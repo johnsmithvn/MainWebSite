@@ -1,0 +1,123 @@
+/* ======== DÙNG CHUNG ======== */
+.folder-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease;
+}
+
+.folder-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.folder-thumb {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.folder-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.folder-card:hover .folder-thumb img {
+  transform: scale(1.05);
+}
+
+.folder-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 8px;
+  text-align: left;
+  padding: 0 8px 12px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-views {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  font-size: 12px;
+  color: white;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 2px 6px;
+  border-radius: 6px;
+  z-index: 10;
+}
+
+/* ======== CHỈ CHO SLIDER ======== */
+.folder-section.slider .folder-card {
+  width: 180px;
+}
+
+.folder-section.slider .folder-thumb {
+  height: 240px;
+}
+
+/* ======== CHỈ CHO GRID ======== */
+.folder-section.grid .folder-card {
+  width: 100%;
+}
+
+.folder-section.grid .folder-thumb {
+  aspect-ratio: 3/4;
+  height: auto;
+}
+
+
+
+.grid-section {
+  margin: 32px 0;
+}
+
+.grid-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  margin-bottom: 12px;
+}
+
+.grid-section-title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.folder-section.grid .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  padding: 0 16px;
+}
+
+/* SLIDER – trên mobile vẫn cần resize */
+@media (max-width: 768px) {
+  .folder-section.slider .folder-card {
+    width: 140px;
+  }
+
+  .folder-section.slider .folder-thumb {
+    height: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .folder-section.slider .folder-card {
+    width: 120px;
+  }
+
+  .folder-section.slider .folder-thumb {
+    height: 180px;
+  }
+}

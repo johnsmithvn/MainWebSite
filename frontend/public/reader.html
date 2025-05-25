@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/default/favicon.png" />
+    <title>Đọc truyện - MyLocalManga</title>
+    <link rel="stylesheet" href="/src/styles/base.css" />
+    <link rel="stylesheet" href="/src/styles/pages/reader.css" />
+    <link rel="stylesheet" href="/src/styles/dark/reader-dark.css" />
+    <!-- Thư viện SwiperJS + PinchZoom -->
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"
+    />
+
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pinch-zoom-js@2.3.4/dist/pinch-zoom.umd.min.js"></script>
+  </head>
+  <body>
+    <header id="site-header" class="site-header">
+      <div class="header-left">
+        <button class="menu-button" id="sidebarToggle">☰</button>
+        <div class="logo" onclick="location.href='index.html'">📚</div>
+      </div>
+
+      <h1 id="reader-folder-name" title="..." class="truncate-folder-name">
+        Tên folder
+      </h1>
+
+      <div class="header-right">
+        <button class="icon-button" id="searchToggle">🔍</button>
+      </div>
+    </header>
+
+    <div class="floating-search" id="floating-search">
+      <input
+        type="text"
+        id="floatingSearchInput"
+        placeholder="Tìm kiếm truyện..."
+      />
+      <div id="search-dropdown" class="hidden"></div>
+    </div>
+
+    <div id="wrapper">
+      <aside id="sidebar-menu" class="sidebar"></aside>
+      <div class="main-content">
+        <div id="app"></div>
+      </div>
+    </div>
+
+    <footer id="reader-footer">
+      <div class="reader-footer-inner">
+        <button id="prev-chapter-btn">⬅ Prev</button>
+        <div style="text-align: center">
+          <div id="page-info">Trang ? / ?</div>
+          <div
+            id="image-count-info"
+            style="font-size: 13px; color: #ccc; margin-top: 2px"
+          >
+            ? / ? (Page: ?)
+          </div>
+        </div>
+        <button id="next-chapter-btn">Next ➡</button>
+      </div>
+    </footer>
+    <div id="loading-overlay" class="hidden">
+      <div class="loader-text">⏳ Đang tải...</div>
+    </div>
+    <!-- ✅ Load JS đúng cách -->
+    <script type="module" src="/src/pages/reader.js"></script>
+  </body>
+</html>

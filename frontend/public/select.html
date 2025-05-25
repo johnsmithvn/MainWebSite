@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chọn Manga Folder</title>
+    <link rel="stylesheet" href="/src/styles/base.css" />
+    <link rel="stylesheet" href="/src/styles/pages/select.css" />
+    <link rel="icon" type="image/png" href="/default/favicon.png" />
+    <script type="module" src="/src/pages/select.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+
+  <body>
+    <!-- ✅ wrapper phải NẰM TRONG body -->
+    <div id="wrapper">
+      <header class="select-header">
+        <div class="logo" onclick="location.href='home.html'">
+          <h1>📚 Chọn bộ Manga</h1>
+        </div>
+      </header>
+
+      <main id="folder-list" class="select-grid">
+        <!-- JS sẽ render danh sách folder vào đây -->
+      </main>
+
+      <!-- ✅ Footer phải nằm TRONG wrapper nếu muốn đẩy sát đáy -->
+      <footer id="main-footer">
+        <button id="reset-all-db-btn" style="padding: 8px 16px; font-size: 14px; background-color: red; color: white; border: none; border-radius: 6px; cursor: pointer;">
+          🗑️ Reset toàn bộ DB
+        </button>
+        <button id="clear-all-folder-cache-btn">🧼 Xoá toàn bộ folder cache</button>
+      </footer>
+    </div>
+
+    <!-- overlay và toast nằm ngoài wrapper là OK -->
+    <div id="loading-overlay" class="hidden">
+      <div class="loader-text">⏳ Đang tải...</div>
+    </div>
+    <div id="toast-message"></div>
+  </body>
+</html>

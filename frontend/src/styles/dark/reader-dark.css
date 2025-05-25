@@ -1,0 +1,42 @@
+/* =============================
+   🌙 DARK MODE – CHO TRANG READER
+============================= */
+
+/* Toàn bộ nền reader đen */
+.dark-mode .reader {
+    background-color: #000;
+  }
+  
+  /* Ảnh scroll đen + padding tối */
+  .dark-mode .scroll-img {
+    background-color: #000;
+  }
+  
+  /* Page indicator (Ảnh X/Y ở dưới màn) */
+  .dark-mode .page-indicator {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+  }
+  
+  /* Footer reader */
+  .dark-mode #reader-footer {
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    color: white;
+  }
+  
+  /* Nút trong footer */
+  .dark-mode #reader-footer button {
+    background: #333;
+    color: white;
+  }
+  
+  .dark-mode #reader-footer button:hover {
+    background: #555;
+  }
+  
+  /* Nút toggle mode 📖 */
+  .dark-mode #readerModeButton {
+    color: white;
+  }
+  

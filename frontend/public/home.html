@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chọn nguồn</title>
+  <link rel="stylesheet" href="/src/styles/base.css"/>
+  <link rel="stylesheet" href="/src/styles/pages/home.css"/>
+</head>
+<body>
+  <h1>🎬📚 Chọn nguồn dữ liệu</h1>
+
+  <h2>📚 Manga</h2>
+  <div id="manga-list" class="source-list"></div>
+
+  <h2>🎬 Movie</h2>
+  <div id="movie-list" class="source-list"></div>
+
+  <div id="loading-overlay" class="hidden">
+    <div class="loader-text">⏳ Đang tải...</div>
+  </div>
+
+  <!-- Gắn 2 script lấy source cho window.mangaKeys & window.movieKeys -->
+  <script src="/api/source-keys.js"></script>
+  <script type="module" src="/src/pages/home.js"></script>
+</body>
+</html>

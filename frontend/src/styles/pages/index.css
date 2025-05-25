@@ -1,0 +1,92 @@
+/* =============================
+   🏠 HOME PAGE – HEADER, FOOTER, SIDEBAR
+============================= */
+
+
+/* Wrapper toàn trang */
+#wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding-top: 80px;
+  /* né header */
+}
+
+#app {
+  flex: 1;
+}
+
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ❌ Không căn giữa trên mobile (dưới 768px) */
+@media (max-width: 768px) {
+  .main-content {
+    max-width: 100%;
+    margin: 0;
+    padding: 0 8px;
+  }
+}
+
+
+/*  */
+
+
+
+
+/* =============================
+     📄 PAGINATION
+  ============================= */
+.reader-controls {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 20px;
+}
+
+.reader-controls button {
+  padding: 10px 16px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--btn-bg, #eee);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reader-controls button:hover {
+  background: var(--btn-hover-bg, #ccc);
+}
+
+
+/* =============================
+     🔍 RESPONSIVE
+  ============================= */
+  @media (max-width: 600px) {
+    .site-header {
+      flex-direction: row;
+      padding: 8px 12px;
+    }
+  
+    .logo-text {
+      display: none;
+    }
+  
+    .search-box input {
+      display: none;
+    }
+  
+    .header-right {
+      gap: 8px;
+    }
+  
+    .menu-button,
+    .icon-button {
+      padding: 4px;
+      font-size: 18px;
+    }
+  }
+  

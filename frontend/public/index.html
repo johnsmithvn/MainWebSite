@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/default/favicon.png" />
+    <title>📚 MyLocalManga</title>
+    <link rel="stylesheet" href="/src/styles/base.css" />
+    <link rel="stylesheet" href="/src/styles/pages/index.css" />
+    <link rel="stylesheet" href="/src/styles/dark/home-dark.css" />
+    <link rel="stylesheet" href="/src/styles/components/folder-slider.css" />
+    <link rel="stylesheet" href="/src/styles/components/folder-card.css" />
+    <script type="module" src="/src/pages/index.js"></script>
+  </head>
+  <body>
+    <!-- ✅ HEADER GỐC -->
+    <header id="site-header" class="site-header">
+      <div class="header-left">
+        <button class="menu-button" id="sidebarToggle">☰</button>
+        <div class="logo" onclick="location.href='index.html'">
+          📚 <span class="logo-text">MyLocalManga</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button class="icon-button" onclick="location.href='favorites.html'">
+          ❤️
+        </button>
+        <button class="icon-button" id="searchToggle">🔍</button>
+        <button class="icon-button" onclick="toggleDarkMode?.()">🌙</button>
+      </div>
+    </header>
+
+    <!-- ✅ SEARCH FLOATING -->
+    <div id="floating-search" class="floating-search">
+      <input
+        type="text"
+        id="floatingSearchInput"
+        placeholder="Tìm kiếm truyện..."
+      />
+      <div id="search-dropdown" class="search-dropdown hidden"></div>
+    </div>
+    <!-- ✅ WRAPPER CHÍNH -->
+    <div id="wrapper">
+      <aside id="sidebar-menu"></aside>
+      <div class="main-content">
+        <!-- ✅ BANNER / SECTION -->
+        <div id="section-random"></div>
+        <div id="section-topview"></div>
+        <div id="section-recent"></div>
+
+        <!-- ✅ CHỖ HIỂN THỊ FOLDER CHÍNH -->
+        <main id="app"></main>
+      </div>
+    </div>
+
+    <!-- ✅ FOOTER CHÍNH -->
+    <footer id="main-footer">
+      <!-- <button id="reset-cache-btn">🧹 Reset Cache</button> -->
+    </footer>
+
+    <!-- ✅ OVERLAY LOADING -->
+    <div id="loading-overlay" class="hidden">
+      <div class="loader-text">⏳ Đang tải...</div>
+    </div>
+  </body>
+</html>

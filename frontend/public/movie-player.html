@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Xem phim</title>
+    <style>
+      body {
+        background: #111;
+        color: #fff;
+        margin: 0;
+        padding: 0;
+      }
+      video {
+        width: 100vw;
+        height: 100vh;
+        background: #000;
+      }
+      .back-btn {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        z-index: 2;
+        font-size: 18px;
+        background: #222;
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <button class="back-btn" onclick="window.history.back()">⬅ Quay lại</button>
+    <video id="video-player" controls autoplay></video>
+    <script>
+      const urlParams = new URLSearchParams(window.location.search);
+      const file = urlParams.get("file");
+      const sourceKey = localStorage.getItem("sourceKey");
+      const src = `/api/video?key=${sourceKey}&file=${encodeURIComponent(
+        file
+      )}`;
+      document.getElementById("video-player").src = src;
+    </script>
+  </body>
+</html>
