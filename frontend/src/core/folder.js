@@ -14,7 +14,7 @@ export const state = {
   allFolders: [],
 };
 let folderPage = 0;
-const foldersPerPage = 20;
+const foldersPerPage = 24;
 let totalFolders = 0; // 🆕 Tổng số folder thực tế không bị slice
 
 /**
