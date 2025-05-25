@@ -148,7 +148,18 @@ img.loading {
   font-weight: bold;
   font-size: 16px;
 }
-
+.search-type-dropdown {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: #222;
+  color: white;
+  border: 1px solid #444;
+  font-size: 13px;
+  z-index: 10;
+}
 
 /* =============================
      📚 SIDEBAR MENU
@@ -328,16 +339,35 @@ body.dark-mode .icon-button:hover {
 
 /* Footer chính */
 #main-footer {
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  color: white;
-  text-align: center;
-  font-size: 13px;
-  padding: 12px 20px;
-  margin-top: 40px;
+  height: 60px;
+  background: var(--color-bg-secondary, #f5f5f5);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 24px;
+  border-top: 1px solid #ccc;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
 }
 
+body.dark-mode #main-footer {
+  background: #1a1a1a;
+  border-top: 1px solid #444;
+}
 
+.danger-button {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-weight: bold;
+  transition: background 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.danger-button:hover {
+  background: #c0392b;
+}
 /*  favorite */
 /* ❤️ Style nút yêu thích trong card */
 .folder-fav {
@@ -364,3 +394,39 @@ body.dark-mode .icon-button:hover {
 .folder-thumb {
   position: relative; /* để .folder-fav bám góc ảnh */
 }
+/* =============================
+   🏠 HOME PAGE – HEADER, FOOTER, SIDEBAR
+============================= */
+
+
+/* Wrapper toàn trang */
+#wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding-top: 80px;
+  /* né header */
+}
+
+#app {
+  flex: 1;
+}
+
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ❌ Không căn giữa trên mobile (dưới 768px) */
+@media (max-width: 768px) {
+  .main-content {
+    max-width: 100%;
+    margin: 0;
+    padding: 0 8px;
+  }
+}
+
+
+/*  */
+

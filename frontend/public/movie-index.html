@@ -2,62 +2,72 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Danh sách phim</title>
     <link rel="stylesheet" href="/src/styles/base.css" />
-    <link rel="stylesheet" href="/src/styles/components/folder-card.css" />
+    <link rel="stylesheet" href="/src/styles/components/movie-card.css" />
     <link rel="stylesheet" href="/src/styles/components/folder-slider.css" />
-    <link rel="stylesheet" href="/src/styles/pages/movie-index.css" />
-
-    <style>
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 20px;
-        margin-top: 32px;
-      }
-      .folder-card {
-        background: #232323;
-        color: #fff;
-        border-radius: 10px;
-        padding: 18px 10px;
-        text-align: center;
-        cursor: pointer;
-      }
-      .folder-card:hover {
-        background: #333;
-      }
-      .folder-thumb-placeholder {
-        font-size: 2.5rem;
-        margin-bottom: 10px;
-      }
-    </style>
   </head>
   <body>
-    <!-- 👇 THÊM NGAY DƯỚI ĐÂY -->
-    <section id="randomFolderSection" class="folder-slider-section"></section>
-    <section id="randomVideoSection" class="folder-slider-section"></section>
-    <div style="padding: 20px">
-      <button id="back-root" style="display: none">
-        ⬅ Quay lại nguồn phim
-      </button>
-      <div id="movie-app"></div>
+    <header id="site-header" class="site-header">
+      <div class="header-left">
+        <button class="menu-button" id="sidebarToggle">☰</button>
+        <div class="logo" onclick="location.href='movie-index.html'">
+          🎬 <span class="logo-text">MyLocalMovie</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button class="icon-button" id="searchToggle">🔍</button>
+        <button class="icon-button" onclick="toggleDarkMode?.()">🌙</button>
+      </div>
+    </header>
+
+    <!-- ✅ SEARCH FLOATING -->
+    <div id="floating-search" class="floating-search">
+      <input
+        type="text"
+        id="floatingSearchInput"
+        placeholder="Tìm kiếm phim..."
+      />
+
+      <!-- 🆕 Dropdown chọn loại tìm -->
+      <select id="search-type-select" class="search-type-dropdown">
+        <option value="video">🎬 Chỉ video</option>
+        <option value="folder">📁 Chỉ thư mục</option>
+        <option value="all" selected>🔍 Cả hai</option>
+      </select>
+
+      <div id="search-dropdown" class="search-dropdown hidden"></div>
     </div>
-    <footer id="main-footer">
-      <button
-        id="delete-movie-db"
-        style="
-          float: right;
-          background: #e74c3c;
-          color: #fff;
-          border: none;
-          border-radius: 6px;
-          padding: 7px 14px;
-          margin-left: 10px;
-        "
-      >
-        🗑 Xoá DB Movie
-      </button>
+    <!-- ✅ LAYOUT CHUẨN -->
+    <div id="wrapper">
+      <aside id="sidebar-menu"></aside>
+      <div class="main-content">
+        <!-- ✅ CÁC SLIDER RANDOM -->
+        <section
+          id="randomFolderSection"
+          class="folder-slider-section"
+        ></section>
+        <section
+          id="randomVideoSection"
+          class="folder-slider-section"
+        ></section>
+        <section id="section-topview" class="folder-slider-section"></section>
+
+        <!-- ✅ APP CHÍNH -->
+        <button id="back-root" style="display: none">
+          ⬅ Quay lại nguồn phim
+        </button>
+        <div id="movie-app"></div>
+      </div>
+    </div>
+
+    <!-- ✅ FOOTER -->
+    <footer id="main-footer" class="footer-bar">
+      <button id="delete-movie-db" class="danger-button">🗑 Xoá DB Movie</button>
     </footer>
+
     <script type="module" src="/src/pages/movie-index.js"></script>
   </body>
 </html>

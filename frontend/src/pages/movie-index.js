@@ -1,7 +1,60 @@
-import { renderFolderCard } from "/src/components/folderCard.js";
+import {} from "/src/components/folderCard.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
 import { getSourceKey } from "/src/core/storage.js";
-import { showRandomUpdatedTime } from "/src/core/ui.js"; // ✅ Giống manga
+import { showRandomUpdatedTime, filterMovie, toggleSearchBar, toggleDarkMode, setupSidebar, showConfirm, showToast, toggleSidebar } from "/src/core/ui.js";
+import { setupGlobalClickToCloseUI } from "/src/core/events.js";
+
+// 👉 Gắn sự kiện UI
+window.addEventListener("DOMContentLoaded", () => {
+  const initialPath = getInitialPathFromURL();
+  loadMovieFolder(initialPath);
+  setupDeleteMovieButton();
+  setupRandomSectionsIfMissing();
+  loadRandomSliders();
+  loadTopVideoSlider();
+
+  document.getElementById("floatingSearchInput")?.addEventListener("input", filterMovie);
+  document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
+  document.getElementById("sidebarToggle")?.addEventListener("click", toggleSidebar);
+
+  setupGlobalClickToCloseUI(); // ✅ xử lý click ra ngoài để đóng sidebar + search
+});
+
+function getInitialPathFromURL() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get("path") || "";
+}
+
+function setupDeleteMovieButton() {
+  const deleteBtn = document.getElementById("delete-movie-db");
+  if (!deleteBtn) return;
+
+  deleteBtn.onclick = async () => {
+    const ok = await showConfirm("Bạn có chắc muốn xoá sạch DB Movie?", { loading: true });
+    if (!ok) return;
+
+    const sourceKey = getSourceKey();
+    try {
+      await fetch(`/api/reset-movie-db?key=${sourceKey}`, { method: "DELETE" });
+      showToast("✅ Đã xoá xong DB Movie!");
+      window.location.reload();
+    } catch (err) {
+      showToast("❌ Lỗi khi xoá DB movie!");
+      console.error(err);
+    }
+  };
+}
+
+function setupRandomSectionsIfMissing() {
+  ["randomFolderSection", "randomVideoSection"].forEach((id) => {
+    const exist = document.getElementById(id);
+    if (!exist) {
+      const sec = document.createElement("section");
+      sec.id = id;
+      document.body.prepend(sec);
+    }
+  });
+}
 
 let currentPath = "";
 
@@ -51,34 +104,18 @@ function renderMovieGrid(list, basePath) {
   grid.className = "grid";
 
   list.forEach((item) => {
-    let thumbnailUrl = null;
-    if (item.thumbnail) {
-      thumbnailUrl = `/video/${item.thumbnail.replace(/\\/g, "/")}`;
-    } else {
-      thumbnailUrl =
-        item.type === "video" || item.type === "file"
-          ? "/default/video-thumb.png"
-          : "/default/folder-thumb.png";
-    }
+    let thumbnailUrl = item.thumbnail
+      ? `/video/${item.thumbnail.replace(/\\/g, "/")}`
+      : item.type === "video" || item.type === "file"
+      ? "/default/video-thumb.png"
+      : "/default/folder-thumb.png";
 
-    let cardData = {
+    const card = renderMovieCard({
       name: item.name,
       path: item.path,
       thumbnail: thumbnailUrl,
-      isSelfReader: false,
-    };
-
-    const card = renderFolderCard(cardData, false, false);
-
-    card.onclick = () => {
-      if (item.type === "video" || item.type === "file") {
-        window.location.href = `/movie-player.html?file=${encodeURIComponent(
-          cardData.path
-        )}&key=${getSourceKey()}`;
-      } else {
-        loadMovieFolder(cardData.path);
-      }
-    };
+      type: item.type,
+    });
 
     grid.appendChild(card);
   });
@@ -86,43 +123,57 @@ function renderMovieGrid(list, basePath) {
   app.appendChild(grid);
 }
 
-function loadRandomSliders() {
-  const sourceKey = getSourceKey();
-  loadRandomSection(
-    "folder",
-    sourceKey,
-    "randomFolderSection",
-    "🎲 Folder ngẫu nhiên",
-    false // ✅ kiểm tra cache trước khi fetch
-  );
-  loadRandomSection(
-    "file",
-    sourceKey,
-    "randomVideoSection",
-    "🎲 Video ngẫu nhiên",
-    false // ✅ kiểm tra cache trước khi fetch
-  );
+function renderMovieCard(item) {
+  const card = document.createElement("div");
+  card.className = "movie-card";
+
+  const img = document.createElement("img");
+  img.className = "movie-thumb";
+  img.src = item.thumbnail || "/default/video-thumb.png";
+
+  const info = document.createElement("div");
+  info.className = "movie-info";
+
+  const title = document.createElement("div");
+  title.className = "movie-title";
+  title.textContent = item.name;
+  card.title = item.name;
+
+  const sub = document.createElement("div");
+  sub.className = "movie-sub";
+  sub.textContent = item.type === "video" ? "🎬 Video file" : "📁 Thư mục";
+
+  info.appendChild(title);
+  info.appendChild(sub);
+
+  card.appendChild(img);
+  card.appendChild(info);
+
+  card.onclick = () => {
+    if (item.type === "video" || item.type === "file") {
+      window.location.href = `/movie-player.html?file=${encodeURIComponent(item.path)}&key=${getSourceKey()}`;
+    } else {
+      loadMovieFolder(item.path);
+    }
+  };
+
+  return card;
 }
 
-async function loadRandomSection(
-  type,
-  sourceKey,
-  sectionId,
-  title,
-  force = false
-) {
+function loadRandomSliders() {
+  const sourceKey = getSourceKey();
+  loadRandomSection("folder", sourceKey, "randomFolderSection", "🎲 Folder ngẫu nhiên", false);
+  loadRandomSection("file", sourceKey, "randomVideoSection", "🎲 Video ngẫu nhiên", false);
+}
+
+async function loadRandomSection(type, sourceKey, sectionId, title, force = false) {
   if (!sourceKey) {
     console.warn("⚠️ Không có sourceKey – skip random section");
     return;
   }
 
-  const cacheKey = `${
-    type === "file" ? "randomVideos" : "randomFolders"
-  }-${sourceKey}`;
-
-  // 🆔 Xác định id timestamp theo type
-  const tsId =
-    type === "file" ? "random-timestamp-video" : "random-timestamp-folder";
+  const cacheKey = `${type === "file" ? "randomVideos" : "randomFolders"}-${sourceKey}`;
+  const tsId = type === "file" ? "random-timestamp-video" : "random-timestamp-folder";
 
   if (!force) {
     const raw = localStorage.getItem(cacheKey);
@@ -135,36 +186,24 @@ async function loadRandomSection(
             title,
             folders: parsed.data,
             targetId: sectionId,
-            onRefresh: () =>
-              loadRandomSection(type, sourceKey, sectionId, title, true),
+            onRefresh: () => loadRandomSection(type, sourceKey, sectionId, title, true),
           });
 
           const el = document.getElementById(tsId);
-          if (el) showRandomUpdatedTime(parsed.timestamp,tsId);
+          if (el) showRandomUpdatedTime(parsed.timestamp, tsId);
           return;
         }
       } catch {}
     }
   }
 
-  const res = await fetch(
-    `/api/video-cache?mode=random&type=${type}&key=${sourceKey}`
-  );
+  const res = await fetch(`/api/video-cache?mode=random&type=${type}&key=${sourceKey}`);
   const json = await res.json();
   const folders = Array.isArray(json) ? json : json.folders;
   const now = Date.now();
 
-  // ✅ Ghi vào cache
-  localStorage.setItem(
-    cacheKey,
-    JSON.stringify({ data: folders, timestamp: now })
-  );
-
-  // ✅ Ghi randomView giống manga
-  localStorage.setItem(
-    `randomView::${sourceKey}::1`,
-    JSON.stringify({ data: folders })
-  );
+  localStorage.setItem(cacheKey, JSON.stringify({ data: folders, timestamp: now }));
+  localStorage.setItem(`randomView::${sourceKey}::1`, JSON.stringify({ data: folders }));
 
   renderFolderSlider({
     title,
@@ -174,37 +213,20 @@ async function loadRandomSection(
   });
 
   const el = document.getElementById(tsId);
-  if (el) showRandomUpdatedTime(now, tsId); // ✅ cần truyền id
+  if (el) showRandomUpdatedTime(now, tsId);
 }
 
-window.addEventListener("DOMContentLoaded", () => {
-  loadMovieFolder();
-  loadRandomSliders();
+function loadTopVideoSlider() {
+  const key = getSourceKey();
+  if (!key) return;
 
-  const deleteBtn = document.getElementById("delete-movie-db");
-  if (deleteBtn) {
-    deleteBtn.onclick = async () => {
-      if (!confirm("Bạn có chắc muốn xoá sạch DB Movie này không?")) return;
-      const sourceKey = getSourceKey();
-      try {
-        await fetch(`/api/reset-movie-db?key=${sourceKey}`, {
-          method: "DELETE",
-        });
-        alert("Đã xoá xong DB Movie! Vào lại sẽ tự scan lại.");
-        window.location.reload();
-      } catch (err) {
-        alert("Lỗi khi xoá DB movie!");
-        console.error(err);
-      }
-    };
-  }
-});
-
-["randomFolderSection", "randomVideoSection"].forEach((id) => {
-  const exist = document.getElementById(id);
-  if (!exist) {
-    const sec = document.createElement("section");
-    sec.id = id;
-    document.body.prepend(sec);
-  }
-});
+  fetch(`/api/video-cache?key=${key}&mode=top`)
+    .then((res) => res.json())
+    .then((data) => {
+      renderFolderSlider({
+        title: "🔥 Xem nhiều",
+        folders: data.folders,
+        showViews: true,
+      });
+    });
+}

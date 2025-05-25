@@ -1,39 +1,3 @@
-/* =============================
-   🏠 HOME PAGE – HEADER, FOOTER, SIDEBAR
-============================= */
-
-
-/* Wrapper toàn trang */
-#wrapper {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  padding-top: 80px;
-  /* né header */
-}
-
-#app {
-  flex: 1;
-}
-
-.main-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 16px;
-}
-
-/* ❌ Không căn giữa trên mobile (dưới 768px) */
-@media (max-width: 768px) {
-  .main-content {
-    max-width: 100%;
-    margin: 0;
-    padding: 0 8px;
-  }
-}
-
-
-/*  */
-
 
 
 

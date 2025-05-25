@@ -2,6 +2,8 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Xem phim</title>
     <style>
       body {
@@ -32,14 +34,6 @@
   <body>
     <button class="back-btn" onclick="window.history.back()">⬅ Quay lại</button>
     <video id="video-player" controls autoplay></video>
-    <script>
-      const urlParams = new URLSearchParams(window.location.search);
-      const file = urlParams.get("file");
-      const sourceKey = localStorage.getItem("sourceKey");
-      const src = `/api/video?key=${sourceKey}&file=${encodeURIComponent(
-        file
-      )}`;
-      document.getElementById("video-player").src = src;
-    </script>
+    <script type="module" src="/src/pages/movie-player.js"></script>
   </body>
 </html>

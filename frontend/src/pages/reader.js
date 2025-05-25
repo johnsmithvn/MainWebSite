@@ -8,17 +8,21 @@ import {
   setupSidebar,
   toggleSidebar,
   filterManga,
-  toggleSearchBar,showToast
+  toggleSearchBar,
+  showToast,
 } from "/src/core/ui.js";
+import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 
+window.addEventListener("DOMContentLoaded", initializeReader);
 /**
  * Fetch and render reader data based on the URL path.
  */
 async function initializeReader() {
   document.getElementById("loading-overlay")?.classList.remove("hidden");
+
   const sourceKey = getSourceKey();
   const rootFolder = getRootFolder();
-  requireRootFolder(); // 🔐 Kiểm tra root
+  requireRootFolder();
 
   const urlParams = new URLSearchParams(window.location.search);
   const rawPath = urlParams.get("path");
@@ -27,7 +31,7 @@ async function initializeReader() {
     return;
   }
 
-  const path = rawPath; // 🔥 Giữ nguyên path, backend tự lo /__self__
+  const path = rawPath;  // 🔥 Giữ nguyên path, backend tự lo /__self__
 
   try {
     const response = await fetch(
@@ -40,21 +44,10 @@ async function initializeReader() {
     const data = await response.json();
 
     if (data.type === "reader" && Array.isArray(data.images)) {
-      document.getElementById("loading-overlay")?.classList.add("hidden"); // ✅ Ẩn overlay sau khi render
+      document.getElementById("loading-overlay")?.classList.add("hidden");  // ✅ Ẩn overlay sau khi render
 
       renderReader(data.images);
-
-      setupSidebar();
-      // ✅ Gắn sự kiện toggle
-      document
-        .getElementById("sidebarToggle")
-        ?.addEventListener("click", toggleSidebar);
-      document
-        .getElementById("searchToggle")
-        ?.addEventListener("click", toggleSearchBar);
-      document
-        .getElementById("floatingSearchInput")
-        ?.addEventListener("input", filterManga);
+      setupReaderUIEvents();
     } else {
       showToast("❌ Folder này không chứa ảnh hoặc không hợp lệ!");
     }
@@ -64,5 +57,11 @@ async function initializeReader() {
   }
 }
 
-// 👉 Initialize reader on DOMContentLoaded
-window.addEventListener("DOMContentLoaded", initializeReader);
+function setupReaderUIEvents() {
+  setupSidebar();
+  setupGlobalClickToCloseUI();
+
+  document.getElementById("sidebarToggle")?.addEventListener("click", toggleSidebar);
+  document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
+  document.getElementById("floatingSearchInput")?.addEventListener("input", filterManga);
+}

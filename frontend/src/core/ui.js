@@ -1,6 +1,6 @@
 // ➕ BỔ SUNG UI FRONTEND RENDER BANNER RANDOM
 // 📁 frontend/src/ui.js ➜ renderRandomBanner()
-import { getRootFolder,  getSourceKey } from "./storage.js";
+import { getRootFolder, getSourceKey } from "./storage.js";
 
 import { state, loadFolder } from "/src/core/folder.js";
 import { changeRootFolder } from "./storage.js";
@@ -70,6 +70,80 @@ export async function filterManga() {
   } catch (err) {
     dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
     console.error("❌ Lỗi tìm kiếm:", err);
+  }
+}
+export async function filterMovie() {
+  const keyword = document
+    .getElementById("floatingSearchInput")
+    ?.value.trim()
+    .toLowerCase();
+  const dropdown = document.getElementById("search-dropdown");
+  const sourceKey = localStorage.getItem("sourceKey");
+  const type = document.getElementById("search-type-select")?.value || "video"; // ✅ loại tìm
+
+  if (!keyword) {
+    dropdown.classList.add("hidden");
+    dropdown.innerHTML = "";
+    return;
+  }
+
+  dropdown.classList.remove("hidden");
+  dropdown.innerHTML = `<div id="search-loader">🔍 Đang tìm video...</div>`;
+
+  try {
+    const res = await fetch(
+      `/api/video-cache?mode=search&key=${encodeURIComponent(
+        sourceKey
+      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}`
+    );
+    const data = await res.json();
+    dropdown.innerHTML = "";
+
+    if (!data.folders || data.folders.length === 0) {
+      dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy video nào</div>`;
+      return;
+    }
+
+    data.folders.forEach((f) => {
+      const item = document.createElement("div");
+      item.className = "search-item";
+
+      // ✅ Xử lý thumbnail theo loại
+      let thumbSrc = "/default/folder-thumb.png";
+
+      if (f.type === "video" || f.type === "file") {
+        thumbSrc = f.thumbnail
+          ? `/video/${f.thumbnail.replace(/\\/g, "/")}`
+          : "/default/video-thumb.png";
+      } else {
+        thumbSrc = f.thumbnail
+          ? `/video/${f.thumbnail.replace(/\\/g, "/")}`
+          : "/default/folder-thumb.png";
+      }
+
+      item.innerHTML = `
+        <img src="${thumbSrc}" class="search-thumb" alt="thumb">
+        <div class="search-title">${f.name}</div>
+      `;
+
+      item.onclick = () => {
+        dropdown.classList.add("hidden");
+        if (f.type === "video" || f.type === "file") {
+          window.location.href = `/movie-player.html?file=${encodeURIComponent(
+            f.path
+          )}&key=${sourceKey}`;
+        } else {
+          window.location.href = `/movie-index.html?path=${encodeURIComponent(
+            f.path
+          )}`;
+        }
+      };
+
+      dropdown.appendChild(item);
+    });
+  } catch (err) {
+    console.error("❌ Lỗi tìm kiếm video:", err);
+    dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
   }
 }
 
@@ -168,7 +242,9 @@ export function showRandomUpdatedTime(timestamp, id = "random-timestamp") {
   if (isMobile) {
     info.textContent = `🎲 ${diff === 0 ? "now" : `${diff}m`}`;
   } else {
-    info.textContent = `🎲 Random ${diff === 0 ? "vừa xong" : `${diff} phút trước`}`;
+    info.textContent = `🎲 Random ${
+      diff === 0 ? "vừa xong" : `${diff} phút trước`
+    }`;
   }
 }
 
