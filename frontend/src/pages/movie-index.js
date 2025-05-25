@@ -55,7 +55,6 @@ function setupDeleteMovieButton() {
     try {
       await fetch(`/api/reset-movie-db?key=${sourceKey}`, { method: "DELETE" });
       showToast("✅ Đã xoá xong DB Movie!");
-      window.location.reload();
     } catch (err) {
       showToast("❌ Lỗi khi xoá DB movie!");
       console.error(err);
