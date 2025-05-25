@@ -402,9 +402,8 @@ export function setupSidebar() {
           count++;
         }
       });
-
+      window.location.href = "/home.html"; // ✅ Quay lại chọn root
       showToast(`✅ Đã xoá ${count} cache folder`);
-      changeRootFolder(); // ✅ Quay lại chọn root
     })
   );
 }
@@ -508,4 +507,62 @@ export function showConfirm(message, options = {}) {
     okBtn.addEventListener("click", onOK);
     cancelBtn.addEventListener("click", onCancel);
   });
+}
+
+export function setupMovieSidebar() {
+  const sidebar = document.getElementById("sidebar-menu");
+  if (!sidebar) return;
+  sidebar.innerHTML = "";
+
+  const sourceKey = getSourceKey();
+
+  // 🔄 Đổi Movie Folder (chuyển về home.html)
+  sidebar.appendChild(
+    createSidebarButton("🎬 Đổi Movie Folder", () => {
+      localStorage.removeItem("rootFolder");
+      window.location.href = "/home.html";
+    })
+  );
+
+  // 🗑 Xoá DB Movie
+  sidebar.appendChild(
+    createSidebarButton("🗑 Xoá DB Movie", async () => {
+      const ok = await showConfirm("Bạn có chắc muốn xoá toàn bộ DB Movie?", {
+        loading: true,
+      });
+      if (!ok) return;
+
+      try {
+        const res = await fetch(`/api/reset-movie-db?key=${sourceKey}`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        showToast(data.message || "✅ Đã xoá DB Movie");
+        window.location.reload();
+      } catch (err) {
+        showToast("❌ Lỗi khi gọi API xoá DB Movie");
+        console.error(err);
+      }
+    })
+  );
+
+  // 🧹 Xoá cache movie folder localStorage
+  sidebar.appendChild(
+    createSidebarButton("🧼 Xoá cache folder", async () => {
+      const ok = await showConfirm(
+        "Bạn có chắc muốn xoá cache folder movie localStorage?"
+      );
+      if (!ok) return;
+
+      let count = 0;
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith(`movieCache::${sourceKey}::`)) {
+          localStorage.removeItem(key);
+          count++;
+        }
+      });
+
+      showToast(`✅ Đã xoá ${count} cache folder`);
+    })
+  );
 }

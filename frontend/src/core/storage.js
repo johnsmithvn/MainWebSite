@@ -1,6 +1,7 @@
 // 📁 frontend/src/storage.js
-const FOLDER_CACHE_PREFIX = "folderCache::";
 import { showToast } from "./ui.js";
+const MOVIE_CACHE_PREFIX = "movieCache::";
+const FOLDER_CACHE_PREFIX = "folderCache::";
 
 /**
  * 📂 Lấy rootFolder hiện tại từ localStorage
@@ -12,6 +13,10 @@ export function getRootFolder() {
 
 export function getSourceKey() {
   return localStorage.getItem("sourceKey");
+}
+export function getMovieCacheKey(sourceKey, path) {
+  if (!sourceKey) return null;
+  return `${MOVIE_CACHE_PREFIX}${sourceKey}::${path || ""}`;
 }
 
 /**
@@ -74,7 +79,14 @@ export function getFolderCache(sourceKey, rootFolder, path) {
  * 📦 Lưu cache folder
  */
 export function setFolderCache(sourceKey, rootFolder, path, data) {
+  if (!sourceKey || rootFolder === null || rootFolder === undefined) {
+    const msg = `⚠️ Không cache được do thiếu thông tin: sourceKey = ${sourceKey}, rootFolder = ${rootFolder}`;
+    console.warn(msg);
+    showToast(msg);
+    return;
+  }
   const key = getFolderCacheKey(sourceKey, rootFolder, path);
+
   const jsonData = JSON.stringify({
     timestamp: Date.now(),
     data: data,
@@ -181,4 +193,91 @@ export function saveRecentViewed(folder) {
   } catch (err) {
     console.warn("❌ Không thể lưu recentViewed:", err);
   }
+}
+
+//  Movie
+export function getMovieCache(sourceKey, path) {
+  const key = getMovieCacheKey(sourceKey, path);
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed.data;
+  } catch {
+    localStorage.removeItem(key);
+    return null;
+  }
+}
+
+export function setMovieCache(sourceKey, path, data) {
+  if (!sourceKey) {
+    const msg = `⚠️ Không cache được do thiếu thông tin: sourceKey = ${sourceKey}`;
+    console.warn(msg);
+    showToast(msg);
+    return;
+  }
+  const key = getMovieCacheKey(sourceKey, path);
+  const jsonData = JSON.stringify({
+    timestamp: Date.now(),
+    data: data,
+  });
+
+  const maxTotalSize = 4 * 1024 * 1024 + 300;
+  const currentTotalSize = getCurrentMovieCacheSize();
+
+  if (jsonData.length > maxTotalSize) {
+    const msg = `⚠️ Movie folder quá lớn, không cache localStorage: ${path}`;
+    console.warn(msg);
+    showToast(msg);
+    return;
+  }
+
+  if (currentTotalSize + jsonData.length > maxTotalSize) {
+    let size = maxTotalSize - jsonData.length;
+    if (size > maxTotalSize / 2) size = maxTotalSize / 2;
+    cleanUpOldMovieCache(size);
+  }
+
+  localStorage.setItem(key, jsonData);
+}
+function getCurrentMovieCacheSize() {
+  let total = 0;
+  for (const key in localStorage) {
+    if (key.startsWith(MOVIE_CACHE_PREFIX)) {
+      const item = localStorage.getItem(key);
+      total += item?.length || 0;
+    }
+  }
+  return total;
+}
+
+function cleanUpOldMovieCache(minFreeBytes) {
+  const entries = [];
+
+  for (const key in localStorage) {
+    if (key.startsWith(MOVIE_CACHE_PREFIX)) {
+      try {
+        const raw = localStorage.getItem(key);
+        const parsed = JSON.parse(raw);
+        entries.push({
+          key,
+          size: raw.length,
+          timestamp: parsed.timestamp || 0,
+        });
+      } catch {
+        localStorage.removeItem(key);
+      }
+    }
+  }
+
+  entries.sort((a, b) => a.timestamp - b.timestamp);
+  let freed = 0;
+  for (const entry of entries) {
+    localStorage.removeItem(entry.key);
+    freed += entry.size;
+    if (freed >= minFreeBytes) break;
+  }
+
+  console.log(`🧹 Dọn movie cache: đã xoá ${freed} byte`);
 }

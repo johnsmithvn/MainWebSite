@@ -1,8 +1,17 @@
 import {} from "/src/components/folderCard.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
 import { getSourceKey } from "/src/core/storage.js";
-import { showRandomUpdatedTime, filterMovie, toggleSearchBar, toggleDarkMode, setupSidebar, showConfirm, showToast, toggleSidebar } from "/src/core/ui.js";
+import {
+  showRandomUpdatedTime,
+  filterMovie,
+  toggleSearchBar,
+  setupMovieSidebar,
+  showConfirm,
+  showToast,
+  toggleSidebar,
+} from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
+import { getMovieCache, setMovieCache } from "/src/core/storage.js";
 
 // 👉 Gắn sự kiện UI
 window.addEventListener("DOMContentLoaded", () => {
@@ -12,10 +21,17 @@ window.addEventListener("DOMContentLoaded", () => {
   setupRandomSectionsIfMissing();
   loadRandomSliders();
   loadTopVideoSlider();
+  setupMovieSidebar();
 
-  document.getElementById("floatingSearchInput")?.addEventListener("input", filterMovie);
-  document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
-  document.getElementById("sidebarToggle")?.addEventListener("click", toggleSidebar);
+  document
+    .getElementById("floatingSearchInput")
+    ?.addEventListener("input", filterMovie);
+  document
+    .getElementById("searchToggle")
+    ?.addEventListener("click", toggleSearchBar);
+  document
+    .getElementById("sidebarToggle")
+    ?.addEventListener("click", toggleSidebar);
 
   setupGlobalClickToCloseUI(); // ✅ xử lý click ra ngoài để đóng sidebar + search
 });
@@ -30,7 +46,9 @@ function setupDeleteMovieButton() {
   if (!deleteBtn) return;
 
   deleteBtn.onclick = async () => {
-    const ok = await showConfirm("Bạn có chắc muốn xoá sạch DB Movie?", { loading: true });
+    const ok = await showConfirm("Bạn có chắc muốn xoá sạch DB Movie?", {
+      loading: true,
+    });
     if (!ok) return;
 
     const sourceKey = getSourceKey();
@@ -66,13 +84,26 @@ function loadMovieFolder(path = "") {
     return;
   }
   currentPath = path;
+
+  // ✅ Check cache
+  const cached = getMovieCache(sourceKey, path);
+  if (cached && Date.now() - cached.timestamp < 30 * 60 * 1000) {
+    console.log("⚡ Dùng cache movie folder");
+    renderMovieGrid(cached.data, path);
+    return;
+  }
+
+  // ✅ Nếu không có cache → fetch
   const params = new URLSearchParams();
   params.set("key", sourceKey);
   if (path) params.set("path", path);
 
   fetch("/api/movie-folder?" + params.toString())
     .then((res) => res.json())
-    .then((data) => renderMovieGrid(data.folders, path));
+    .then((data) => {
+      setMovieCache(sourceKey, path, data.folders); // ✅ Lưu cache
+      renderMovieGrid(data.folders, path);
+    });
 }
 
 window.loadMovieFolder = loadMovieFolder;
@@ -119,6 +150,10 @@ function renderMovieGrid(list, basePath) {
 
     grid.appendChild(card);
   });
+  if (!list || list.length === 0) {
+    app.innerHTML += "<p>❌ Không tìm thấy nội dung trong thư mục này.</p>";
+    return;
+  }
 
   app.appendChild(grid);
 }
@@ -151,7 +186,9 @@ function renderMovieCard(item) {
 
   card.onclick = () => {
     if (item.type === "video" || item.type === "file") {
-      window.location.href = `/movie-player.html?file=${encodeURIComponent(item.path)}&key=${getSourceKey()}`;
+      window.location.href = `/movie-player.html?file=${encodeURIComponent(
+        item.path
+      )}&key=${getSourceKey()}`;
     } else {
       loadMovieFolder(item.path);
     }
@@ -162,18 +199,39 @@ function renderMovieCard(item) {
 
 function loadRandomSliders() {
   const sourceKey = getSourceKey();
-  loadRandomSection("folder", sourceKey, "randomFolderSection", "🎲 Folder ngẫu nhiên", false);
-  loadRandomSection("file", sourceKey, "randomVideoSection", "🎲 Video ngẫu nhiên", false);
+  loadRandomSection(
+    "folder",
+    sourceKey,
+    "randomFolderSection",
+    "🎲 Folder ngẫu nhiên",
+    false
+  );
+  loadRandomSection(
+    "file",
+    sourceKey,
+    "randomVideoSection",
+    "🎲 Video ngẫu nhiên",
+    false
+  );
 }
 
-async function loadRandomSection(type, sourceKey, sectionId, title, force = false) {
+async function loadRandomSection(
+  type,
+  sourceKey,
+  sectionId,
+  title,
+  force = false
+) {
   if (!sourceKey) {
     console.warn("⚠️ Không có sourceKey – skip random section");
     return;
   }
 
-  const cacheKey = `${type === "file" ? "randomVideos" : "randomFolders"}-${sourceKey}`;
-  const tsId = type === "file" ? "random-timestamp-video" : "random-timestamp-folder";
+  const cacheKey = `${
+    type === "file" ? "randomVideos" : "randomFolders"
+  }-${sourceKey}`;
+  const tsId =
+    type === "file" ? "random-timestamp-video" : "random-timestamp-folder";
 
   if (!force) {
     const raw = localStorage.getItem(cacheKey);
@@ -186,7 +244,8 @@ async function loadRandomSection(type, sourceKey, sectionId, title, force = fals
             title,
             folders: parsed.data,
             targetId: sectionId,
-            onRefresh: () => loadRandomSection(type, sourceKey, sectionId, title, true),
+            onRefresh: () =>
+              loadRandomSection(type, sourceKey, sectionId, title, true),
           });
 
           const el = document.getElementById(tsId);
@@ -197,13 +256,21 @@ async function loadRandomSection(type, sourceKey, sectionId, title, force = fals
     }
   }
 
-  const res = await fetch(`/api/video-cache?mode=random&type=${type}&key=${sourceKey}`);
+  const res = await fetch(
+    `/api/video-cache?mode=random&type=${type}&key=${sourceKey}`
+  );
   const json = await res.json();
   const folders = Array.isArray(json) ? json : json.folders;
   const now = Date.now();
 
-  localStorage.setItem(cacheKey, JSON.stringify({ data: folders, timestamp: now }));
-  localStorage.setItem(`randomView::${sourceKey}::1`, JSON.stringify({ data: folders }));
+  localStorage.setItem(
+    cacheKey,
+    JSON.stringify({ data: folders, timestamp: now })
+  );
+  localStorage.setItem(
+    `randomView::${sourceKey}::1`,
+    JSON.stringify({ data: folders })
+  );
 
   renderFolderSlider({
     title,

@@ -29,8 +29,22 @@ window.getRootFolder = getRootFolder;
 window.addEventListener("DOMContentLoaded", initializeMangaHome);
 
 async function initializeMangaHome() {
-  const sourceKey = getSourceKey();
+   const sourceKey = getSourceKey();
+
+  // 🛑 Nếu chưa chọn source ➜ về home
+  if (!sourceKey) {
+    showToast("⚠️ Chưa chọn nguồn dữ liệu, vui lòng chọn lại!");
+    return (window.location.href = "/home.html");
+  }
+
+  // 🛑 Nếu là movie ➜ về movie-index.html
+  if (sourceKey.startsWith("V_")) {
+    return (window.location.href = "/movie-index.html");
+  }
+
   const rootFolder = getRootFolder();
+
+  // 🛡 Manga mới cần check root
   requireRootFolder();
   setupSidebar();
   setupGlobalClickToCloseUI();
