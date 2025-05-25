@@ -73,27 +73,33 @@ function setupRandomSectionsIfMissing() {
     }
   });
 }
-
+let moviePage = 0;
+const moviesPerPage = 20;
+let fullList = []; // danh sách đầy đủ sau khi fetch/cache
 let currentPath = "";
-
-function loadMovieFolder(path = "") {
+function paginateList(list) {
+  return list.slice(moviePage * moviesPerPage, (moviePage + 1) * moviesPerPage);
+}
+function loadMovieFolder(path = "", page = 0) {
   const sourceKey = getSourceKey();
   if (!sourceKey) {
     alert("Chưa chọn nguồn phim!");
     window.location.href = "/home.html";
     return;
   }
-  currentPath = path;
 
-  // ✅ Check cache
+  currentPath = path;
+  moviePage = page;
+
   const cached = getMovieCache(sourceKey, path);
-  if (cached && Date.now() - cached.timestamp < 30 * 60 * 1000) {
+  if (cached && Date.now() - cached.timestamp < 7 * 60 * 60 * 1000) {
     console.log("⚡ Dùng cache movie folder");
-    renderMovieGrid(cached.data, path);
+    fullList = cached.data || [];
+    renderMovieGrid(paginateList(fullList), path);
+    updateMoviePaginationUI(moviePage, fullList.length, moviesPerPage);
     return;
   }
 
-  // ✅ Nếu không có cache → fetch
   const params = new URLSearchParams();
   params.set("key", sourceKey);
   if (path) params.set("path", path);
@@ -101,18 +107,18 @@ function loadMovieFolder(path = "") {
   fetch("/api/movie-folder?" + params.toString())
     .then((res) => res.json())
     .then((data) => {
-      setMovieCache(sourceKey, path, data.folders); // ✅ Lưu cache
-      renderMovieGrid(data.folders, path);
+      fullList = data.folders || [];
+      setMovieCache(sourceKey, path, fullList);
+      renderMovieGrid(paginateList(fullList), path);
+      updateMoviePaginationUI(moviePage, fullList.length, moviesPerPage);
     });
 }
 
-window.loadMovieFolder = loadMovieFolder;
-
-function renderMovieGrid(list, basePath) {
+function renderMovieGrid(list) {
   const app = document.getElementById("movie-app");
   app.innerHTML = "";
 
-  const parts = basePath ? basePath.split("/").filter(Boolean) : [];
+  const parts = currentPath ? currentPath.split("/").filter(Boolean) : [];
 
   const title = document.createElement("h2");
   title.className = "folder-section-title";
@@ -125,12 +131,11 @@ function renderMovieGrid(list, basePath) {
     title.title = "Quay lại thư mục cha";
     title.onclick = () => {
       const parent = parts.slice(0, -1).join("/");
-      loadMovieFolder(parent);
+      loadMovieFolder(parent); // ⬅️ dùng đúng global currentPath
     };
   }
 
   app.appendChild(title);
-
   const grid = document.createElement("div");
   grid.className = "grid";
 
@@ -150,11 +155,16 @@ function renderMovieGrid(list, basePath) {
 
     grid.appendChild(card);
   });
-  if (!list || list.length === 0) {
-    app.innerHTML += "<p>❌ Không tìm thấy nội dung trong thư mục này.</p>";
-    return;
-  }
-
+ if (!list || list.length === 0) {
+  const parentPath = path.split("/").slice(0, -1).join("/");
+  app.innerHTML += `
+    <div class="empty-folder">
+      <p>❌ Không tìm thấy nội dung trong thư mục này.</p>
+      <button onclick="loadMovieFolder('${parentPath}')">⬅ Quay lại</button>
+    </div>
+  `;
+  return;
+}
   app.appendChild(grid);
 }
 
@@ -296,4 +306,54 @@ function loadTopVideoSlider() {
         showViews: true,
       });
     });
+}
+
+function updateMoviePaginationUI(currentPage, totalItems, perPage) {
+  const totalPages = Math.ceil(totalItems / perPage);
+  const app = document.getElementById("movie-app");
+
+  const nav = document.createElement("div");
+  nav.className = "reader-controls";
+
+  const prev = document.createElement("button");
+  prev.textContent = "⬅ Trang trước";
+  prev.disabled = currentPage <= 0;
+  prev.onclick = () => loadMovieFolder(currentPath, currentPage - 1);
+  nav.appendChild(prev);
+
+  const jumpForm = document.createElement("form");
+  jumpForm.style.display = "inline-block";
+  jumpForm.style.margin = "0 10px";
+  jumpForm.onsubmit = (e) => {
+    e.preventDefault();
+    const page = parseInt(jumpInput.value) - 1;
+    if (!isNaN(page) && page >= 0) loadMovieFolder(currentPath, page);
+  };
+
+  const jumpInput = document.createElement("input");
+  jumpInput.type = "number";
+  jumpInput.min = 1;
+  jumpInput.max = totalPages;
+  jumpInput.placeholder = "Trang...";
+  jumpInput.style.width = "60px";
+
+  const jumpBtn = document.createElement("button");
+  jumpBtn.textContent = "⏩";
+  jumpForm.appendChild(jumpInput);
+  jumpForm.appendChild(jumpBtn);
+  nav.appendChild(jumpForm);
+
+  const next = document.createElement("button");
+  next.textContent = "Trang sau ➡";
+  next.disabled = currentPage + 1 >= totalPages;
+  next.onclick = () => loadMovieFolder(currentPath, currentPage + 1);
+  nav.appendChild(next);
+
+  app.appendChild(nav);
+
+  const info = document.createElement("div");
+  info.textContent = `Trang ${currentPage + 1} / ${totalPages}`;
+  info.style.textAlign = "center";
+  info.style.marginTop = "10px";
+  app.appendChild(info);
 }
