@@ -157,9 +157,10 @@ export function toggleDarkMode() {
 /**
  * 📄 Cập nhật UI phân trang
  */
-export function updateFolderPaginationUI(currentPage, totalItems, perPage) {
+export function updateFolderPaginationUI(currentPage, totalItems, perPage, onPageChange, target = null) {
   const totalPages = Math.ceil(totalItems / perPage);
-  const app = document.getElementById("app");
+  const container = target || document.getElementById("app");
+  if (!container) return;
 
   const nav = document.createElement("div");
   nav.className = "reader-controls";
@@ -202,13 +203,13 @@ export function updateFolderPaginationUI(currentPage, totalItems, perPage) {
   next.onclick = () => loadFolder(state.currentPath, currentPage + 1);
   nav.appendChild(next);
 
-  app.appendChild(nav);
+  container.appendChild(nav);
 
   const info = document.createElement("div");
   info.textContent = `Trang ${currentPage + 1} / ${totalPages}`;
   info.style.textAlign = "center";
   info.style.marginTop = "10px";
-  app.appendChild(info);
+  container.appendChild(info);
 }
 
 /**

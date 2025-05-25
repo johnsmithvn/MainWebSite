@@ -339,6 +339,16 @@ body.dark-mode .icon-button:hover {
 
 /* Footer chính */
 #main-footer {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  color: white;
+  text-align: center;
+  font-size: 13px;
+  padding: 12px 20px;
+  margin-top: auto;
+}
+
+/* #main-footer {
   height: 60px;
   background: var(--color-bg-secondary, #f5f5f5);
   display: flex;
@@ -347,8 +357,7 @@ body.dark-mode .icon-button:hover {
   padding: 0 24px;
   border-top: 1px solid #ccc;
   box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
-}
-
+} */
 body.dark-mode #main-footer {
   background: #1a1a1a;
   border-top: 1px solid #444;

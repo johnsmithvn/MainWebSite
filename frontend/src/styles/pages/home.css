@@ -1,9 +1,13 @@
 body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
     font-family: Arial, sans-serif;
     padding: 40px;
     max-width: 600px;
     margin: auto;
 }
+
 
 h1 {
     text-align: center;
