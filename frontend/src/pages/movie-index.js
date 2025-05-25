@@ -154,16 +154,16 @@ function renderMovieGrid(list) {
 
     grid.appendChild(card);
   });
- if (!list || list.length === 0) {
-  const parentPath = path.split("/").slice(0, -1).join("/");
-  app.innerHTML += `
-    <div class="empty-folder">
-      <p>❌ Không tìm thấy nội dung trong thư mục này.</p>
-      <button onclick="loadMovieFolder('${parentPath}')">⬅ Quay lại</button>
-    </div>
-  `;
-  return;
-}
+//  if (!list || list.length === 0) {
+//   const parentPath = path.split("/").slice(0, -1).join("/");
+//   app.innerHTML += `
+//     <div class="empty-folder">
+//       <p>❌ Không tìm thấy nội dung trong thư mục này.</p>
+//       <button onclick="loadMovieFolder('${parentPath}')">⬅ Quay lại</button>
+//     </div>
+//   `;
+//   return;
+// }
   app.appendChild(grid);
 }
 
