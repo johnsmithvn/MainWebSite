@@ -1,16 +1,30 @@
 // 📁 folderSlider.js (Scroll Native version – scroll snap, auto-scroll, hover pause, visibility-aware)
 import { renderFolderCard } from "./folderCard.js";
 import { renderRecentViewed } from "../core/ui.js";
-import { getRootFolder, recentViewedKey } from "../core/storage.js";
+import {
+  getRootFolder,
+  recentViewedKey,
+  getSourceKey,
+} from "../core/storage.js";
 
 /**
- * Hiển thị slider thư mục truyện bằng scroll native (scroll snap + auto-scroll chỉ khi visible và không hover)
+ * Hiển thị slider thư mục (truyện hoặc phim) dạng ngang scroll
+ * @param {Object} options
+ * @param {string} options.title - tiêu đề (ví dụ: "✨ Random")
+ * @param {Array} options.folders - danh sách folder
+ * @param {boolean} options.showViews - có hiển thị lượt xem không
+ * @param {string} [options.targetId] - nếu truyền thì render đúng vào container đó
  */
-export function renderFolderSlider({ title, folders, showViews = false }) {
+export function renderFolderSlider({
+  title,
+  folders,
+  showViews = false,
+  targetId,
+  onRefresh = null,
+}) {
   const section = document.createElement("section");
   section.className = "folder-section slider";
 
-  // === HEADER ===
   const header = document.createElement("div");
   header.className = "folder-section-header";
 
@@ -21,10 +35,8 @@ export function renderFolderSlider({ title, folders, showViews = false }) {
   h3.className = "folder-section-title";
   h3.textContent = title;
   left.appendChild(h3);
-
   header.appendChild(left);
 
-  // === Nếu là Random Banner thì thêm nút Refresh + timestamp ===
   if (title.includes("ngẫu nhiên") || title.includes("Mới đọc")) {
     const right = document.createElement("div");
     right.className = "slider-right";
@@ -35,16 +47,26 @@ export function renderFolderSlider({ title, folders, showViews = false }) {
       refreshBtn.textContent = "🔄 Refresh";
       refreshBtn.className = "small-button";
       right.appendChild(refreshBtn);
-
+      refreshBtn.onclick = () => {
+        if (typeof onRefresh === "function") {
+          onRefresh();
+        }
+      };
       const timestamp = document.createElement("span");
-      timestamp.id = "random-timestamp";
       timestamp.className = "random-timestamp";
+      // ✅ Set ID khác nhau cho Folder và Video
+      if (title.includes("Folder")) {
+        timestamp.id = "random-timestamp-folder";
+      } else if (title.includes("Video")) {
+        timestamp.id = "random-timestamp-video";
+      } else {
+        timestamp.id = "random-timestamp"; // fallback cho manga
+      }
       timestamp.textContent = "";
       right.appendChild(timestamp);
     }
 
     if (title.includes("Mới đọc")) {
-
       const clearBtn = document.createElement("button");
       clearBtn.textContent = "🗑️ Xoá tất cả";
       clearBtn.className = "small-button";
@@ -62,7 +84,6 @@ export function renderFolderSlider({ title, folders, showViews = false }) {
 
   section.appendChild(header);
 
-  // === SLIDER ===
   const sliderContainer = document.createElement("div");
   sliderContainer.style.position = "relative";
 
@@ -71,16 +92,49 @@ export function renderFolderSlider({ title, folders, showViews = false }) {
   wrapper.style.scrollSnapType = "x mandatory";
   wrapper.style.overflowX = "auto";
 
+  const isMoviePage = window.location.pathname.includes("movie");
+
   folders.forEach((f) => {
-    const card = renderFolderCard(f, showViews);
+    // ✅ Thumbnail đúng cho cả manga và movie
+    let thumbnailUrl = f.thumbnail;
+    if (!f.thumbnail) {
+      thumbnailUrl =
+        f.type === "video" || f.type === "file"
+          ? "/default/video-thumb.png"
+          : "/default/folder-thumb.png";
+    } else if (isMoviePage) {
+      thumbnailUrl = `/video/${f.thumbnail.replace(/\\/g, "/")}`;
+    }
+
+    const cardData = {
+      ...f,
+      thumbnail: thumbnailUrl,
+    };
+
+    const card = renderFolderCard(cardData, showViews);
     card.style.scrollSnapAlign = "start";
     wrapper.appendChild(card);
+
+    // ✅ Xử lý click tương thích movie & manga
+    const encoded = encodeURIComponent(f.path);
+    const key = getSourceKey();
+
+    card.onclick = () => {
+      if (f.type === "video" || f.type === "file") {
+        window.location.href = `/movie-player.html?file=${encoded}&key=${key}`;
+      } else {
+        if (isMoviePage && typeof window.loadMovieFolder === "function") {
+          window.loadMovieFolder(f.path);
+        } else {
+          window.location.href = `/reader.html?path=${encoded}&key=${key}`;
+        }
+      }
+    };
   });
 
   sliderContainer.appendChild(wrapper);
 
   const isMobile = window.innerWidth <= 768;
-
   const prevBtn = document.createElement("button");
   const nextBtn = document.createElement("button");
   prevBtn.className = "nav-button prev-button";
@@ -95,18 +149,20 @@ export function renderFolderSlider({ title, folders, showViews = false }) {
 
   section.appendChild(sliderContainer);
 
-  // === PAGINATION DOTS ===
   const dots = document.createElement("div");
   dots.className = "slider-pagination";
   section.appendChild(dots);
 
-  const containerId = title.includes("ngẫu nhiên")
-    ? "section-random"
-    : title.includes("Xem nhiều")
-    ? "section-topview"
-    : "section-recent";
+  const container = targetId
+    ? document.getElementById(targetId)
+    : document.getElementById(
+        title.includes("ngẫu nhiên")
+          ? "section-random"
+          : title.includes("Xem nhiều")
+          ? "section-topview"
+          : "section-recent"
+      );
 
-  const container = document.getElementById(containerId);
   if (container) {
     container.innerHTML = "";
     container.appendChild(section);
@@ -137,10 +193,8 @@ export function renderFolderSlider({ title, folders, showViews = false }) {
     });
   });
 
-  // === AUTO SCROLL ===
   let currentScroll = 0;
   let autoTimer = null;
-
   const scrollInterval = () => {
     const maxScroll = wrapper.scrollWidth - wrapper.clientWidth;
     currentScroll += step * 5;
@@ -151,22 +205,16 @@ export function renderFolderSlider({ title, folders, showViews = false }) {
   const startAutoScroll = () => {
     if (!isMobile && !autoTimer) autoTimer = setInterval(scrollInterval, 20000);
   };
-
   const stopAutoScroll = () => {
-    if (autoTimer) {
-      clearInterval(autoTimer);
-      autoTimer = null;
-    }
+    if (autoTimer) clearInterval(autoTimer);
+    autoTimer = null;
   };
 
   const observer = new IntersectionObserver(
     (entries) => {
       const entry = entries[0];
-      if (entry.isIntersecting) {
-        startAutoScroll();
-      } else {
-        stopAutoScroll();
-      }
+      if (entry.isIntersecting) startAutoScroll();
+      else stopAutoScroll();
     },
     { threshold: 0.5 }
   );

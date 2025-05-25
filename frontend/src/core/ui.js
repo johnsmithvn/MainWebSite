@@ -158,20 +158,17 @@ export function toggleSearchBar() {
  * @param {Array} folders - Danh sách folder có thumbnail
  */
 // ✅ Hiển thị thời gian cập nhật ngẫu nhiên bên dưới banner random
-export function showRandomUpdatedTime(timestamp) {
-  const info = document.getElementById("random-timestamp");
+export function showRandomUpdatedTime(timestamp, id = "random-timestamp") {
+  const info = document.getElementById(id);
   if (!info) return;
 
-  const diff = Math.floor((Date.now() - timestamp) / 60000); // phút
-  // ✅ Check nếu mobile thì rút gọn
+  const diff = Math.floor((Date.now() - timestamp) / 60000);
   const isMobile = window.innerWidth <= 480;
 
   if (isMobile) {
     info.textContent = `🎲 ${diff === 0 ? "now" : `${diff}m`}`;
   } else {
-    info.textContent = `🎲 Random ${
-      diff === 0 ? "vừa xong" : `${diff} phút trước`
-    }`;
+    info.textContent = `🎲 Random ${diff === 0 ? "vừa xong" : `${diff} phút trước`}`;
   }
 }
 

@@ -118,3 +118,4 @@ app.use("/api/movie-folder-empty", require("./api/movie-folder-empty"));
 app.use("/api/scan-movie", require("./api/scan-movie"));
 
 app.use("/api/reset-movie-db", require("./api/reset-movie-db"));
+app.use("/api", require("./api/video-cache"));
