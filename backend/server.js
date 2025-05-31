@@ -21,12 +21,12 @@ app.use(express.json());
 app.use(authMiddleware);
 
 // ✅ API chính
-app.use("/api", require("./api/folder-cache")); // 🌟 API gộp random, top, search, path, folders
+app.use("/api/manga", require("./api/manga/folder-cache")); // 🌟 API gộp random, top, search, path, folders
 app.use("/api", require("./api/increase-view")); // 📈 Ghi lượt xem
-app.use("/api", require("./api/reset-cache")); // 🔁 Reset cache DB
+app.use("/api/manga", require("./api/manga/reset-cache")); // 🔁 Reset cache DB
 // ✅ Đăng ký route /api/scan trong server.js:
-app.use("/api/scan", require("./api/scan"));
-app.use("/api", require("./api/favorite")); // ⭐ API đánh dấu yêu thích
+app.use("/api/manga", require("./api/manga/scan"));
+app.use("/api/manga", require("./api/manga/favorite")); // ⭐ API đánh dấu yêu thích
 
 // // ✅ Serve static images từ BASE_DIR (E:/File/Manga)
 // app.use("/manga", express.static(BASE_DIR));
@@ -110,13 +110,13 @@ app.listen(PORT, () => {
   console.log(`✅ Server is running at http://localhost:${PORT}`);
 });
 
-app.use("/api", require("./api/movie-folder"));
+app.use("/api/movie", require("./api/movie/movie-folder"));
 // Thêm dòng này vào server.js
-app.use("/api", require("./api/video"));
+app.use("/api/movie", require("./api/movie/video"));
 
-app.use("/api/movie-folder-empty", require("./api/movie-folder-empty"));
-app.use("/api/scan-movie", require("./api/scan-movie"));
+app.use("/api/movie", require("./api/movie/movie-folder-empty"));
+app.use("/api/movie", require("./api/movie/scan-movie"));
 
-app.use("/api/reset-movie-db", require("./api/reset-movie-db"));
-app.use("/api", require("./api/video-cache"));
-app.use("/api/favorite-movie", require("./api/favorite-movie"));
+app.use("/api/movie", require("./api/movie/reset-movie-db"));
+app.use("/api/movie", require("./api/movie/video-cache"));
+app.use("/api/movie", require("./api/movie/favorite-movie"));

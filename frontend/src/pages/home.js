@@ -17,11 +17,11 @@ function renderSourceList(listId, keys, type) {
       } else if (type === "movie") {
         // Kiểm tra DB movie rỗng thì scan trước khi chuyển trang
         try {
-          const resp = await fetch(`/api/movie-folder-empty?key=${key}`);
+          const resp = await fetch(`/api/movie/movie-folder-empty?key=${key}`);
           const data = await resp.json();
           if (data.empty) {
             // Scan nếu rỗng
-            await fetch("/api/scan-movie", {
+            await fetch("/api/movie/scan-movie", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ key }),

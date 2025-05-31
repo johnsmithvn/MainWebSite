@@ -48,7 +48,7 @@ export function renderMovieCardWithFavorite(item) {
     favBtn.title = newVal ? "Bỏ yêu thích" : "Thêm yêu thích";
 
     try {
-      await fetch("/api/favorite-movie", {
+      await fetch("/api/movie/favorite-movie", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

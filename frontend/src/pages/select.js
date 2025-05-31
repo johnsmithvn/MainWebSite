@@ -39,7 +39,7 @@ function createRootFolderCard(folder) {
     localStorage.setItem("rootFolder", folder);
 
     const res = await fetch(
-      `/api/folder-cache?mode=folders&key=${encodeURIComponent(
+      `/api/manga/folder-cache?mode=folders&key=${encodeURIComponent(
         sourceKey
       )}&root=${encodeURIComponent(folder)}`
     );
@@ -49,7 +49,7 @@ function createRootFolderCard(folder) {
       console.log("📂 DB rỗng, tiến hành scan...");
 
       await withLoading(async () => {
-        await fetch("/api/scan", {
+        await fetch("/api/manga/scan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ root: folder, key: sourceKey }),
@@ -106,7 +106,7 @@ document
       if (!sourceKey) return showToast("❌ Thiếu sourceKey");
 
       const res = await fetch(
-        `/api/reset-cache/all?key=${encodeURIComponent(sourceKey)}`,
+        `/api/manga/reset-cache/all?key=${encodeURIComponent(sourceKey)}`,
         { method: "DELETE" }
       );
 

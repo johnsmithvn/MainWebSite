@@ -42,7 +42,7 @@ function renderMovieCardWithFavorite(item) {
     favBtn.title = newVal ? "Bỏ yêu thích" : "Thêm yêu thích";
 
     try {
-      await fetch("/api/favorite-movie", {
+      await fetch("/api/movie/favorite-movie", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -145,7 +145,7 @@ async function loadFavoritesMovie() {
   document.getElementById("loading-overlay")?.classList.remove("hidden");
 
   try {
-    const res = await fetch(`/api/favorite-movie?key=${encodeURIComponent(key)}`);
+    const res = await fetch(`/api/movie/favorite-movie?key=${encodeURIComponent(key)}`);
     allFavorites = await res.json();
     currentPage = 0;
     renderGridPage();

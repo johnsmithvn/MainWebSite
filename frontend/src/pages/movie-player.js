@@ -2,7 +2,7 @@
 const urlParams = new URLSearchParams(window.location.search);
 const file = urlParams.get("file");
 const sourceKey = localStorage.getItem("sourceKey");
-const src = `/api/video?key=${sourceKey}&file=${encodeURIComponent(file)}`;
+const src = `/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(file)}`;
 document.getElementById("video-player").src = src;
 // ✅ Gửi API tăng view cho video
 if (file && sourceKey) {

@@ -1,14 +1,14 @@
 // 📁 backend/api/favorite-movie.js
 const express = require("express");
 const router = express.Router();
-const { getMovieDB } = require("../utils/db");
+const { getMovieDB } = require("../../utils/db");
 
 /**
  * POST /api/favorite-movie
  * Body: { key, path, value }
  * Toggle yêu thích (dùng bảng folders trong movie DB)
  */
-router.post("/", (req, res) => {
+router.post("/favorite-movie", (req, res) => {
   const { dbkey, path, value } = req.body;
   if (!dbkey || !path || typeof value !== "boolean") {
     return res.status(400).json({ error: "Thiếu hoặc sai dữ liệu" });
@@ -35,7 +35,7 @@ router.post("/", (req, res) => {
  * GET /api/favorite-movie?key=V_MOVIE
  * Trả về danh sách item yêu thích (folder + video)
  */
-router.get("/", (req, res) => {
+router.get("/favorite-movie", (req, res) => {
   const { key } = req.query;
   if (!key) return res.status(400).json({ error: "Thiếu key" });
 

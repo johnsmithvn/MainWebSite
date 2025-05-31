@@ -35,7 +35,7 @@ async function initializeReader() {
 
   try {
     const response = await fetch(
-      `/api/folder-cache?mode=path&key=${encodeURIComponent(
+      `/api/manga/folder-cache?mode=path&key=${encodeURIComponent(
         sourceKey
       )}&root=${encodeURIComponent(rootFolder)}&path=${encodeURIComponent(
         path

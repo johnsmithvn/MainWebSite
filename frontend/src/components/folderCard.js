@@ -74,7 +74,7 @@ export function renderFolderCard(folder, showViews = false) {
       // const body = isMovie
       // ? { key: sourceKey, path: folder.path, value: newVal } // 🎬 movie
       // : { dbkey: sourceKey, path: folder.path, value: newVal }; // 📚 manga
-      await fetch(isMovie ? "/api/favorite-movie" : "/api/favorite", {
+      await fetch(isMovie ? "/api/movie/favorite-movie" : "/api/manga/favorite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

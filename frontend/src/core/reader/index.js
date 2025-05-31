@@ -206,7 +206,7 @@ function moveChapter(direction = "next") {
       }
 
       fetch(
-        `/api/folder-cache?mode=path&key=${encodeURIComponent(
+        `/api/manga/folder-cache?mode=path&key=${encodeURIComponent(
           key
         )}&root=${encodeURIComponent(root)}&path=${encodeURIComponent(
           data.path

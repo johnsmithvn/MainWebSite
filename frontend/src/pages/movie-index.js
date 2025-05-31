@@ -55,7 +55,7 @@ function setupDeleteMovieButton() {
 
     const sourceKey = getSourceKey();
     try {
-      await fetch(`/api/reset-movie-db?key=${sourceKey}`, { method: "DELETE" });
+      await fetch(`/api/movie/reset-movie-db?key=${sourceKey}`, { method: "DELETE" });
       showToast("✅ Đã xoá xong DB Movie!");
     } catch (err) {
       showToast("❌ Lỗi khi xoá DB movie!");
@@ -105,7 +105,7 @@ function loadMovieFolder(path = "", page = 0) {
   params.set("key", sourceKey);
   if (path) params.set("path", path);
 
-  fetch("/api/movie-folder?" + params.toString())
+  fetch("/api/movie/movie-folder?" + params.toString())
     .then((res) => res.json())
     .then((data) => {
       fullList = data.folders || [];
@@ -268,7 +268,7 @@ async function loadRandomSection(
   }
 
   const res = await fetch(
-    `/api/video-cache?mode=random&type=${type}&key=${sourceKey}`
+    `/api/movie/video-cache?mode=random&type=${type}&key=${sourceKey}`
   );
   const json = await res.json();
   const folders = Array.isArray(json) ? json : json.folders;
@@ -295,7 +295,7 @@ function loadTopVideoSlider() {
   const key = getSourceKey();
   if (!key) return;
 
-  fetch(`/api/video-cache?key=${key}&mode=top`)
+  fetch(`/api/movie/video-cache?key=${key}&mode=top`)
     .then((res) => res.json())
     .then((data) => {
       renderFolderSlider({

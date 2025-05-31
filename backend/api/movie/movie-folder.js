@@ -3,7 +3,7 @@
 // 📁 backend/api/movie-folder.js
 const express = require("express");
 const router = express.Router();
-const { getMovieDB } = require("../utils/db");
+const { getMovieDB } = require("../../utils/db");
 
 /**
  * GET /api/movie-folder?key=V_MOVIE&path=...
