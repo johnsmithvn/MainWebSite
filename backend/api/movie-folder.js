@@ -31,7 +31,9 @@ router.get("/movie-folder", (req, res) => {
     name: item.name,
     path: item.path,
     thumbnail: item.thumbnail,
-    type: item.type
+    type: item.type,
+    isFavorite: !!item.isFavorite // ✅ thêm dòng này
+
   }));
 
   res.json({

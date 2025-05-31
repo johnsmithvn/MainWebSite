@@ -23,7 +23,7 @@ router.get("/video-cache", async (req, res) => {
     if (mode === "random") {
       let rows = db
         .prepare(
-          `SELECT name, path, thumbnail, type FROM folders
+          `SELECT name, path, thumbnail,isFavorite, type FROM folders
             ORDER BY RANDOM() LIMIT 30`
         )
         .all();
@@ -40,7 +40,7 @@ router.get("/video-cache", async (req, res) => {
       // Chỉ lấy file video có thumbnail
       const rows = db
         .prepare(
-          `SELECT name, path, thumbnail, type, viewCount
+          `SELECT name, path, thumbnail, type, viewCount,isFavorite
           FROM folders
           WHERE (type = 'video' OR type = 'file')
             AND viewCount > 0
@@ -64,7 +64,7 @@ router.get("/video-cache", async (req, res) => {
         rows = db
           .prepare(
             `
-    SELECT name, path, thumbnail, type, viewCount
+    SELECT name, path, thumbnail, type, viewCount,isFavorite
     FROM folders
     WHERE (type IS NULL OR type = 'folder')
       AND name LIKE ?
@@ -76,7 +76,7 @@ router.get("/video-cache", async (req, res) => {
         rows = db
           .prepare(
             `
-    SELECT name, path, thumbnail, type, viewCount
+    SELECT name, path, thumbnail, type, viewCount,isFavorite
     FROM folders
     WHERE name LIKE ?
     ORDER BY name COLLATE NOCASE ASC
@@ -87,7 +87,7 @@ router.get("/video-cache", async (req, res) => {
         rows = db
           .prepare(
             `
-    SELECT name, path, thumbnail, type, viewCount
+    SELECT name, path, thumbnail, type, viewCount,isFavorite
     FROM folders
     WHERE (type = 'video' OR type = 'file')
       AND name LIKE ?

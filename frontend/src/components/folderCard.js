@@ -70,7 +70,11 @@ export function renderFolderCard(folder, showViews = false) {
     favBtn.title = newVal ? "Bỏ yêu thích" : "Thêm yêu thích";
 
     try {
-      await fetch("/api/favorite", {
+      const isMovie = sourceKey?.startsWith("V_"); // Nếu key là movie
+      // const body = isMovie
+      // ? { key: sourceKey, path: folder.path, value: newVal } // 🎬 movie
+      // : { dbkey: sourceKey, path: folder.path, value: newVal }; // 📚 manga
+      await fetch(isMovie ? "/api/favorite-movie" : "/api/favorite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -90,7 +94,151 @@ export function renderFolderCard(folder, showViews = false) {
   return card;
 }
 
+// function updateFavoriteEverywhere(sourceKey, rootFolder, folderPath, newVal) {
+//   const prefix = `folderCache::${sourceKey}::${rootFolder}`;
+//   for (const key in localStorage) {
+//     if (key.startsWith(prefix)) {
+//       try {
+//         const raw = localStorage.getItem(key);
+//         const parsed = JSON.parse(raw);
+//         let changed = false;
+//         if (parsed.data && parsed.data.folders) {
+//           for (const f of parsed.data.folders) {
+//             if (f.path === folderPath) {
+//               f.isFavorite = newVal;
+//               changed = true;
+//             }
+//           }
+//         }
+//         // Nếu là self-reader
+//         if (
+//           parsed.data &&
+//           parsed.data.images &&
+//           folderPath.endsWith("/__self__")
+//         ) {
+//           if (parsed.data.isFavorite !== undefined) {
+//             parsed.data.isFavorite = newVal;
+//             changed = true;
+//           }
+//         }
+//         if (changed) {
+//           localStorage.setItem(key, JSON.stringify(parsed));
+//         }
+//       } catch (err) {
+//         console.warn("❌ Không thể update cache:", err);
+//       }
+//     }
+//   }
+
+//   // 🟢 Update recentViewed nếu có
+//   try {
+//     const recentKey = `recentViewed::${rootFolder}::${rootFolder}`;
+//     const raw = localStorage.getItem(recentKey);
+//     if (raw) {
+//       const list = JSON.parse(raw);
+//       let changed = false;
+//       for (const item of list) {
+//         if (item.path === folderPath) {
+//           item.isFavorite = newVal;
+//           changed = true;
+//         }
+//       }
+//       if (changed) {
+//         localStorage.setItem(recentKey, JSON.stringify(list));
+//       }
+//     }
+//   } catch (err) {
+//     console.warn("❌ Không thể update recentViewed:", err);
+//   }
+// }
+
 function updateFavoriteEverywhere(sourceKey, rootFolder, folderPath, newVal) {
+  const isMovie = sourceKey?.startsWith("V_");
+
+  // 📦 Nếu là movie ➜ update movieCache
+  // if (isMovie) {
+  //   const prefix = `movieCache::${sourceKey}::`;
+  //   for (const key in localStorage) {
+  //     if (key.startsWith(prefix)) {
+  //       try {
+  //         const raw = localStorage.getItem(key);
+  //         const parsed = JSON.parse(raw);
+  //         let changed = false;
+  //         if (Array.isArray(parsed.data)) {
+  //           for (const f of parsed.data) {
+  //             if (f.path === folderPath) {
+  //               f.isFavorite = newVal;
+  //               changed = true;
+  //             }
+  //           }
+  //         }
+  //         if (changed) {
+  //           localStorage.setItem(key, JSON.stringify(parsed));
+  //         }
+  //       } catch (err) {
+  //         console.warn("❌ Không thể update movieCache:", err);
+  //       }
+  //     }
+  //   }
+  //   return;
+  // }
+
+  // 📁 folderCard.js – trong updateFavoriteEverywhere()
+
+  // 📦 Nếu là movie ➜ update movieCache
+  if (isMovie) {
+    const prefix = `movieCache::${sourceKey}::`;
+    for (const key in localStorage) {
+      if (key.startsWith(prefix)) {
+        try {
+          const raw = localStorage.getItem(key);
+          const parsed = JSON.parse(raw);
+          let changed = false;
+          if (Array.isArray(parsed.data)) {
+            for (const f of parsed.data) {
+              if (f.path === folderPath) {
+                f.isFavorite = newVal;
+                changed = true;
+              }
+            }
+          }
+          if (changed) {
+            localStorage.setItem(key, JSON.stringify(parsed));
+          }
+        } catch (err) {
+          console.warn("❌ Không thể update movieCache:", err);
+        }
+      }
+    }
+
+    // 🔁 Thêm xử lý random cache
+    ["randomFolders", "randomVideos"].forEach((prefix) => {
+      const cacheKey = `${prefix}-${sourceKey}`;
+      const raw = localStorage.getItem(cacheKey);
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        let changed = false;
+        if (Array.isArray(parsed.data)) {
+          for (const f of parsed.data) {
+            if (f.path === folderPath) {
+              f.isFavorite = newVal;
+              changed = true;
+            }
+          }
+        }
+        if (changed) {
+          localStorage.setItem(cacheKey, JSON.stringify(parsed));
+        }
+      } catch (err) {
+        console.warn("❌ Không thể update random cache:", err);
+      }
+    });
+
+    return;
+  }
+
+  // 📚 Nếu là manga ➜ giữ nguyên logic cũ
   const prefix = `folderCache::${sourceKey}::${rootFolder}`;
   for (const key in localStorage) {
     if (key.startsWith(prefix)) {
@@ -106,27 +254,20 @@ function updateFavoriteEverywhere(sourceKey, rootFolder, folderPath, newVal) {
             }
           }
         }
-        // Nếu là self-reader
-        if (
-          parsed.data &&
-          parsed.data.images &&
-          folderPath.endsWith("/__self__")
-        ) {
-          if (parsed.data.isFavorite !== undefined) {
-            parsed.data.isFavorite = newVal;
-            changed = true;
-          }
+        if (parsed.data?.images && folderPath.endsWith("/__self__")) {
+          parsed.data.isFavorite = newVal;
+          changed = true;
         }
         if (changed) {
           localStorage.setItem(key, JSON.stringify(parsed));
         }
       } catch (err) {
-        console.warn("❌ Không thể update cache:", err);
+        console.warn("❌ Không thể update folderCache:", err);
       }
     }
   }
 
-  // 🟢 Update recentViewed nếu có
+  // ✅ Update recentViewed (manga)
   try {
     const recentKey = `recentViewed::${rootFolder}::${rootFolder}`;
     const raw = localStorage.getItem(recentKey);

@@ -1,6 +1,8 @@
 import {} from "/src/components/folderCard.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
 import { getSourceKey } from "/src/core/storage.js";
+import { renderMovieCardWithFavorite } from "/src/components/movieCard.js";
+
 import {
   showRandomUpdatedTime,
   filterMovie,
@@ -145,25 +147,25 @@ function renderMovieGrid(list) {
       ? "/default/video-thumb.png"
       : "/default/folder-thumb.png";
 
-    const card = renderMovieCard({
+    const card = renderMovieCardWithFavorite({
       name: item.name,
       path: item.path,
       thumbnail: thumbnailUrl,
       type: item.type,
+      isFavorite: item.isFavorite ?? false,
     });
-
     grid.appendChild(card);
   });
-//  if (!list || list.length === 0) {
-//   const parentPath = path.split("/").slice(0, -1).join("/");
-//   app.innerHTML += `
-//     <div class="empty-folder">
-//       <p>❌ Không tìm thấy nội dung trong thư mục này.</p>
-//       <button onclick="loadMovieFolder('${parentPath}')">⬅ Quay lại</button>
-//     </div>
-//   `;
-//   return;
-// }
+  //  if (!list || list.length === 0) {
+  //   const parentPath = path.split("/").slice(0, -1).join("/");
+  //   app.innerHTML += `
+  //     <div class="empty-folder">
+  //       <p>❌ Không tìm thấy nội dung trong thư mục này.</p>
+  //       <button onclick="loadMovieFolder('${parentPath}')">⬅ Quay lại</button>
+  //     </div>
+  //   `;
+  //   return;
+  // }
   app.appendChild(grid);
 }
 
@@ -276,10 +278,7 @@ async function loadRandomSection(
     cacheKey,
     JSON.stringify({ data: folders, timestamp: now })
   );
-  localStorage.setItem(
-    `randomView::${sourceKey}::1`,
-    JSON.stringify({ data: folders })
-  );
+
 
   renderFolderSlider({
     title,
