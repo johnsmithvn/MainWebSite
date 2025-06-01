@@ -1,20 +1,24 @@
 import { getSourceKey } from "/src/core/storage.js";
 
 /**
- * 🎬 Tạo card phim có icon ❤️ toggle favorite
- * @param {object} item - { name, path, thumbnail, type, isFavorite }
- * @returns {HTMLElement} card
+ * 🎬 Tạo card phim có thumbnail, tiêu đề, loại và toggle favorite
  */
 export function renderMovieCardWithFavorite(item) {
   const card = document.createElement("div");
   card.className = "movie-card";
 
-  // Thumbnail
+  // ✅ Xử lý thumbnail fallback
+  let thumbnailUrl = item.thumbnail;
+  if (!thumbnailUrl || thumbnailUrl === "null") {
+    thumbnailUrl = item.type === "folder"
+      ? "/default/folder-thumb.png"
+      : "/default/video-thumb.png";
+  }
+
   const img = document.createElement("img");
   img.className = "movie-thumb";
-  img.src = item.thumbnail || "/default/video-thumb.png";
+  img.src = thumbnailUrl;
 
-  // Info
   const info = document.createElement("div");
   info.className = "movie-info";
 
@@ -52,7 +56,7 @@ export function renderMovieCardWithFavorite(item) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          dbkey : getSourceKey(),
+          dbkey: getSourceKey(),
           path: item.path,
           value: newVal,
         }),
@@ -64,7 +68,7 @@ export function renderMovieCardWithFavorite(item) {
 
   card.appendChild(favBtn);
 
-  // Click: vào player hoặc vào folder
+  // 📽 Click: vào video hoặc folder
   card.onclick = () => {
     const encoded = encodeURIComponent(item.path);
     const key = getSourceKey();
