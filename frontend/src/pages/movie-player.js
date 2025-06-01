@@ -285,6 +285,7 @@ setupMovieSidebar(); // ✅ render nội dung sidebar (quét, reset DB, v.v.)
 // ⚙️ Double tap để tua 10s
 const SKIP_SECONDS = 10;
 
+// ⚡ Double tap trái/phải để tua đúng 10s
 videoEl.addEventListener("dblclick", (e) => {
   const x = e.clientX;
   const width = videoEl.clientWidth;
@@ -295,5 +296,34 @@ videoEl.addEventListener("dblclick", (e) => {
   } else {
     videoEl.currentTime = Math.min(videoEl.duration, videoEl.currentTime + SKIP_SECONDS);
     showToast(`⏩ Tua ${SKIP_SECONDS}s`);
+  }
+});
+
+// 📱 Vuốt ngang để tua (mobile only)
+let isDragging = false;
+let startX = 0;
+let lastDelta = 0;
+
+videoEl.addEventListener("touchstart", (e) => {
+  if (e.touches.length !== 1) return;
+  isDragging = true;
+  startX = e.touches[0].clientX;
+  lastDelta = 0;
+}, { passive: true });
+
+videoEl.addEventListener("touchmove", (e) => {
+  if (!isDragging || e.touches.length !== 1) return;
+  const deltaX = e.touches[0].clientX - startX;
+  lastDelta = deltaX;
+}, { passive: true });
+
+videoEl.addEventListener("touchend", () => {
+  if (!isDragging) return;
+  isDragging = false;
+
+  const skipSeconds = Math.floor(lastDelta / 10); // 10px = 1s
+  if (skipSeconds !== 0) {
+    videoEl.currentTime = Math.max(0, Math.min(videoEl.duration, videoEl.currentTime + skipSeconds));
+    showToast(`${skipSeconds > 0 ? "⏩" : "⏪"} ${Math.abs(skipSeconds)}s`);
   }
 });
