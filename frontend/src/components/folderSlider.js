@@ -1,6 +1,6 @@
 // 📁 folderSlider.js (Scroll Native version – scroll snap, auto-scroll, hover pause, visibility-aware)
 import { renderFolderCard } from "./folderCard.js";
-import { renderRecentViewed,showRandomUpdatedTime } from "../core/ui.js";
+import { renderRecentViewed, showRandomUpdatedTime } from "../core/ui.js";
 import {
   getRootFolder,
   recentViewedKey,
@@ -119,14 +119,19 @@ export function renderFolderSlider({
     const encoded = encodeURIComponent(f.path);
     const key = getSourceKey();
 
-    card.onclick = () => {
+    card.onclick = (e) => {
+      // ❌ Nếu bấm vào nút ❤️ thì bỏ qua
+      if (e.target.classList.contains("folder-fav")) return;
+
       if (f.type === "video" || f.type === "file") {
         window.location.href = `/movie-player.html?file=${encoded}&key=${key}`;
       } else {
-        if (isMoviePage && typeof window.loadMovieFolder === "function") {
-          window.loadMovieFolder(f.path);
-        } else {
-          window.location.href = `/reader.html?path=${encoded}&key=${key}`;
+        if (isMoviePage) {
+          window.location.href = `/movie-index.html?path=${encoded}&key=${key}`;
+        } else if (f.isSelfReader && f.images) {
+          window.location.href = `/reader.html?path=${encoded}`;
+        } else if (typeof window.loadFolder === "function") {
+          window.loadFolder(f.path);
         }
       }
     };
@@ -224,7 +229,6 @@ export function renderFolderSlider({
   wrapper.addEventListener("mouseleave", startAutoScroll);
 }
 
-
 // 👉 Tạo section nếu thiếu trên trang
 // 👉 Tạo section nếu thiếu nếu chưa có section (movie-player dùng)
 export function setupRandomSectionsIfMissing() {
@@ -240,16 +244,35 @@ export function setupRandomSectionsIfMissing() {
 // 👉 Hàm load 2 slider random (folder + video)
 export function loadRandomSliders() {
   const sourceKey = getSourceKey();
-  loadRandomSection("folder", sourceKey, "randomFolderSection", "🎲 Folder ngẫu nhiên");
-  loadRandomSection("file", sourceKey, "randomVideoSection", "🎲 Video ngẫu nhiên");
+  loadRandomSection(
+    "folder",
+    sourceKey,
+    "randomFolderSection",
+    "🎲 Folder ngẫu nhiên"
+  );
+  loadRandomSection(
+    "file",
+    sourceKey,
+    "randomVideoSection",
+    "🎲 Video ngẫu nhiên"
+  );
 }
 
 // ✅ Hàm riêng gọi API và render
-async function loadRandomSection(type, sourceKey, sectionId, title, force = false) {
+async function loadRandomSection(
+  type,
+  sourceKey,
+  sectionId,
+  title,
+  force = false
+) {
   if (!sourceKey) return;
 
-  const cacheKey = `${type === "file" ? "randomVideos" : "randomFolders"}-${sourceKey}`;
-  const tsId = type === "file" ? "random-timestamp-video" : "random-timestamp-folder";
+  const cacheKey = `${
+    type === "file" ? "randomVideos" : "randomFolders"
+  }-${sourceKey}`;
+  const tsId =
+    type === "file" ? "random-timestamp-video" : "random-timestamp-folder";
 
   if (!force) {
     const raw = localStorage.getItem(cacheKey);
@@ -262,7 +285,8 @@ async function loadRandomSection(type, sourceKey, sectionId, title, force = fals
             title,
             folders: parsed.data,
             targetId: sectionId,
-            onRefresh: () => loadRandomSection(type, sourceKey, sectionId, title, true),
+            onRefresh: () =>
+              loadRandomSection(type, sourceKey, sectionId, title, true),
           });
 
           const el = document.getElementById(tsId);
@@ -274,18 +298,24 @@ async function loadRandomSection(type, sourceKey, sectionId, title, force = fals
   }
 
   try {
-    const res = await fetch(`/api/movie/video-cache?mode=random&type=${type}&key=${sourceKey}`);
+    const res = await fetch(
+      `/api/movie/video-cache?mode=random&type=${type}&key=${sourceKey}`
+    );
     const data = await res.json();
     const folders = Array.isArray(data) ? data : data.folders;
     const now = Date.now();
 
-    localStorage.setItem(cacheKey, JSON.stringify({ data: folders, timestamp: now }));
+    localStorage.setItem(
+      cacheKey,
+      JSON.stringify({ data: folders, timestamp: now })
+    );
 
     renderFolderSlider({
       title,
       folders,
       targetId: sectionId,
-      onRefresh: () => loadRandomSection(type, sourceKey, sectionId, title, true),
+      onRefresh: () =>
+        loadRandomSection(type, sourceKey, sectionId, title, true),
     });
 
     const el = document.getElementById(tsId);

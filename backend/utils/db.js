@@ -63,9 +63,10 @@ const dbMovieMap = {};
 function getMovieDB(dbkey) {
   if (dbMovieMap[dbkey]) return dbMovieMap[dbkey];
   const safeName = dbkey.replace(/[^a-zA-Z0-9_-]/g, "_");
-  // DB riêng cho movie, KHÔNG có root
   const dbPath = path.join(DB_DIR, `${safeName}.db`);
   const db = new Database(dbPath);
+
+  // Tạo bảng nếu chưa có
   db.exec(`
     CREATE TABLE IF NOT EXISTS folders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,8 +82,23 @@ function getMovieDB(dbkey) {
     CREATE INDEX IF NOT EXISTS idx_folders_path ON folders(path);
     CREATE INDEX IF NOT EXISTS idx_folders_favorite ON folders(isFavorite);
   `);
+
+  // ✅ Kiểm tra & thêm cột nếu thiếu
+  const existingCols = db.prepare(`PRAGMA table_info(folders)`).all().map(c => c.name);
+
+  if (!existingCols.includes("size")) {
+    db.prepare(`ALTER TABLE folders ADD COLUMN size INTEGER DEFAULT 0`).run();
+  }
+  if (!existingCols.includes("modified")) {
+    db.prepare(`ALTER TABLE folders ADD COLUMN modified INTEGER`).run();
+  }
+  if (!existingCols.includes("duration")) {
+    db.prepare(`ALTER TABLE folders ADD COLUMN duration INTEGER`).run();
+  }
+
   dbMovieMap[dbkey] = db;
   return db;
 }
+
 
 module.exports = { getDB, getMovieDB };

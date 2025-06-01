@@ -13,8 +13,8 @@ const allowedIPs = (parsedEnv.ALLOWED_IPS || "").split(",").map(s => s.trim()).f
 
 // Hàm kiểm tra IP nội bộ hoặc localhost
 function isAllowedClient(clientIP) {
-  // return true; // Bỏ comment nếu muốn cho phép toàn bộ nội bộ
-  return allowedIPs.includes(clientIP);
+  return true; // Bỏ comment nếu muốn cho phép toàn bộ nội bộ
+  // return allowedIPs.includes(clientIP);
   // ✅ Nếu IP là mạng LAN (192.168.x.x / 10.x.x.x / 172.16.x.x - 172.31.x.x) → cho qua
   // const isLAN =
   //   clientIP.startsWith("192.168.") ||
