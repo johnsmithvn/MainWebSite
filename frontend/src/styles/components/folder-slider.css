@@ -34,15 +34,19 @@
     margin-bottom: 6px;
   }
   
-  .folder-section-title {
-    font-size: 18px;
-    font-weight: bold;
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-  }
-  
+.folder-section-title {
+  font-size: 18px;
+  font-weight: bold;
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
   /* ✨ Khi có thể click (JS đã gán cursor:pointer) */
   .folder-section-title[style*="cursor: pointer"] {
     border: 1px solid transparent;

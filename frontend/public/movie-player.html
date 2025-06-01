@@ -7,12 +7,15 @@
     <link rel="stylesheet" href="/src/styles/base.css" />
     <link rel="stylesheet" href="/src/styles/components/movie-card.css" />
     <link rel="stylesheet" href="/src/styles/components/folder-slider.css" />
+    <link rel="stylesheet" href="/src/styles/pages/player.css" />
+
     <link rel="icon" type="image/png" href="/default/favicon.png" />
   </head>
   <body>
     <header id="site-header" class="site-header">
       <div class="header-left">
         <button class="menu-button" id="sidebarToggle">☰</button>
+        
         <div id="movie-folder-name" class="logo">📁 ...</div>
       </div>
       <div class="header-right">
@@ -37,6 +40,8 @@
 
     <div id="wrapper">
       <div class="main-content">
+        <aside id="sidebar-menu"></aside>
+
         <!-- ✅ Section random -->
         <section
           id="randomFolderSection"
@@ -49,9 +54,20 @@
         <video
           id="video-player"
           controls
-          autoplay
           style="width: 100%; margin-top: 20px"
         ></video>
+        <div id="video-prev-next" class="video-nav">
+          <button id="btn-prev">⬅ Tập trước</button>
+          <div class="random-jump">
+            <button id="btn-random-jump">🎲 Xem ngẫu nhiên</button>
+          </div>
+          <button id="btn-next">Tập sau ➡</button>
+        </div>
+
+        <!-- Thêm dòng này dưới -->
+        <div id="video-episode-list" class="episode-list"></div>
+        <div id="video-name" class="video-name-display"></div>
+
       </div>
     </div>
 

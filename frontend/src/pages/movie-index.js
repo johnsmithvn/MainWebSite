@@ -4,7 +4,7 @@ import { getSourceKey } from "/src/core/storage.js";
 import { renderMovieCardWithFavorite } from "/src/components/movieCard.js";
 
 import {
-  showRandomUpdatedTime,
+  
   filterMovie,
   toggleSearchBar,
   setupMovieSidebar,
@@ -14,7 +14,10 @@ import {
 } from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 import { getMovieCache, setMovieCache } from "/src/core/storage.js";
-import { loadRandomSliders, setupRandomSectionsIfMissing } from "/src/components/folderSlider.js";
+import {
+  loadRandomSliders,
+  setupRandomSectionsIfMissing,
+} from "/src/components/folderSlider.js";
 
 // 👉 Gắn sự kiện UI
 window.addEventListener("DOMContentLoaded", () => {
@@ -66,7 +69,6 @@ function setupDeleteMovieButton() {
     }
   };
 }
-
 
 let moviePage = 0;
 const moviesPerPage = 20;
@@ -128,9 +130,10 @@ function renderMovieGrid(list) {
   if (parts.length === 0) {
     title.textContent = "📂 Danh sách phim";
   } else {
-    title.textContent = "📁 " + parts[parts.length - 1];
+    const folderName = parts[parts.length - 1];
+    title.textContent = "📁 " + folderName;
+    title.title = folderName; // ✅ Tooltip hiện tên đầy đủ
     title.style.cursor = "pointer";
-    title.title = "Quay lại thư mục cha";
     title.onclick = () => {
       const parent = parts.slice(0, -1).join("/");
       loadMovieFolder(parent); // ⬅️ dùng đúng global currentPath
@@ -169,10 +172,6 @@ function renderMovieGrid(list) {
   // }
   app.appendChild(grid);
 }
-
-
-
-
 
 function loadTopVideoSlider() {
   const key = getSourceKey();

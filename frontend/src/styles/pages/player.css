@@ -1,0 +1,88 @@
+/* 🎬 Nút Prev / Next / Random */
+.video-nav {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px auto 12px;
+  padding: 0 8px;
+}
+
+
+.video-nav button,
+.video-nav .random-jump button {
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  min-width: 90px;
+  white-space: nowrap;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.video-nav button:hover:not(:disabled),
+.video-nav .random-jump button:hover {
+  background-color: #f5f5f5;
+  border-color: #888;
+}
+
+.video-nav button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 🎲 Nút xem ngẫu nhiên */
+.random-jump {
+  display: flex;
+  justify-content: center;
+}
+
+/* 🧾 Tên video đầy đủ */
+.video-name-display {
+  margin: 8px auto 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #444;
+  padding: 0 12px;
+  word-break: break-word;
+  max-width: 95%;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+
+/* #️⃣ Danh sách tập */
+.episode-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  margin-bottom: 20px;
+}
+
+.episode-list button {
+  flex: 0 0 auto;
+  min-width: 50px;
+  padding: 6px 10px;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  background: #f9f9f9;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.episode-list button.active {
+  background: #333;
+  color: white;
+  font-weight: bold;
+}
+
+/* # truncte name title */
+#movie-folder-name {
+  max-width: 60vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
