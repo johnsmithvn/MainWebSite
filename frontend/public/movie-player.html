@@ -2,38 +2,61 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Xem phim</title>
-    <style>
-      body {
-        background: #111;
-        color: #fff;
-        margin: 0;
-        padding: 0;
-      }
-      video {
-        width: 100vw;
-        height: 100vh;
-        background: #000;
-      }
-      .back-btn {
-        position: absolute;
-        top: 16px;
-        left: 16px;
-        z-index: 2;
-        font-size: 18px;
-        background: #222;
-        color: #fff;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 8px;
-      }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/src/styles/base.css" />
+    <link rel="stylesheet" href="/src/styles/components/movie-card.css" />
+    <link rel="stylesheet" href="/src/styles/components/folder-slider.css" />
+    <link rel="icon" type="image/png" href="/default/favicon.png" />
   </head>
   <body>
-    <button class="back-btn" onclick="window.history.back()">⬅ Quay lại</button>
-    <video id="video-player" controls autoplay></video>
+    <header id="site-header" class="site-header">
+      <div class="header-left">
+        <button class="menu-button" id="sidebarToggle">☰</button>
+        <div id="movie-folder-name" class="logo">📁 ...</div>
+      </div>
+      <div class="header-right">
+        <button class="icon-button" id="fav-btn">🤍</button>
+        <button class="icon-button" id="searchToggle">🔍</button>
+      </div>
+    </header>
+
+    <div id="floating-search" class="floating-search">
+      <input
+        type="text"
+        id="floatingSearchInput"
+        placeholder="Tìm kiếm video..."
+      />
+      <select id="search-type-select" class="search-type-dropdown">
+        <option value="video">🎬 Chỉ video</option>
+        <option value="folder">📁 Chỉ thư mục</option>
+        <option value="all" selected>🔍 Cả hai</option>
+      </select>
+      <div id="search-dropdown" class="search-dropdown hidden"></div>
+    </div>
+
+    <div id="wrapper">
+      <div class="main-content">
+        <!-- ✅ Section random -->
+        <section
+          id="randomFolderSection"
+          class="folder-slider-section"
+        ></section>
+        <section
+          id="randomVideoSection"
+          class="folder-slider-section"
+        ></section>
+        <video
+          id="video-player"
+          controls
+          autoplay
+          style="width: 100%; margin-top: 20px"
+        ></video>
+      </div>
+    </div>
+
+    <div id="loading-overlay" class="hidden">⏳ Đang tải...</div>
     <script type="module" src="/src/pages/movie-player.js"></script>
+    <script type="module" src="/src/core/ui.js"></script>
   </body>
 </html>

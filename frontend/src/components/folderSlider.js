@@ -1,6 +1,6 @@
 // 📁 folderSlider.js (Scroll Native version – scroll snap, auto-scroll, hover pause, visibility-aware)
 import { renderFolderCard } from "./folderCard.js";
-import { renderRecentViewed } from "../core/ui.js";
+import { renderRecentViewed,showRandomUpdatedTime } from "../core/ui.js";
 import {
   getRootFolder,
   recentViewedKey,
@@ -222,4 +222,75 @@ export function renderFolderSlider({
 
   wrapper.addEventListener("mouseenter", stopAutoScroll);
   wrapper.addEventListener("mouseleave", startAutoScroll);
+}
+
+
+// 👉 Tạo section nếu thiếu trên trang
+// 👉 Tạo section nếu thiếu nếu chưa có section (movie-player dùng)
+export function setupRandomSectionsIfMissing() {
+  ["randomFolderSection", "randomVideoSection"].forEach((id) => {
+    if (!document.getElementById(id)) {
+      const sec = document.createElement("section");
+      sec.id = id;
+      document.body.prepend(sec);
+    }
+  });
+}
+
+// 👉 Hàm load 2 slider random (folder + video)
+export function loadRandomSliders() {
+  const sourceKey = getSourceKey();
+  loadRandomSection("folder", sourceKey, "randomFolderSection", "🎲 Folder ngẫu nhiên");
+  loadRandomSection("file", sourceKey, "randomVideoSection", "🎲 Video ngẫu nhiên");
+}
+
+// ✅ Hàm riêng gọi API và render
+async function loadRandomSection(type, sourceKey, sectionId, title, force = false) {
+  if (!sourceKey) return;
+
+  const cacheKey = `${type === "file" ? "randomVideos" : "randomFolders"}-${sourceKey}`;
+  const tsId = type === "file" ? "random-timestamp-video" : "random-timestamp-folder";
+
+  if (!force) {
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        const expired = Date.now() - parsed.timestamp > 30 * 60 * 1000;
+        if (!expired) {
+          renderFolderSlider({
+            title,
+            folders: parsed.data,
+            targetId: sectionId,
+            onRefresh: () => loadRandomSection(type, sourceKey, sectionId, title, true),
+          });
+
+          const el = document.getElementById(tsId);
+          if (el) showRandomUpdatedTime(parsed.timestamp, tsId); // ✅ sửa timestamp về như manga
+          return;
+        }
+      } catch {}
+    }
+  }
+
+  try {
+    const res = await fetch(`/api/movie/video-cache?mode=random&type=${type}&key=${sourceKey}`);
+    const data = await res.json();
+    const folders = Array.isArray(data) ? data : data.folders;
+    const now = Date.now();
+
+    localStorage.setItem(cacheKey, JSON.stringify({ data: folders, timestamp: now }));
+
+    renderFolderSlider({
+      title,
+      folders,
+      targetId: sectionId,
+      onRefresh: () => loadRandomSection(type, sourceKey, sectionId, title, true),
+    });
+
+    const el = document.getElementById(tsId);
+    if (el) showRandomUpdatedTime(now, tsId);
+  } catch (err) {
+    console.error("❌ Lỗi random slider:", err);
+  }
 }

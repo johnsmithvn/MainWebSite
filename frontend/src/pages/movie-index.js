@@ -14,6 +14,7 @@ import {
 } from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 import { getMovieCache, setMovieCache } from "/src/core/storage.js";
+import { loadRandomSliders, setupRandomSectionsIfMissing } from "/src/components/folderSlider.js";
 
 // 👉 Gắn sự kiện UI
 window.addEventListener("DOMContentLoaded", () => {
@@ -66,16 +67,7 @@ function setupDeleteMovieButton() {
   };
 }
 
-function setupRandomSectionsIfMissing() {
-  ["randomFolderSection", "randomVideoSection"].forEach((id) => {
-    const exist = document.getElementById(id);
-    if (!exist) {
-      const sec = document.createElement("section");
-      sec.id = id;
-      document.body.prepend(sec);
-    }
-  });
-}
+
 let moviePage = 0;
 const moviesPerPage = 20;
 let fullList = []; // danh sách đầy đủ sau khi fetch/cache
@@ -178,126 +170,9 @@ function renderMovieGrid(list) {
   app.appendChild(grid);
 }
 
-// function renderMovieCard(item) {
-//   const card = document.createElement("div");
-//   card.className = "movie-card";
 
-//   const img = document.createElement("img");
-//   img.className = "movie-thumb";
-//   img.src = item.thumbnail || "/default/video-thumb.png";
 
-//   const info = document.createElement("div");
-//   info.className = "movie-info";
 
-//   const title = document.createElement("div");
-//   title.className = "movie-title";
-//   title.textContent = item.name;
-//   card.title = item.name;
-
-//   const sub = document.createElement("div");
-//   sub.className = "movie-sub";
-//   sub.textContent = item.type === "video" ? "🎬 Video file" : "📁 Thư mục";
-
-//   info.appendChild(title);
-//   info.appendChild(sub);
-
-//   card.appendChild(img);
-//   card.appendChild(info);
-
-//   card.onclick = () => {
-//     if (item.type === "video" || item.type === "file") {
-//       window.location.href = `/movie-player.html?file=${encodeURIComponent(
-//         item.path
-//       )}&key=${getSourceKey()}`;
-//     } else {
-//       loadMovieFolder(item.path);
-//     }
-//   };
-
-//   return card;
-// }
-
-function loadRandomSliders() {
-  const sourceKey = getSourceKey();
-  loadRandomSection(
-    "folder",
-    sourceKey,
-    "randomFolderSection",
-    "🎲 Folder ngẫu nhiên",
-    false
-  );
-  loadRandomSection(
-    "file",
-    sourceKey,
-    "randomVideoSection",
-    "🎲 Video ngẫu nhiên",
-    false
-  );
-}
-
-async function loadRandomSection(
-  type,
-  sourceKey,
-  sectionId,
-  title,
-  force = false
-) {
-  if (!sourceKey) {
-    console.warn("⚠️ Không có sourceKey – skip random section");
-    return;
-  }
-
-  const cacheKey = `${
-    type === "file" ? "randomVideos" : "randomFolders"
-  }-${sourceKey}`;
-  const tsId =
-    type === "file" ? "random-timestamp-video" : "random-timestamp-folder";
-
-  if (!force) {
-    const raw = localStorage.getItem(cacheKey);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        const expired = Date.now() - parsed.timestamp > 30 * 60 * 1000;
-        if (!expired) {
-          renderFolderSlider({
-            title,
-            folders: parsed.data,
-            targetId: sectionId,
-            onRefresh: () =>
-              loadRandomSection(type, sourceKey, sectionId, title, true),
-          });
-
-          const el = document.getElementById(tsId);
-          if (el) showRandomUpdatedTime(parsed.timestamp, tsId);
-          return;
-        }
-      } catch {}
-    }
-  }
-
-  const res = await fetch(
-    `/api/movie/video-cache?mode=random&type=${type}&key=${sourceKey}`
-  );
-  const json = await res.json();
-  const folders = Array.isArray(json) ? json : json.folders;
-  const now = Date.now();
-
-  localStorage.setItem(
-    cacheKey,
-    JSON.stringify({ data: folders, timestamp: now })
-  );
-
-  renderFolderSlider({
-    title,
-    folders,
-    targetId: sectionId,
-    onRefresh: () => loadRandomSection(type, sourceKey, sectionId, title, true),
-  });
-
-  const el = document.getElementById(tsId);
-  if (el) showRandomUpdatedTime(now, tsId);
-}
 
 function loadTopVideoSlider() {
   const key = getSourceKey();
