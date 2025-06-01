@@ -55,7 +55,9 @@ function setupDeleteMovieButton() {
 
     const sourceKey = getSourceKey();
     try {
-      await fetch(`/api/movie/reset-movie-db?key=${sourceKey}`, { method: "DELETE" });
+      await fetch(`/api/movie/reset-movie-db?key=${sourceKey}`, {
+        method: "DELETE",
+      });
       showToast("✅ Đã xoá xong DB Movie!");
     } catch (err) {
       showToast("❌ Lỗi khi xoá DB movie!");
@@ -92,9 +94,10 @@ function loadMovieFolder(path = "", page = 0) {
   currentPath = path;
   moviePage = page;
 
+  // ✅ SỬA: dùng path làm cache key
   const cached = getMovieCache(sourceKey, path);
   if (cached && Date.now() - cached.timestamp < 7 * 60 * 60 * 1000) {
-    console.log("⚡ Dùng cache movie folder");
+    console.log("⚡ Dùng cache movie folder:", path); // 🆕 THÊM: debug
     fullList = cached.data || [];
     renderMovieGrid(paginateList(fullList), path);
     updateMoviePaginationUI(moviePage, fullList.length, moviesPerPage);
@@ -109,9 +112,15 @@ function loadMovieFolder(path = "", page = 0) {
     .then((res) => res.json())
     .then((data) => {
       fullList = data.folders || [];
-      setMovieCache(sourceKey, path, fullList);
+
+      setMovieCache(sourceKey, path, fullList); // 🆕 THÊM: cache lại dù là root
+
       renderMovieGrid(paginateList(fullList), path);
       updateMoviePaginationUI(moviePage, fullList.length, moviesPerPage);
+    })
+    .catch((err) => {
+      console.error("❌ Failed to load movie folder:", err);
+      showToast("🚫 Lỗi tải thư mục phim!");
     });
 }
 
@@ -169,44 +178,44 @@ function renderMovieGrid(list) {
   app.appendChild(grid);
 }
 
-function renderMovieCard(item) {
-  const card = document.createElement("div");
-  card.className = "movie-card";
+// function renderMovieCard(item) {
+//   const card = document.createElement("div");
+//   card.className = "movie-card";
 
-  const img = document.createElement("img");
-  img.className = "movie-thumb";
-  img.src = item.thumbnail || "/default/video-thumb.png";
+//   const img = document.createElement("img");
+//   img.className = "movie-thumb";
+//   img.src = item.thumbnail || "/default/video-thumb.png";
 
-  const info = document.createElement("div");
-  info.className = "movie-info";
+//   const info = document.createElement("div");
+//   info.className = "movie-info";
 
-  const title = document.createElement("div");
-  title.className = "movie-title";
-  title.textContent = item.name;
-  card.title = item.name;
+//   const title = document.createElement("div");
+//   title.className = "movie-title";
+//   title.textContent = item.name;
+//   card.title = item.name;
 
-  const sub = document.createElement("div");
-  sub.className = "movie-sub";
-  sub.textContent = item.type === "video" ? "🎬 Video file" : "📁 Thư mục";
+//   const sub = document.createElement("div");
+//   sub.className = "movie-sub";
+//   sub.textContent = item.type === "video" ? "🎬 Video file" : "📁 Thư mục";
 
-  info.appendChild(title);
-  info.appendChild(sub);
+//   info.appendChild(title);
+//   info.appendChild(sub);
 
-  card.appendChild(img);
-  card.appendChild(info);
+//   card.appendChild(img);
+//   card.appendChild(info);
 
-  card.onclick = () => {
-    if (item.type === "video" || item.type === "file") {
-      window.location.href = `/movie-player.html?file=${encodeURIComponent(
-        item.path
-      )}&key=${getSourceKey()}`;
-    } else {
-      loadMovieFolder(item.path);
-    }
-  };
+//   card.onclick = () => {
+//     if (item.type === "video" || item.type === "file") {
+//       window.location.href = `/movie-player.html?file=${encodeURIComponent(
+//         item.path
+//       )}&key=${getSourceKey()}`;
+//     } else {
+//       loadMovieFolder(item.path);
+//     }
+//   };
 
-  return card;
-}
+//   return card;
+// }
 
 function loadRandomSliders() {
   const sourceKey = getSourceKey();
@@ -278,7 +287,6 @@ async function loadRandomSection(
     cacheKey,
     JSON.stringify({ data: folders, timestamp: now })
   );
-
 
   renderFolderSlider({
     title,
