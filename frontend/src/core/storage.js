@@ -68,7 +68,10 @@ export function getFolderCache(sourceKey, rootFolder, path) {
 
   try {
     const parsed = JSON.parse(raw);
-    return parsed.data;
+    return {
+      data: parsed.data,
+      timestamp: parsed.timestamp,
+    };
   } catch {
     localStorage.removeItem(key);
     return null;
@@ -203,7 +206,10 @@ export function getMovieCache(sourceKey, path) {
 
   try {
     const parsed = JSON.parse(raw);
-    return parsed.data;
+    return {
+      data: parsed.data,
+      timestamp: parsed.timestamp,
+    };
   } catch {
     localStorage.removeItem(key);
     return null;
