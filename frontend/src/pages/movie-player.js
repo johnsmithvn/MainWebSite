@@ -280,3 +280,20 @@ document.getElementById("sidebarToggle")?.addEventListener("click", () => {
 });
 
 setupMovieSidebar(); // ✅ render nội dung sidebar (quét, reset DB, v.v.)
+
+
+// ⚙️ Double tap để tua 10s
+const SKIP_SECONDS = 10;
+
+videoEl.addEventListener("dblclick", (e) => {
+  const x = e.clientX;
+  const width = videoEl.clientWidth;
+
+  if (x < width / 2) {
+    videoEl.currentTime = Math.max(0, videoEl.currentTime - SKIP_SECONDS);
+    showToast(`⏪ Lùi ${SKIP_SECONDS}s`);
+  } else {
+    videoEl.currentTime = Math.min(videoEl.duration, videoEl.currentTime + SKIP_SECONDS);
+    showToast(`⏩ Tua ${SKIP_SECONDS}s`);
+  }
+});
