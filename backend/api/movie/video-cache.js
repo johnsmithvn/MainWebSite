@@ -1,8 +1,8 @@
 // 📁 backend/api/video-cache.js – lấy random folder & file video từ DB movie
 const express = require("express");
 const router = express.Router();
-const { getMovieDB } = require("../utils/db");
-const { getRootPath } = require("../utils/config");
+const { getMovieDB } = require("../../utils/db");
+const { getRootPath } = require("../../utils/config");
 
 router.get("/video-cache", async (req, res) => {
   const {

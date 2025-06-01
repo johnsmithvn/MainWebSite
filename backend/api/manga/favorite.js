@@ -1,7 +1,7 @@
 // 📁 backend/api/favorite.js
 const express = require("express");
 const router = express.Router();
-const { getDB } = require("../utils/db");
+const { getDB } = require("../../utils/db");
 
 /**
  * ⭐ Toggle trạng thái yêu thích cho folder

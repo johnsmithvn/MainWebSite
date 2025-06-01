@@ -74,7 +74,7 @@ export function renderFolderCard(folder, showViews = false) {
       // const body = isMovie
       // ? { key: sourceKey, path: folder.path, value: newVal } // 🎬 movie
       // : { dbkey: sourceKey, path: folder.path, value: newVal }; // 📚 manga
-      await fetch(isMovie ? "/api/favorite-movie" : "/api/favorite", {
+      await fetch(isMovie ? "/api/movie/favorite-movie" : "/api/manga/favorite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -152,36 +152,8 @@ export function renderFolderCard(folder, showViews = false) {
 //   }
 // }
 
-function updateFavoriteEverywhere(sourceKey, rootFolder, folderPath, newVal) {
+export function updateFavoriteEverywhere(sourceKey, rootFolder, folderPath, newVal) {
   const isMovie = sourceKey?.startsWith("V_");
-
-  // 📦 Nếu là movie ➜ update movieCache
-  // if (isMovie) {
-  //   const prefix = `movieCache::${sourceKey}::`;
-  //   for (const key in localStorage) {
-  //     if (key.startsWith(prefix)) {
-  //       try {
-  //         const raw = localStorage.getItem(key);
-  //         const parsed = JSON.parse(raw);
-  //         let changed = false;
-  //         if (Array.isArray(parsed.data)) {
-  //           for (const f of parsed.data) {
-  //             if (f.path === folderPath) {
-  //               f.isFavorite = newVal;
-  //               changed = true;
-  //             }
-  //           }
-  //         }
-  //         if (changed) {
-  //           localStorage.setItem(key, JSON.stringify(parsed));
-  //         }
-  //       } catch (err) {
-  //         console.warn("❌ Không thể update movieCache:", err);
-  //       }
-  //     }
-  //   }
-  //   return;
-  // }
 
   // 📁 folderCard.js – trong updateFavoriteEverywhere()
 

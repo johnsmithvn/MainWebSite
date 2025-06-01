@@ -30,7 +30,7 @@ export async function filterManga() {
 
   try {
     const res = await fetch(
-      `/api/folder-cache?mode=search&key=${encodeURIComponent(
+      `/api/manga/folder-cache?mode=search&key=${encodeURIComponent(
         sourceKey
       )}&root=${encodeURIComponent(rootFolder)}&q=${encodeURIComponent(
         keyword
@@ -92,7 +92,7 @@ export async function filterMovie() {
 
   try {
     const res = await fetch(
-      `/api/video-cache?mode=search&key=${encodeURIComponent(
+      `/api/movie/video-cache?mode=search&key=${encodeURIComponent(
         sourceKey
       )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}`
     );
@@ -315,7 +315,7 @@ export function setupSidebar() {
 
       try {
         const res = await fetch(
-          `/api/reset-cache?root=${encodeURIComponent(
+          `/api/manga/reset-cache?root=${encodeURIComponent(
             root
           )}&key=${encodeURIComponent(sourceKey)}&mode=delete`,
           { method: "DELETE" }
@@ -341,7 +341,7 @@ export function setupSidebar() {
 
       try {
         const res = await fetch(
-          `/api/reset-cache?root=${encodeURIComponent(
+          `/api/manga/reset-cache?root=${encodeURIComponent(
             root
           )}&key=${encodeURIComponent(sourceKey)}&mode=reset`,
           { method: "DELETE" }
@@ -368,7 +368,7 @@ export function setupSidebar() {
       if (!ok) return;
 
       try {
-        const res = await fetch("/api/scan", {
+        const res = await fetch("/api/manga/scan", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ root: root, key: sourceKey }),
@@ -534,7 +534,7 @@ export function setupMovieSidebar() {
       if (!ok) return;
 
       try {
-        const res = await fetch(`/api/reset-movie-db?key=${sourceKey}`, {
+        const res = await fetch(`/api/movie/reset-cache-movie?key=${sourceKey}&mode=delete`, {
           method: "DELETE",
         });
         const data = await res.json();
@@ -542,6 +542,53 @@ export function setupMovieSidebar() {
         window.location.reload();
       } catch (err) {
         showToast("❌ Lỗi khi gọi API xoá DB Movie");
+        console.error(err);
+      }
+    })
+  );
+
+    // 🗑 Xoá DB Movie
+  sidebar.appendChild(
+    createSidebarButton("🗑 Reset DB Movie (xóa và scan)", async () => {
+      const ok = await showConfirm("Bạn có chắc muốn xoá toàn bộ DB Movie?", {
+        loading: true,
+      });
+      if (!ok) return;
+
+      try {
+        const res = await fetch(`/api/movie/reset-cache-movie?key=${sourceKey}&mode=reset`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        showToast(data.message || "✅ Đã xoá DB Movie");
+        window.location.reload();
+      } catch (err) {
+        showToast("❌ Lỗi khi gọi API xoá DB Movie");
+        console.error(err);
+      }
+    })
+  );
+
+
+  sidebar.appendChild(
+    createSidebarButton("📦 Quét thư mục mới", async () => {
+      const ok = await showConfirm("Quét folder mới (không xoá DB)?", {
+        loading: true,
+      });
+      if (!ok) return;
+
+      try {
+        const res = await fetch("/api/movie/scan-movie", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({key : sourceKey}),
+        });
+        const data = await res.json();
+        showToast(
+          `✅ Scan xong:\nInserted ${data.stats.inserted}, Updated ${data.stats.updated}, Skipped ${data.stats.skipped}`
+        );
+      } catch (err) {
+        showToast("❌ Lỗi khi quét folder");
         console.error(err);
       }
     })

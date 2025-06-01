@@ -4,7 +4,7 @@ import { getSourceKey } from "/src/core/storage.js";
 import { renderMovieCardWithFavorite } from "/src/components/movieCard.js";
 
 import {
-  showRandomUpdatedTime,
+  
   filterMovie,
   toggleSearchBar,
   setupMovieSidebar,
@@ -14,6 +14,10 @@ import {
 } from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 import { getMovieCache, setMovieCache } from "/src/core/storage.js";
+import {
+  loadRandomSliders,
+  setupRandomSectionsIfMissing,
+} from "/src/components/folderSlider.js";
 
 // 👉 Gắn sự kiện UI
 window.addEventListener("DOMContentLoaded", () => {
@@ -55,7 +59,9 @@ function setupDeleteMovieButton() {
 
     const sourceKey = getSourceKey();
     try {
-      await fetch(`/api/reset-movie-db?key=${sourceKey}`, { method: "DELETE" });
+      await fetch(`/api/movie/reset-movie-db?key=${sourceKey}`, {
+        method: "DELETE",
+      });
       showToast("✅ Đã xoá xong DB Movie!");
     } catch (err) {
       showToast("❌ Lỗi khi xoá DB movie!");
@@ -64,16 +70,6 @@ function setupDeleteMovieButton() {
   };
 }
 
-function setupRandomSectionsIfMissing() {
-  ["randomFolderSection", "randomVideoSection"].forEach((id) => {
-    const exist = document.getElementById(id);
-    if (!exist) {
-      const sec = document.createElement("section");
-      sec.id = id;
-      document.body.prepend(sec);
-    }
-  });
-}
 let moviePage = 0;
 const moviesPerPage = 20;
 let fullList = []; // danh sách đầy đủ sau khi fetch/cache
@@ -92,9 +88,10 @@ function loadMovieFolder(path = "", page = 0) {
   currentPath = path;
   moviePage = page;
 
+  // ✅ SỬA: dùng path làm cache key
   const cached = getMovieCache(sourceKey, path);
   if (cached && Date.now() - cached.timestamp < 7 * 60 * 60 * 1000) {
-    console.log("⚡ Dùng cache movie folder");
+    console.log("⚡ Dùng cache movie folder:", path); // 🆕 THÊM: debug
     fullList = cached.data || [];
     renderMovieGrid(paginateList(fullList), path);
     updateMoviePaginationUI(moviePage, fullList.length, moviesPerPage);
@@ -105,13 +102,19 @@ function loadMovieFolder(path = "", page = 0) {
   params.set("key", sourceKey);
   if (path) params.set("path", path);
 
-  fetch("/api/movie-folder?" + params.toString())
+  fetch("/api/movie/movie-folder?" + params.toString())
     .then((res) => res.json())
     .then((data) => {
       fullList = data.folders || [];
-      setMovieCache(sourceKey, path, fullList);
+
+      setMovieCache(sourceKey, path, fullList); // 🆕 THÊM: cache lại dù là root
+
       renderMovieGrid(paginateList(fullList), path);
       updateMoviePaginationUI(moviePage, fullList.length, moviesPerPage);
+    })
+    .catch((err) => {
+      console.error("❌ Failed to load movie folder:", err);
+      showToast("🚫 Lỗi tải thư mục phim!");
     });
 }
 
@@ -127,9 +130,10 @@ function renderMovieGrid(list) {
   if (parts.length === 0) {
     title.textContent = "📂 Danh sách phim";
   } else {
-    title.textContent = "📁 " + parts[parts.length - 1];
+    const folderName = parts[parts.length - 1];
+    title.textContent = "📁 " + folderName;
+    title.title = folderName; // ✅ Tooltip hiện tên đầy đủ
     title.style.cursor = "pointer";
-    title.title = "Quay lại thư mục cha";
     title.onclick = () => {
       const parent = parts.slice(0, -1).join("/");
       loadMovieFolder(parent); // ⬅️ dùng đúng global currentPath
@@ -169,133 +173,11 @@ function renderMovieGrid(list) {
   app.appendChild(grid);
 }
 
-function renderMovieCard(item) {
-  const card = document.createElement("div");
-  card.className = "movie-card";
-
-  const img = document.createElement("img");
-  img.className = "movie-thumb";
-  img.src = item.thumbnail || "/default/video-thumb.png";
-
-  const info = document.createElement("div");
-  info.className = "movie-info";
-
-  const title = document.createElement("div");
-  title.className = "movie-title";
-  title.textContent = item.name;
-  card.title = item.name;
-
-  const sub = document.createElement("div");
-  sub.className = "movie-sub";
-  sub.textContent = item.type === "video" ? "🎬 Video file" : "📁 Thư mục";
-
-  info.appendChild(title);
-  info.appendChild(sub);
-
-  card.appendChild(img);
-  card.appendChild(info);
-
-  card.onclick = () => {
-    if (item.type === "video" || item.type === "file") {
-      window.location.href = `/movie-player.html?file=${encodeURIComponent(
-        item.path
-      )}&key=${getSourceKey()}`;
-    } else {
-      loadMovieFolder(item.path);
-    }
-  };
-
-  return card;
-}
-
-function loadRandomSliders() {
-  const sourceKey = getSourceKey();
-  loadRandomSection(
-    "folder",
-    sourceKey,
-    "randomFolderSection",
-    "🎲 Folder ngẫu nhiên",
-    false
-  );
-  loadRandomSection(
-    "file",
-    sourceKey,
-    "randomVideoSection",
-    "🎲 Video ngẫu nhiên",
-    false
-  );
-}
-
-async function loadRandomSection(
-  type,
-  sourceKey,
-  sectionId,
-  title,
-  force = false
-) {
-  if (!sourceKey) {
-    console.warn("⚠️ Không có sourceKey – skip random section");
-    return;
-  }
-
-  const cacheKey = `${
-    type === "file" ? "randomVideos" : "randomFolders"
-  }-${sourceKey}`;
-  const tsId =
-    type === "file" ? "random-timestamp-video" : "random-timestamp-folder";
-
-  if (!force) {
-    const raw = localStorage.getItem(cacheKey);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        const expired = Date.now() - parsed.timestamp > 30 * 60 * 1000;
-        if (!expired) {
-          renderFolderSlider({
-            title,
-            folders: parsed.data,
-            targetId: sectionId,
-            onRefresh: () =>
-              loadRandomSection(type, sourceKey, sectionId, title, true),
-          });
-
-          const el = document.getElementById(tsId);
-          if (el) showRandomUpdatedTime(parsed.timestamp, tsId);
-          return;
-        }
-      } catch {}
-    }
-  }
-
-  const res = await fetch(
-    `/api/video-cache?mode=random&type=${type}&key=${sourceKey}`
-  );
-  const json = await res.json();
-  const folders = Array.isArray(json) ? json : json.folders;
-  const now = Date.now();
-
-  localStorage.setItem(
-    cacheKey,
-    JSON.stringify({ data: folders, timestamp: now })
-  );
-
-
-  renderFolderSlider({
-    title,
-    folders,
-    targetId: sectionId,
-    onRefresh: () => loadRandomSection(type, sourceKey, sectionId, title, true),
-  });
-
-  const el = document.getElementById(tsId);
-  if (el) showRandomUpdatedTime(now, tsId);
-}
-
 function loadTopVideoSlider() {
   const key = getSourceKey();
   if (!key) return;
 
-  fetch(`/api/video-cache?key=${key}&mode=top`)
+  fetch(`/api/movie/video-cache?key=${key}&mode=top`)
     .then((res) => res.json())
     .then((data) => {
       renderFolderSlider({

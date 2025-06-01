@@ -88,7 +88,7 @@ async function loadRandomBanner(sourceKey, rootFolder) {
   }
 
   if (!listRandom) {
-    const res = await fetch(`/api/folder-cache?mode=random&key=${encodeURIComponent(sourceKey)}&root=${encodeURIComponent(rootFolder)}`);
+    const res = await fetch(`/api/manga/folder-cache?mode=random&key=${encodeURIComponent(sourceKey)}&root=${encodeURIComponent(rootFolder)}`);
     listRandom = await res.json();
     localStorage.setItem(randomKey, JSON.stringify({ data: listRandom, time: Date.now() }));
   }
@@ -106,7 +106,7 @@ async function loadRandomBanner(sourceKey, rootFolder) {
 
 async function loadTopView(sourceKey, rootFolder) {
   try {
-    const res = await fetch(`/api/folder-cache?mode=top&key=${encodeURIComponent(sourceKey)}&root=${encodeURIComponent(rootFolder)}`);
+    const res = await fetch(`/api/manga/folder-cache?mode=top&key=${encodeURIComponent(sourceKey)}&root=${encodeURIComponent(rootFolder)}`);
     const listTop = await res.json();
     if (Array.isArray(listTop)) {
       renderTopView(listTop);
@@ -131,7 +131,7 @@ async function resetCache() {
   if (!confirm(`Reset cache cho '${root}'?`)) return;
 
   try {
-    const res = await fetch(`/api/reset-cache?root=${encodeURIComponent(root)}`, {
+    const res = await fetch(`/api/manga/reset-cache?root=${encodeURIComponent(root)}`, {
       method: "DELETE",
     });
     const json = await res.json();

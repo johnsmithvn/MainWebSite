@@ -1,9 +1,9 @@
-// 📁 backend/api/folder-cache.js
+// 📁 backend/api/manga/folder-cache.js
 const express = require("express");
 const router = express.Router();
 // ✅ Dùng DB dynamic theo dbkey
-const { getDB } = require("../utils/db");
-const { getRootPath } = require("../utils/config");
+const { getDB } = require("../../utils/db");
+const { getRootPath } = require("../../utils/config");
 /**
  * 📦 API duy nhất để xử lý các loại folder cache
  * mode = path | random | top | search | folders
@@ -62,7 +62,7 @@ router.get("/folder-cache", async (req, res) => {
     }
     if (mode === "path") {
       // Lấy folder hoặc reader theo path
-      const { loadFolderFromDisk } = require("../utils/folder-loader");
+      const { loadFolderFromDisk } = require("../../utils/folder-loader");
       let realPath = folderPath;
       let isSelf = false;
       if (folderPath.endsWith("/__self__")) {

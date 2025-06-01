@@ -88,7 +88,7 @@ async function loadFavorites() {
 
   try {
     const res = await fetch(
-      `/api/favorite?key=${encodeURIComponent(key)}&root=${encodeURIComponent(
+      `/api/manga/favorite?key=${encodeURIComponent(key)}&root=${encodeURIComponent(
         root
       )}`
     );

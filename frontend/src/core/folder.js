@@ -42,7 +42,7 @@ export function loadFolder(path = "", page = 0) {
   }
 
   fetch(
-    `/api/folder-cache?mode=path&key=${encodeURIComponent(
+    `/api/manga/folder-cache?mode=path&key=${encodeURIComponent(
       sourceKey
     )}&root=${encodeURIComponent(rootFolder)}&path=${encodeURIComponent(path)}`
   )

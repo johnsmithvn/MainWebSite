@@ -1,9 +1,9 @@
 // 📁 backend/api/reset-cache.js
 const express = require("express");
 const router = express.Router();
-const { getRootPath } = require("../utils/config");
-const { scanFolderRecursive } = require("../utils/cache-scan");
-const { getDB } = require("../utils/db");
+const { getRootPath } = require("../../utils/config");
+const { scanFolderRecursive } = require("../../utils/cache-scan");
+const { getDB } = require("../../utils/db");
 
 /**
  * 🔁 Xử lý theo mode:
