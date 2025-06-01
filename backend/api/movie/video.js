@@ -1,72 +1,96 @@
-// 📁 backend/api/video.js
+// 📁 backend/api/movie/video.js
 
 const express = require("express");
 const router = express.Router();
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 const { getRootPath } = require("../../utils/config");
+const { LRUCache } = require("lru-cache");
 
-/**
- * API stream video theo key và file path
- * Ví dụ: /api/video/V_MOVIE/folder1/abc.mp4
- * 
- * - :key = mã nguồn (V_MOVIE, ...)
- * - :filePath = đường dẫn file video trong root (dùng req.params[0] lấy path động)
- */
+
+// 🧠 Tính toán RAM khả dụng
+const totalRAM = os.totalmem(); // đơn vị byte
+const usableRAM = totalRAM * 0.5; // dùng 50% RAM
+const maxVideoCount = 5; // tối đa cache 5 video một lúc
+const MAX_VIDEO_SIZE = usableRAM / maxVideoCount; // ~3.2GB nếu RAM 32GB
+
+// 🧠 RAM cache: giữ 5 video gần nhất
+const videoCache = new LRUCache({
+  maxSize: usableRAM, // tối đa dùng 50% RAM máy
+  sizeCalculation: (val, key) => val.length, // độ lớn buffer
+  ttl: 1000 * 60 * 60, // giữ 1 tiếng
+});
 router.get("/video", (req, res) => {
   const key = req.query.key;
   const relPath = req.query.file;
-  // Lấy path gốc từ .env
   const rootPath = getRootPath(key);
-  if (!rootPath) {
-    return res.status(400).json({ error: "Key không hợp lệ" });
+  if (!key || !relPath || !rootPath) {
+    return res.status(400).json({ error: "Thiếu key hoặc file" });
   }
 
-  // Lấy file path động (phần còn lại sau key)
-  if (!relPath) {
-    return res.status(400).json({ error: "Thiếu file path" });
-  }
-
-  // Ghép full path tuyệt đối tới file video
   const absPath = path.join(rootPath, relPath);
-
-  // Kiểm tra file tồn tại không
   if (!fs.existsSync(absPath)) {
-    return res.status(404).json({ error: "Không tìm thấy file video" });
+    return res.status(404).json({ error: "Không tìm thấy video" });
   }
 
-  // Lấy thông tin file
   const stat = fs.statSync(absPath);
   const fileSize = stat.size;
   const range = req.headers.range;
+  const ext = path.extname(absPath).toLowerCase();
 
-  // Xác định mime-type dựa vào ext (tối giản: mp4)
+  // MIME type
   let mime = "video/mp4";
-  if (absPath.endsWith(".mkv")) mime = "video/x-matroska";
-  else if (absPath.endsWith(".webm")) mime = "video/webm";
-  else if (absPath.endsWith(".avi")) mime = "video/x-msvideo";
+  if (ext === ".mkv") mime = "video/x-matroska";
+  else if (ext === ".webm") mime = "video/webm";
+  else if (ext === ".avi") mime = "video/x-msvideo";
 
-  // Nếu có header Range => stream theo đoạn (hỗ trợ tua)
+  // Header stream chuẩn
+  res.setHeader("Accept-Ranges", "bytes");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Last-Modified", stat.mtime.toUTCString());
+  res.setHeader("Content-Type", mime);
+  res.setHeader("X-Content-Type-Options", "nosniff");
+
+  // 🧠 Load RAM nếu đủ điều kiện
+  let buffer = null;
+  const useRAM = fileSize <= MAX_VIDEO_SIZE;
+
+  if (useRAM) {
+    buffer = videoCache.get(absPath);
+    if (!buffer) {
+      // console.log("📥 Load vào RAM:", relPath);
+      buffer = fs.readFileSync(absPath);
+      videoCache.set(absPath, buffer);
+    }
+  }
+
   if (range) {
     const parts = range.replace(/bytes=/, "").split("-");
     const start = parseInt(parts[0], 10);
     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    const chunkSize = (end - start) + 1;
-    const file = fs.createReadStream(absPath, { start, end });
-    res.writeHead(206, {
-      "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-      "Accept-Ranges": "bytes",
-      "Content-Length": chunkSize,
-      "Content-Type": mime
-    });
-    file.pipe(res);
+    const chunkSize = end - start + 1;
+
+    if (start >= fileSize || end >= fileSize) {
+      return res.status(416).send("Range Not Satisfiable");
+    }
+
+    res.status(206).setHeader("Content-Range", `bytes ${start}-${end}/${fileSize}`);
+    res.setHeader("Content-Length", chunkSize);
+
+    if (buffer) {
+      return res.end(buffer.slice(start, end + 1));
+    } else {
+      return fs.createReadStream(absPath, { start, end }).pipe(res);
+    }
+  }
+
+  // Không có Range → stream toàn bộ
+  res.status(200).setHeader("Content-Length", fileSize);
+  if (buffer) {
+    return res.end(buffer);
   } else {
-    // Không có range, stream cả file
-    res.writeHead(200, {
-      "Content-Length": fileSize,
-      "Content-Type": mime
-    });
-    fs.createReadStream(absPath).pipe(res);
+    return fs.createReadStream(absPath).pipe(res);
   }
 });
 
