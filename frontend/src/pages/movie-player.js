@@ -327,3 +327,14 @@ videoEl.addEventListener("touchend", () => {
     showToast(`${skipSeconds > 0 ? "⏩" : "⏪"} ${Math.abs(skipSeconds)}s`);
   }
 });
+
+
+// 👉 Nút "Mở bằng ExoPlayer" (nếu app hỗ trợ)
+document.getElementById("btn-open-exoplayer")?.addEventListener("click", () => {
+  const videoUrl = `${location.origin}/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(file)}`;
+  if (window.Android?.openExoPlayer) {
+    window.Android.openExoPlayer(videoUrl);
+  } else {
+    showToast("❌ Ứng dụng không hỗ trợ ExoPlayer");
+  }
+});

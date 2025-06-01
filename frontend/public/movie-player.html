@@ -15,7 +15,7 @@
     <header id="site-header" class="site-header">
       <div class="header-left">
         <button class="menu-button" id="sidebarToggle">☰</button>
-        
+
         <div id="movie-folder-name" class="logo">📁 ...</div>
       </div>
       <div class="header-right">
@@ -42,15 +42,11 @@
       <div class="main-content">
         <aside id="sidebar-menu"></aside>
 
-        <!-- ✅ Section random -->
-        <section
-          id="randomFolderSection"
-          class="folder-slider-section"
-        ></section>
-        <section
-          id="randomVideoSection"
-          class="folder-slider-section"
-        ></section>
+        <div id="video-name" class="video-name-display"></div>
+        <!-- ✅ Thêm nút mở bằng ExoPlayer -->
+        <div class="open-exoplayer-wrapper">
+          <button id="btn-open-exoplayer">▶ Mở bằng ExoPlayer</button>
+        </div>
         <video
           id="video-player"
           controls
@@ -66,8 +62,15 @@
 
         <!-- Thêm dòng này dưới -->
         <div id="video-episode-list" class="episode-list"></div>
-        <div id="video-name" class="video-name-display"></div>
-
+        <!-- ✅ Section random -->
+        <section
+          id="randomFolderSection"
+          class="folder-slider-section"
+        ></section>
+        <section
+          id="randomVideoSection"
+          class="folder-slider-section"
+        ></section>
       </div>
     </div>
 
