@@ -88,6 +88,18 @@ export function setFolderCache(sourceKey, rootFolder, path, data) {
     showToast(msg);
     return;
   }
+
+  // ✅ Nếu data không có folder hoặc ảnh thì bỏ qua
+  if (
+    !data ||
+    (Array.isArray(data.folders) &&
+      data.folders.length === 0 &&
+      Array.isArray(data.images) &&
+      data.images.length === 0)
+  ) {
+    console.warn("⚠️ Dữ liệu rỗng, không lưu cache:", path);
+    return;
+  }
   const key = getFolderCacheKey(sourceKey, rootFolder, path);
 
   const jsonData = JSON.stringify({
@@ -221,6 +233,11 @@ export function setMovieCache(sourceKey, path, data) {
     const msg = `⚠️ Không cache được do thiếu thông tin: sourceKey = ${sourceKey}`;
     console.warn(msg);
     showToast(msg);
+    return;
+  }
+  // ✅ Kiểm tra data không hợp lệ
+  if (!data || (Array.isArray(data) && data.length === 0)) {
+    console.warn("⚠️ Movie data rỗng, không lưu cache:", path);
     return;
   }
   const key = getMovieCacheKey(sourceKey, path);
