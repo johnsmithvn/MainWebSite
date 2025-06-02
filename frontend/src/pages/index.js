@@ -146,3 +146,10 @@ async function resetCache() {
     console.error(err);
   }
 }
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) {
+    // ✅ Trường hợp back từ reader → reload dữ liệu
+    const path = new URLSearchParams(window.location.search).get("path") || "";
+    window.loadFolder?.(path);
+  }
+});

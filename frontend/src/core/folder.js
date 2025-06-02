@@ -35,8 +35,8 @@ export function loadFolder(path = "", page = 0) {
   if (readerBtn) readerBtn.remove();
 
   const cached = getFolderCache(sourceKey, rootFolder, path);
-  if (cached) {
-    renderFromData(cached);
+  if (cached && cached.data) {
+    renderFromData(cached.data);
     document.getElementById("loading-overlay")?.classList.add("hidden");
     return;
   }

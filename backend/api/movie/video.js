@@ -8,23 +8,24 @@ const os = require("os");
 const { getRootPath } = require("../../utils/config");
 const { LRUCache } = require("lru-cache");
 
-
 // 🧠 Tính toán RAM khả dụng
-const totalRAM = os.totalmem(); // đơn vị byte
-const usableRAM = totalRAM * 0.5; // dùng 50% RAM
-const maxVideoCount = 5; // tối đa cache 5 video một lúc
+const totalRAM = os.totalmem(); // byte
+const usableRAM = totalRAM * 0.5; // dùng 50%
+const maxVideoCount = 5; // tối đa 5 video RAM
 const MAX_VIDEO_SIZE = usableRAM / maxVideoCount; // ~3.2GB nếu RAM 32GB
 
-// 🧠 RAM cache: giữ 5 video gần nhất
+// 🧠 RAM cache video
 const videoCache = new LRUCache({
-  maxSize: usableRAM, // tối đa dùng 50% RAM máy
-  sizeCalculation: (val, key) => val.length, // độ lớn buffer
-  ttl: 1000 * 60 * 60, // giữ 1 tiếng
+  maxSize: usableRAM,
+  sizeCalculation: (val, key) => val?.length || 0, // Tránh lỗi nếu val null
+  ttl: 1000 * 60 * 60, // 1 tiếng
 });
+
 router.get("/video", (req, res) => {
   const key = req.query.key;
   const relPath = req.query.file;
   const rootPath = getRootPath(key);
+
   if (!key || !relPath || !rootPath) {
     return res.status(400).json({ error: "Thiếu key hoặc file" });
   }
@@ -39,7 +40,7 @@ router.get("/video", (req, res) => {
   const range = req.headers.range;
   const ext = path.extname(absPath).toLowerCase();
 
-  // MIME type
+  // MIME
   let mime = "video/mp4";
   if (ext === ".mkv") mime = "video/x-matroska";
   else if (ext === ".webm") mime = "video/webm";
@@ -52,16 +53,22 @@ router.get("/video", (req, res) => {
   res.setHeader("Content-Type", mime);
   res.setHeader("X-Content-Type-Options", "nosniff");
 
-  // 🧠 Load RAM nếu đủ điều kiện
+  // 🧠 Nếu đủ nhỏ → cache RAM
   let buffer = null;
-  const useRAM = fileSize <= MAX_VIDEO_SIZE;
+  const useRAM = fileSize <= MAX_VIDEO_SIZE && fileSize < 2 * 1024 * 1024 * 1024; // < 2GB
 
   if (useRAM) {
     buffer = videoCache.get(absPath);
     if (!buffer) {
-      // console.log("📥 Load vào RAM:", relPath);
-      buffer = fs.readFileSync(absPath);
-      videoCache.set(absPath, buffer);
+      try {
+        buffer = fs.readFileSync(absPath);
+        if (buffer) {
+          videoCache.set(absPath, buffer);
+        }
+      } catch (err) {
+        console.warn("⚠️ File quá lớn, không cache RAM:", absPath);
+        buffer = null;
+      }
     }
   }
 
@@ -85,7 +92,7 @@ router.get("/video", (req, res) => {
     }
   }
 
-  // Không có Range → stream toàn bộ
+  // Nếu không có range: stream toàn bộ
   res.status(200).setHeader("Content-Length", fileSize);
   if (buffer) {
     return res.end(buffer);

@@ -51,7 +51,11 @@ export function renderReader(
     fetch("/api/increase-view", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path: path, dbkey: sourceKey, rootKey: rootFolder }),
+      body: JSON.stringify({
+        path: path,
+        dbkey: sourceKey,
+        rootKey: rootFolder,
+      }),
     });
   }
   //
@@ -187,22 +191,26 @@ function moveChapter(direction = "next") {
   path = path.replace(/\/__self__$/, "");
 
   if (!key || !root || !path) {
-    showToast("❌ Thiếu key, root hoặc path!");
+    alert("❌ Thiếu key, root hoặc path!");
     return;
   }
 
+
+
   fetch(
-    `/api/next-chapter?key=${encodeURIComponent(key)}&root=${encodeURIComponent(
+    `/api/manga/next-chapter?key=${encodeURIComponent(key)}&root=${encodeURIComponent(
       root
     )}&path=${encodeURIComponent(path)}&dir=${direction}`
   )
     .then((res) => res.json())
     .then((data) => {
       if (!data.path) {
-        showToast(
+        alert(
           direction === "next" ? "🚫 Hết chương!" : "🚫 Đây là chương đầu!"
         );
         return;
+
+
       }
 
       fetch(
@@ -227,7 +235,7 @@ function moveChapter(direction = "next") {
               const parentPath = parts.slice(0, -1).join("/");
               loadFolder(parentPath);
             } else {
-              showToast("❌ Không còn folder cha!");
+              alert("❌ Không còn folder cha!");
             }
             return;
           }
@@ -261,7 +269,7 @@ function moveChapter(direction = "next") {
     })
     .catch((err) => {
       console.error("❌ Lỗi chuyển chương:", err);
-      showToast("❌ Lỗi kết nối server");
+      alert("❌ Lỗi kết nối server");
     });
 }
 
