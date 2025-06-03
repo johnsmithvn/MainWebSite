@@ -299,35 +299,57 @@ videoEl.addEventListener("dblclick", (e) => {
   }
 });
 
-// 📱 Vuốt ngang để tua (mobile only)
-let isDragging = false;
-let startX = 0;
-let lastDelta = 0;
+// 🎯 Gắn gesture cho video
+const hammer = new Hammer(videoEl);
+hammer.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL });
 
-videoEl.addEventListener("touchstart", (e) => {
-  if (e.touches.length !== 1) return;
-  isDragging = true;
-  startX = e.touches[0].clientX;
-  lastDelta = 0;
-}, { passive: true });
+let panDeltaX = 0;
 
-videoEl.addEventListener("touchmove", (e) => {
-  if (!isDragging || e.touches.length !== 1) return;
-  const deltaX = e.touches[0].clientX - startX;
-  lastDelta = deltaX;
-}, { passive: true });
+hammer.on("pan", (ev) => {
+  panDeltaX = ev.deltaX;
 
-videoEl.addEventListener("touchend", () => {
-  if (!isDragging) return;
-  isDragging = false;
-
-  const skipSeconds = Math.floor(lastDelta / 10); // 10px = 1s
-  if (skipSeconds !== 0) {
-    videoEl.currentTime = Math.max(0, Math.min(videoEl.duration, videoEl.currentTime + skipSeconds));
-    showToast(`${skipSeconds > 0 ? "⏩" : "⏪"} ${Math.abs(skipSeconds)}s`);
-  }
+  // 👉 Optional: hiệu ứng preview hoặc bar (nếu bạn muốn)
 });
 
+hammer.on("panend", () => {
+  const skipSeconds = Math.floor(panDeltaX / 10); // 10px = 1s
+  if (skipSeconds !== 0) {
+    videoEl.currentTime = Math.max(
+      0,
+      Math.min(videoEl.duration, videoEl.currentTime + skipSeconds)
+    );
+    showToast(`${skipSeconds > 0 ? "⏩" : "⏪"} ${Math.abs(skipSeconds)}s`);
+  }
+  panDeltaX = 0;
+});
+// // 📱 Vuốt ngang để tua (mobile only)
+// let isDragging = false;
+// let startX = 0;
+// let lastDelta = 0;
+
+// videoEl.addEventListener("touchstart", (e) => {
+//   if (e.touches.length !== 1) return;
+//   isDragging = true;
+//   startX = e.touches[0].clientX;
+//   lastDelta = 0;
+// }, { passive: true });
+
+// videoEl.addEventListener("touchmove", (e) => {
+//   if (!isDragging || e.touches.length !== 1) return;
+//   const deltaX = e.touches[0].clientX - startX;
+//   lastDelta = deltaX;
+// }, { passive: true });
+
+// videoEl.addEventListener("touchend", () => {
+//   if (!isDragging) return;
+//   isDragging = false;
+
+//   const skipSeconds = Math.floor(lastDelta / 10); // 10px = 1s
+//   if (skipSeconds !== 0) {
+//     videoEl.currentTime = Math.max(0, Math.min(videoEl.duration, videoEl.currentTime + skipSeconds));
+//     showToast(`${skipSeconds > 0 ? "⏩" : "⏪"} ${Math.abs(skipSeconds)}s`);
+//   }
+// });
 
 // 👉 Nút "Mở bằng ExoPlayer" (nếu app hỗ trợ)
 document.getElementById("btn-open-exoplayer")?.addEventListener("click", () => {
