@@ -275,9 +275,16 @@ export function renderTopView(folders) {
 
 /** 🧠 Danh sách truy cập gần đây – hiển thị bên phải, vuốt được */
 export function renderRecentViewed(folders = []) {
+  const isMoviePage = window.location.pathname.includes("movie");
+
+  const filtered = isMoviePage
+    ? folders.filter(f => f.type === "video" || f.type === "file")
+    : folders.filter(f => !f.type || (f.type !== "video" && f.type !== "file"));
+
   renderFolderSlider({
-    title: "🕘 Mới đọc",
-    folders,
+    title: isMoviePage ? "🕓 Vừa xem" : "🕘 Mới đọc",
+    folders: filtered,
+    targetId: "section-recent",
   });
 }
 

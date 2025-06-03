@@ -2,6 +2,7 @@ import {} from "/src/components/folderCard.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
 import { getSourceKey } from "/src/core/storage.js";
 import { renderMovieCardWithFavorite } from "/src/components/movieCard.js";
+import { recentViewedVideoKey } from "/src/core/storage.js";
 
 import {
   
@@ -28,6 +29,7 @@ window.addEventListener("DOMContentLoaded", () => {
   loadRandomSliders();
   loadTopVideoSlider();
   setupMovieSidebar();
+    renderRecentVideoSlider(); // 🆕 Thêm dòng này
 
   document
     .getElementById("floatingSearchInput")
@@ -236,4 +238,20 @@ function updateMoviePaginationUI(currentPage, totalItems, perPage) {
   info.style.textAlign = "center";
   info.style.marginTop = "10px";
   app.appendChild(info);
+}
+
+
+
+
+function renderRecentVideoSlider() {
+  const raw = localStorage.getItem(recentViewedVideoKey());
+  if (!raw) return;
+  const list = JSON.parse(raw);
+  const filtered = list.filter(f => f.type === "video" || f.type === "file");
+
+  renderFolderSlider({
+    title: "🕓 Vừa xem",
+    folders: filtered,
+    targetId: "section-recent", // tạo thêm <div id="section-recent"> trong movie-index.html nếu thiếu
+  });
 }

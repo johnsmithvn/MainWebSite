@@ -304,3 +304,31 @@ function cleanUpOldMovieCache(minFreeBytes) {
 
   console.log(`🧹 Dọn movie cache: đã xoá ${freed} byte`);
 }
+
+
+export function recentViewedVideoKey() {
+  const key = getSourceKey(); // dùng key làm định danh
+  return `recentViewedVideo::${key}`;
+}
+
+
+export function saveRecentViewedVideo(video) {
+  const key = recentViewedVideoKey();
+  try {
+    const raw = localStorage.getItem(key);
+    const list = raw ? JSON.parse(raw) : [];
+
+    const filtered = list.filter((item) => item.path !== video.path);
+    filtered.unshift({
+      name: video.name,
+      path: video.path,
+      thumbnail: video.thumbnail,
+      type: "video", // quan trọng để phân biệt
+    });
+
+    const limited = filtered.slice(0, 30);
+    localStorage.setItem(key, JSON.stringify(limited));
+  } catch (err) {
+    console.warn("❌ Không thể lưu recentViewedVideo:", err);
+  }
+}
