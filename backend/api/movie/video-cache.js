@@ -21,17 +21,31 @@ router.get("/video-cache", async (req, res) => {
 
   try {
     if (mode === "random") {
-      let rows = db
-        .prepare(
-          `SELECT name, path, thumbnail,isFavorite, type FROM folders
-            ORDER BY RANDOM() LIMIT 30`
-        )
-        .all();
+      let rows = [];
 
       if (type === "file") {
-        rows = rows.filter((r) => r.type === "file" || r.type === "video");
+        rows = db
+          .prepare(
+            `SELECT name, path, thumbnail, isFavorite, type FROM folders
+     WHERE type = 'file' OR type = 'video'
+     ORDER BY RANDOM() LIMIT 30`
+          )
+          .all();
       } else if (type === "folder") {
-        rows = rows.filter((r) => !r.type || r.type === "folder");
+        rows = db
+          .prepare(
+            `SELECT name, path, thumbnail, isFavorite, type FROM folders
+     WHERE type IS NULL OR type = 'folder'
+     ORDER BY RANDOM() LIMIT 30`
+          )
+          .all();
+      } else {
+        rows = db
+          .prepare(
+            `SELECT name, path, thumbnail, isFavorite, type FROM folders
+     ORDER BY RANDOM() LIMIT 30`
+          )
+          .all();
       }
 
       return res.json({ folders: rows });

@@ -17,6 +17,8 @@ import {
   loadRandomSliders,
   setupRandomSectionsIfMissing,
 } from "/src/components/folderSlider.js";
+import { saveRecentViewedVideo } from "/src/core/storage.js";
+
 const urlParams = new URLSearchParams(window.location.search);
 const file = urlParams.get("file");
 const sourceKey = getSourceKey();
@@ -103,8 +105,35 @@ fetch("/api/increase-view/movie", {
   console.error("❌ Failed to increase view:", err);
 });
 
-// 💾 Lưu recent
-saveRecentViewed({ name: videoName, path: file, thumbnail: null });
+let thumb = null;
+
+const cached = getMovieCache(sourceKey, folderPath);
+if (cached?.data?.length) {
+  const fileName = file.split("/").pop();
+  const found = cached.data.find(
+    (v) =>
+      v.path === file ||
+      v.name === fileName ||
+      file.endsWith(v.path)
+  );
+
+  if (found?.thumbnail) {
+    thumb = found.thumbnail.replace(/\\/g, "/"); // ✅ giữ raw path
+  }
+}
+
+// fallback jpg
+if (!thumb) {
+  thumb = file.replace(/\.(mp4|mkv|ts|avi|mov|webm)$/i, ".jpg");
+}
+
+saveRecentViewedVideo({
+  name: videoName,
+  path: file,
+  thumbnail: thumb, // ✅ raw path
+  type: "video",
+});
+
 
 // 🔍 Gắn search bar
 document

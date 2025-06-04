@@ -71,9 +71,9 @@ export function renderFolderSlider({
       clearBtn.textContent = "🗑️ Xoá tất cả";
       clearBtn.className = "small-button";
       clearBtn.onclick = () => {
-        const root = getRootFolder?.();
-        if (!root) return;
-        localStorage.removeItem(recentViewedKey());
+        const isMoviePage = window.location.pathname.includes("movie");
+        const key = isMoviePage ? recentViewedVideoKey() : recentViewedKey();
+        localStorage.removeItem(key);
         renderRecentViewed([]);
       };
       right.appendChild(clearBtn);
