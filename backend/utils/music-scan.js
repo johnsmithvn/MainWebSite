@@ -3,10 +3,25 @@ const path = require("path");
 const { getRootPath } = require("./config");
 const { getMusicDB } = require("./db");
 
-const AUDIO_EXTS = [".mp3", ".flac", ".wav", ".aac", ".m4a", ".ogg", ".opus", ".wma", ".alac", ".aiff"];
+const AUDIO_EXTS = [
+  ".mp3",
+  ".flac",
+  ".wav",
+  ".aac",
+  ".m4a",
+  ".ogg",
+  ".opus",
+  ".wma",
+  ".alac",
+  ".aiff",
+];
 const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".avif"];
 
-async function scanMusicFolderToDB(dbkey, currentPath = "", stats = { inserted: 0, updated: 0, skipped: 0 }) {
+async function scanMusicFolderToDB(
+  dbkey,
+  currentPath = "",
+  stats = { inserted: 0, updated: 0, skipped: 0 }
+) {
   const db = getMusicDB(dbkey);
   const rootPath = getRootPath(dbkey);
   const basePath = path.join(rootPath, currentPath);
@@ -32,12 +47,16 @@ async function scanMusicFolderToDB(dbkey, currentPath = "", stats = { inserted: 
         }
       } catch {}
 
-      const existing = db.prepare(`SELECT * FROM folders WHERE path = ?`).get(relPath);
+      const existing = db
+        .prepare(`SELECT * FROM folders WHERE path = ?`)
+        .get(relPath);
       if (!existing) {
-        db.prepare(`
+        db.prepare(
+          `
           INSERT INTO folders (name, path, thumbnail, type, createdAt, updatedAt)
           VALUES (?, ?, ?, 'folder', ?, ?)
-        `).run(entry.name, relPath, thumb, Date.now(), Date.now());
+        `
+        ).run(entry.name, relPath, thumb, Date.now(), Date.now());
         stats.inserted++;
       } else {
         stats.skipped++;
@@ -47,30 +66,37 @@ async function scanMusicFolderToDB(dbkey, currentPath = "", stats = { inserted: 
     }
 
     // 🎵 AUDIO FILE
-    if (entry.isFile() && AUDIO_EXTS.includes(path.extname(entry.name).toLowerCase())) {
+    if (
+      entry.isFile() &&
+      AUDIO_EXTS.includes(path.extname(entry.name).toLowerCase())
+    ) {
       const name = path.basename(entry.name, path.extname(entry.name));
       const stat = fs.statSync(fullPath);
       const { parseFile } = await import("music-metadata");
 
-      let duration = 0, artist = null, album = null, genre = null, lyrics = null, thumb = null;
+      let duration = 0,
+        artist = null,
+        album = null,
+        genre = null,
+        lyrics = null,
+        thumb = null;
 
       try {
         const metadata = await parseFile(fullPath);
         const common = metadata.common;
 
-       duration = Number.isFinite(metadata.format.duration)
-  ? Math.floor(metadata.format.duration)
-  : 0;
+        duration = Number.isFinite(metadata.format.duration)
+          ? Math.floor(metadata.format.duration)
+          : 0;
 
-artist = typeof common.artist === "string" ? common.artist : null;
-album = typeof common.album === "string" ? common.album : null;
-genre = Array.isArray(common.genre)
-  ? common.genre.join(", ")
-  : typeof common.genre === "string"
-  ? common.genre
-  : null;
-lyrics = typeof common.lyrics === "string" ? common.lyrics : null;
-
+        artist = typeof common.artist === "string" ? common.artist : null;
+        album = typeof common.album === "string" ? common.album : null;
+        genre = Array.isArray(common.genre)
+          ? common.genre.join(", ")
+          : typeof common.genre === "string"
+          ? common.genre
+          : null;
+        lyrics = typeof common.lyrics === "string" ? common.lyrics : null;
 
         // 📸 Tạo thumbnail từ ảnh nhúng
         if (common.picture && common.picture.length > 0) {
@@ -82,19 +108,23 @@ lyrics = typeof common.lyrics === "string" ? common.lyrics : null;
           const thumbFile = path.join(thumbFolder, name + ext);
           fs.writeFileSync(thumbFile, pic.data);
 
-          thumb = path.posix.join(currentPath, ".thumbnail", name + ext);
+          thumb = path.posix.join(".thumbnail", name + ext);
         }
       } catch (err) {
         console.warn("❌ Lỗi đọc metadata:", entry.name, err.message);
       }
 
-      const existing = db.prepare(`SELECT * FROM folders WHERE path = ?`).get(relPath);
+      const existing = db
+        .prepare(`SELECT * FROM folders WHERE path = ?`)
+        .get(relPath);
 
       if (!existing) {
-        db.prepare(`
+        db.prepare(
+          `
           INSERT INTO folders (name, path, thumbnail, type, size, modified, duration, createdAt, updatedAt)
           VALUES (?, ?, ?, 'audio', ?, ?, ?, ?, ?)
-        `).run(
+        `
+        ).run(
           name,
           relPath,
           thumb,
@@ -105,21 +135,27 @@ lyrics = typeof common.lyrics === "string" ? common.lyrics : null;
           Date.now()
         );
 
-        db.prepare(`
+        db.prepare(
+          `
           INSERT INTO songs (path, artist, album, genre, lyrics)
           VALUES (?, ?, ?, ?, ?)
-        `).run(relPath, artist, album, genre, lyrics);
+        `
+        ).run(relPath, artist, album, genre, lyrics);
 
         stats.inserted++;
       } else {
         // 🔁 UPDATE metadata nếu đã tồn tại
-        db.prepare(`
+        db.prepare(
+          `
           UPDATE folders SET thumbnail = ?, updatedAt = ? WHERE path = ?
-        `).run(thumb, Date.now(), relPath);
+        `
+        ).run(thumb, Date.now(), relPath);
 
-        db.prepare(`
+        db.prepare(
+          `
           UPDATE songs SET artist = ?, album = ?, genre = ?, lyrics = ? WHERE path = ?
-        `).run(artist, album, genre, lyrics, relPath);
+        `
+        ).run(artist, album, genre, lyrics, relPath);
 
         stats.updated++;
       }

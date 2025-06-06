@@ -135,20 +135,27 @@ function renderMusicGrid(list) {
   const grid = document.createElement("div");
   grid.className = "grid";
 
-  list.forEach((item) => {
-    let thumb = item.thumbnail
-      ? `/audio/${item.thumbnail.replace(/\\/g, "/")}`
-      : item.type === "audio" || item.type === "file"
-      ? "/default/music-thumb.png"
-      : "/default/folder-thumb.png";
+list.forEach((item) => {
+  console.log("item.path =", item.path, "| thumbnail =", item.thumbnail);
+  let folderPrefixParts = item.path?.split("/").filter(Boolean);
+  if (item.type === "file" || item.type === "audio") folderPrefixParts.pop();
+  let folderPrefix = folderPrefixParts.join("/");
 
-    const card = renderMusicCardWithFavorite({
-      ...item,
-      thumbnail: thumb,
-    });
+  let thumb = item.thumbnail
+    ? `/audio/${folderPrefix ? folderPrefix + "/" : ""}${item.thumbnail.replace(/\\/g, "/")}`
+    : item.type === "folder"
+    ? "/default/folder-thumb.png"
+    : "/default/music-thumb.png";
 
-    grid.appendChild(card);
+  console.log("Thumbnail URL:", thumb);
+
+  const card = renderMusicCardWithFavorite({
+    ...item,
+    thumbnail: thumb,
   });
+
+  grid.appendChild(card);
+});
 
   app.appendChild(grid);
 }

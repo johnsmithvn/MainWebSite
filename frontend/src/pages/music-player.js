@@ -1,11 +1,15 @@
 import { getSourceKey } from "/src/core/storage.js";
 import { showToast } from "/src/core/ui.js";
-import {  toggleSearchBar, filterMovie } from "/src/core/ui.js";
+import { toggleSearchBar, filterMovie } from "/src/core/ui.js";
 import { setupMusicSidebar } from "/src/core/ui.js";
 
 setupMusicSidebar(); // ✅ đúng
-document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
-document.getElementById("floatingSearchInput")?.addEventListener("input", filterMovie);
+document
+  .getElementById("searchToggle")
+  ?.addEventListener("click", toggleSearchBar);
+document
+  .getElementById("floatingSearchInput")
+  ?.addEventListener("input", filterMovie);
 document.getElementById("sidebarToggle")?.addEventListener("click", () => {
   document.getElementById("sidebar-menu")?.classList.toggle("active");
 });
@@ -37,11 +41,17 @@ let currentIndex = -1;
 
 async function loadFolderSongs() {
   try {
-    const res = await fetch(`/api/music/music-folder?key=${sourceKey}&path=${encodeURIComponent(folderPath)}`);
+    const res = await fetch(
+      `/api/music/music-folder?key=${sourceKey}&path=${encodeURIComponent(
+        folderPath
+      )}`
+    );
     const data = await res.json();
 
-    audioList = (data.folders || []).filter(f => f.type === "audio" || f.type === "file");
-    currentIndex = audioList.findIndex(f => f.path === currentFile);
+    audioList = (data.folders || []).filter(
+      (f) => f.type === "audio" || f.type === "file"
+    );
+    currentIndex = audioList.findIndex((f) => f.path === currentFile);
 
     renderTrackList();
     if (currentIndex >= 0) {
@@ -63,42 +73,64 @@ function renderTrackList() {
     const tr = document.createElement("tr");
     tr.className = index === currentIndex ? "playing" : "";
 
-    // Thumbnail
-    const tdThumb = document.createElement("td");
-    const img = document.createElement("img");
-    img.src = item.thumbnail ? `/video/${item.thumbnail}` : "/default/music-thumb.png";
-    img.className = "track-thumb";
-    tdThumb.appendChild(img);
+    const folderPrefix = item.path?.split("/").slice(0, -1).join("/");
+    const folderRoot = item.path?.split("/")[0] || "Unknown";
 
-    // Title + name
-    const tdTitle = document.createElement("td");
-    tdTitle.innerHTML = `<div class="track-title">${item.name}</div>
-                         <div class="track-artist">${item.artist || "Unknown"}</div>`;
+    // 🖼️ Cột bài hát (ảnh + tên + ca sĩ)
+    const tdSong = document.createElement("td");
+    tdSong.innerHTML = `
+      <div class="track-flex">
+        <img class="track-thumb" src="${
+          item.thumbnail
+            ? `/audio/${
+                folderPrefix ? folderPrefix + "/" : ""
+              }${item.thumbnail.replace(/\\/g, "/")}`
+            : "/default/music-thumb.png"
+        }" alt="thumb" />
+        <div class="track-info">
+          <div class="track-title">${item.name}</div>
+          <div class="track-artist">${item.artist || "Unknown"}</div>
+        </div>
+      </div>
+    `;
 
-    // Artist
-    const tdArtist = document.createElement("td");
-    tdArtist.textContent = item.artist || "Unknown";
-
-    // Album = folder cha
+    // 📀 Album
     const tdAlbum = document.createElement("td");
+    tdAlbum.textContent = item.album || "Unknown";
+
+    // 📁 Thư mục gốc
+    const tdFolder = document.createElement("td");
     const folderParts = item.path.split("/");
-    tdAlbum.textContent = folderParts.length > 1 ? folderParts.at(-2) : "Unknown";
+    tdFolder.textContent =
+      folderParts.length > 1 ? folderParts.slice(0, -1).join("/") : "Root";
+
+    // 🔁 Lượt nghe
+    const tdViews = document.createElement("td");
+    tdViews.textContent = item.viewCount || 0;
+
+    // ⏱ Duration
+    const tdDuration = document.createElement("td");
+    tdDuration.textContent = formatDuration(item.duration);
+    tdDuration.className = "track-duration";
 
     tr.onclick = () => playAtIndex(index);
-    tr.append(tdThumb, tdTitle, tdArtist, tdAlbum);
+    tr.append(tdSong, tdAlbum, tdFolder, tdViews, tdDuration);
     tbody.appendChild(tr);
   });
 
-  document.getElementById("folder-meta").textContent = `${audioList.length} tracks`;
+  document.getElementById(
+    "folder-meta"
+  ).textContent = `${audioList.length} tracks`;
 }
-
 
 function playAtIndex(index) {
   if (index < 0 || index >= audioList.length) return;
   currentIndex = index;
 
   const file = audioList[index];
-  const src = `/api/music/audio?key=${sourceKey}&file=${encodeURIComponent(file.path)}`;
+  const src = `/api/music/audio?key=${sourceKey}&file=${encodeURIComponent(
+    file.path
+  )}`;
 
   audioEl.src = src;
   audioEl.play().catch(() => {
@@ -114,8 +146,6 @@ function updateTrackHighlight() {
     row.classList.toggle("playing", idx === currentIndex);
   });
 }
-
-
 
 // Nút điều khiển
 document.getElementById("btn-prev").onclick = () => {
@@ -137,5 +167,10 @@ audioEl.addEventListener("ended", () => {
     playAtIndex(currentIndex + 1);
   }
 });
-
+function formatDuration(seconds) {
+  if (!seconds || isNaN(seconds)) return "--:--";
+  const min = Math.floor(seconds / 60);
+  const sec = Math.floor(seconds % 60);
+  return `${min}:${sec.toString().padStart(2, "0")}`;
+}
 loadFolderSongs();

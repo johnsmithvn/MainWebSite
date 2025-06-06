@@ -5,6 +5,7 @@ body {
   font-family: "Segoe UI", sans-serif;
 }
 
+/* ====== HEADER + SIDEBAR ====== */
 .site-header {
   background: #181818;
   padding: 12px 20px;
@@ -19,71 +20,6 @@ body {
   background: #202020;
   color: #1db954;
   font-weight: bold;
-}
-
-#track-list {
-  padding: 20px;
-}
-
-.track-row {
-  padding: 10px;
-  border-bottom: 1px solid #333;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.track-row:hover {
-  background: #333;
-}
-.track-row.playing {
-  color: #1db954;
-  font-weight: bold;
-}
-
-.player-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #181818;
-  padding: 10px 20px;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  z-index: 100;
-}
-
-.player-footer audio {
-  width: 100%;
-  max-width: 600px;
-}
-
-.controls {
-  margin-top: 6px;
-  display: flex;
-  gap: 16px;
-  font-size: 20px;
-}
-
-.now-playing {
-  margin-top: 4px;
-  font-size: 14px;
-  color: #bbb;
-}
-
-.sidebar button {
-  display: block;
-  background: none;
-  border: none;
-  color: #ccc;
-  font-size: 14px;
-  padding: 8px 0;
-  text-align: left;
-  width: 100%;
-  cursor: pointer;
-}
-.sidebar button:hover {
-  color: white;
 }
 
 #sidebar-menu {
@@ -103,55 +39,145 @@ body {
   transform: translateX(0);
 }
 
-.music-table,
+.sidebar button {
+  display: block;
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 14px;
+  padding: 8px 0;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+}
+.sidebar button:hover {
+  color: white;
+}
+
+/* ====== PLAYER FOOTER ====== */
+.player-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #181818;
+  padding: 10px 20px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 100;
+}
+.player-footer audio {
+  width: 100%;
+  max-width: 600px;
+}
+.controls {
+  margin-top: 6px;
+  display: flex;
+  gap: 16px;
+  font-size: 20px;
+}
+.now-playing {
+  margin-top: 4px;
+  font-size: 14px;
+  color: #bbb;
+}
+
+/* ====== TABLE STYLE ====== */
 .track-table {
   width: 100%;
   border-collapse: collapse;
   color: white;
   margin-top: 10px;
 }
-
-.music-table th,
-.track-table th {
+.track-table th, .track-table td {
+  padding: 10px 12px;
+  font-size: 14px;
   text-align: left;
-  padding: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.track-table th {
+  font-size: 13px;
   font-weight: 500;
   color: #888;
   border-bottom: 1px solid #333;
 }
-
-.music-table td,
 .track-table td {
-  padding: 10px;
   border-bottom: 1px solid #222;
-  cursor: pointer;
+  vertical-align: middle;
+  height: 60px;
 }
-
-.music-table tr.playing,
+.track-table td:nth-child(1) {
+  min-width: 240px;
+  width: 100%;
+  max-width: 400px;
+}
 .track-table tr.playing {
   background-color: #1db95422;
   color: #1db954;
 }
-
-.music-table tr:hover,
 .track-table tr:hover {
   background-color: #2a2a2a;
 }
 
-.track-table .track-thumb {
-  width: 48px;
-  height: 48px;
-  object-fit: cover;
-  border-radius: 4px;
+/* ====== BÀI HÁT (GỘP ẢNH + TEXT) ====== */
+.track-flex {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-
-.track-table .track-title {
+.track-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.track-title {
   font-weight: bold;
   color: white;
+  font-size: 14px;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.track-artist {
+  font-size: 12px;
+  color: #bbb;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.track-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
-.track-table .track-artist {
-  font-size: 0.85em;
-  color: #bbb;
-  margin-top: 4px;
+
+/*  wraper */
+.track-table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+.track-table {
+  min-width: 768px;
+}
+/* mobile */
+
+@media (max-width: 768px) {
+  .track-table th:nth-child(3),
+  .track-table td:nth-child(3), /* Thư mục */
+
+  .track-table th:nth-child(4),
+  .track-table td:nth-child(4)  /* Lượt nghe */
+  {
+    display: none;
+  }
 }

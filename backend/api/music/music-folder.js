@@ -14,11 +14,13 @@ router.get("/music-folder", (req, res) => {
   const items = db
     .prepare(
       `
-  SELECT * FROM folders
-  WHERE path LIKE ?
-    AND name != '.thumbnail'
-  ORDER BY type DESC, name COLLATE NOCASE ASC
-`
+      SELECT folders.*, songs.artist, songs.album, songs.genre, songs.lyrics
+      FROM folders
+      LEFT JOIN songs ON folders.path = songs.path
+      WHERE folders.path LIKE ?
+        AND folders.name != '.thumbnail'
+      ORDER BY folders.type DESC, folders.name COLLATE NOCASE ASC
+    `
     )
     .all(relPath ? `${relPath}/%` : "%");
 
@@ -34,7 +36,18 @@ router.get("/music-folder", (req, res) => {
       thumbnail: item.thumbnail,
       type: item.type,
       isFavorite: !!item.isFavorite,
+      artist: item.artist,
+      album: item.album,
+      genre: item.genre,
+      lyrics: item.lyrics,
+      duration: item.duration,
     }));
+
+  console.log("Music folder data:", {
+    type: "music-folder",
+    folders,
+    total: folders.length,
+  });
 
   res.json({
     type: "music-folder",

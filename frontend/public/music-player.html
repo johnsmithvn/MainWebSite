@@ -52,22 +52,24 @@
           <div class="folder-section-title" id="folder-title">🎶 Playlist</div>
           <div id="folder-meta" class="folder-meta">Đang tải...</div>
         </div>
-        <table id="track-table" class="track-table">
-          <thead>
-            <tr>
-              <th>Bài hát</th>
-              <!-- Gộp cả thumbnail + title + artist -->
-              <th>Album</th>
-              <th>Thư mục</th>
-              <th>Thời lượng</th>
-              <!-- 🆕 -->
-            </tr>
-          </thead>
+        <div class="track-table-wrapper">
+          <table id="track-table" class="track-table">
+            <thead>
+              <tr>
+                <th>Bài hát</th>
+                <th>Album</th>
+                <th>Thư mục</th>
+                <th>Lượt nghe</th>
+                <!-- ✅ thêm -->
+                <th>Thời lượng</th>
+              </tr>
+            </thead>
 
-          <tbody id="track-body">
-            <!-- Sẽ render bằng JS -->
-          </tbody>
-        </table>
+            <tbody id="track-body">
+              <!-- Sẽ render bằng JS -->
+            </tbody>
+          </table>
+        </div>
       </main>
     </div>
 

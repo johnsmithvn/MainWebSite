@@ -5,7 +5,8 @@ const path = require("path");
 const fs = require("fs");
 const {
   getAllMangaKeys,
-  getAllMovieKeys,getAllMusicKeys,
+  getAllMovieKeys,
+  getAllMusicKeys,
   getRootPath,
 } = require("./utils/config");
 const { ROOT_PATHS } = require("./utils/config");
@@ -35,6 +36,8 @@ for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
   // Nếu key là video/movie, mount route riêng
   if (key.startsWith("V_")) {
     app.use("/video", express.static(absPath));
+  } else if (key.startsWith("M_")) {
+app.use("/audio", express.static(absPath, { dotfiles: "allow" }));
   } else {
     app.use("/manga", express.static(absPath));
   }

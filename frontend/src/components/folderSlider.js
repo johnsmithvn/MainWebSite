@@ -107,7 +107,10 @@ export function renderFolderSlider({
     } else {
       const isMusicPage = window.location.pathname.includes("music");
       if (isMusicPage) {
-        thumbnailUrl = `/audio/${f.thumbnail.replace(/\\/g, "/")}`;
+        const folderPrefix = f.path?.split("/").slice(0, -1).join("/");
+        thumbnailUrl = `/audio/${
+          folderPrefix ? folderPrefix + "/" : ""
+        }${f.thumbnail.replace(/\\/g, "/")}`;
       } else if (isMoviePage) {
         thumbnailUrl = `/video/${f.thumbnail.replace(/\\/g, "/")}`;
       }
