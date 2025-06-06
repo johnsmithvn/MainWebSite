@@ -157,7 +157,13 @@ export function toggleDarkMode() {
 /**
  * 📄 Cập nhật UI phân trang
  */
-export function updateFolderPaginationUI(currentPage, totalItems, perPage, onPageChange, target = null) {
+export function updateFolderPaginationUI(
+  currentPage,
+  totalItems,
+  perPage,
+  onPageChange,
+  target = null
+) {
   const totalPages = Math.ceil(totalItems / perPage);
   const container = target || document.getElementById("app");
   if (!container) return;
@@ -278,8 +284,10 @@ export function renderRecentViewed(folders = []) {
   const isMoviePage = window.location.pathname.includes("movie");
 
   const filtered = isMoviePage
-    ? folders.filter(f => f.type === "video" || f.type === "file")
-    : folders.filter(f => !f.type || (f.type !== "video" && f.type !== "file"));
+    ? folders.filter((f) => f.type === "video" || f.type === "file")
+    : folders.filter(
+        (f) => !f.type || (f.type !== "video" && f.type !== "file")
+      );
 
   renderFolderSlider({
     title: isMoviePage ? "🕓 Vừa xem" : "🕘 Mới đọc",
@@ -541,9 +549,12 @@ export function setupMovieSidebar() {
       if (!ok) return;
 
       try {
-        const res = await fetch(`/api/movie/reset-cache-movie?key=${sourceKey}&mode=delete`, {
-          method: "DELETE",
-        });
+        const res = await fetch(
+          `/api/movie/reset-cache-movie?key=${sourceKey}&mode=delete`,
+          {
+            method: "DELETE",
+          }
+        );
         const data = await res.json();
         showToast(data.message || "✅ Đã xoá DB Movie");
         window.location.reload();
@@ -554,7 +565,7 @@ export function setupMovieSidebar() {
     })
   );
 
-    // 🗑 Xoá DB Movie
+  // 🗑 Xoá DB Movie
   sidebar.appendChild(
     createSidebarButton("🗑 Reset DB Movie (xóa và scan)", async () => {
       const ok = await showConfirm("Bạn có chắc muốn xoá toàn bộ DB Movie?", {
@@ -563,9 +574,12 @@ export function setupMovieSidebar() {
       if (!ok) return;
 
       try {
-        const res = await fetch(`/api/movie/reset-cache-movie?key=${sourceKey}&mode=reset`, {
-          method: "DELETE",
-        });
+        const res = await fetch(
+          `/api/movie/reset-cache-movie?key=${sourceKey}&mode=reset`,
+          {
+            method: "DELETE",
+          }
+        );
         const data = await res.json();
         showToast(data.message || "✅ Đã xoá DB Movie");
         window.location.reload();
@@ -575,7 +589,6 @@ export function setupMovieSidebar() {
       }
     })
   );
-
 
   sidebar.appendChild(
     createSidebarButton("📦 Quét thư mục mới", async () => {
@@ -588,7 +601,7 @@ export function setupMovieSidebar() {
         const res = await fetch("/api/movie/scan-movie", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({key : sourceKey}),
+          body: JSON.stringify({ key: sourceKey }),
         });
         const data = await res.json();
         showToast(
@@ -622,9 +635,6 @@ export function setupMovieSidebar() {
   );
 }
 
-
-
-
 export function setupMusicSidebar() {
   const sidebar = document.getElementById("sidebar-menu");
   if (!sidebar) return;
@@ -649,9 +659,12 @@ export function setupMusicSidebar() {
       if (!ok) return;
 
       try {
-        const res = await fetch(`/api/music/scan-music?key=${sourceKey}&mode=delete`, {
-          method: "DELETE",
-        });
+        const res = await fetch(
+          `/api/music/scan-music?key=${sourceKey}&mode=delete`,
+          {
+            method: "DELETE",
+          }
+        );
         const data = await res.json();
         showToast(data.message || "✅ Đã xoá DB");
       } catch (err) {
@@ -723,4 +736,81 @@ export function setupMusicSidebar() {
       showToast(`✅ Đã xoá ${count} cache folder`);
     })
   );
+}
+
+// filter music
+export async function filterMusic() {
+  const keyword = document
+    .getElementById("floatingSearchInput")
+    ?.value.trim()
+    .toLowerCase();
+  const dropdown = document.getElementById("search-dropdown");
+  const sourceKey = getSourceKey();
+  const type = document.getElementById("search-type-select")?.value || "audio";
+
+  if (!keyword) {
+    dropdown.classList.add("hidden");
+    dropdown.innerHTML = "";
+    return;
+  }
+
+  dropdown.classList.remove("hidden");
+  dropdown.innerHTML = `<div id="search-loader">🔍 Đang tìm nhạc...</div>`;
+
+  try {
+    const res = await fetch(
+      `/api/music/audio-cache?mode=search&key=${encodeURIComponent(
+        sourceKey
+      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}`
+    );
+    const data = await res.json();
+    dropdown.innerHTML = "";
+
+    if (!data.folders || data.folders.length === 0) {
+      dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy bài hát nào</div>`;
+      return;
+    }
+
+    data.folders.forEach((f) => {
+      const item = document.createElement("div");
+      item.className = "search-item";
+
+      const isAudio = f.type === "audio" || f.type === "file";
+      const folderPrefix = f.path?.split("/").slice(0, -1).join("/");
+
+      let thumbSrc;
+      if (f.thumbnail) {
+        thumbSrc = `/audio/${
+          folderPrefix ? folderPrefix + "/" : ""
+        }${f.thumbnail.replace(/\\/g, "/")}`;
+      } else {
+        thumbSrc = isAudio
+          ? "/default/music-thumb.png"
+          : "/default/folder-thumb.png";
+      }
+
+      item.innerHTML = `
+        <img src="${thumbSrc}" class="search-thumb" alt="thumb">
+        <div class="search-title">${f.name}</div>
+      `;
+
+      item.onclick = () => {
+        dropdown.classList.add("hidden");
+        if (f.type === "audio" || f.type === "file") {
+          window.location.href = `/music-player.html?file=${encodeURIComponent(
+            f.path
+          )}`;
+        } else {
+          window.location.href = `/music-index.html?path=${encodeURIComponent(
+            f.path
+          )}`;
+        }
+      };
+
+      dropdown.appendChild(item);
+    });
+  } catch (err) {
+    console.error("❌ Lỗi tìm kiếm nhạc:", err);
+    dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
+  }
 }

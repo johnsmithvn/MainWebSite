@@ -129,22 +129,31 @@ export function renderFolderSlider({
     const encoded = encodeURIComponent(f.path);
     const key = getSourceKey();
 
-    card.onclick = (e) => {
-      // ❌ Nếu bấm vào nút ❤️ thì bỏ qua
-      if (e.target.classList.contains("folder-fav")) return;
+  card.onclick = (e) => {
+  // ❌ Nếu bấm vào nút ❤️ thì bỏ qua
+  if (e.target.classList.contains("folder-fav")) return;
 
-      if (f.type === "video" || f.type === "file") {
-        window.location.href = `/movie-player.html?file=${encoded}&key=${key}`;
-      } else {
-        if (isMoviePage) {
-          window.location.href = `/movie-index.html?path=${encoded}&key=${key}`;
-        } else if (f.isSelfReader && f.images) {
-          window.location.href = `/reader.html?path=${encoded}`;
-        } else if (typeof window.loadFolder === "function") {
-          window.loadFolder(f.path);
-        }
-      }
-    };
+  const isMusicPage = window.location.pathname.includes("music");
+
+  // 📦 Nếu là file audio hoặc file nói chung
+  if (f.type === "audio" || f.type === "file") {
+    const page = isMusicPage ? "music-player" : "movie-player";
+    window.location.href = `/${page}.html?file=${encoded}&key=${key}`;
+    return;
+  }
+
+  // 📁 Nếu là thư mục
+  if (isMusicPage) {
+    window.location.href = `/music-index.html?path=${encoded}&key=${key}`;
+  } else if (isMoviePage) {
+    window.location.href = `/movie-index.html?path=${encoded}&key=${key}`;
+  } else if (f.isSelfReader && f.images) {
+    window.location.href = `/reader.html?path=${encoded}`;
+  } else if (typeof window.loadFolder === "function") {
+    window.loadFolder(f.path);
+  }
+};
+
   });
 
   sliderContainer.appendChild(wrapper);

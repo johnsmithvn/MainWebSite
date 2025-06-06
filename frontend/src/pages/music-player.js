@@ -1,6 +1,6 @@
 import { getSourceKey } from "/src/core/storage.js";
 import { showToast } from "/src/core/ui.js";
-import { toggleSearchBar, filterMovie } from "/src/core/ui.js";
+import { toggleSearchBar, filterMusic } from "/src/core/ui.js";
 import { setupMusicSidebar } from "/src/core/ui.js";
 
 setupMusicSidebar(); // ✅ đúng
@@ -9,7 +9,7 @@ document
   ?.addEventListener("click", toggleSearchBar);
 document
   .getElementById("floatingSearchInput")
-  ?.addEventListener("input", filterMovie);
+  ?.addEventListener("input", filterMusic);
 document.getElementById("sidebarToggle")?.addEventListener("click", () => {
   document.getElementById("sidebar-menu")?.classList.toggle("active");
 });

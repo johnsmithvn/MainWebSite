@@ -14,6 +14,7 @@ import {
   setupMusicSidebar,
   showConfirm,
 } from "/src/core/ui.js";
+import { filterMusic } from "/src/core/ui.js";
 
 window.addEventListener("DOMContentLoaded", () => {
   const initialPath = getInitialPathFromURL();
@@ -25,9 +26,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   document
     .getElementById("floatingSearchInput")
-    ?.addEventListener("input", () => {
-      // gọi filterMusic nếu bạn tách ra
-    });
+    ?.addEventListener("input", filterMusic);
 
   document
     .getElementById("searchToggle")
@@ -135,27 +134,29 @@ function renderMusicGrid(list) {
   const grid = document.createElement("div");
   grid.className = "grid";
 
-list.forEach((item) => {
-  console.log("item.path =", item.path, "| thumbnail =", item.thumbnail);
-  let folderPrefixParts = item.path?.split("/").filter(Boolean);
-  if (item.type === "file" || item.type === "audio") folderPrefixParts.pop();
-  let folderPrefix = folderPrefixParts.join("/");
+  list.forEach((item) => {
+    console.log("item.path =", item.path, "| thumbnail =", item.thumbnail);
+    let folderPrefixParts = item.path?.split("/").filter(Boolean);
+    if (item.type === "file" || item.type === "audio") folderPrefixParts.pop();
+    let folderPrefix = folderPrefixParts.join("/");
 
-  let thumb = item.thumbnail
-    ? `/audio/${folderPrefix ? folderPrefix + "/" : ""}${item.thumbnail.replace(/\\/g, "/")}`
-    : item.type === "folder"
-    ? "/default/folder-thumb.png"
-    : "/default/music-thumb.png";
+    let thumb = item.thumbnail
+      ? `/audio/${
+          folderPrefix ? folderPrefix + "/" : ""
+        }${item.thumbnail.replace(/\\/g, "/")}`
+      : item.type === "folder"
+      ? "/default/folder-thumb.png"
+      : "/default/music-thumb.png";
 
-  console.log("Thumbnail URL:", thumb);
+    console.log("Thumbnail URL:", thumb);
 
-  const card = renderMusicCardWithFavorite({
-    ...item,
-    thumbnail: thumb,
+    const card = renderMusicCardWithFavorite({
+      ...item,
+      thumbnail: thumb,
+    });
+
+    grid.appendChild(card);
   });
-
-  grid.appendChild(card);
-});
 
   app.appendChild(grid);
 }

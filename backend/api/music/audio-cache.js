@@ -20,18 +20,19 @@ router.get("/audio-cache", async (req, res) => {
       if (type === "file") {
         rows = db.prepare(`
           SELECT name, path, thumbnail, isFavorite, type FROM folders
-          WHERE type = 'audio' OR type = 'file'
+          WHERE (type = 'audio' OR type = 'file') AND name != '.thumbnail'
           ORDER BY RANDOM() LIMIT 30
         `).all();
       } else if (type === "folder") {
         rows = db.prepare(`
           SELECT name, path, thumbnail, isFavorite, type FROM folders
-          WHERE type IS NULL OR type = 'folder'
+          WHERE (type IS NULL OR type = 'folder') AND name != '.thumbnail'
           ORDER BY RANDOM() LIMIT 30
         `).all();
       } else {
         rows = db.prepare(`
           SELECT name, path, thumbnail, isFavorite, type FROM folders
+          WHERE name != '.thumbnail'
           ORDER BY RANDOM() LIMIT 30
         `).all();
       }
@@ -44,6 +45,7 @@ router.get("/audio-cache", async (req, res) => {
         SELECT name, path, thumbnail, type, viewCount, isFavorite
         FROM folders
         WHERE (type = 'audio' OR type = 'file')
+          AND name != '.thumbnail'
           AND viewCount > 0
         ORDER BY viewCount DESC
         LIMIT 30
@@ -63,21 +65,26 @@ router.get("/audio-cache", async (req, res) => {
         rows = db.prepare(`
           SELECT name, path, thumbnail, type, viewCount, isFavorite
           FROM folders
-          WHERE (type IS NULL OR type = 'folder') AND name LIKE ?
+          WHERE (type IS NULL OR type = 'folder')
+            AND name != '.thumbnail'
+            AND name LIKE ?
           ORDER BY name COLLATE NOCASE ASC
         `).all(`%${q}%`);
       } else if (searchType === "all") {
         rows = db.prepare(`
           SELECT name, path, thumbnail, type, viewCount, isFavorite
           FROM folders
-          WHERE name LIKE ?
+          WHERE name != '.thumbnail'
+            AND name LIKE ?
           ORDER BY name COLLATE NOCASE ASC
         `).all(`%${q}%`);
       } else {
         rows = db.prepare(`
           SELECT name, path, thumbnail, type, viewCount, isFavorite
           FROM folders
-          WHERE (type = 'audio' OR type = 'file') AND name LIKE ?
+          WHERE (type = 'audio' OR type = 'file')
+            AND name != '.thumbnail'
+            AND name LIKE ?
           ORDER BY name COLLATE NOCASE ASC
         `).all(`%${q}%`);
       }
