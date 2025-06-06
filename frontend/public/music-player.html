@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Nghe nhạc</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/src/styles/base.css" />
+    <link rel="stylesheet" href="/src/styles/components/folder-slider.css" />
+    <link rel="stylesheet" href="/src/styles/pages/music-player.css" />
+  </head>
+  <body>
+    <!-- HEADER -->
+    <header class="site-header">
+      <div class="header-left">
+        <button class="menu-button" id="sidebarToggle">☰</button>
+        <div class="logo" onclick="location.href='music-index.html'">🎵 MyMusic</div>
+      </div>
+      <div class="header-right">
+        <button class="icon-button" onclick="location.href='playlist-music.html'">📁 Playlist</button>
+        <button class="icon-button" id="searchToggle">🔍</button>
+      </div>
+    </header>
+
+    <!-- 🔍 SEARCH FLOATING -->
+    <div id="floating-search" class="floating-search">
+      <input type="text" id="floatingSearchInput" placeholder="Tìm bài hát..." />
+      <select id="search-type-select" class="search-type-dropdown">
+        <option value="audio">🎧 Bài hát</option>
+        <option value="folder">📁 Thư mục</option>
+        <option value="all" selected>🔍 Tất cả</option>
+      </select>
+      <div id="search-dropdown" class="search-dropdown hidden"></div>
+    </div>
+
+    <!-- WRAPPER -->
+ <div id="wrapper" class="layout-wrapper">
+  <aside id="sidebar-menu" class="sidebar"></aside>
+
+  <main class="main-area">
+    <div class="folder-section-header">
+      <div class="folder-section-title" id="folder-title">🎶 Playlist</div>
+      <div id="folder-meta" class="folder-meta">Đang tải...</div>
+    </div>
+<table id="track-table" class="track-table">
+  <thead>
+    <tr>
+      <th></th> <!-- Thumbnail -->
+      <th>Bài hát</th>
+      <th>Ca sĩ</th>
+      <th>Album</th>
+    </tr>
+  </thead>
+  <tbody id="track-body">
+    <!-- Sẽ render bằng JS -->
+  </tbody>
+</table>
+
+  </main>
+</div>
+
+
+    <!-- FOOTER: audio player -->
+    <footer class="player-footer">
+      <audio id="audio-player" controls preload="metadata"></audio>
+      <div class="controls">
+        <button id="btn-prev">⏮</button>
+        <button id="btn-play">▶️</button>
+        <button id="btn-next">⏭</button>
+      </div>
+      <div class="now-playing" id="now-playing">🎵 Chưa chọn bài nào</div>
+    </footer>
+
+    <script type="module" src="/src/pages/music-player.js"></script>
+  </body>
+</html>

@@ -1,0 +1,56 @@
+<!-- 📁 public/music-index.html -->
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Danh sách nhạc</title>
+    <link rel="stylesheet" href="/src/styles/base.css" />
+    <link rel="stylesheet" href="/src/styles/components/movie-card.css" />
+    <link rel="stylesheet" href="/src/styles/components/folder-slider.css" />
+  </head>
+  <body>
+    <header id="site-header" class="site-header">
+      <div class="header-left">
+        <button class="menu-button" id="sidebarToggle">☰</button>
+        <div class="logo" onclick="location.href='music-index.html'">
+          🎵 <span class="logo-text">MyMusic</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="icon-button" onclick="location.href='playlist-music.html'">📁 Playlist</button>
+        <button class="icon-button" id="searchToggle">🔍</button>
+      </div>
+    </header>
+
+    <!-- 🔍 SEARCH FLOATING -->
+    <div id="floating-search" class="floating-search">
+      <input type="text" id="floatingSearchInput" placeholder="Tìm bài hát..." />
+      <select id="search-type-select" class="search-type-dropdown">
+        <option value="audio">🎧 Chỉ bài hát</option>
+        <option value="folder">📁 Chỉ thư mục</option>
+        <option value="all" selected>🔍 Cả hai</option>
+      </select>
+      <div id="search-dropdown" class="search-dropdown hidden"></div>
+    </div>
+
+    <div id="wrapper">
+      <aside id="sidebar-menu"></aside>
+      <div class="main-content">
+        <section id="randomFolderSection" class="folder-slider-section"></section>
+        <section id="section-recent" class="folder-slider-section"></section>
+        <section id="randomAudioSection" class="folder-slider-section"></section>
+        <section id="section-topview" class="folder-slider-section"></section>
+
+        <button id="back-root" style="display: none">⬅ Quay lại nguồn nhạc</button>
+        <div id="music-app"></div>
+      </div>
+    </div>
+
+    <footer id="main-footer" class="footer-bar">
+      <button id="delete-music-db" class="danger-button">🗑 Xoá DB Music</button>
+    </footer>
+
+    <script type="module" src="/src/pages/music-index.js"></script>
+  </body>
+</html>

@@ -621,3 +621,106 @@ export function setupMovieSidebar() {
     })
   );
 }
+
+
+
+
+export function setupMusicSidebar() {
+  const sidebar = document.getElementById("sidebar-menu");
+  if (!sidebar) return;
+  sidebar.innerHTML = "";
+
+  const sourceKey = getSourceKey();
+
+  // 🎼 Đổi Music Folder
+  sidebar.appendChild(
+    createSidebarButton("🎼 Đổi Music Folder", () => {
+      localStorage.removeItem("rootFolder");
+      window.location.href = "/home.html";
+    })
+  );
+
+  // 🗑 Xoá DB
+  sidebar.appendChild(
+    createSidebarButton("🗑 Xoá DB", async () => {
+      const ok = await showConfirm("Bạn có chắc muốn xoá DB music?", {
+        loading: true,
+      });
+      if (!ok) return;
+
+      try {
+        const res = await fetch(`/api/music/scan-music?key=${sourceKey}&mode=delete`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        showToast(data.message || "✅ Đã xoá DB");
+      } catch (err) {
+        showToast("❌ Lỗi khi gọi API xoá DB");
+      }
+    })
+  );
+
+  // 🔄 Reset DB
+  sidebar.appendChild(
+    createSidebarButton("🔄 Reset DB (Xoá + Scan)", async () => {
+      const ok = await showConfirm("Reset DB music và scan lại?", {
+        loading: true,
+      });
+      if (!ok) return;
+
+      try {
+        const res = await fetch(`/api/music/scan-music`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: sourceKey }),
+        });
+        const data = await res.json();
+        showToast(data.message || "✅ Reset DB xong");
+      } catch (err) {
+        showToast("❌ Lỗi reset DB");
+      }
+    })
+  );
+
+  // 📦 Quét thư mục mới
+  sidebar.appendChild(
+    createSidebarButton("📦 Quét thư mục mới", async () => {
+      const ok = await showConfirm("Quét folder mới (không xoá DB)?", {
+        loading: true,
+      });
+      if (!ok) return;
+
+      try {
+        const res = await fetch(`/api/music/scan-music`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: sourceKey }),
+        });
+        const data = await res.json();
+        showToast(
+          `✅ Scan xong:\nInserted ${data.stats.inserted}, Updated ${data.stats.updated}, Skipped ${data.stats.skipped}`
+        );
+      } catch (err) {
+        showToast("❌ Lỗi khi quét folder");
+      }
+    })
+  );
+
+  // 🧹 Xoá cache folder
+  sidebar.appendChild(
+    createSidebarButton("🧼 Xoá cache folder", async () => {
+      const ok = await showConfirm("Xoá toàn bộ cache folder music?");
+      if (!ok) return;
+
+      let count = 0;
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith(`musicCache::${sourceKey}::`)) {
+          localStorage.removeItem(key);
+          count++;
+        }
+      });
+
+      showToast(`✅ Đã xoá ${count} cache folder`);
+    })
+  );
+}

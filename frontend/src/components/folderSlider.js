@@ -97,13 +97,20 @@ export function renderFolderSlider({
   folders.forEach((f) => {
     // ✅ Thumbnail đúng cho cả manga và movie
     let thumbnailUrl = f.thumbnail;
+
     if (!f.thumbnail) {
-      thumbnailUrl =
-        f.type === "video" || f.type === "file"
-          ? "/default/video-thumb.png"
-          : "/default/folder-thumb.png";
-    } else if (isMoviePage) {
-      thumbnailUrl = `/video/${f.thumbnail.replace(/\\/g, "/")}`;
+      if (f.type === "audio" || f.type === "file") {
+        thumbnailUrl = "/default/music-thumb.png";
+      } else {
+        thumbnailUrl = "/default/folder-thumb.png";
+      }
+    } else {
+      const isMusicPage = window.location.pathname.includes("music");
+      if (isMusicPage) {
+        thumbnailUrl = `/audio/${f.thumbnail.replace(/\\/g, "/")}`;
+      } else if (isMoviePage) {
+        thumbnailUrl = `/video/${f.thumbnail.replace(/\\/g, "/")}`;
+      }
     }
 
     const cardData = {
@@ -242,19 +249,27 @@ export function setupRandomSectionsIfMissing() {
 }
 
 // 👉 Hàm load 2 slider random (folder + video)
-export function loadRandomSliders() {
+export function loadRandomSliders(contentType = "movie") {
   const sourceKey = getSourceKey();
+  const isMusic = contentType === "music";
+  const api = isMusic ? "/api/music/audio-cache" : "/api/movie/video-cache";
+
   loadRandomSection(
     "folder",
     sourceKey,
-    "randomFolderSection",
-    "🎲 Folder ngẫu nhiên"
+    isMusic ? "randomFolderSection" : "randomFolderSection",
+    isMusic ? "🎲 Thư mục nhạc ngẫu nhiên" : "🎲 Folder ngẫu nhiên",
+    false,
+    api
   );
+
   loadRandomSection(
     "file",
     sourceKey,
-    "randomVideoSection",
-    "🎲 Video ngẫu nhiên"
+    isMusic ? "randomAudioSection" : "randomVideoSection",
+    isMusic ? "🎵 Bài hát ngẫu nhiên" : "🎬 Video ngẫu nhiên",
+    false,
+    api
   );
 }
 
@@ -264,7 +279,8 @@ async function loadRandomSection(
   sourceKey,
   sectionId,
   title,
-  force = false
+  force = false,
+  apiBase = "/api/movie/video-cache"
 ) {
   if (!sourceKey) return;
 
@@ -299,7 +315,7 @@ async function loadRandomSection(
 
   try {
     const res = await fetch(
-      `/api/movie/video-cache?mode=random&type=${type}&key=${sourceKey}`
+      `${apiBase}?mode=random&type=${type}&key=${sourceKey}`
     );
     const data = await res.json();
     const folders = Array.isArray(data) ? data : data.folders;
@@ -315,7 +331,7 @@ async function loadRandomSection(
       folders,
       targetId: sectionId,
       onRefresh: () =>
-        loadRandomSection(type, sourceKey, sectionId, title, true),
+        loadRandomSection(type, sourceKey, sectionId, title, true, apiBase),
     });
 
     const el = document.getElementById(tsId);
@@ -324,3 +340,5 @@ async function loadRandomSection(
     console.error("❌ Lỗi random slider:", err);
   }
 }
+
+//

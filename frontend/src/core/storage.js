@@ -332,3 +332,38 @@ export function saveRecentViewedVideo(video) {
     console.warn("❌ Không thể lưu recentViewedVideo:", err);
   }
 }
+
+
+// 
+
+const MUSIC_CACHE_PREFIX = "musicCache::";
+
+export function getMusicCacheKey(sourceKey, path) {
+  return `${MUSIC_CACHE_PREFIX}${sourceKey}::${path || ""}`;
+}
+
+export function getMusicCache(sourceKey, path) {
+  const key = getMusicCacheKey(sourceKey, path);
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      data: parsed.data,
+      timestamp: parsed.timestamp,
+    };
+  } catch {
+    localStorage.removeItem(key);
+    return null;
+  }
+}
+
+export function setMusicCache(sourceKey, path, data) {
+  const key = getMusicCacheKey(sourceKey, path);
+  const jsonData = JSON.stringify({
+    timestamp: Date.now(),
+    data: data,
+  });
+
+  localStorage.setItem(key, jsonData);
+}

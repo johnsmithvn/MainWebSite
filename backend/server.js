@@ -5,7 +5,7 @@ const path = require("path");
 const fs = require("fs");
 const {
   getAllMangaKeys,
-  getAllMovieKeys,
+  getAllMovieKeys,getAllMusicKeys,
   getRootPath,
 } = require("./utils/config");
 const { ROOT_PATHS } = require("./utils/config");
@@ -99,9 +99,10 @@ app.get(/^\/(?!api|src|manga).*/, (req, res) => {
 app.get("/api/source-keys.js", (req, res) => {
   const manga = getAllMangaKeys(); // ROOT_
   const movie = getAllMovieKeys(); // V_
-  const js = `window.mangaKeys = ${JSON.stringify(
-    manga
-  )};\nwindow.movieKeys = ${JSON.stringify(movie)};`;
+  const music = getAllMusicKeys(); // M_
+  const js = `window.mangaKeys = ${JSON.stringify(manga)};
+window.movieKeys = ${JSON.stringify(movie)};
+window.musicKeys = ${JSON.stringify(music)};`;
   res.type("application/javascript").send(js);
 });
 
@@ -120,3 +121,11 @@ app.use("/api/movie", require("./api/movie/scan-movie"));
 app.use("/api/movie", require("./api/movie/reset-movie-db"));
 app.use("/api/movie", require("./api/movie/video-cache"));
 app.use("/api/movie", require("./api/movie/favorite-movie"));
+
+//
+app.use("/api/music", require("./api/music/scan-music"));
+app.use("/api/music", require("./api/music/music-folder"));
+app.use("/api/music", require("./api/music/audio"));
+app.use("/api/music", require("./api/music/audio-cache"));
+app.use("/api/music", require("./api/music/playlist"));
+app.use("/api/music", require("./api/music/music-meta"));
