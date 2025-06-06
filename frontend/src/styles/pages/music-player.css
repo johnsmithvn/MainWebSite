@@ -160,6 +160,12 @@ body {
   flex-shrink: 0;
 }
 
+/* td folder */
+.clickable-folder:hover {
+  text-decoration: underline;
+  color: #1ed760;
+}
+
 
 /*  wraper */
 .track-table-wrapper {

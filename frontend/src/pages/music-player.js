@@ -98,11 +98,26 @@ function renderTrackList() {
     const tdAlbum = document.createElement("td");
     tdAlbum.textContent = item.album || "Unknown";
 
-    // 📁 Thư mục gốc
     const tdFolder = document.createElement("td");
-    const folderParts = item.path.split("/");
-    tdFolder.textContent =
-      folderParts.length > 1 ? folderParts.slice(0, -1).join("/") : "Root";
+    const folderParts = item.path?.split("/").filter(Boolean);
+    const folderPath =
+      folderParts.length > 1 ? folderParts.slice(0, -1).join("/") : "";
+
+    tdFolder.textContent = folderPath || "Root";
+    tdFolder.classList.add("clickable-folder"); // ✅ thêm class cho style
+
+    if (folderPath) {
+      tdFolder.style.color = "#1db954";
+      tdFolder.style.cursor = "pointer";
+      tdFolder.title = "Click để mở thư mục";
+
+      tdFolder.onclick = (e) => {
+        e.stopPropagation(); // tránh conflict với click hàng
+        window.location.href = `/music-index.html?path=${encodeURIComponent(
+          folderPath
+        )}`;
+      };
+    }
 
     // 🔁 Lượt nghe
     const tdViews = document.createElement("td");
