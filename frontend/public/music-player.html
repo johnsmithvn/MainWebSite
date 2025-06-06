@@ -13,17 +13,28 @@
     <header class="site-header">
       <div class="header-left">
         <button class="menu-button" id="sidebarToggle">☰</button>
-        <div class="logo" onclick="location.href='music-index.html'">🎵 MyMusic</div>
+        <div class="logo" onclick="location.href='music-index.html'">
+          🎵 MyMusic
+        </div>
       </div>
       <div class="header-right">
-        <button class="icon-button" onclick="location.href='playlist-music.html'">📁 Playlist</button>
+        <button
+          class="icon-button"
+          onclick="location.href='playlist-music.html'"
+        >
+          📁 Playlist
+        </button>
         <button class="icon-button" id="searchToggle">🔍</button>
       </div>
     </header>
 
     <!-- 🔍 SEARCH FLOATING -->
     <div id="floating-search" class="floating-search">
-      <input type="text" id="floatingSearchInput" placeholder="Tìm bài hát..." />
+      <input
+        type="text"
+        id="floatingSearchInput"
+        placeholder="Tìm bài hát..."
+      />
       <select id="search-type-select" class="search-type-dropdown">
         <option value="audio">🎧 Bài hát</option>
         <option value="folder">📁 Thư mục</option>
@@ -33,31 +44,32 @@
     </div>
 
     <!-- WRAPPER -->
- <div id="wrapper" class="layout-wrapper">
-  <aside id="sidebar-menu" class="sidebar"></aside>
+    <div id="wrapper" class="layout-wrapper">
+      <aside id="sidebar-menu" class="sidebar"></aside>
 
-  <main class="main-area">
-    <div class="folder-section-header">
-      <div class="folder-section-title" id="folder-title">🎶 Playlist</div>
-      <div id="folder-meta" class="folder-meta">Đang tải...</div>
+      <main class="main-area">
+        <div class="folder-section-header">
+          <div class="folder-section-title" id="folder-title">🎶 Playlist</div>
+          <div id="folder-meta" class="folder-meta">Đang tải...</div>
+        </div>
+        <table id="track-table" class="track-table">
+          <thead>
+            <tr>
+              <th>Bài hát</th>
+              <!-- Gộp cả thumbnail + title + artist -->
+              <th>Album</th>
+              <th>Thư mục</th>
+              <th>Thời lượng</th>
+              <!-- 🆕 -->
+            </tr>
+          </thead>
+
+          <tbody id="track-body">
+            <!-- Sẽ render bằng JS -->
+          </tbody>
+        </table>
+      </main>
     </div>
-<table id="track-table" class="track-table">
-  <thead>
-    <tr>
-      <th></th> <!-- Thumbnail -->
-      <th>Bài hát</th>
-      <th>Ca sĩ</th>
-      <th>Album</th>
-    </tr>
-  </thead>
-  <tbody id="track-body">
-    <!-- Sẽ render bằng JS -->
-  </tbody>
-</table>
-
-  </main>
-</div>
-
 
     <!-- FOOTER: audio player -->
     <footer class="player-footer">

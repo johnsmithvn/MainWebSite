@@ -11,23 +11,30 @@ router.get("/music-folder", (req, res) => {
 
   const db = getMusicDB(dbkey);
 
-  const items = db.prepare(`
-    SELECT * FROM folders
-    WHERE path LIKE ?
-    ORDER BY type DESC, name COLLATE NOCASE ASC
-  `).all(relPath ? `${relPath}/%` : "%");
+  const items = db
+    .prepare(
+      `
+  SELECT * FROM folders
+  WHERE path LIKE ?
+    AND name != '.thumbnail'
+  ORDER BY type DESC, name COLLATE NOCASE ASC
+`
+    )
+    .all(relPath ? `${relPath}/%` : "%");
 
   const baseDepth = relPath ? relPath.split("/").filter(Boolean).length : 0;
-  const folders = items.filter(item => {
-    const itemDepth = item.path.split("/").filter(Boolean).length;
-    return itemDepth === baseDepth + 1;
-  }).map(item => ({
-    name: item.name,
-    path: item.path,
-    thumbnail: item.thumbnail,
-    type: item.type,
-    isFavorite: !!item.isFavorite
-  }));
+  const folders = items
+    .filter((item) => {
+      const itemDepth = item.path.split("/").filter(Boolean).length;
+      return itemDepth === baseDepth + 1;
+    })
+    .map((item) => ({
+      name: item.name,
+      path: item.path,
+      thumbnail: item.thumbnail,
+      type: item.type,
+      isFavorite: !!item.isFavorite,
+    }));
 
   res.json({
     type: "music-folder",
