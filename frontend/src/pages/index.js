@@ -42,6 +42,12 @@ async function initializeMangaHome() {
     return (window.location.href = "/movie-index.html");
   }
 
+    // 🛑 Nếu là music ➜ về music-index.html
+  if (sourceKey.startsWith("M_")) {
+    return (window.location.href = "/music-index.html");
+  }
+
+
   const rootFolder = getRootFolder();
 
   // 🛡 Manga mới cần check root
