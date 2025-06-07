@@ -88,13 +88,11 @@ favBtn.onclick = async () => {
 
     // ✅ Đồng bộ cache
     updateFavoriteEverywhere(sourceKey, getRootFolder(), file, isFavorite);
-
   } catch (err) {
     console.error("❌ Failed to toggle favorite:", err);
     showToast("❌ Lỗi khi toggle yêu thích");
   }
 };
-
 
 // 📈 Tăng view
 fetch("/api/increase-view/movie", {
@@ -111,14 +109,24 @@ const cached = getMovieCache(sourceKey, folderPath);
 if (cached?.data?.length) {
   const fileName = file.split("/").pop();
   const found = cached.data.find(
-    (v) =>
-      v.path === file ||
-      v.name === fileName ||
-      file.endsWith(v.path)
+    (v) => v.path === file || v.name === fileName || file.endsWith(v.path)
   );
 
   if (found?.thumbnail) {
-    thumb = found.thumbnail.replace(/\\/g, "/"); // ✅ giữ raw path
+    const folderPrefix = file.split("/").slice(0, -1).join("/");
+    thumb = `/video/${
+      folderPrefix ? folderPrefix + "/" : ""
+    }${found.thumbnail.replace(/\\/g, "/")}`;
+  } else {
+    // fallback jpg cùng folder
+    const folderPrefix = file.split("/").slice(0, -1).join("/");
+    const fileBase = file
+      .split("/")
+      .pop()
+      .replace(/\.(mp4|mkv|ts|avi|mov|webm)$/i, "");
+    thumb = `/video/${
+      folderPrefix ? folderPrefix + "/" : ""
+    }.thumbnail/${fileBase}.jpg`;
   }
 }
 
@@ -133,7 +141,6 @@ saveRecentViewedVideo({
   thumbnail: thumb, // ✅ raw path
   type: "video",
 });
-
 
 // 🔍 Gắn search bar
 document
@@ -310,7 +317,6 @@ document.getElementById("sidebarToggle")?.addEventListener("click", () => {
 
 setupMovieSidebar(); // ✅ render nội dung sidebar (quét, reset DB, v.v.)
 
-
 // ⚙️ Double tap để tua 10s
 const SKIP_SECONDS = 10;
 
@@ -323,14 +329,17 @@ videoEl.addEventListener("dblclick", (e) => {
     videoEl.currentTime = Math.max(0, videoEl.currentTime - SKIP_SECONDS);
     showToast(`⏪ Lùi ${SKIP_SECONDS}s`);
   } else {
-    videoEl.currentTime = Math.min(videoEl.duration, videoEl.currentTime + SKIP_SECONDS);
+    videoEl.currentTime = Math.min(
+      videoEl.duration,
+      videoEl.currentTime + SKIP_SECONDS
+    );
     showToast(`⏩ Tua ${SKIP_SECONDS}s`);
   }
 });
 
 // 🎯 Gắn gesture cho video
 const hammer = new Hammer(videoEl);
-hammer.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL });
+hammer.get("pan").set({ direction: Hammer.DIRECTION_HORIZONTAL });
 
 let panDeltaX = 0;
 
@@ -382,7 +391,9 @@ hammer.on("panend", () => {
 
 // 👉 Nút "Mở bằng ExoPlayer" (nếu app hỗ trợ)
 document.getElementById("btn-open-exoplayer")?.addEventListener("click", () => {
-  const videoUrl = `${location.origin}/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(file)}`;
+  const videoUrl = `${
+    location.origin
+  }/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(file)}`;
   if (window.Android?.openExoPlayer) {
     window.Android.openExoPlayer(videoUrl);
   } else {

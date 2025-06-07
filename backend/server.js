@@ -35,9 +35,9 @@ app.use("/api/manga", require("./api/manga/favorite")); // ⭐ API đánh dấu 
 for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
   // Nếu key là video/movie, mount route riêng
   if (key.startsWith("V_")) {
-    app.use("/video", express.static(absPath));
+    app.use("/video", express.static(absPath, { dotfiles: "allow" }));
   } else if (key.startsWith("M_")) {
-app.use("/audio", express.static(absPath, { dotfiles: "allow" }));
+    app.use("/audio", express.static(absPath, { dotfiles: "allow" }));
   } else {
     app.use("/manga", express.static(absPath));
   }

@@ -98,23 +98,32 @@ export function renderFolderSlider({
     // ✅ Thumbnail đúng cho cả manga và movie
     let thumbnailUrl = f.thumbnail;
 
-    if (!f.thumbnail) {
-      if (f.type === "audio" || f.type === "file") {
-        thumbnailUrl = "/default/music-thumb.png";
-      } else {
-        thumbnailUrl = "/default/folder-thumb.png";
-      }
+  if (!f.thumbnail) {
+    if (f.type === "audio" || f.type === "file" || f.type === "video") {
+      thumbnailUrl = "/default/music-thumb.png";
     } else {
-      const isMusicPage = window.location.pathname.includes("music");
-      if (isMusicPage) {
-        const folderPrefix = f.path?.split("/").slice(0, -1).join("/");
-        thumbnailUrl = `/audio/${
-          folderPrefix ? folderPrefix + "/" : ""
-        }${f.thumbnail.replace(/\\/g, "/")}`;
-      } else if (isMoviePage) {
-        thumbnailUrl = `/video/${f.thumbnail.replace(/\\/g, "/")}`;
+      thumbnailUrl = "/default/folder-thumb.png";
+    }
+  } else {
+    const isMusicPage = window.location.pathname.includes("music");
+    const isMoviePage = window.location.pathname.includes("movie");
+    // Phân biệt folder/file để build prefix đúng
+    let folderPrefix = "";
+    if (f.type === "folder") {
+      folderPrefix = f.path || "";
+    } else {
+      folderPrefix = f.path?.split("/").slice(0, -1).join("/") || "";
+    }
+    if (isMusicPage) {
+      if (!f.thumbnail.startsWith("/audio/") && !f.thumbnail.startsWith("http")) {
+        thumbnailUrl = `/audio/${folderPrefix ? folderPrefix + "/" : ""}${f.thumbnail.replace(/\\/g, "/")}`;
+      }
+    } else if (isMoviePage) {
+      if (!f.thumbnail.startsWith("/video/") && !f.thumbnail.startsWith("http")) {
+        thumbnailUrl = `/video/${folderPrefix ? folderPrefix + "/" : ""}${f.thumbnail.replace(/\\/g, "/")}`;
       }
     }
+  }
 
     const cardData = {
       ...f,
@@ -129,35 +138,34 @@ export function renderFolderSlider({
     const encoded = encodeURIComponent(f.path);
     const key = getSourceKey();
 
-card.onclick = (e) => {
-  if (e.target.classList.contains("folder-fav")) return;
+    card.onclick = (e) => {
+      if (e.target.classList.contains("folder-fav")) return;
 
-  const isMusicPage = window.location.pathname.includes("music");
-  const isMoviePage = window.location.pathname.includes("movie");
+      const isMusicPage = window.location.pathname.includes("music");
+      const isMoviePage = window.location.pathname.includes("movie");
 
-  // Xử lý mở player cho cả music và movie
-  if (
-    (isMusicPage && (f.type === "audio" || f.type === "file")) ||
-    (isMoviePage && (f.type === "video" || f.type === "file"))
-  ) {
-    // Nếu là file nhạc thì sang music-player, nếu là video thì sang movie-player
-    const page = isMusicPage ? "music-player" : "movie-player";
-    window.location.href = `/${page}.html?file=${encoded}&key=${key}`;
-    return;
-  }
+      // Xử lý mở player cho cả music và movie
+      if (
+        (isMusicPage && (f.type === "audio" || f.type === "file")) ||
+        (isMoviePage && (f.type === "video" || f.type === "file"))
+      ) {
+        // Nếu là file nhạc thì sang music-player, nếu là video thì sang movie-player
+        const page = isMusicPage ? "music-player" : "movie-player";
+        window.location.href = `/${page}.html?file=${encoded}&key=${key}`;
+        return;
+      }
 
-  // Nếu là folder
-  if (isMusicPage) {
-    window.location.href = `/music-index.html?path=${encoded}&key=${key}`;
-  } else if (isMoviePage) {
-    window.location.href = `/movie-index.html?path=${encoded}&key=${key}`;
-  } else if (f.isSelfReader && f.images) {
-    window.location.href = `/reader.html?path=${encoded}`;
-  } else if (typeof window.loadFolder === "function") {
-    window.loadFolder(f.path);
-  }
-};
-
+      // Nếu là folder
+      if (isMusicPage) {
+        window.location.href = `/music-index.html?path=${encoded}&key=${key}`;
+      } else if (isMoviePage) {
+        window.location.href = `/movie-index.html?path=${encoded}&key=${key}`;
+      } else if (f.isSelfReader && f.images) {
+        window.location.href = `/reader.html?path=${encoded}`;
+      } else if (typeof window.loadFolder === "function") {
+        window.loadFolder(f.path);
+      }
+    };
   });
 
   sliderContainer.appendChild(wrapper);
