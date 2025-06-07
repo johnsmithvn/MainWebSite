@@ -13,10 +13,14 @@ router.get("/playlists", (req, res) => {
   if (!key) return res.status(400).json({ error: "Thiếu key" });
 
   const db = getMusicDB(key);
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT id, name, description FROM playlists
     ORDER BY updatedAt DESC
-  `).all();
+  `
+    )
+    .all();
 
   res.json(rows);
 });
@@ -29,13 +33,23 @@ router.get("/playlist/:id", (req, res) => {
 
   const db = getMusicDB(key);
 
-  const items = db.prepare(`
-    SELECT f.*
-    FROM playlist_items pi
-    JOIN folders f ON f.path = pi.songPath
-    WHERE pi.playlistId = ?
-    ORDER BY pi.sortOrder ASC
-  `).all(id);
+  const items = db
+    .prepare(
+      `
+  SELECT 
+    f.*,
+    s.artist,
+    s.album,
+    s.genre,
+    s.lyrics
+  FROM playlist_items pi
+  JOIN folders f ON f.path = pi.songPath
+  LEFT JOIN songs s ON s.path = f.path
+  WHERE pi.playlistId = ?
+  ORDER BY pi.sortOrder ASC
+`
+    )
+    .all(id);
 
   res.json(items);
 });
@@ -43,13 +57,18 @@ router.get("/playlist/:id", (req, res) => {
 // ➕ Tạo playlist
 router.post("/playlist", (req, res) => {
   const { key, name, description } = req.body;
-  if (!key || !name) return res.status(400).json({ error: "Thiếu key hoặc tên playlist" });
+  if (!key || !name)
+    return res.status(400).json({ error: "Thiếu key hoặc tên playlist" });
 
   const db = getMusicDB(key);
-  const id = db.prepare(`
+  const id = db
+    .prepare(
+      `
     INSERT INTO playlists (name, description, createdAt, updatedAt)
     VALUES (?, ?, ?, ?)
-  `).run(name, description || "", now(), now()).lastInsertRowid;
+  `
+    )
+    .run(name, description || "", now(), now()).lastInsertRowid;
 
   res.json({ success: true, id });
 });
@@ -57,20 +76,30 @@ router.post("/playlist", (req, res) => {
 // ➕ Thêm bài hát vào playlist
 router.post("/playlist/add", (req, res) => {
   const { key, playlistId, path } = req.body;
-  if (!key || !playlistId || !path) return res.status(400).json({ error: "Thiếu dữ liệu" });
+  if (!key || !playlistId || !path)
+    return res.status(400).json({ error: "Thiếu dữ liệu" });
 
   const db = getMusicDB(key);
-  const exists = db.prepare(`
+  const exists = db
+    .prepare(
+      `
     SELECT 1 FROM playlist_items WHERE playlistId = ? AND songPath = ?
-  `).get(playlistId, path);
+  `
+    )
+    .get(playlistId, path);
   if (exists) return res.json({ success: true, message: "Đã có" });
 
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO playlist_items (playlistId, songPath)
     VALUES (?, ?)
-  `).run(playlistId, path);
+  `
+  ).run(playlistId, path);
 
-  db.prepare(`UPDATE playlists SET updatedAt = ? WHERE id = ?`).run(now(), playlistId);
+  db.prepare(`UPDATE playlists SET updatedAt = ? WHERE id = ?`).run(
+    now(),
+    playlistId
+  );
 
   res.json({ success: true });
 });
@@ -78,12 +107,15 @@ router.post("/playlist/add", (req, res) => {
 // ❌ Xoá bài hát khỏi playlist
 router.delete("/playlist/remove", (req, res) => {
   const { key, playlistId, path } = req.body;
-  if (!key || !playlistId || !path) return res.status(400).json({ error: "Thiếu dữ liệu" });
+  if (!key || !playlistId || !path)
+    return res.status(400).json({ error: "Thiếu dữ liệu" });
 
   const db = getMusicDB(key);
-  db.prepare(`
+  db.prepare(
+    `
     DELETE FROM playlist_items WHERE playlistId = ? AND songPath = ?
-  `).run(playlistId, path);
+  `
+  ).run(playlistId, path);
 
   res.json({ success: true });
 });

@@ -39,7 +39,8 @@ async function loadPlaylists() {
     div.title = item.description || "";
     div.onclick = () => {
       // mở bằng music-player với id playlist
-      window.location.href = `/music-player.html?playlist=${item.id}`;
+      const key = getSourceKey();
+      window.location.href = `/music-player.html?playlist=${item.id}&key=${key}`;
     };
     container.appendChild(div);
   });
