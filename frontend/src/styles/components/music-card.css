@@ -1,0 +1,58 @@
+.playlist-popup {
+  position: absolute;
+  z-index: 999;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 6px;
+  min-width: 220px;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+}
+.playlist-popup .popup-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+.playlist-option {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.playlist-option:hover {
+  background-color: #f0f0f0;
+}
+.playlist-option.bold {
+  font-weight: bold;
+  color: #1db954;
+}
+
+.folder-card {
+  position: relative;
+}
+
+
+/* ⋮ icon menu: đưa xuống góc phải dưới */
+.card-menu-btn {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  z-index: 2;
+  opacity: 0.85;
+  transition: all 0.2s ease;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.card-menu-btn:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+

@@ -1,4 +1,5 @@
 import { getSourceKey } from "/src/core/storage.js";
+import { showPlaylistMenu } from "/src/components/playlistMenu.js";
 
 /**
  * 🎵 Tạo card bài hát hoặc thư mục nhạc
@@ -13,9 +14,10 @@ export function renderMusicCardWithFavorite(item) {
     !thumbnailUrl || thumbnailUrl === "null" || thumbnailUrl === "undefined";
 
   if (isMissing) {
-    thumbnailUrl = item.type === "folder"
-      ? "/default/folder-thumb.png"
-      : "/default/music-thumb.png";
+    thumbnailUrl =
+      item.type === "folder"
+        ? "/default/folder-thumb.png"
+        : "/default/music-thumb.png";
   }
 
   const img = document.createElement("img");
@@ -44,6 +46,21 @@ export function renderMusicCardWithFavorite(item) {
   info.appendChild(sub);
   card.appendChild(img);
   card.appendChild(info);
+  // nút menu 3 chấm
+  if (item.type === "audio" || item.type === "file") {
+    const menuBtn = document.createElement("button");
+menuBtn.textContent = "+"; // ✅ Thay vì "⋮"
+    menuBtn.className = "card-menu-btn";
+
+    // ✅ Bắt riêng sự kiện click menu
+    menuBtn.addEventListener("click", (e) => {
+      e.stopPropagation(); // không để lan ra card
+      e.preventDefault(); // tránh trigger hành vi mặc định
+      showPlaylistMenu(item.path, item.name, e.target);
+    });
+
+    card.appendChild(menuBtn);
+  }
 
   const favBtn = document.createElement("div");
   favBtn.className = "folder-fav" + (item.isFavorite ? " active" : "");
@@ -76,15 +93,19 @@ export function renderMusicCardWithFavorite(item) {
 
   card.appendChild(favBtn);
 
-  card.onclick = () => {
+  card.addEventListener("click", (e) => {
+    // ✅ Nếu bấm vào nút ⋮ thì bỏ qua
+    if (e.target.closest(".card-menu-btn")) return;
+
     const encoded = encodeURIComponent(item.path);
     const key = getSourceKey();
+
     if (item.type === "audio" || item.type === "file") {
       window.location.href = `/music-player.html?file=${encoded}&key=${key}`;
     } else {
       window.location.href = `/music-index.html?path=${encoded}`;
     }
-  };
+  });
 
   return card;
 }

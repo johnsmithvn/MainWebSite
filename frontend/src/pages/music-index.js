@@ -135,7 +135,6 @@ function renderMusicGrid(list) {
   grid.className = "grid";
 
   list.forEach((item) => {
-    console.log("item.path =", item.path, "| thumbnail =", item.thumbnail);
     let folderPrefixParts = item.path?.split("/").filter(Boolean);
     if (item.type === "file" || item.type === "audio") folderPrefixParts.pop();
     let folderPrefix = folderPrefixParts.join("/");
@@ -148,7 +147,6 @@ function renderMusicGrid(list) {
       ? "/default/folder-thumb.png"
       : "/default/music-thumb.png";
 
-    console.log("Thumbnail URL:", thumb);
 
     const card = renderMusicCardWithFavorite({
       ...item,

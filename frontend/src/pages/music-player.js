@@ -16,6 +16,7 @@ document.getElementById("sidebarToggle")?.addEventListener("click", () => {
 
 const urlParams = new URLSearchParams(window.location.search);
 const currentFile = urlParams.get("file");
+
 const sourceKey = getSourceKey();
 
 const audioEl = document.getElementById("audio-player");
@@ -188,4 +189,14 @@ function formatDuration(seconds) {
   const sec = Math.floor(seconds % 60);
   return `${min}:${sec.toString().padStart(2, "0")}`;
 }
-loadFolderSongs();
+
+// Hàm load playlist từ ID
+const playlistId = urlParams.get("playlist");
+
+if (playlistId) {
+  loadPlaylistSongs(playlistId);
+} else if (currentFile && sourceKey) {
+  loadFolderSongs(); // chỉ gọi khi có đủ dữ liệu
+} else {
+  showToast("❌ Thiếu file hoặc sourceKey");
+}
