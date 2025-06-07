@@ -1,8 +1,10 @@
-body {
-  background-color: #121212;
-  color: #eee;
+body, html {
+  height: 100vh;
   margin: 0;
   font-family: "Segoe UI", sans-serif;
+  background-color: #121212;
+  color: #eee;
+  overflow: hidden; /* Không cho scroll toàn trang */
 }
 
 /* ====== HEADER + SIDEBAR ====== */
@@ -13,18 +15,29 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: fixed;
+  left: 0; right: 0; top: 0;
+  z-index: 1001;
+  height: 52px;
+}
+.layout-wrapper {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-top: 52px; /* Đẩy xuống dưới header */
+}
+.main-area {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.folder-section-header {
-  padding: 10px 20px;
-  background: #202020;
-  color: #1db954;
-  font-weight: bold;
-}
-
+/* Sidebar */
 #sidebar-menu {
   position: fixed;
-  top: 50px;
+  top: 52px;
   left: 0;
   bottom: 0;
   width: 260px;
@@ -38,7 +51,6 @@ body {
 #sidebar-menu.active {
   transform: translateX(0);
 }
-
 .sidebar button {
   display: block;
   background: none;
@@ -54,42 +66,96 @@ body {
   color: white;
 }
 
-/* ====== PLAYER FOOTER ====== */
-.player-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #181818;
+/* ====== STICKY HEADER, NOW PLAYING, TABLE HEADER ====== */
+.folder-section-header {
+  position: sticky;
+  top: 52px; /* dưới .site-header */
+  z-index: 5;
+  background: #202020;
+  color: #1db954;
+  font-weight: bold;
   padding: 10px 20px;
-  color: white;
+  box-shadow: 0 2px 8px 0 #0002;
+}
+.now-playing-info {
+  position: sticky;
+  top: 98px; /* 52px (header) + 46px (folder-section-header) */
+  z-index: 4;
+  background: #181818;
+  box-shadow: 0 2px 8px 0 #0002;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin: 0 0 24px 0;
+  padding: 20px 24px;
+  border-radius: 20px;
+  color: #fff;
+}
+.now-playing-cover {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.now-playing-thumb {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 16px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.30);
+  background: #222;
+}
+.now-playing-meta {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  z-index: 100;
+  gap: 10px;
 }
-.player-footer audio {
-  width: 100%;
-  max-width: 600px;
+.now-title {
+  font-size: 2.2rem;
+  font-weight: bold;
+  margin-bottom: 4px;
 }
-.controls {
-  margin-top: 6px;
+.now-artist {
+  font-size: 1.3rem;
+  color: #1db954;
+}
+.now-extra {
+  font-size: 1.1rem;
+  color: #ccc;
+  gap: 12px;
   display: flex;
-  gap: 16px;
-  font-size: 20px;
+  align-items: center;
 }
-.now-playing {
-  margin-top: 4px;
-  font-size: 14px;
-  color: #bbb;
+@media (max-width: 600px) {
+  .now-playing-info {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 8px;
+    gap: 14px;
+  }
+  .now-playing-thumb {
+    width: 90px; height: 90px;
+  }
+  .now-title { font-size: 1.1rem; }
 }
 
 /* ====== TABLE STYLE ====== */
+.track-table-wrapper {
+  position: relative;
+  /* Giới hạn chiều cao cho list nhạc (trừ header, now-playing, footer) */
+  max-height: calc(100vh - 430px); /* Điều chỉnh theo thực tế UI: header 52 + folder-header 46 + nowplaying 170 + footer 80 + margin 24 + extra */
+  min-height: 180px;
+  overflow-y: auto;
+  overflow-x: auto;
+  width: 100%;
+  background: transparent;
+  padding-bottom: 88px; /* tạo khoảng trống không bị player-footer che */
+}
 .track-table {
   width: 100%;
+  min-width: 820px;
   border-collapse: collapse;
   color: white;
-  margin-top: 10px;
+  margin-top: 0;
 }
 .track-table th, .track-table td {
   padding: 10px 12px;
@@ -99,11 +165,16 @@ body {
   text-overflow: ellipsis;
   overflow: hidden;
 }
-.track-table th {
+.track-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #181818;
   font-size: 13px;
   font-weight: 500;
   color: #888;
   border-bottom: 1px solid #333;
+  box-shadow: 0 2px 4px #0002;
 }
 .track-table td {
   border-bottom: 1px solid #222;
@@ -159,28 +230,16 @@ body {
   object-fit: cover;
   flex-shrink: 0;
 }
-
 /* td folder */
 .clickable-folder:hover {
   text-decoration: underline;
   color: #1ed760;
 }
 
-
-/*  wraper */
-.track-table-wrapper {
-  overflow-x: auto;
-  width: 100%;
-}
-.track-table {
-  min-width: 768px;
-}
-/* mobile */
-
+/* mobile Ẩn cột cho gọn */
 @media (max-width: 768px) {
   .track-table th:nth-child(3),
   .track-table td:nth-child(3), /* Thư mục */
-
   .track-table th:nth-child(4),
   .track-table td:nth-child(4)  /* Lượt nghe */
   {
@@ -188,68 +247,123 @@ body {
   }
 }
 
-
-
-
-
-/* //////////// */
-/* ===============================
-   BLOCK NOW PLAYING (Spotify Style)
-=============================== */
-.now-playing-info {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  margin: 32px 0 24px 0;
-  padding: 20px 24px;
+/* ====== PLAYER FOOTER ====== */
+.player-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   background: #181818;
-  border-radius: 20px;
-  color: #fff;
-  box-shadow: 0 4px 20px 0 rgba(0,0,0,.08);
-}
-.now-playing-cover {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-.now-playing-thumb {
-  width: 120px;
-  height: 120px;
-  object-fit: cover;
-  border-radius: 16px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.30);
-  background: #222;
-}
-.now-playing-meta {
+  padding: 10px 20px 20px 20px;
+  color: white;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  z-index: 1002;
+  box-shadow: 0 -2px 20px #0009;
+  width: 100vw;
+}
+.player-footer audio {
+  width: 100%;
+  max-width: 600px;
+}
+.controls {
+  margin-top: 6px;
+  display: flex;
+  gap: 16px;
+  font-size: 20px;
+}
+.player-footer .controls {
   gap: 10px;
 }
-.now-title {
-  font-size: 2.2rem;
-  font-weight: bold;
-  margin-bottom: 4px;
+.player-footer .controls button {
+  background: #222;
+  border: none;
+  color: #fff;
+  font-size: 1.6rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  margin: 0 3px;
+  transition: background 0.18s, transform 0.1s;
+  cursor: pointer;
 }
-.now-artist {
-  font-size: 1.3rem;
-  color: #1db954;
-}
-.now-extra {
-  font-size: 1.1rem;
-  color: #ccc;
-  gap: 12px;
+.player-footer .controls button#btn-play { background: #1db954; font-size: 2.1rem; }
+.player-footer .controls button.active, .player-footer .controls button:active { background: #1db954; }
+.player-footer .controls button#btn-shuffle.active { color: #1db954; }
+.seekbar-row {
   display: flex;
   align-items: center;
+  gap: 10px;
+  width: 98%;
+  margin: 6px auto 0 auto;
 }
-@media (max-width: 600px) {
-  .now-playing-info {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 12px 8px;
-    gap: 14px;
-  }
-  .now-playing-thumb {
-    width: 90px; height: 90px;
-  }
-  .now-title { font-size: 1.1rem; }
+.seekbar-row input[type=range] {
+  flex: 1;
+  appearance: none;
+  height: 5px;
+  border-radius: 4px;
+  background: #333;
+  outline: none;
+}
+.seekbar-row input[type=range]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #1db954;
+  cursor: pointer;
+  box-shadow: 0 0 2px #fff;
+}
+.seekbar-row span { font-size: 0.93rem; color: #bbb; min-width: 40px; text-align: center;}
+
+.now-playing {
+  margin-top: 4px;
+  font-size: 14px;
+  color: #bbb;
+}
+
+/* Ẩn scroll bar ngang table nếu không cần */
+.track-table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  background: #222;
+}
+.track-table-wrapper::-webkit-scrollbar-thumb {
+  background: #1a1a1a;
+  border-radius: 8px;
+}
+
+
+/*  */
+
+.folder-section-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 20px;
+  font-size: 1.08em;
+  font-weight: 500;
+  background: #202020;
+  border-radius: 0 0 18px 18px;
+  min-height: 42px;
+}
+.folder-title.clickable {
+  color: #1db954;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.13s;
+}
+.folder-title.clickable:hover {
+  color: #24e066;
+}
+.folder-track-count {
+  color: #1db954;
+  font-size: 1em;
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+
+.folder-title.playlist-title {
+  color: #a259ec;  /* tím nổi bật */
+  font-weight: 600;
 }

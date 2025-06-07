@@ -26,6 +26,7 @@ router.get("/playlists", (req, res) => {
 });
 
 // 🎵 GET bài hát trong playlist
+// 🎵 GET bài hát trong playlist + tên playlist
 router.get("/playlist/:id", (req, res) => {
   const { key } = req.query;
   const id = req.params.id;
@@ -33,6 +34,12 @@ router.get("/playlist/:id", (req, res) => {
 
   const db = getMusicDB(key);
 
+  // Lấy thông tin tên playlist
+  const playlist = db
+    .prepare(`SELECT id, name, description FROM playlists WHERE id = ?`)
+    .get(id);
+
+  // Lấy danh sách track
   const items = db
     .prepare(
       `
@@ -51,7 +58,16 @@ router.get("/playlist/:id", (req, res) => {
     )
     .all(id);
 
-  res.json(items);
+  if (!playlist) {
+    return res.status(404).json({ error: "Playlist không tồn tại" });
+  }
+
+  res.json({
+    id: playlist.id,
+    name: playlist.name,
+    description: playlist.description,
+    tracks: items,
+  });
 });
 
 // ➕ Tạo playlist
