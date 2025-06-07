@@ -279,6 +279,14 @@ function playAtIndex(index) {
   renderNowPlayingInfo(file);
   updateTrackHighlight();
   updateSeekbar();
+
+
+   // =========== Tăng view ==============
+  fetch("/api/increase-view/music", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: sourceKey, path: file.path }),
+  }).catch(() => {});
 }
 
 // ========================

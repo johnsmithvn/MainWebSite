@@ -139,11 +139,7 @@ function getMusicDB(dbkey) {
       lyrics TEXT
     );
 
-    -- 📈 views
-    CREATE TABLE IF NOT EXISTS views (
-      path TEXT PRIMARY KEY,
-      count INTEGER DEFAULT 1
-    );
+   
 
     -- 🎶 playlists
     CREATE TABLE IF NOT EXISTS playlists (

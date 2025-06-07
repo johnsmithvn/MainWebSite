@@ -30,18 +30,19 @@ router.get("/music-folder", (req, res) => {
       const itemDepth = item.path.split("/").filter(Boolean).length;
       return itemDepth === baseDepth + 1;
     })
-    .map((item) => ({
-      name: item.name,
-      path: item.path,
-      thumbnail: item.thumbnail,
-      type: item.type,
-      isFavorite: !!item.isFavorite,
-      artist: item.artist,
-      album: item.album,
-      genre: item.genre,
-      lyrics: item.lyrics,
-      duration: item.duration,
-    }));
+   .map((item) => ({
+  name: item.name,
+  path: item.path,
+  thumbnail: item.thumbnail,
+  type: item.type,
+  isFavorite: !!item.isFavorite,
+  artist: item.artist,
+  album: item.album,
+  genre: item.genre,
+  lyrics: item.lyrics,
+  duration: item.duration,
+  viewCount: typeof item.viewCount === "number" ? item.viewCount : (item.viewCount ? Number(item.viewCount) : 0),
+}));
 
 
 

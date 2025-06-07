@@ -817,3 +817,48 @@ export async function filterMusic() {
     dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
   }
 }
+
+
+
+
+export function showInputPrompt(message, placeholder = "", okText = "OK", cancelText = "Hủy") {
+  return new Promise((resolve) => {
+    // Tạo overlay
+    let overlay = document.createElement("div");
+    overlay.className = "popup-overlay";
+    overlay.style.zIndex = "99999";
+    overlay.innerHTML = `
+      <div class="popup-confirm">
+        <div class="popup-message">${message}</div>
+        <input class="popup-input" type="text" placeholder="${placeholder}" autofocus />
+        <div class="popup-actions">
+          <button class="popup-ok">${okText}</button>
+          <button class="popup-cancel">${cancelText}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector(".popup-input");
+    const okBtn = overlay.querySelector(".popup-ok");
+    const cancelBtn = overlay.querySelector(".popup-cancel");
+
+    // Sự kiện OK
+    okBtn.onclick = () => {
+      const value = input.value.trim();
+      overlay.remove();
+      resolve(value || null);
+    };
+    // Sự kiện Hủy
+    cancelBtn.onclick = () => {
+      overlay.remove();
+      resolve(null);
+    };
+    // Enter
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") okBtn.click();
+      if (e.key === "Escape") cancelBtn.click();
+    };
+    input.focus();
+  });
+}

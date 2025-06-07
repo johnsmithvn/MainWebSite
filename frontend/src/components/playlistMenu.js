@@ -1,6 +1,6 @@
 // playlistMenu.js
 import { getSourceKey } from "/src/core/storage.js";
-import { showToast } from "/src/core/ui.js";
+import { showToast,showConfirm,showInputPrompt } from "/src/core/ui.js";
 
 export async function showPlaylistMenu(path, name, anchor) {
   let container = document.getElementById("playlist-popup");
@@ -20,27 +20,36 @@ export async function showPlaylistMenu(path, name, anchor) {
     showToast("❌ Lỗi tải danh sách playlist");
   }
 
-  container.innerHTML = `<div class="popup-title">➕ Thêm "${name}" vào:</div>`;
+  // === Render cấu trúc khung popup sticky title + vùng scroll + sticky button add ===
+  container.innerHTML = `
+    <div class="popup-title">Add "${name}"</div>
+    <div class="playlist-list-scroll"></div>
+  `;
 
-  // ⭐⭐⭐ 1. Check trạng thái từng playlist
+  const listScroll = container.querySelector('.playlist-list-scroll');
+
+  // Render từng playlist-row vào vùng scroll
   const playlistStatus = await Promise.all(
     playlists.map(async (p) => {
-      // Lấy danh sách bài trong playlist này
       const res = await fetch(`/api/music/playlist/${p.id}?key=${key}`);
       const items = await res.json();
-      const contains = items.some(song => song.path === path);
+      const contains = items.tracks?.some((song) => song.path === path);
       return { ...p, contains };
     })
   );
 
-  // ⭐⭐⭐ 2. Render từng playlist, tick nếu đã có, click thì toggle add/remove
   playlistStatus.forEach((p) => {
+    const row = document.createElement("div");
+    row.className = "playlist-row";
+
+    // Nút tick add/remove bài
     const btn = document.createElement("button");
     btn.className = "playlist-option" + (p.contains ? " bold" : "");
     btn.innerHTML = p.contains ? `✅ ${p.name}` : p.name;
+    btn.style.flex = "1";
+    btn.style.textAlign = "left";
     btn.onclick = async () => {
       if (p.contains) {
-        // Remove khỏi playlist
         await fetch("/api/music/playlist/remove", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
@@ -52,7 +61,6 @@ export async function showPlaylistMenu(path, name, anchor) {
         });
         showToast("❌ Đã xoá khỏi playlist");
       } else {
-        // Thêm vào playlist
         await fetch("/api/music/playlist/add", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -64,41 +72,70 @@ export async function showPlaylistMenu(path, name, anchor) {
         });
         showToast("✅ Đã thêm vào playlist");
       }
-      // Reload lại popup để cập nhật tick ngay lập tức
       showPlaylistMenu(path, name, anchor);
     };
-    container.appendChild(btn);
+
+    // Nút xoá playlist bên phải
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "🗑️";
+    delBtn.className = "playlist-delete-btn";
+    delBtn.title = "Xoá playlist này";
+    delBtn.style.marginLeft = "6px";
+    delBtn.onclick = async (e) => {
+      e.stopPropagation();
+      const ok = await showConfirm(`Xoá playlist "${p.name}"?`);
+      if (!ok) return;
+      await fetch("/api/music/playlist", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, id: p.id }),
+      });
+      showToast("🗑️ Đã xoá playlist");
+      showPlaylistMenu(path, name, anchor);
+    };
+
+    row.appendChild(btn);
+    row.appendChild(delBtn);
+
+    // Flex-row style
+    row.style.display = "flex";
+    row.style.alignItems = "center";
+    row.style.gap = "0";
+
+    listScroll.appendChild(row); // Append vào vùng scroll!
   });
 
-  // ⭐⭐⭐ 3. Tạo mới playlist
+  // Tạo mới playlist (sticky dưới)
   const newBtn = document.createElement("button");
-  newBtn.className = "playlist-option bold";
+  newBtn.className = "playlist-option bold playlist-add-btn";
   newBtn.textContent = "➕ Tạo playlist mới...";
   newBtn.onclick = async () => {
-    const name = prompt("Nhập tên playlist mới:");
-    if (!name) return;
-
+    const value = await showInputPrompt("Nhập tên playlist mới", "Tên playlist");
+    if (!value) return;
     const res = await fetch("/api/music/playlist", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, name }),
+      body: JSON.stringify({ key, name: value }),
     });
     const data = await res.json();
     if (data?.id) {
       showToast("✅ Tạo playlist thành công!");
-      showPlaylistMenu(path, name, anchor); // load lại popup
+      showPlaylistMenu(path, name, anchor);
     }
   };
   container.appendChild(newBtn);
 
-  // ⭐⭐⭐ 4. Vị trí hiển thị popup
-  const rect = anchor.getBoundingClientRect();
-  const scrollY = window.scrollY || document.documentElement.scrollTop;
-  const scrollX = window.scrollX || document.documentElement.scrollLeft;
-  container.style.top = rect.bottom + scrollY + "px";
-  container.style.left = rect.left + scrollX + "px";
+  // Popup căn giữa (mobile/desktop)
+  const isMobile = window.innerWidth <= 480;
+  container.style.position = "fixed";
+  container.style.left = "50%";
+  container.style.top = "50%";
+  container.style.transform = "translate(-50%, -50%)";
+  container.style.width = isMobile ? "min(96vw, 400px)" : "340px";
+  container.style.maxWidth = isMobile ? "96vw" : "340px";
+  container.style.maxHeight = isMobile ? "87vh" : "70vh";
 
-  // ⭐⭐⭐ 5. Tự ẩn nếu click ra ngoài
+  // Click ngoài sẽ ẩn popup
   setTimeout(() => {
     function handleClickOutside(e) {
       if (!container.contains(e.target)) {

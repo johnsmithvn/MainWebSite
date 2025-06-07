@@ -8,7 +8,7 @@
   min-width: 220px;
   box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
 }
-.playlist-popup .popup-title {
+/* .playlist-popup .popup-title {
   font-weight: bold;
   margin-bottom: 8px;
 }
@@ -27,7 +27,7 @@
 .playlist-option.bold {
   font-weight: bold;
   color: #1db954;
-}
+} */
 
 .folder-card {
   position: relative;

@@ -1,0 +1,155 @@
+.playlist-popup {
+  position: fixed;
+  z-index: 9999;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+  width: 340px;
+  max-width: 96vw;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  overflow: hidden;
+}
+
+.popup-title {
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #222;
+  text-align: center;
+  background: #fafafa;
+  padding: 13px 16px 9px 16px;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  display: block;
+  max-width: 100%;
+}
+
+.playlist-list-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 42vh;
+  padding: 2px 0;
+}
+
+.playlist-row {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  width: 100%;
+  padding: 0 7px;
+  min-width: 0;
+}
+
+.playlist-option {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 1em;
+  padding: 6px 0 6px 6px;
+  cursor: pointer;
+  border-radius: 6px 0 0 6px;
+  transition: background .13s;
+  display: inline-block;
+  box-sizing: border-box;
+}
+
+
+.playlist-option.bold {
+  font-weight: bold;
+  color: #1db954;
+}
+
+.playlist-option:hover,
+.playlist-option:focus {
+  background-color: #f5f5f5;
+}
+
+.playlist-add-btn {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  width: 100%;
+  border-radius: 0 0 10px 10px;
+  background: #e7fbe9;
+  color: #1db954;
+  font-weight: bold;
+  padding: 12px 0 12px 0;
+  margin: 0;
+  border-top: 1px solid #eee;
+  text-align: center;
+  font-size: 1.06em;
+}
+
+.playlist-add-btn:hover,
+.playlist-add-btn:focus {
+  background: #d4f8db;
+}
+
+.playlist-delete-btn {
+  background: none;
+  border: none;
+  color: #bbb;
+  font-size: 1.08em;
+  cursor: pointer;
+  padding: 6px 14px 6px 8px;
+  margin-left: 0;
+  flex-shrink: 0;
+  border-radius: 0 6px 6px 0;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  transition: background 0.13s, color 0.13s;
+}
+.playlist-delete-btn:hover,
+.playlist-delete-btn:focus {
+  color: #e74c3c;
+  background: #fbe8e6;
+}
+
+/* Mobile tối ưu */
+@media (max-width: 480px) {
+  .playlist-popup {
+    width: 96vw;
+    min-width: 0;
+    max-width: 99vw;
+    max-height: 87vh;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%,-50%);
+  }
+  .playlist-list-scroll {
+    max-height: 53vh;
+  }
+  .playlist-option {
+    font-size: .96em;
+    max-width: 85px;
+  }
+  .popup-title {
+    font-size: 1em;
+    padding: 11px 8px 7px 8px;
+  }
+  .playlist-delete-btn {
+    font-size: 1em;
+    padding-right: 7px;
+    padding-left: 6px;
+  }
+}

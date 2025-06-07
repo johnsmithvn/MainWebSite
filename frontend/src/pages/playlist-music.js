@@ -42,6 +42,30 @@ async function loadPlaylists() {
       const key = getSourceKey();
       window.location.href = `/music-player.html?playlist=${item.id}&key=${key}`;
     };
+
+    // ============ Thêm nút xoá ============
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "🗑️";
+    delBtn.className = "playlist-delete-btn";
+    delBtn.title = "Xoá playlist này";
+    delBtn.onclick = async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Xoá playlist "${item.name}"?`)) return;
+      const res = await fetch("/api/music/playlist", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, id: item.id }),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        showToast("✅ Đã xoá playlist!");
+        loadPlaylists();
+      } else {
+        showToast("❌ Không xoá được playlist!");
+      }
+    };
+    div.appendChild(delBtn);
+
     container.appendChild(div);
   });
 }
