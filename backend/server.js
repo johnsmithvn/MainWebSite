@@ -132,3 +132,4 @@ app.use("/api/music", require("./api/music/audio"));
 app.use("/api/music", require("./api/music/audio-cache"));
 app.use("/api/music", require("./api/music/playlist"));
 app.use("/api/music", require("./api/music/music-meta"));
+app.use("/api/music", require("./api/music/reset-music-db"));

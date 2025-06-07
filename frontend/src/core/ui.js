@@ -652,7 +652,7 @@ export function setupMusicSidebar() {
 
   // 🗑 Xoá DB
   sidebar.appendChild(
-    createSidebarButton("🗑 Xoá DB", async () => {
+    createSidebarButton("🗑 Xoá Music DB", async () => {
       const ok = await showConfirm("Bạn có chắc muốn xoá DB music?", {
         loading: true,
       });
@@ -660,7 +660,7 @@ export function setupMusicSidebar() {
 
       try {
         const res = await fetch(
-          `/api/music/scan-music?key=${sourceKey}&mode=delete`,
+          `/api/music/reset-cache-music?key=${sourceKey}&mode=delete`,
           {
             method: "DELETE",
           }
@@ -682,14 +682,17 @@ export function setupMusicSidebar() {
       if (!ok) return;
 
       try {
-        const res = await fetch(`/api/music/scan-music`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: sourceKey }),
-        });
+        const res = await fetch(
+         `/api/music/reset-cache-music?key=${sourceKey}&mode=reset`,
+          {
+            method: "DELETE",
+          }
+        );
         const data = await res.json();
         showToast(data.message || "✅ Reset DB xong");
+        window.location.reload();
       } catch (err) {
+        console.error(err);
         showToast("❌ Lỗi reset DB");
       }
     })

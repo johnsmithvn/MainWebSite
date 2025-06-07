@@ -129,20 +129,24 @@ export function renderFolderSlider({
     const encoded = encodeURIComponent(f.path);
     const key = getSourceKey();
 
-  card.onclick = (e) => {
-  // ❌ Nếu bấm vào nút ❤️ thì bỏ qua
+card.onclick = (e) => {
   if (e.target.classList.contains("folder-fav")) return;
 
   const isMusicPage = window.location.pathname.includes("music");
+  const isMoviePage = window.location.pathname.includes("movie");
 
-  // 📦 Nếu là file audio hoặc file nói chung
-  if (f.type === "audio" || f.type === "file") {
+  // Xử lý mở player cho cả music và movie
+  if (
+    (isMusicPage && (f.type === "audio" || f.type === "file")) ||
+    (isMoviePage && (f.type === "video" || f.type === "file"))
+  ) {
+    // Nếu là file nhạc thì sang music-player, nếu là video thì sang movie-player
     const page = isMusicPage ? "music-player" : "movie-player";
     window.location.href = `/${page}.html?file=${encoded}&key=${key}`;
     return;
   }
 
-  // 📁 Nếu là thư mục
+  // Nếu là folder
   if (isMusicPage) {
     window.location.href = `/music-index.html?path=${encoded}&key=${key}`;
   } else if (isMoviePage) {

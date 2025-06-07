@@ -43,11 +43,7 @@ router.get("/music-folder", (req, res) => {
       duration: item.duration,
     }));
 
-  console.log("Music folder data:", {
-    type: "music-folder",
-    folders,
-    total: folders.length,
-  });
+
 
   res.json({
     type: "music-folder",

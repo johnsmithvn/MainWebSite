@@ -1,11 +1,10 @@
-// 📁 backend/api/reset-movie-db.js
+// 📁 backend/api/reset-music-db.js
 const express = require("express");
 const router = express.Router();
-const { getMovieDB } = require("../../utils/db");
-const{scanMovieFolderToDB} = require("../../utils/movie-scan");
+const { getMusicDB } = require("../../utils/db");
+const { scanMusicFolderToDB } = require("../../utils/music-scan");
 
-
-router.delete("/reset-cache-movie", (req, res) => {
+router.delete("/reset-cache-music", (req, res) => {
   const key = req.query.key || req.body.key;
   const mode = req.query.mode;
 
@@ -14,18 +13,25 @@ router.delete("/reset-cache-movie", (req, res) => {
     return res.status(400).json({ error: "Thiếu root hoặc mode" });
   }
 
-
   try {
-    const db = getMovieDB(key);
+    const db = getMusicDB(key);
 
     if (mode === "delete") {
       db.prepare("DELETE FROM folders").run();
+      db.prepare("DELETE FROM songs").run();
+      db.prepare("DELETE FROM views").run();
+      db.prepare("DELETE FROM playlists").run();
+      db.prepare("DELETE FROM playlist_items").run();
       console.log(`🗑️ Đã xoá cache DB cho ${key}`);
       return res.json({ success: true, message: "Đã xoá cache thành công" });
     }
     if (mode === "reset") {
       db.prepare("DELETE FROM folders").run();
-      const stats = scanMovieFolderToDB(key);
+      db.prepare("DELETE FROM songs").run();
+      db.prepare("DELETE FROM views").run();
+      db.prepare("DELETE FROM playlists").run();
+      db.prepare("DELETE FROM playlist_items").run();
+      const stats = scanMusicFolderToDB(key);
       console.log(`🔁 Reset cache cho ${key}:`, stats);
       return res.json({
         success: true,
@@ -34,7 +40,9 @@ router.delete("/reset-cache-movie", (req, res) => {
       });
     }
     // Nếu mode không hợp lệ
-    return res.status(400).json({ error: "Sai mode (chỉ hỗ trợ delete, reset)" });
+    return res
+      .status(400)
+      .json({ error: "Sai mode (chỉ hỗ trợ delete, reset)" });
   } catch (err) {
     console.error("❌ Lỗi reset-cache:", err);
     res.status(500).json({ error: "Lỗi server" });
