@@ -878,15 +878,13 @@ export function buildThumbnailUrl(f, mediaType = "movie") {
   // Nếu không có thumbnail thì trả về default
   if (!f.thumbnail) {
     if (mediaType === "music") {
-      return (f.type === "audio" || f.type === "file")
+      return f.type === "audio" || f.type === "file"
         ? defaultFile
         : defaultFolder;
     } else if (mediaType === "manga" || mediaType === "comic") {
-      return f.type === "folder"
-        ? defaultFolder
-        : defaultFile;
+      return f.type === "folder" ? defaultFolder : defaultFile;
     } else {
-      return (f.type === "video" || f.type === "file")
+      return f.type === "video" || f.type === "file"
         ? defaultFile
         : defaultFolder;
     }
@@ -896,8 +894,12 @@ export function buildThumbnailUrl(f, mediaType = "movie") {
   if (f.thumbnail.startsWith(prefix) || f.thumbnail.startsWith("http")) {
     return f.thumbnail;
   }
-
+  // Nếu thumbnail đã bị dính prefix folder (do bug hay import DB cũ) thì cắt đi
+  if (folderPrefix && f.thumbnail.startsWith(folderPrefix + "/")) {
+    f.thumbnail = f.thumbnail.slice(folderPrefix.length + 1);
+  }
   // Build lại URL chuẩn
-  return `${prefix}${folderPrefix ? folderPrefix + "/" : ""}${f.thumbnail.replace(/\\/g, "/")}`;
+  return `${prefix}${
+    folderPrefix ? folderPrefix + "/" : ""
+  }${f.thumbnail.replace(/\\/g, "/")}`;
 }
-

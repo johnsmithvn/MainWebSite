@@ -103,45 +103,36 @@ fetch("/api/increase-view/movie", {
   console.error("❌ Failed to increase view:", err);
 });
 
-let thumb = null;
 
+let thumb = null;
+let found = null; // chưa có đoạn tìm found, thiếu chỗ này!
+// Bạn cần đoạn này trước:
 const cached = getMovieCache(sourceKey, folderPath);
 if (cached?.data?.length) {
   const fileName = file.split("/").pop();
-  const found = cached.data.find(
+  found = cached.data.find(
     (v) => v.path === file || v.name === fileName || file.endsWith(v.path)
   );
+}
 
-  if (found?.thumbnail) {
-    const folderPrefix = file.split("/").slice(0, -1).join("/");
-    thumb = `/video/${
-      folderPrefix ? folderPrefix + "/" : ""
-    }${found.thumbnail.replace(/\\/g, "/")}`;
+// Phần gán thumb:
+if (found?.thumbnail) {
+  // Chỉ lưu path tương đối từ folder chứa video, ví dụ: .thumbnail/abc.jpg
+  if (found.thumbnail.startsWith('.thumbnail/')) {
+    thumb = found.thumbnail;
   } else {
-    // fallback jpg cùng folder
-    const folderPrefix = file.split("/").slice(0, -1).join("/");
-    const fileBase = file
-      .split("/")
-      .pop()
-      .replace(/\.(mp4|mkv|ts|avi|mov|webm)$/i, "");
-    thumb = `/video/${
-      folderPrefix ? folderPrefix + "/" : ""
-    }.thumbnail/${fileBase}.jpg`;
+    thumb = found.thumbnail.split("/").pop();
   }
+} else {
+  // Fallback: build luôn .thumbnail/abc.jpg
+  thumb = `.thumbnail/${file.split("/").pop().replace(/\.(mp4|mkv|ts|avi|mov|webm)$/i, ".jpg")}`;
 }
-
-// fallback jpg
-if (!thumb) {
-  thumb = file.replace(/\.(mp4|mkv|ts|avi|mov|webm)$/i, ".jpg");
-}
-
 saveRecentViewedVideo({
   name: videoName,
   path: file,
-  thumbnail: thumb, // ✅ raw path
+  thumbnail: thumb,
   type: "video",
 });
-
 // 🔍 Gắn search bar
 document
   .getElementById("searchToggle")
