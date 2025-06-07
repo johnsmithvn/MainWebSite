@@ -6,6 +6,7 @@ import {
   recentViewedKey,
   getSourceKey,
 } from "../core/storage.js";
+import { buildThumbnailUrl } from "../core/ui.js";
 
 /**
  * Hiển thị slider thư mục (truyện hoặc phim) dạng ngang scroll
@@ -59,6 +60,9 @@ export function renderFolderSlider({
         timestamp.id = "random-timestamp-folder";
       } else if (title.includes("Video")) {
         timestamp.id = "random-timestamp-video";
+      } else if (title.includes("Bài hát")) {
+        // hoặc: Audio
+        timestamp.id = "random-timestamp-audio";
       } else {
         timestamp.id = "random-timestamp"; // fallback cho manga
       }
@@ -96,15 +100,16 @@ export function renderFolderSlider({
 
   folders.forEach((f) => {
     // ✅ Thumbnail đúng cho cả manga và movie
-    let thumbnailUrl = f.thumbnail;
-    if (!f.thumbnail) {
-      thumbnailUrl =
-        f.type === "video" || f.type === "file"
-          ? "/default/video-thumb.png"
-          : "/default/folder-thumb.png";
-    } else if (isMoviePage) {
-      thumbnailUrl = `/video/${f.thumbnail.replace(/\\/g, "/")}`;
-    }
+
+    const isMusicPage = window.location.pathname.includes("music");
+    const isMoviePage = window.location.pathname.includes("movie");
+    const isMangaPage = !isMusicPage && !isMoviePage; // còn lại là manga/comic/reader/...
+
+    let mediaType = "movie";
+    if (isMusicPage) mediaType = "music";
+    else if (isMangaPage) mediaType = "manga";
+
+    const thumbnailUrl = buildThumbnailUrl(f, mediaType);
 
     const cardData = {
       ...f,
@@ -120,19 +125,31 @@ export function renderFolderSlider({
     const key = getSourceKey();
 
     card.onclick = (e) => {
-      // ❌ Nếu bấm vào nút ❤️ thì bỏ qua
       if (e.target.classList.contains("folder-fav")) return;
 
-      if (f.type === "video" || f.type === "file") {
-        window.location.href = `/movie-player.html?file=${encoded}&key=${key}`;
-      } else {
-        if (isMoviePage) {
-          window.location.href = `/movie-index.html?path=${encoded}&key=${key}`;
-        } else if (f.isSelfReader && f.images) {
-          window.location.href = `/reader.html?path=${encoded}`;
-        } else if (typeof window.loadFolder === "function") {
-          window.loadFolder(f.path);
-        }
+      const isMusicPage = window.location.pathname.includes("music");
+      const isMoviePage = window.location.pathname.includes("movie");
+
+      // Xử lý mở player cho cả music và movie
+      if (
+        (isMusicPage && (f.type === "audio" || f.type === "file")) ||
+        (isMoviePage && (f.type === "video" || f.type === "file"))
+      ) {
+        // Nếu là file nhạc thì sang music-player, nếu là video thì sang movie-player
+        const page = isMusicPage ? "music-player" : "movie-player";
+        window.location.href = `/${page}.html?file=${encoded}&key=${key}`;
+        return;
+      }
+
+      // Nếu là folder
+      if (isMusicPage) {
+        window.location.href = `/music-index.html?path=${encoded}&key=${key}`;
+      } else if (isMoviePage) {
+        window.location.href = `/movie-index.html?path=${encoded}&key=${key}`;
+      } else if (f.isSelfReader && f.images) {
+        window.location.href = `/reader.html?path=${encoded}`;
+      } else if (typeof window.loadFolder === "function") {
+        window.loadFolder(f.path);
       }
     };
   });
@@ -242,19 +259,30 @@ export function setupRandomSectionsIfMissing() {
 }
 
 // 👉 Hàm load 2 slider random (folder + video)
-export function loadRandomSliders() {
+export function loadRandomSliders(contentType = "movie") {
   const sourceKey = getSourceKey();
+  const isMusic = contentType === "music";
+  const api = isMusic ? "/api/music/audio-cache" : "/api/movie/video-cache";
+
+  // Thêm timestamp id cho audio random
   loadRandomSection(
     "folder",
     sourceKey,
     "randomFolderSection",
-    "🎲 Folder ngẫu nhiên"
+    isMusic ? "🎲 Thư mục nhạc ngẫu nhiên" : "🎲 Folder ngẫu nhiên",
+    false,
+    api,
+    isMusic ? "random-timestamp-folder" : "random-timestamp-folder"
   );
+
   loadRandomSection(
     "file",
     sourceKey,
-    "randomVideoSection",
-    "🎲 Video ngẫu nhiên"
+    isMusic ? "randomAudioSection" : "randomVideoSection",
+    isMusic ? "🎵 Bài hát ngẫu nhiên" : "🎬 Video ngẫu nhiên",
+    false,
+    api,
+    isMusic ? "random-timestamp-audio" : "random-timestamp-video"
   );
 }
 
@@ -264,15 +292,39 @@ async function loadRandomSection(
   sourceKey,
   sectionId,
   title,
-  force = false
+  force = false,
+  apiBase,
+  tsId // Thêm id timestamp riêng cho audio
 ) {
+  if (!apiBase) {
+    const path = window.location.pathname;
+    if (path.includes("music")) apiBase = "/api/music/audio-cache";
+    else if (path.includes("movie")) apiBase = "/api/movie/video-cache";
+    else if (
+      path.includes("manga") ||
+      path.includes("comic") ||
+      path.includes("reader")
+    )
+      apiBase = "/api/manga/folder-cache";
+    else apiBase = "/api/movie/video-cache"; // fallback
+  }
   if (!sourceKey) return;
 
   const cacheKey = `${
-    type === "file" ? "randomVideos" : "randomFolders"
+    type === "file"
+      ? apiBase.includes("music")
+        ? "randomAudios"
+        : "randomVideos"
+      : "randomFolders"
   }-${sourceKey}`;
-  const tsId =
-    type === "file" ? "random-timestamp-video" : "random-timestamp-folder";
+
+  tsId =
+    tsId ||
+    (type === "file"
+      ? apiBase.includes("music")
+        ? "random-timestamp-audio"
+        : "random-timestamp-video"
+      : "random-timestamp-folder");
 
   if (!force) {
     const raw = localStorage.getItem(cacheKey);
@@ -286,11 +338,19 @@ async function loadRandomSection(
             folders: parsed.data,
             targetId: sectionId,
             onRefresh: () =>
-              loadRandomSection(type, sourceKey, sectionId, title, true),
+              loadRandomSection(
+                type,
+                sourceKey,
+                sectionId,
+                title,
+                true,
+                apiBase,
+                tsId
+              ),
           });
-
+          // Bổ sung timestamp cho từng sectionId (audio/video)
           const el = document.getElementById(tsId);
-          if (el) showRandomUpdatedTime(parsed.timestamp, tsId); // ✅ sửa timestamp về như manga
+          if (el) showRandomUpdatedTime(parsed.timestamp, tsId);
           return;
         }
       } catch {}
@@ -299,7 +359,7 @@ async function loadRandomSection(
 
   try {
     const res = await fetch(
-      `/api/movie/video-cache?mode=random&type=${type}&key=${sourceKey}`
+      `${apiBase}?mode=random&type=${type}&key=${sourceKey}`
     );
     const data = await res.json();
     const folders = Array.isArray(data) ? data : data.folders;
@@ -315,7 +375,15 @@ async function loadRandomSection(
       folders,
       targetId: sectionId,
       onRefresh: () =>
-        loadRandomSection(type, sourceKey, sectionId, title, true),
+        loadRandomSection(
+          type,
+          sourceKey,
+          sectionId,
+          title,
+          true,
+          apiBase,
+          tsId
+        ),
     });
 
     const el = document.getElementById(tsId);
@@ -324,3 +392,5 @@ async function loadRandomSection(
     console.error("❌ Lỗi random slider:", err);
   }
 }
+
+//

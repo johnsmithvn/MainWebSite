@@ -34,6 +34,21 @@ function renderSourceList(listId, keys, type) {
         }
         // Xong luôn chuyển sang movie-index.html
         window.location.href = "/movie-index.html";
+      } else if (type === "music") {
+        try {
+          const resp = await fetch(`/api/music/music-folder?key=${key}`);
+          const data = await resp.json();
+          if (!data.total || data.total === 0) {
+            await fetch("/api/music/scan-music", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ key }),
+            });
+          }
+        } catch (err) {
+          console.error("❌ Lỗi check/scan DB music:", err);
+        }
+        window.location.href = "/music-index.html";
       }
     };
     container.appendChild(btn);
@@ -44,4 +59,5 @@ function renderSourceList(listId, keys, type) {
 window.addEventListener("DOMContentLoaded", () => {
   renderSourceList("manga-list", window.mangaKeys || [], "manga"); // source-manga.js sẽ gán window.sourceKeys
   renderSourceList("movie-list", window.movieKeys || [], "movie"); // source-movies.js sẽ gán window.movieKeys
+  renderSourceList("music-list", window.musicKeys || [], "music");
 });

@@ -70,7 +70,6 @@ function renderFromData(data) {
   app.innerHTML = "";
 
   if (data.type === "folder") {
-   
     state.allFolders = [];
 
     if (data.images && data.images.length > 0) {
@@ -89,16 +88,26 @@ function renderFromData(data) {
 
     state.allFolders = state.allFolders.concat(data.folders);
 
-    preloadThumbnails(state.allFolders);
-
     // 🆕 Ghi lại tổng số folders thực tế
     totalFolders = state.allFolders.length;
 
-    // 🆕 Slice phân trang chỉ đúng trang cần render
+    // --- Lấy page hiện tại ---
     const pagedFolders = state.allFolders.slice(
       folderPage * foldersPerPage,
       (folderPage + 1) * foldersPerPage
     );
+
+    // --- Lấy page sau (nếu có) ---
+    const nextPageFolders = state.allFolders.slice(
+      (folderPage + 1) * foldersPerPage,
+      (folderPage + 2) * foldersPerPage
+    );
+
+    // --- Gộp lại và loại trùng ---
+    const preloadList = [...pagedFolders, ...nextPageFolders];
+
+    // --- Preload thumbnail cho cả 2 page ---
+    preloadThumbnails(preloadList);
 
     renderFolderGrid(pagedFolders);
 

@@ -5,7 +5,6 @@ import { renderMovieCardWithFavorite } from "/src/components/movieCard.js";
 import { recentViewedVideoKey } from "/src/core/storage.js";
 
 import {
-  
   filterMovie,
   toggleSearchBar,
   setupMovieSidebar,
@@ -29,7 +28,7 @@ window.addEventListener("DOMContentLoaded", () => {
   loadRandomSliders();
   loadTopVideoSlider();
   setupMovieSidebar();
-    renderRecentVideoSlider(); // 🆕 Thêm dòng này
+  renderRecentVideoSlider(); // 🆕 Thêm dòng này
 
   document
     .getElementById("floatingSearchInput")
@@ -147,8 +146,14 @@ function renderMovieGrid(list) {
   grid.className = "grid";
 
   list.forEach((item) => {
+    let folderPrefixParts = item.path?.split("/").filter(Boolean);
+    if (item.type === "video" || item.type === "file") folderPrefixParts.pop();
+    let folderPrefix = folderPrefixParts.join("/");
+
     let thumbnailUrl = item.thumbnail
-      ? `/video/${item.thumbnail.replace(/\\/g, "/")}`
+      ? `/video/${
+          folderPrefix ? folderPrefix + "/" : ""
+        }${item.thumbnail.replace(/\\/g, "/")}`
       : item.type === "video" || item.type === "file"
       ? "/default/video-thumb.png"
       : "/default/folder-thumb.png";
@@ -240,14 +245,11 @@ function updateMoviePaginationUI(currentPage, totalItems, perPage) {
   app.appendChild(info);
 }
 
-
-
-
 function renderRecentVideoSlider() {
   const raw = localStorage.getItem(recentViewedVideoKey());
   if (!raw) return;
   const list = JSON.parse(raw);
-  const filtered = list.filter(f => f.type === "video" || f.type === "file");
+  const filtered = list.filter((f) => f.type === "video" || f.type === "file");
 
   renderFolderSlider({
     title: "🕓 Vừa xem",

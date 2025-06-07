@@ -94,63 +94,6 @@ export function renderFolderCard(folder, showViews = false) {
   return card;
 }
 
-// function updateFavoriteEverywhere(sourceKey, rootFolder, folderPath, newVal) {
-//   const prefix = `folderCache::${sourceKey}::${rootFolder}`;
-//   for (const key in localStorage) {
-//     if (key.startsWith(prefix)) {
-//       try {
-//         const raw = localStorage.getItem(key);
-//         const parsed = JSON.parse(raw);
-//         let changed = false;
-//         if (parsed.data && parsed.data.folders) {
-//           for (const f of parsed.data.folders) {
-//             if (f.path === folderPath) {
-//               f.isFavorite = newVal;
-//               changed = true;
-//             }
-//           }
-//         }
-//         // Nếu là self-reader
-//         if (
-//           parsed.data &&
-//           parsed.data.images &&
-//           folderPath.endsWith("/__self__")
-//         ) {
-//           if (parsed.data.isFavorite !== undefined) {
-//             parsed.data.isFavorite = newVal;
-//             changed = true;
-//           }
-//         }
-//         if (changed) {
-//           localStorage.setItem(key, JSON.stringify(parsed));
-//         }
-//       } catch (err) {
-//         console.warn("❌ Không thể update cache:", err);
-//       }
-//     }
-//   }
-
-//   // 🟢 Update recentViewed nếu có
-//   try {
-//     const recentKey = `recentViewed::${rootFolder}::${rootFolder}`;
-//     const raw = localStorage.getItem(recentKey);
-//     if (raw) {
-//       const list = JSON.parse(raw);
-//       let changed = false;
-//       for (const item of list) {
-//         if (item.path === folderPath) {
-//           item.isFavorite = newVal;
-//           changed = true;
-//         }
-//       }
-//       if (changed) {
-//         localStorage.setItem(recentKey, JSON.stringify(list));
-//       }
-//     }
-//   } catch (err) {
-//     console.warn("❌ Không thể update recentViewed:", err);
-//   }
-// }
 
 export function updateFavoriteEverywhere(sourceKey, rootFolder, folderPath, newVal) {
   const isMovie = sourceKey?.startsWith("V_");

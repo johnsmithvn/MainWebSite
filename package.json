@@ -25,6 +25,7 @@
     "hammerjs": "^2.0.8",
     "lru-cache": "^11.1.0",
     "mime-types": "^3.0.1",
+    "music-metadata": "^11.2.3",
     "serve-favicon": "^2.5.0",
     "string-natural-compare": "^3.0.1"
   }
