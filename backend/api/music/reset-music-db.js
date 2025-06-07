@@ -19,7 +19,6 @@ router.delete("/reset-cache-music", (req, res) => {
     if (mode === "delete") {
       db.prepare("DELETE FROM folders").run();
       db.prepare("DELETE FROM songs").run();
-      db.prepare("DELETE FROM views").run();
       db.prepare("DELETE FROM playlists").run();
       db.prepare("DELETE FROM playlist_items").run();
       console.log(`🗑️ Đã xoá cache DB cho ${key}`);
@@ -28,7 +27,6 @@ router.delete("/reset-cache-music", (req, res) => {
     if (mode === "reset") {
       db.prepare("DELETE FROM folders").run();
       db.prepare("DELETE FROM songs").run();
-      db.prepare("DELETE FROM views").run();
       db.prepare("DELETE FROM playlists").run();
       db.prepare("DELETE FROM playlist_items").run();
       const stats = scanMusicFolderToDB(key);

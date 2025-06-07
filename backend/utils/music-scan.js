@@ -99,17 +99,17 @@ async function scanMusicFolderToDB(
         lyrics = typeof common.lyrics === "string" ? common.lyrics : null;
 
         // 📸 Tạo thumbnail từ ảnh nhúng
-        if (common.picture && common.picture.length > 0) {
-          const pic = common.picture[0];
-          const ext = pic.format.includes("png") ? ".png" : ".jpg";
-          const thumbFolder = path.join(basePath, ".thumbnail");
-          if (!fs.existsSync(thumbFolder)) fs.mkdirSync(thumbFolder);
+        // if (common.picture && common.picture.length > 0) {
+        //   const pic = common.picture[0];
+        //   const ext = pic.format.includes("png") ? ".png" : ".jpg";
+        //   const thumbFolder = path.join(basePath, ".thumbnail");
+        //   if (!fs.existsSync(thumbFolder)) fs.mkdirSync(thumbFolder);
 
-          const thumbFile = path.join(thumbFolder, name + ext);
-          fs.writeFileSync(thumbFile, pic.data);
+        //   const thumbFile = path.join(thumbFolder, name + ext);
+        //   fs.writeFileSync(thumbFile, pic.data);
 
-          thumb = path.posix.join(".thumbnail", name + ext);
-        }
+        //   thumb = path.posix.join(".thumbnail", name + ext);
+        // }
       } catch (err) {
         console.warn("❌ Lỗi đọc metadata:", entry.name, err.message);
       }
