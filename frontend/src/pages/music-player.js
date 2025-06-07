@@ -1,7 +1,7 @@
 // 📁 frontend/src/pages/music-player.js
 
 // 📦 Import các hàm cần thiết
-import { getSourceKey } from "/src/core/storage.js";
+import { getSourceKey,saveRecentViewedMusic  } from "/src/core/storage.js";
 import { showToast } from "/src/core/ui.js";
 import {
   toggleSearchBar,
@@ -275,6 +275,17 @@ function playAtIndex(index) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ key: sourceKey, path: file.path }),
   }).catch(() => {});
+    console.log( file);
+  // ====== Lưu vào recent view nhạc ======
+  saveRecentViewedMusic({
+    name: file.name,
+    path: file.path,
+    thumbnail: file.thumbnail, // nếu có field này từ API/cache, hoặc:
+    // thumbnail: buildThumbnailUrl(file, "music"), // cũng được, FE sẽ tự build đúng sau
+    type: "audio",
+    artist: file.artist || "",
+    album: file.album || "",
+  });
 }
 
 // ========================

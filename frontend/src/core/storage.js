@@ -367,3 +367,32 @@ export function setMusicCache(sourceKey, path, data) {
 
   localStorage.setItem(key, jsonData);
 }
+
+
+export function recentViewedMusicKey() {
+  const key = getSourceKey();
+  return `recentViewedMusic::${key}`;
+}
+
+
+export function saveRecentViewedMusic(song) {
+  const key = recentViewedMusicKey();
+  try {
+    const raw = localStorage.getItem(key);
+    const list = raw ? JSON.parse(raw) : [];
+
+    const filtered = list.filter((item) => item.path !== song.path);
+    filtered.unshift({
+      name: song.name,
+      path: song.path,
+      thumbnail: song.thumbnail,
+      type: "audio", // có thể thêm field type cho đồng bộ UI
+      artist: song.artist, // nếu có
+    });
+
+    const limited = filtered.slice(0, 30);
+    localStorage.setItem(key, JSON.stringify(limited));
+  } catch (err) {
+    console.warn("❌ Không thể lưu recentViewedMusic:", err);
+  }
+}

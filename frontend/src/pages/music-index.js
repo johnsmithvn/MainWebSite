@@ -6,16 +6,17 @@ import { renderMusicCardWithFavorite } from "/src/components/musicCard.js"; // b
 import {
   getSourceKey,
   getMusicCache,
-  setMusicCache,
+  setMusicCache,recentViewedMusicKey
 } from "/src/core/storage.js";
 import {
   showToast,
   toggleSearchBar,
   setupMusicSidebar,
-  showConfirm,
+  showConfirm,renderRecentViewedMusic
 } from "/src/core/ui.js";
 import { filterMusic } from "/src/core/ui.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
+
 
 window.addEventListener("DOMContentLoaded", () => {
   const initialPath = getInitialPathFromURL();
@@ -24,6 +25,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupMusicSidebar(); // ✅ music
   setupRandomSectionsIfMissing();
   loadRandomSliders("music");
+  renderRecentMusicOnLoad();
 
   document
     .getElementById("floatingSearchInput")
@@ -147,4 +149,14 @@ function renderMusicGrid(list) {
   });
 
   app.appendChild(grid);
+}
+
+
+
+function renderRecentMusicOnLoad() {
+  const raw = localStorage.getItem(recentViewedMusicKey());
+  if (raw) {
+    const list = JSON.parse(raw);
+    renderRecentViewedMusic(list);
+  }
 }

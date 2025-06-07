@@ -24,7 +24,6 @@ const file = urlParams.get("file");
 const sourceKey = getSourceKey();
 const videoEl = document.getElementById("video-player");
 const favBtn = document.getElementById("fav-btn");
-
 if (!file || !sourceKey) {
   showToast("❌ Thiếu file hoặc sourceKey");
   throw new Error("Missing file or sourceKey");
@@ -36,6 +35,7 @@ const src = `/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(
 videoEl.src = src;
 
 // 📁 Extract folder info
+
 const parts = file.split("/").filter(Boolean);
 const videoName = parts[parts.length - 1];
 document.getElementById("video-name").textContent = videoName;
@@ -104,35 +104,15 @@ fetch("/api/increase-view/movie", {
 });
 
 
-let thumb = null;
-let found = null; // chưa có đoạn tìm found, thiếu chỗ này!
-// Bạn cần đoạn này trước:
-const cached = getMovieCache(sourceKey, folderPath);
-if (cached?.data?.length) {
-  const fileName = file.split("/").pop();
-  found = cached.data.find(
-    (v) => v.path === file || v.name === fileName || file.endsWith(v.path)
-  );
-}
-
-// Phần gán thumb:
-if (found?.thumbnail) {
-  // Chỉ lưu path tương đối từ folder chứa video, ví dụ: .thumbnail/abc.jpg
-  if (found.thumbnail.startsWith('.thumbnail/')) {
-    thumb = found.thumbnail;
-  } else {
-    thumb = found.thumbnail.split("/").pop();
-  }
-} else {
-  // Fallback: build luôn .thumbnail/abc.jpg
-  thumb = `.thumbnail/${file.split("/").pop().replace(/\.(mp4|mkv|ts|avi|mov|webm)$/i, ".jpg")}`;
-}
+const videoBaseName = file.split("/").pop().replace(/\.(mp4|mkv|ts|avi|mov|webm)$/i, "");
+const thumb = `.thumbnail/${videoBaseName}.jpg`;
 saveRecentViewedVideo({
   name: videoName,
   path: file,
   thumbnail: thumb,
   type: "video",
 });
+
 // 🔍 Gắn search bar
 document
   .getElementById("searchToggle")

@@ -903,3 +903,18 @@ export function buildThumbnailUrl(f, mediaType = "movie") {
     folderPrefix ? folderPrefix + "/" : ""
   }${f.thumbnail.replace(/\\/g, "/")}`;
 }
+
+
+
+export function renderRecentViewedMusic(list = []) {
+  // Lọc chỉ lấy audio/file (nếu cần)
+  const filtered = list.filter(
+    (f) => f.type === "audio" || f.type === "file"
+  );
+
+  renderFolderSlider({
+    title: "🕘 Nhạc vừa nghe",
+    folders: filtered,
+    targetId: "section-recent-music", // Tạo 1 div/section này trong HTML hoặc tự động sinh
+  });
+}
