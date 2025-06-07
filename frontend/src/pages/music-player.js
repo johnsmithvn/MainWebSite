@@ -1,9 +1,46 @@
+// 📁 frontend/src/pages/music-player.js
+
 // 📦 Import các hàm cần thiết
 import { getSourceKey } from "/src/core/storage.js";
 import { showToast } from "/src/core/ui.js";
 import { toggleSearchBar, filterMusic, setupMusicSidebar } from "/src/core/ui.js";
 
-// ✅ Thiết lập sidebar và các sự kiện tìm kiếm
+// ========================
+// Hàm render info nổi bật như Spotify
+// ========================
+function renderNowPlayingInfo(track) {
+  // Lấy element để render info
+  const el = document.getElementById("now-playing-info");
+  if (!el) return;
+  if (!track) {
+    el.innerHTML = "";
+    return;
+  }
+  // Xử lý đường dẫn thumbnail
+  let folderPrefix = track.path?.split("/").slice(0, -1).join("/");
+  let thumb = track.thumbnail
+    ? `/audio/${folderPrefix ? folderPrefix + "/" : ""}${track.thumbnail.replace(/\\/g, "/")}`
+    : "/default/music-thumb.png";
+
+  // Render info nổi bật giống Spotify
+  el.innerHTML = `
+    <div class="now-playing-cover">
+      <img class="now-playing-thumb" src="${thumb}" alt="thumb" />
+      <div class="now-playing-meta">
+        <div class="now-title">${track.name}</div>
+        <div class="now-artist">${track.artist || "Unknown Artist"}</div>
+        <div class="now-extra">
+          <span>👁️ ${track.viewCount || 0}</span>
+          <span>${track.album ? "• " + track.album : ""}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ========================
+// SETUP UI CƠ BẢN
+// ========================
 setupMusicSidebar();
 document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
 document.getElementById("floatingSearchInput")?.addEventListener("input", filterMusic);
@@ -11,13 +48,14 @@ document.getElementById("sidebarToggle")?.addEventListener("click", () => {
   document.getElementById("sidebar-menu")?.classList.toggle("active");
 });
 
-// ✅ Lấy tham số từ URL
+// ========================
+// XỬ LÝ BIẾN TOÀN CỤC
+// ========================
 const urlParams = new URLSearchParams(window.location.search);
 const currentFile = urlParams.get("file");
 const playlistId = urlParams.get("playlist");
-const sourceKey = urlParams.get("key") || getSourceKey(); // Lấy từ URL hoặc fallback localStorage
+const sourceKey = urlParams.get("key") || getSourceKey(); // Ưu tiên lấy từ URL
 
-// ✅ Kiểm tra điều kiện bắt buộc
 if (!sourceKey) {
   showToast("❌ Thiếu sourceKey");
   throw new Error("Missing sourceKey");
@@ -27,13 +65,13 @@ if (!currentFile && !playlistId) {
   throw new Error("Missing file or playlistId");
 }
 
-// ✅ Khởi tạo các phần tử DOM
+// Khởi tạo DOM element
 const audioEl = document.getElementById("audio-player");
 const nowPlayingEl = document.getElementById("now-playing");
 const folderTitleEl = document.getElementById("folder-title");
 const trackListEl = document.getElementById("track-list");
 
-// ✅ Nếu là file riêng lẻ → xử lý folder
+// Nếu là file riêng lẻ → xác định folder
 let fileParts = [];
 let folderPath = "";
 let currentFileName = "";
@@ -47,11 +85,15 @@ if (currentFile) {
   folderTitleEl.textContent = `📁 Playlist`;
 }
 
-// ✅ Danh sách bài + chỉ số hiện tại
+// Danh sách bài + chỉ số hiện tại
 let audioList = [];
 let currentIndex = -1;
 
-// 📁 Load nhạc từ folder (trường hợp mở bằng file)
+// ========================
+// HÀM LOAD NHẠC
+// ========================
+
+// Load nhạc từ folder (khi mở từng file)
 async function loadFolderSongs() {
   try {
     const res = await fetch(
@@ -76,7 +118,7 @@ async function loadFolderSongs() {
   }
 }
 
-// 📁 Load nhạc từ playlist
+// Load nhạc từ playlist
 async function loadPlaylistSongs(id) {
   try {
     const res = await fetch(`/api/music/playlist/${id}?key=${sourceKey}`);
@@ -93,7 +135,9 @@ async function loadPlaylistSongs(id) {
   }
 }
 
-// 📄 Render danh sách bài hát dạng bảng
+// ========================
+// RENDER DANH SÁCH TRACK
+// ========================
 function renderTrackList() {
   const tbody = document.getElementById("track-body");
   tbody.innerHTML = "";
@@ -154,7 +198,9 @@ function renderTrackList() {
   document.getElementById("folder-meta").textContent = `${audioList.length} tracks`;
 }
 
-// ▶️ Phát nhạc tại chỉ số
+// ========================
+// PHÁT NHẠC & UPDATE INFO
+// ========================
 function playAtIndex(index) {
   if (index < 0 || index >= audioList.length) return;
   currentIndex = index;
@@ -168,17 +214,20 @@ function playAtIndex(index) {
   });
 
   nowPlayingEl.textContent = `🎵 ${file.name}`;
+  renderNowPlayingInfo(file); // ⭐⭐ Update block info trên cùng
   updateTrackHighlight();
 }
 
-// ✅ Cập nhật trạng thái dòng đang phát
+// Cập nhật trạng thái dòng đang phát
 function updateTrackHighlight() {
   document.querySelectorAll("#track-body tr").forEach((row, idx) => {
     row.classList.toggle("playing", idx === currentIndex);
   });
 }
 
-// 🎛️ Nút điều khiển
+// ========================
+// BUTTON ĐIỀU KHIỂN
+// ========================
 document.getElementById("btn-prev").onclick = () => {
   if (currentIndex > 0) playAtIndex(currentIndex - 1);
 };
@@ -199,7 +248,9 @@ audioEl.addEventListener("ended", () => {
   }
 });
 
-// ⏱️ Format thời lượng
+// ========================
+// HÀM XỬ LÝ THỜI LƯỢNG
+// ========================
 function formatDuration(seconds) {
   if (!seconds || isNaN(seconds)) return "--:--";
   const min = Math.floor(seconds / 60);
@@ -207,7 +258,9 @@ function formatDuration(seconds) {
   return `${min}:${sec.toString().padStart(2, "0")}`;
 }
 
-// 🚀 Gọi hàm chính
+// ========================
+// KHỞI TẠO GỌI CHƯƠNG TRÌNH
+// ========================
 if (playlistId) {
   loadPlaylistSongs(playlistId);
 } else {
