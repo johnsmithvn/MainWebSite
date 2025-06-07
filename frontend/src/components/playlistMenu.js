@@ -3,7 +3,6 @@ import { getSourceKey } from "/src/core/storage.js";
 import { showToast } from "/src/core/ui.js";
 
 export async function showPlaylistMenu(path, name, anchor) {
-  // nguyên code bạn đang dùng ở cuối file
   let container = document.getElementById("playlist-popup");
   if (!container) {
     container = document.createElement("div");
@@ -12,7 +11,6 @@ export async function showPlaylistMenu(path, name, anchor) {
     document.body.appendChild(container);
   }
 
-  // Lấy playlist hiện có
   const key = getSourceKey();
   let playlists = [];
   try {
@@ -24,28 +22,55 @@ export async function showPlaylistMenu(path, name, anchor) {
 
   container.innerHTML = `<div class="popup-title">➕ Thêm "${name}" vào:</div>`;
 
-  // Danh sách playlist
-  playlists.forEach((p) => {
+  // ⭐⭐⭐ 1. Check trạng thái từng playlist
+  const playlistStatus = await Promise.all(
+    playlists.map(async (p) => {
+      // Lấy danh sách bài trong playlist này
+      const res = await fetch(`/api/music/playlist/${p.id}?key=${key}`);
+      const items = await res.json();
+      const contains = items.some(song => song.path === path);
+      return { ...p, contains };
+    })
+  );
+
+  // ⭐⭐⭐ 2. Render từng playlist, tick nếu đã có, click thì toggle add/remove
+  playlistStatus.forEach((p) => {
     const btn = document.createElement("button");
-    btn.className = "playlist-option";
-    btn.textContent = `📁 ${p.name}`;
+    btn.className = "playlist-option" + (p.contains ? " bold" : "");
+    btn.innerHTML = p.contains ? `✅ ${p.name}` : p.name;
     btn.onclick = async () => {
-      await fetch("/api/music/playlist/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key,
-          playlistId: p.id,
-          path,
-        }),
-      });
-      showToast("✅ Đã thêm vào playlist");
-      container.remove();
+      if (p.contains) {
+        // Remove khỏi playlist
+        await fetch("/api/music/playlist/remove", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key,
+            playlistId: p.id,
+            path,
+          }),
+        });
+        showToast("❌ Đã xoá khỏi playlist");
+      } else {
+        // Thêm vào playlist
+        await fetch("/api/music/playlist/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key,
+            playlistId: p.id,
+            path,
+          }),
+        });
+        showToast("✅ Đã thêm vào playlist");
+      }
+      // Reload lại popup để cập nhật tick ngay lập tức
+      showPlaylistMenu(path, name, anchor);
     };
     container.appendChild(btn);
   });
 
-  // Tạo mới
+  // ⭐⭐⭐ 3. Tạo mới playlist
   const newBtn = document.createElement("button");
   newBtn.className = "playlist-option bold";
   newBtn.textContent = "➕ Tạo playlist mới...";
@@ -66,16 +91,14 @@ export async function showPlaylistMenu(path, name, anchor) {
   };
   container.appendChild(newBtn);
 
-  // Vị trí hiển thị
-const rect = anchor.getBoundingClientRect();
-const scrollY = window.scrollY || document.documentElement.scrollTop;
-const scrollX = window.scrollX || document.documentElement.scrollLeft;
+  // ⭐⭐⭐ 4. Vị trí hiển thị popup
+  const rect = anchor.getBoundingClientRect();
+  const scrollY = window.scrollY || document.documentElement.scrollTop;
+  const scrollX = window.scrollX || document.documentElement.scrollLeft;
+  container.style.top = rect.bottom + scrollY + "px";
+  container.style.left = rect.left + scrollX + "px";
 
-container.style.top = rect.bottom + scrollY + "px";
-container.style.left = rect.left + scrollX + "px";
-
-  
-  // Tự ẩn nếu click ra ngoài
+  // ⭐⭐⭐ 5. Tự ẩn nếu click ra ngoài
   setTimeout(() => {
     function handleClickOutside(e) {
       if (!container.contains(e.target)) {
