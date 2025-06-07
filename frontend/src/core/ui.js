@@ -108,23 +108,13 @@ export async function filterMovie() {
       const item = document.createElement("div");
       item.className = "search-item";
 
-      // ✅ Xử lý thumbnail theo loại
-      let thumbSrc = "/default/folder-thumb.png";
-
-      if (f.type === "video" || f.type === "file") {
-        thumbSrc = f.thumbnail
-          ? `/video/${f.thumbnail.replace(/\\/g, "/")}`
-          : "/default/video-thumb.png";
-      } else {
-        thumbSrc = f.thumbnail
-          ? `/video/${f.thumbnail.replace(/\\/g, "/")}`
-          : "/default/folder-thumb.png";
-      }
+      // 🔥 Build prefix đúng cho folder/file
+      let thumbSrc = buildThumbnailUrl(f, "movie");
 
       item.innerHTML = `
-        <img src="${thumbSrc}" class="search-thumb" alt="thumb">
-        <div class="search-title">${f.name}</div>
-      `;
+    <img src="${thumbSrc}" class="search-thumb" alt="thumb">
+    <div class="search-title">${f.name}</div>
+  `;
 
       item.onclick = () => {
         dropdown.classList.add("hidden");
@@ -683,7 +673,7 @@ export function setupMusicSidebar() {
 
       try {
         const res = await fetch(
-         `/api/music/reset-cache-music?key=${sourceKey}&mode=reset`,
+          `/api/music/reset-cache-music?key=${sourceKey}&mode=reset`,
           {
             method: "DELETE",
           }
@@ -779,18 +769,8 @@ export async function filterMusic() {
       item.className = "search-item";
 
       const isAudio = f.type === "audio" || f.type === "file";
-      const folderPrefix = f.path?.split("/").slice(0, -1).join("/");
-
-      let thumbSrc;
-      if (f.thumbnail) {
-        thumbSrc = `/audio/${
-          folderPrefix ? folderPrefix + "/" : ""
-        }${f.thumbnail.replace(/\\/g, "/")}`;
-      } else {
-        thumbSrc = isAudio
-          ? "/default/music-thumb.png"
-          : "/default/folder-thumb.png";
-      }
+      // 🔥 Sửa chỗ này: folderPrefix phải khác nhau giữa folder và file
+      let thumbSrc = buildThumbnailUrl(f, "music");
 
       item.innerHTML = `
         <img src="${thumbSrc}" class="search-thumb" alt="thumb">
@@ -799,7 +779,7 @@ export async function filterMusic() {
 
       item.onclick = () => {
         dropdown.classList.add("hidden");
-        if (f.type === "audio" || f.type === "file") {
+        if (isAudio) {
           window.location.href = `/music-player.html?file=${encodeURIComponent(
             f.path
           )}`;
@@ -818,10 +798,12 @@ export async function filterMusic() {
   }
 }
 
-
-
-
-export function showInputPrompt(message, placeholder = "", okText = "OK", cancelText = "Hủy") {
+export function showInputPrompt(
+  message,
+  placeholder = "",
+  okText = "OK",
+  cancelText = "Hủy"
+) {
   return new Promise((resolve) => {
     // Tạo overlay
     let overlay = document.createElement("div");
@@ -862,3 +844,60 @@ export function showInputPrompt(message, placeholder = "", okText = "OK", cancel
     input.focus();
   });
 }
+
+//
+
+/**
+ * Build thumbnail url cho movie/audio: luôn trả về URL tuyệt đối dùng được cho img.src
+ * @param {object} f - object chứa ít nhất .path, .thumbnail, .type
+ * @param {"movie"|"music"} mediaType
+ * @returns {string} url thumbnail
+ */
+export function buildThumbnailUrl(f, mediaType = "movie") {
+  let prefix = "/video/";
+  let defaultFile = "/default/video-thumb.png";
+  let defaultFolder = "/default/folder-thumb.png";
+  if (mediaType === "music") {
+    prefix = "/audio/";
+    defaultFile = "/default/music-thumb.png";
+    defaultFolder = "/default/folder-thumb.png";
+  } else if (mediaType === "manga" || mediaType === "comic") {
+    prefix = "/manga/";
+    defaultFile = "/default/manga-thumb.png";
+    defaultFolder = "/default/folder-thumb.png";
+  }
+
+  // Phân biệt folder/file để lấy prefix đúng
+  let folderPrefix;
+  if (f.type === "folder") {
+    folderPrefix = f.path || "";
+  } else {
+    folderPrefix = f.path?.split("/").slice(0, -1).join("/") || "";
+  }
+
+  // Nếu không có thumbnail thì trả về default
+  if (!f.thumbnail) {
+    if (mediaType === "music") {
+      return (f.type === "audio" || f.type === "file")
+        ? defaultFile
+        : defaultFolder;
+    } else if (mediaType === "manga" || mediaType === "comic") {
+      return f.type === "folder"
+        ? defaultFolder
+        : defaultFile;
+    } else {
+      return (f.type === "video" || f.type === "file")
+        ? defaultFile
+        : defaultFolder;
+    }
+  }
+
+  // Nếu thumbnail đã là URL tuyệt đối thì trả luôn
+  if (f.thumbnail.startsWith(prefix) || f.thumbnail.startsWith("http")) {
+    return f.thumbnail;
+  }
+
+  // Build lại URL chuẩn
+  return `${prefix}${folderPrefix ? folderPrefix + "/" : ""}${f.thumbnail.replace(/\\/g, "/")}`;
+}
+

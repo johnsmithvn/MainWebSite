@@ -6,6 +6,7 @@ import {
   recentViewedKey,
   getSourceKey,
 } from "../core/storage.js";
+import { buildThumbnailUrl } from "../core/ui.js";
 
 /**
  * Hiển thị slider thư mục (truyện hoặc phim) dạng ngang scroll
@@ -59,6 +60,9 @@ export function renderFolderSlider({
         timestamp.id = "random-timestamp-folder";
       } else if (title.includes("Video")) {
         timestamp.id = "random-timestamp-video";
+      } else if (title.includes("Bài hát")) {
+        // hoặc: Audio
+        timestamp.id = "random-timestamp-audio";
       } else {
         timestamp.id = "random-timestamp"; // fallback cho manga
       }
@@ -96,34 +100,16 @@ export function renderFolderSlider({
 
   folders.forEach((f) => {
     // ✅ Thumbnail đúng cho cả manga và movie
-    let thumbnailUrl = f.thumbnail;
 
-  if (!f.thumbnail) {
-    if (f.type === "audio" || f.type === "file" || f.type === "video") {
-      thumbnailUrl = "/default/music-thumb.png";
-    } else {
-      thumbnailUrl = "/default/folder-thumb.png";
-    }
-  } else {
     const isMusicPage = window.location.pathname.includes("music");
     const isMoviePage = window.location.pathname.includes("movie");
-    // Phân biệt folder/file để build prefix đúng
-    let folderPrefix = "";
-    if (f.type === "folder") {
-      folderPrefix = f.path || "";
-    } else {
-      folderPrefix = f.path?.split("/").slice(0, -1).join("/") || "";
-    }
-    if (isMusicPage) {
-      if (!f.thumbnail.startsWith("/audio/") && !f.thumbnail.startsWith("http")) {
-        thumbnailUrl = `/audio/${folderPrefix ? folderPrefix + "/" : ""}${f.thumbnail.replace(/\\/g, "/")}`;
-      }
-    } else if (isMoviePage) {
-      if (!f.thumbnail.startsWith("/video/") && !f.thumbnail.startsWith("http")) {
-        thumbnailUrl = `/video/${folderPrefix ? folderPrefix + "/" : ""}${f.thumbnail.replace(/\\/g, "/")}`;
-      }
-    }
-  }
+    const isMangaPage = !isMusicPage && !isMoviePage; // còn lại là manga/comic/reader/...
+
+    let mediaType = "movie";
+    if (isMusicPage) mediaType = "music";
+    else if (isMangaPage) mediaType = "manga";
+
+    const thumbnailUrl = buildThumbnailUrl(f, mediaType);
 
     const cardData = {
       ...f,
@@ -278,13 +264,15 @@ export function loadRandomSliders(contentType = "movie") {
   const isMusic = contentType === "music";
   const api = isMusic ? "/api/music/audio-cache" : "/api/movie/video-cache";
 
+  // Thêm timestamp id cho audio random
   loadRandomSection(
     "folder",
     sourceKey,
-    isMusic ? "randomFolderSection" : "randomFolderSection",
+    "randomFolderSection",
     isMusic ? "🎲 Thư mục nhạc ngẫu nhiên" : "🎲 Folder ngẫu nhiên",
     false,
-    api
+    api,
+    isMusic ? "random-timestamp-folder" : "random-timestamp-folder"
   );
 
   loadRandomSection(
@@ -293,7 +281,8 @@ export function loadRandomSliders(contentType = "movie") {
     isMusic ? "randomAudioSection" : "randomVideoSection",
     isMusic ? "🎵 Bài hát ngẫu nhiên" : "🎬 Video ngẫu nhiên",
     false,
-    api
+    api,
+    isMusic ? "random-timestamp-audio" : "random-timestamp-video"
   );
 }
 
@@ -304,15 +293,38 @@ async function loadRandomSection(
   sectionId,
   title,
   force = false,
-  apiBase = "/api/movie/video-cache"
+  apiBase,
+  tsId // Thêm id timestamp riêng cho audio
 ) {
+  if (!apiBase) {
+    const path = window.location.pathname;
+    if (path.includes("music")) apiBase = "/api/music/audio-cache";
+    else if (path.includes("movie")) apiBase = "/api/movie/video-cache";
+    else if (
+      path.includes("manga") ||
+      path.includes("comic") ||
+      path.includes("reader")
+    )
+      apiBase = "/api/manga/folder-cache";
+    else apiBase = "/api/movie/video-cache"; // fallback
+  }
   if (!sourceKey) return;
 
   const cacheKey = `${
-    type === "file" ? "randomVideos" : "randomFolders"
+    type === "file"
+      ? apiBase.includes("music")
+        ? "randomAudios"
+        : "randomVideos"
+      : "randomFolders"
   }-${sourceKey}`;
-  const tsId =
-    type === "file" ? "random-timestamp-video" : "random-timestamp-folder";
+
+  tsId =
+    tsId ||
+    (type === "file"
+      ? apiBase.includes("music")
+        ? "random-timestamp-audio"
+        : "random-timestamp-video"
+      : "random-timestamp-folder");
 
   if (!force) {
     const raw = localStorage.getItem(cacheKey);
@@ -326,11 +338,19 @@ async function loadRandomSection(
             folders: parsed.data,
             targetId: sectionId,
             onRefresh: () =>
-              loadRandomSection(type, sourceKey, sectionId, title, true),
+              loadRandomSection(
+                type,
+                sourceKey,
+                sectionId,
+                title,
+                true,
+                apiBase,
+                tsId
+              ),
           });
-
+          // Bổ sung timestamp cho từng sectionId (audio/video)
           const el = document.getElementById(tsId);
-          if (el) showRandomUpdatedTime(parsed.timestamp, tsId); // ✅ sửa timestamp về như manga
+          if (el) showRandomUpdatedTime(parsed.timestamp, tsId);
           return;
         }
       } catch {}
@@ -355,7 +375,15 @@ async function loadRandomSection(
       folders,
       targetId: sectionId,
       onRefresh: () =>
-        loadRandomSection(type, sourceKey, sectionId, title, true, apiBase),
+        loadRandomSection(
+          type,
+          sourceKey,
+          sectionId,
+          title,
+          true,
+          apiBase,
+          tsId
+        ),
     });
 
     const el = document.getElementById(tsId);

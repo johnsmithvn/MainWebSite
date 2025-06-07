@@ -15,6 +15,7 @@ import {
   showConfirm,
 } from "/src/core/ui.js";
 import { filterMusic } from "/src/core/ui.js";
+import { buildThumbnailUrl } from "/src/core/ui.js";
 
 window.addEventListener("DOMContentLoaded", () => {
   const initialPath = getInitialPathFromURL();
@@ -135,18 +136,7 @@ function renderMusicGrid(list) {
   grid.className = "grid";
 
   list.forEach((item) => {
-    let folderPrefixParts = item.path?.split("/").filter(Boolean);
-    if (item.type === "file" || item.type === "audio") folderPrefixParts.pop();
-    let folderPrefix = folderPrefixParts.join("/");
-
-    let thumb = item.thumbnail
-      ? `/audio/${
-          folderPrefix ? folderPrefix + "/" : ""
-        }${item.thumbnail.replace(/\\/g, "/")}`
-      : item.type === "folder"
-      ? "/default/folder-thumb.png"
-      : "/default/music-thumb.png";
-
+    let thumb = buildThumbnailUrl(item, "music");
 
     const card = renderMusicCardWithFavorite({
       ...item,

@@ -1,6 +1,6 @@
 import {
   getSourceKey,
-  saveRecentViewed,
+  
   getMovieCache,
 } from "/src/core/storage.js";
 import { updateFavoriteEverywhere } from "/src/components/folderCard.js";

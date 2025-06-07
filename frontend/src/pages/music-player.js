@@ -8,6 +8,7 @@ import {
   filterMusic,
   setupMusicSidebar,
 } from "/src/core/ui.js";
+import { buildThumbnailUrl } from "/src/core/ui.js";
 
 // ========================
 // Hàm render info nổi bật như Spotify
@@ -21,12 +22,7 @@ function renderNowPlayingInfo(track) {
     return;
   }
   // Xử lý đường dẫn thumbnail
-  let folderPrefix = track.path?.split("/").slice(0, -1).join("/");
-  let thumb = track.thumbnail
-    ? `/audio/${
-        folderPrefix ? folderPrefix + "/" : ""
-      }${track.thumbnail.replace(/\\/g, "/")}`
-    : "/default/music-thumb.png";
+  let thumb = buildThumbnailUrl(track, "music");
 
   // Render info nổi bật giống Spotify
   el.innerHTML = `
@@ -100,7 +96,9 @@ function updateFolderHeader() {
     folderTitleEl.classList.add("clickable");
     folderTitleEl.title = "Quay lại thư mục này";
     folderTitleEl.onclick = () => {
-      window.location.href = `/music-index.html?path=${encodeURIComponent(folderPath)}`;
+      window.location.href = `/music-index.html?path=${encodeURIComponent(
+        folderPath
+      )}`;
     };
   } else {
     folderTitleEl.textContent = "📁 Playlist";
@@ -108,7 +106,6 @@ function updateFolderHeader() {
     folderTitleEl.onclick = null;
   }
 }
-
 
 // Danh sách bài + chỉ số hiện tại
 let audioList = [];
@@ -134,7 +131,7 @@ async function loadFolderSongs() {
     currentIndex = audioList.findIndex((f) => f.path === currentFile);
 
     renderTrackList();
-        updateFolderHeader(); // ⭐ GỌI NGAY SAU KHI CÓ DỮ LIỆU MỚI
+    updateFolderHeader(); // ⭐ GỌI NGAY SAU KHI CÓ DỮ LIỆU MỚI
 
     if (currentIndex >= 0) {
       playAtIndex(currentIndex);
@@ -162,7 +159,7 @@ async function loadPlaylistSongs(id) {
     renderTrackList();
     // Gán tên vào header luôn ở đây, KHÔNG gọi updateFolderHeader khi là playlist
     folderTitleEl.textContent = `🎵 ${data.name || "Playlist"}`;
-  folderTitleEl.classList.add("playlist-title");
+    folderTitleEl.classList.add("playlist-title");
     folderTitleEl.classList.remove("clickable");
     folderTitleEl.onclick = null;
 
@@ -193,25 +190,17 @@ function renderTrackList() {
     }
     tr.className = index === realPlayingIndex ? "playing" : "";
 
-    const folderPrefix = item.path?.split("/").slice(0, -1).join("/");
-
+    const thumb = buildThumbnailUrl(item, "music");
     const tdSong = document.createElement("td");
     tdSong.innerHTML = `
-      <div class="track-flex">
-        <img class="track-thumb" src="${
-          item.thumbnail
-            ? `/audio/${
-                folderPrefix ? folderPrefix + "/" : ""
-              }${item.thumbnail.replace(/\\/g, "/")}`
-            : "/default/music-thumb.png"
-        }" alt="thumb" />
-        <div class="track-info">
-          <div class="track-title">${item.name}</div>
-          <div class="track-artist">${item.artist || "Unknown"}</div>
-        </div>
-      </div>
-    `;
-
+  <div class="track-flex">
+    <img class="track-thumb" src="${thumb}" alt="thumb" />
+    <div class="track-info">
+      <div class="track-title">${item.name}</div>
+      <div class="track-artist">${item.artist || "Unknown"}</div>
+    </div>
+  </div>
+`;
     const tdAlbum = document.createElement("td");
     tdAlbum.textContent = item.album || "Unknown";
 
@@ -280,8 +269,7 @@ function playAtIndex(index) {
   updateTrackHighlight();
   updateSeekbar();
 
-
-   // =========== Tăng view ==============
+  // =========== Tăng view ==============
   fetch("/api/increase-view/music", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
