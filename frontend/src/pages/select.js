@@ -29,7 +29,7 @@ function createRootFolderCard(folder) {
   };
 
   const label = document.createElement("div");
-  label.className = "select-label";
+  label.className = "select-name";
   label.textContent = folder;
 
   card.appendChild(thumbnail);
