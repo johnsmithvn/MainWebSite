@@ -10,7 +10,7 @@ import {
   setupMovieSidebar,
   showConfirm,
   showToast,
-  toggleSidebar,
+  toggleSidebar,withLoading
 } from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 import { getMovieCache, setMovieCache } from "/src/core/storage.js";
@@ -23,7 +23,7 @@ import {
 window.addEventListener("DOMContentLoaded", () => {
   const initialPath = getInitialPathFromURL();
   loadMovieFolder(initialPath);
-  setupDeleteMovieButton();
+  setupExtractThumbnailButton();
   setupRandomSectionsIfMissing();
   loadRandomSliders();
   loadTopVideoSlider();
@@ -48,28 +48,47 @@ function getInitialPathFromURL() {
   return urlParams.get("path") || "";
 }
 
-function setupDeleteMovieButton() {
-  const deleteBtn = document.getElementById("delete-movie-db");
-  if (!deleteBtn) return;
+function setupExtractThumbnailButton() {
+  const extractBtn = document.getElementById("extract-thumbnail-btn");
+  if (!extractBtn) return;
 
-  deleteBtn.onclick = async () => {
-    const ok = await showConfirm("Bạn có chắc muốn xoá sạch DB Movie?", {
-      loading: true,
-    });
+  extractBtn.onclick = withLoading(async () => {
+    // KHÔNG truyền {loading: true} nữa
+    const ok = await showConfirm("Extract lại thumbnail phim cho toàn bộ folder hiện tại?");
     if (!ok) return;
 
     const sourceKey = getSourceKey();
+    if (!sourceKey) {
+      showToast("❌ Không xác định được nguồn phim!");
+      return;
+    }
+
+
     try {
-      await fetch(`/api/movie/reset-movie-db?key=${sourceKey}`, {
-        method: "DELETE",
+      const resp = await fetch("/api/movie/extract-thumbnail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: sourceKey,
+          path: currentPath,
+        }),
       });
-      showToast("✅ Đã xoá xong DB Movie!");
+      const data = await resp.json();
+      if (data.success) {
+        showToast("✅ Đã extract thumbnail xong!");
+        loadMovieFolder(currentPath, moviePage);
+      } else {
+        showToast("❌ Lỗi extract thumbnail!");
+      }
     } catch (err) {
-      showToast("❌ Lỗi khi xoá DB movie!");
+      showToast("❌ Lỗi khi extract thumbnail!");
       console.error(err);
     }
-  };
+    // KHÔNG cần finally overlay nữa!
+  });
 }
+
+
 
 let moviePage = 0;
 const moviesPerPage = 20;
@@ -167,16 +186,7 @@ function renderMovieGrid(list) {
     });
     grid.appendChild(card);
   });
-  //  if (!list || list.length === 0) {
-  //   const parentPath = path.split("/").slice(0, -1).join("/");
-  //   app.innerHTML += `
-  //     <div class="empty-folder">
-  //       <p>❌ Không tìm thấy nội dung trong thư mục này.</p>
-  //       <button onclick="loadMovieFolder('${parentPath}')">⬅ Quay lại</button>
-  //     </div>
-  //   `;
-  //   return;
-  // }
+
   app.appendChild(grid);
 }
 

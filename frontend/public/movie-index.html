@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="/src/styles/base.css" />
     <link rel="stylesheet" href="/src/styles/components/movie-card.css" />
     <link rel="stylesheet" href="/src/styles/components/folder-slider.css" />
-
   </head>
+
   <body>
     <header id="site-header" class="site-header">
       <div class="header-left">
@@ -19,7 +19,12 @@
       </div>
 
       <div class="header-right">
-        <button class="icon-button" onclick="location.href='favorites-movie.html'">❤️</button>
+        <button
+          class="icon-button"
+          onclick="location.href='favorites-movie.html'"
+        >
+          ❤️
+        </button>
         <button class="icon-button" id="searchToggle">🔍</button>
       </div>
     </header>
@@ -68,9 +73,13 @@
 
     <!-- ✅ FOOTER -->
     <footer id="main-footer" class="footer-bar">
-      <button id="delete-movie-db" class="danger-button">🗑 Xoá DB Movie</button>
+      <button id="extract-thumbnail-btn" class="danger-button">
+        🖼 Extract thumbnail (movie)
+      </button>
     </footer>
-
+    <div id="loading-overlay" class="hidden">
+      <div class="loader-text">⏳ Đang tải...</div>
+    </div>
     <script type="module" src="/src/pages/movie-index.js"></script>
   </body>
 </html>

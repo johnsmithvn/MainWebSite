@@ -12,7 +12,7 @@ import {
   showToast,
   toggleSearchBar,
   setupMusicSidebar,
-  showConfirm,renderRecentViewedMusic
+  showConfirm,renderRecentViewedMusic,withLoading
 } from "/src/core/ui.js";
 import { filterMusic } from "/src/core/ui.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
@@ -21,11 +21,11 @@ import { buildThumbnailUrl } from "/src/core/ui.js";
 window.addEventListener("DOMContentLoaded", () => {
   const initialPath = getInitialPathFromURL();
   loadMusicFolder(initialPath);
-  setupDeleteMusicButton();
   setupMusicSidebar(); // ✅ music
   setupRandomSectionsIfMissing();
   loadRandomSliders("music");
   renderRecentMusicOnLoad();
+  setupExtractThumbnailButton();
 
   document
     .getElementById("floatingSearchInput")
@@ -44,28 +44,28 @@ function getInitialPathFromURL() {
   return urlParams.get("path") || "";
 }
 
-function setupDeleteMusicButton() {
-  const deleteBtn = document.getElementById("delete-music-db");
-  if (!deleteBtn) return;
+// function setupDeleteMusicButton() {
+//   const deleteBtn = document.getElementById("delete-music-db");
+//   if (!deleteBtn) return;
 
-  deleteBtn.onclick = async () => {
-    const ok = await showConfirm("Bạn có chắc muốn xoá sạch DB Music?", {
-      loading: true,
-    });
-    if (!ok) return;
+//   deleteBtn.onclick = async () => {
+//     const ok = await showConfirm("Bạn có chắc muốn xoá sạch DB Music?", {
+//       loading: true,
+//     });
+//     if (!ok) return;
 
-    const sourceKey = getSourceKey();
-    try {
-      await fetch(`/api/music/scan-music?key=${sourceKey}&mode=delete`, {
-        method: "DELETE",
-      });
-      showToast("✅ Đã xoá xong DB Music!");
-    } catch (err) {
-      showToast("❌ Lỗi khi xoá DB music!");
-      console.error(err);
-    }
-  };
-}
+//     const sourceKey = getSourceKey();
+//     try {
+//       await fetch(`/api/music/scan-music?key=${sourceKey}&mode=delete`, {
+//         method: "DELETE",
+//       });
+//       showToast("✅ Đã xoá xong DB Music!");
+//     } catch (err) {
+//       showToast("❌ Lỗi khi xoá DB music!");
+//       console.error(err);
+//     }
+//   };
+// }
 
 let musicPage = 0;
 const perPage = 20;
@@ -159,4 +159,63 @@ function renderRecentMusicOnLoad() {
     const list = JSON.parse(raw);
     renderRecentViewedMusic(list);
   }
+}
+
+
+
+function setupExtractThumbnailButton() {
+  const extractBtn = document.getElementById("extract-thumbnail-btn");
+  if (!extractBtn) return;
+
+  extractBtn.onclick = withLoading(async () => {
+    // Xác nhận
+    const ok = await showConfirm("Extract lại thumbnail nhạc cho toàn bộ folder hiện tại?");
+    if (!ok) return;
+
+    const sourceKey = getSourceKey();
+    if (!sourceKey) {
+      showToast("❌ Không xác định được nguồn nhạc!");
+      return;
+    }
+
+    // Tải danh sách file nhạc trong folder hiện tại
+    const params = new URLSearchParams();
+    if (sourceKey) params.set("key", sourceKey);
+    if (currentPath) params.set("path", currentPath);
+
+    try {
+      const res = await fetch("/api/music/music-folder?" + params.toString());
+      const data = await res.json();
+      const list = data.folders || [];
+
+      // Lọc chỉ lấy các audio file
+      const audioFiles = list.filter(item => item.type === "audio");
+
+      if (audioFiles.length === 0) {
+        showToast("😅 Không có bài hát nào để extract thumbnail.");
+        return;
+      }
+
+      showToast("⏳ Đang extract thumbnail...");
+
+      // Gọi tuần tự từng file
+      for (const item of audioFiles) {
+        const resp = await fetch("/api/music/extract-thumbnail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: sourceKey, file: item.path }),
+        });
+        const result = await resp.json();
+        // Nếu muốn có thể hiện progress ở đây
+      }
+
+      showToast("✅ Đã extract thumbnail xong!");
+      loadMusicFolder(currentPath, musicPage);
+
+    } catch (err) {
+      showToast("❌ Lỗi extract thumbnail!");
+      console.error(err);
+    }
+    // KHÔNG cần finally hide overlay nữa, withLoading đã lo.
+  });
 }

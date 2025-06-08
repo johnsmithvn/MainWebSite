@@ -124,6 +124,7 @@ app.use("/api/movie", require("./api/movie/scan-movie"));
 app.use("/api/movie", require("./api/movie/reset-movie-db"));
 app.use("/api/movie", require("./api/movie/video-cache"));
 app.use("/api/movie", require("./api/movie/favorite-movie"));
+app.use("/api/movie", require("./api/movie/extract-movie-thumbnail"));
 
 //
 app.use("/api/music", require("./api/music/scan-music"));
@@ -133,3 +134,4 @@ app.use("/api/music", require("./api/music/audio-cache"));
 app.use("/api/music", require("./api/music/playlist"));
 app.use("/api/music", require("./api/music/music-meta"));
 app.use("/api/music", require("./api/music/reset-music-db"));
+app.use("/api/music", require("./api/music/extract-thumbnail"));

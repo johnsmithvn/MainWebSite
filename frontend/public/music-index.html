@@ -8,9 +8,7 @@
     <link rel="stylesheet" href="/src/styles/components/movie-card.css" />
     <link rel="stylesheet" href="/src/styles/components/folder-slider.css" />
     <link rel="stylesheet" href="/src/styles/components/music-card.css" />
-     <link rel="stylesheet" href="/src/styles/components/play-list-popup.css" />
-
-  
+    <link rel="stylesheet" href="/src/styles/components/play-list-popup.css" />
   </head>
   <body>
     <header id="site-header" class="site-header">
@@ -58,7 +56,7 @@
           id="randomFolderSection"
           class="folder-slider-section"
         ></section>
-         <section id="section-recent-music"></section>
+        <section id="section-recent-music"></section>
         <section
           id="randomAudioSection"
           class="folder-slider-section"
@@ -73,9 +71,13 @@
     </div>
 
     <footer id="main-footer" class="footer-bar">
-      <button id="delete-music-db" class="danger-button">🗑 Xoá DB Music</button>
+      <button id="extract-thumbnail-btn" class="danger-button">
+        🖼 Extract thumbnail (music)
+      </button>
     </footer>
-
+<div id="loading-overlay" class="hidden">
+  <div class="loader-text">⏳ Đang tải...</div>
+</div>
     <script type="module" src="/src/pages/music-index.js"></script>
   </body>
 </html>

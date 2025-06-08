@@ -338,13 +338,12 @@ export function setupSidebar() {
   );
   // 🔁 Reset cache DB + scan lại theo rootFolder
   sidebar.appendChild(
-    createSidebarButton("🔄 Reset DB (Xoá + Scan)", async () => {
-      const ok = await showConfirm("Bạn chắc muốn reset và scan lại DB?", {
-        loading: true,
-      });
-      if (!ok) return;
+    createSidebarButton(
+      "🔄 Reset DB (Xoá + Scan)",
+      withLoading(async () => {
+        const ok = await showConfirm("Bạn chắc muốn reset và scan lại DB?");
+        if (!ok) return;
 
-      try {
         const res = await fetch(
           `/api/manga/reset-cache?root=${encodeURIComponent(
             root
@@ -353,48 +352,39 @@ export function setupSidebar() {
         );
         const data = await res.json();
         showToast(data.message || "✅ Reset DB xong");
-      } catch (err) {
-        showToast("❌ Lỗi reset DB");
-        console.error(err);
-      } finally {
-        const overlay = document.getElementById("loading-overlay");
-        overlay?.classList.add("hidden");
-      }
-    })
+      })
+    )
   );
 
   // 📦 Quét thư mục mới (Scan DB)
   // 📦 Scan folder mới (không xoá DB)
-  sidebar.appendChild(
-    createSidebarButton("📦 Quét thư mục mới", async () => {
-      const ok = await showConfirm("Quét folder mới (không xoá DB)?", {
-        loading: true,
-      });
-      if (!ok) return;
+sidebar.appendChild(
+  createSidebarButton("📦 Quét thư mục mới", withLoading(async () => {
+    // Chỉ gọi showConfirm không truyền {loading: true}
+    const ok = await showConfirm("Quét folder mới (không xoá DB)?");
+    if (!ok) return;
 
-      try {
-        const res = await fetch("/api/manga/scan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ root: root, key: sourceKey }),
-        });
-        const data = await res.json();
-        showToast(
-          `✅ Scan xong:\nInserted ${data.stats.inserted}, Updated ${data.stats.updated}, Skipped ${data.stats.skipped}`
-        );
-      } catch (err) {
-        showToast("❌ Lỗi khi quét folder");
-        console.error(err);
-      } finally {
-        const overlay = document.getElementById("loading-overlay");
-        overlay?.classList.add("hidden");
-      }
-    })
-  );
+    try {
+      const res = await fetch("/api/manga/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ root: root, key: sourceKey }),
+      });
+      const data = await res.json();
+      showToast(
+        `✅ Scan xong:\nInserted ${data.stats.inserted}, Updated ${data.stats.updated}, Skipped ${data.stats.skipped}`
+      );
+    } catch (err) {
+      showToast("❌ Lỗi khi quét folder");
+      console.error(err);
+    }
+  }))
+);
+
 
   // 🧼 Xoá cache folder localStorage
   sidebar.appendChild(
-    createSidebarButton("🧼 Xoá cache folder", async () => {
+    createSidebarButton("🧼 Xoá cache folder", withLoading(async () => {
       const ok = await showConfirm(
         "Bạn có chắc muốn xoá cache folder localStorage?"
       );
@@ -410,7 +400,7 @@ export function setupSidebar() {
       });
       window.location.href = "/home.html"; // ✅ Quay lại chọn root
       showToast(`✅ Đã xoá ${count} cache folder`);
-    })
+    }))
   );
 }
 
@@ -531,11 +521,12 @@ export function setupMovieSidebar() {
   );
 
   // 🗑 Xoá DB Movie
-  sidebar.appendChild(
-    createSidebarButton("🗑 Xoá DB Movie", async () => {
-      const ok = await showConfirm("Bạn có chắc muốn xoá toàn bộ DB Movie?", {
-        loading: true,
-      });
+sidebar.appendChild(
+  createSidebarButton(
+    "🗑 Xoá DB Movie",
+    withLoading(async () => {
+      // KHÔNG truyền {loading: true} nữa!
+      const ok = await showConfirm("Bạn có chắc muốn xoá toàn bộ DB Movie?");
       if (!ok) return;
 
       try {
@@ -552,76 +543,85 @@ export function setupMovieSidebar() {
         showToast("❌ Lỗi khi gọi API xoá DB Movie");
         console.error(err);
       }
+      // KHÔNG cần finally overlay nữa!
     })
-  );
+  )
+);
 
   // 🗑 Xoá DB Movie
   sidebar.appendChild(
-    createSidebarButton("🗑 Reset DB Movie (xóa và scan)", async () => {
-      const ok = await showConfirm("Bạn có chắc muốn xoá toàn bộ DB Movie?", {
-        loading: true,
-      });
-      if (!ok) return;
+    createSidebarButton(
+      "🗑 Reset DB Movie (xóa và scan)",
+      withLoading(async () => {
+        const ok = await showConfirm("Bạn có chắc muốn xoá toàn bộ DB Movie?", {
+          loading: true,
+        });
+        if (!ok) return;
 
-      try {
-        const res = await fetch(
-          `/api/movie/reset-cache-movie?key=${sourceKey}&mode=reset`,
-          {
-            method: "DELETE",
-          }
-        );
-        const data = await res.json();
-        showToast(data.message || "✅ Đã xoá DB Movie");
-        window.location.reload();
-      } catch (err) {
-        showToast("❌ Lỗi khi gọi API xoá DB Movie");
-        console.error(err);
-      }
-    })
+        try {
+          const res = await fetch(
+            `/api/movie/reset-cache-movie?key=${sourceKey}&mode=reset`,
+            {
+              method: "DELETE",
+            }
+          );
+          const data = await res.json();
+          showToast(data.message || "✅ Đã xoá DB Movie");
+          window.location.reload();
+        } catch (err) {
+          showToast("❌ Lỗi khi gọi API xoá DB Movie");
+          console.error(err);
+        }
+      })
+    )
   );
 
   sidebar.appendChild(
-    createSidebarButton("📦 Quét thư mục mới", async () => {
-      const ok = await showConfirm("Quét folder mới (không xoá DB)?", {
-        loading: true,
-      });
-      if (!ok) return;
+    createSidebarButton(
+      "📦 Quét thư mục mới",
+      withLoading(async () => {
+        const ok = await showConfirm("Quét folder mới (không xoá DB)?", {});
+        if (!ok) return;
 
-      try {
-        const res = await fetch("/api/movie/scan-movie", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: sourceKey }),
-        });
-        const data = await res.json();
-        showToast(
-          `✅ Scan xong:\nInserted ${data.stats.inserted}, Updated ${data.stats.updated}, Skipped ${data.stats.skipped}`
-        );
-      } catch (err) {
-        showToast("❌ Lỗi khi quét folder");
-        console.error(err);
-      }
-    })
+        try {
+          const res = await fetch("/api/movie/scan-movie", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: sourceKey }),
+          });
+          const data = await res.json();
+          showToast(
+            `✅ Scan xong:\nInserted ${data.stats.inserted}, Updated ${data.stats.updated}, Skipped ${data.stats.skipped}`
+          );
+        } catch (err) {
+          showToast("❌ Lỗi khi quét folder");
+          console.error(err);
+        }
+      })
+    )
   );
 
   // 🧹 Xoá cache movie folder localStorage
   sidebar.appendChild(
-    createSidebarButton("🧼 Xoá cache folder", async () => {
-      const ok = await showConfirm(
-        "Bạn có chắc muốn xoá cache folder movie localStorage?"
-      );
-      if (!ok) return;
+    createSidebarButton(
+      "🧼 Xoá cache folder",
+      withLoading(async () => {
+        const ok = await showConfirm(
+          "Bạn có chắc muốn xoá cache folder movie localStorage?"
+        );
+        if (!ok) return;
 
-      let count = 0;
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith(`movieCache::${sourceKey}::`)) {
-          localStorage.removeItem(key);
-          count++;
-        }
-      });
+        let count = 0;
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith(`movieCache::${sourceKey}::`)) {
+            localStorage.removeItem(key);
+            count++;
+          }
+        });
 
-      showToast(`✅ Đã xoá ${count} cache folder`);
-    })
+        showToast(`✅ Đã xoá ${count} cache folder`);
+      })
+    )
   );
 }
 
@@ -642,7 +642,7 @@ export function setupMusicSidebar() {
 
   // 🗑 Xoá DB
   sidebar.appendChild(
-    createSidebarButton("🗑 Xoá Music DB", async () => {
+    createSidebarButton("🗑 Xoá Music DB", withLoading(async () => {
       const ok = await showConfirm("Bạn có chắc muốn xoá DB music?", {
         loading: true,
       });
@@ -660,14 +660,13 @@ export function setupMusicSidebar() {
       } catch (err) {
         showToast("❌ Lỗi khi gọi API xoá DB");
       }
-    })
+    }))
   );
 
   // 🔄 Reset DB
   sidebar.appendChild(
-    createSidebarButton("🔄 Reset DB (Xoá + Scan)", async () => {
+    createSidebarButton("🔄 Reset DB (Xoá + Scan)", withLoading(async () => {
       const ok = await showConfirm("Reset DB music và scan lại?", {
-        loading: true,
       });
       if (!ok) return;
 
@@ -685,14 +684,13 @@ export function setupMusicSidebar() {
         console.error(err);
         showToast("❌ Lỗi reset DB");
       }
-    })
+    }))
   );
 
   // 📦 Quét thư mục mới
   sidebar.appendChild(
-    createSidebarButton("📦 Quét thư mục mới", async () => {
+    createSidebarButton("📦 Quét thư mục mới",withLoading( async () => {
       const ok = await showConfirm("Quét folder mới (không xoá DB)?", {
-        loading: true,
       });
       if (!ok) return;
 
@@ -709,12 +707,12 @@ export function setupMusicSidebar() {
       } catch (err) {
         showToast("❌ Lỗi khi quét folder");
       }
-    })
+    }))
   );
 
   // 🧹 Xoá cache folder
   sidebar.appendChild(
-    createSidebarButton("🧼 Xoá cache folder", async () => {
+    createSidebarButton("🧼 Xoá cache folder", withLoading(async () => {
       const ok = await showConfirm("Xoá toàn bộ cache folder music?");
       if (!ok) return;
 
@@ -727,7 +725,7 @@ export function setupMusicSidebar() {
       });
 
       showToast(`✅ Đã xoá ${count} cache folder`);
-    })
+    }))
   );
 }
 
@@ -904,17 +902,22 @@ export function buildThumbnailUrl(f, mediaType = "movie") {
   }${f.thumbnail.replace(/\\/g, "/")}`;
 }
 
-
-
 export function renderRecentViewedMusic(list = []) {
   // Lọc chỉ lấy audio/file (nếu cần)
-  const filtered = list.filter(
-    (f) => f.type === "audio" || f.type === "file"
-  );
+  const filtered = list.filter((f) => f.type === "audio" || f.type === "file");
 
   renderFolderSlider({
     title: "🕘 Nhạc vừa nghe",
     folders: filtered,
     targetId: "section-recent-music", // Tạo 1 div/section này trong HTML hoặc tự động sinh
   });
+}
+
+export function hideOverlay() {
+  const overlay = document.getElementById("loading-overlay");
+  if (overlay) overlay.classList.add("hidden");
+}
+export function showOverlay() {
+  const overlay = document.getElementById("loading-overlay");
+  if (overlay) overlay.classList.remove("hidden");
 }
