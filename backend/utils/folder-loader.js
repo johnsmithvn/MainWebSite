@@ -109,7 +109,7 @@ function loadMovieFolderFromDisk(
 
     if (entry.isFile()) {
       const ext = path.extname(entry.name).toLowerCase();
-      if ([".mp4", ".mkv", ".avi", ".webm"].includes(ext)) {
+if ([".mp4", ".mkv", ".avi", ".webm", ".ts", ".wmv"].includes(ext)) {
         folders.push({
           name: entry.name,
           path: path.posix.join(folderPath, entry.name),

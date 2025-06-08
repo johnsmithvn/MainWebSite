@@ -7,7 +7,7 @@ const ffmpeg = require("fluent-ffmpeg");
 const ffprobe = require("ffprobe-static");
 ffmpeg.setFfprobePath(ffprobe.path);
 
-const VIDEO_EXTS = [".mp4", ".mkv", ".avi", ".webm"];
+const VIDEO_EXTS = [".mp4", ".mkv", ".avi", ".webm", ".ts", ".wmv"];
 const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".avif"];
 
 // 🟢 Hàm tìm thumbnail đúng tên

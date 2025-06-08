@@ -104,7 +104,7 @@ fetch("/api/increase-view/movie", {
 });
 
 
-const videoBaseName = file.split("/").pop().replace(/\.(mp4|mkv|ts|avi|mov|webm)$/i, "");
+const videoBaseName = file.split("/").pop().replace(/\.(mp4|mkv|ts|avi|mov|webm|wmv)$/i, "");
 const thumb = `.thumbnail/${videoBaseName}.jpg`;
 saveRecentViewedVideo({
   name: videoName,

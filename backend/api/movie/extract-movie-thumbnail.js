@@ -8,7 +8,7 @@ const ffmpeg = require("fluent-ffmpeg");
 const ffprobe = require("ffprobe-static");
 ffmpeg.setFfprobePath(ffprobe.path);
 
-const VIDEO_EXTS = [".mp4", ".mkv", ".avi", ".mov", ".webm"];
+const VIDEO_EXTS = [".mp4", ".mkv", ".avi", ".mov", ".webm", ".ts", ".wmv"];
 
 // Hàm extract thumbnail cho file hoặc folder/subfolder, và update DB cho cả video & folder cha
 async function extractMovieThumbnailSmart({ key, relPath = "" }) {
@@ -76,7 +76,6 @@ async function extractMovieThumbnailSmart({ key, relPath = "" }) {
           Date.now()
         );
       } else {
-        console.log("[EXTRACT MOVIE] UPDATE FOLDER:", folderName, relPath);
 
         db.prepare(
           `UPDATE folders SET thumbnail = ?, updatedAt = ? WHERE name = ? AND path = ?`

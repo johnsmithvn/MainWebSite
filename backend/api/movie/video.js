@@ -45,6 +45,8 @@ router.get("/video", (req, res) => {
   if (ext === ".mkv") mime = "video/x-matroska";
   else if (ext === ".webm") mime = "video/webm";
   else if (ext === ".avi") mime = "video/x-msvideo";
+  else if (ext === ".ts") mime = "video/mp2t"; // Chuẩn MIME của .ts
+else if (ext === ".wmv") mime = "video/x-ms-wmv";
 
   // Header stream chuẩn
   res.setHeader("Accept-Ranges", "bytes");
