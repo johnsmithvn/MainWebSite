@@ -162,7 +162,7 @@ function renderMovieGrid(list) {
 
   app.appendChild(title);
   const grid = document.createElement("div");
-  grid.className = "grid";
+  grid.className = "movie-grid";
 
   list.forEach((item) => {
     let folderPrefixParts = item.path?.split("/").filter(Boolean);

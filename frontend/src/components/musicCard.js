@@ -6,7 +6,7 @@ import { showPlaylistMenu } from "/src/components/playlistMenu.js";
  */
 export function renderMusicCardWithFavorite(item) {
   const card = document.createElement("div");
-  card.className = "movie-card"; // dùng lại CSS của movie
+card.className = "music-card"; 
 
   // ✅ Thumbnail: fallback chuẩn
   let thumbnailUrl = item.thumbnail;
@@ -21,19 +21,19 @@ export function renderMusicCardWithFavorite(item) {
   }
 
   const img = document.createElement("img");
-  img.className = "movie-thumb";
+  img.className = "music-thumb";
   img.src = thumbnailUrl;
 
   const info = document.createElement("div");
-  info.className = "movie-info";
+  info.className = "music-info";
 
   const title = document.createElement("div");
-  title.className = "movie-title";
+  title.className = "music-title";
   title.textContent = item.name;
   card.title = item.name;
 
   const sub = document.createElement("div");
-  sub.className = "movie-sub";
+  sub.className = "music-sub";
 
   if (item.type === "audio" || item.type === "file") {
     const ext = item.path?.split(".").pop()?.toLowerCase();
@@ -109,3 +109,7 @@ menuBtn.textContent = "+"; // ✅ Thay vì "⋮"
 
   return card;
 }
+
+
+
+
