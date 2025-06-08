@@ -2,9 +2,10 @@
 import { renderFolderCard } from "./folderCard.js";
 import { renderRecentViewed, showRandomUpdatedTime } from "../core/ui.js";
 import {
-  getRootFolder,
   recentViewedKey,
   getSourceKey,
+  recentViewedVideoKey,
+  recentViewedMusicKey,
 } from "../core/storage.js";
 import { buildThumbnailUrl } from "../core/ui.js";
 
@@ -37,8 +38,13 @@ export function renderFolderSlider({
   h3.textContent = title;
   left.appendChild(h3);
   header.appendChild(left);
+  const isRecent =
+    title.toLowerCase().includes("vừa xem") ||
+    title.toLowerCase().includes("vừa nghe") ||
+    title.toLowerCase().includes("mới đọc") ||
+    title.toLowerCase().includes("nhạc vừa nghe");
 
-  if (title.includes("ngẫu nhiên") || title.includes("Mới đọc")) {
+  if (title.includes("ngẫu nhiên") || isRecent) {
     const right = document.createElement("div");
     right.className = "slider-right";
 
@@ -70,30 +76,29 @@ export function renderFolderSlider({
       right.appendChild(timestamp);
     }
 
-  if (
-  title.includes("Mới đọc") ||
-  title.includes("Vừa xem") ||
-  title.includes("Vừa nghe")
-) {
-  const clearBtn = document.createElement("button");
-  clearBtn.textContent = "🗑️ Xoá tất cả";
-  clearBtn.className = "small-button";
-  clearBtn.onclick = () => {
-    let key;
-    if (window.location.pathname.includes("movie")) {
-      key = recentViewedVideoKey();
-    } else if (window.location.pathname.includes("music")) {
-      key = recentViewedMusicKey();
-    } else {
-      key = recentViewedKey();
+    if (isRecent) {
+      const clearBtn = document.createElement("button");
+      clearBtn.textContent = "🗑️ Xoá tất cả";
+      clearBtn.className = "small-button";
+      clearBtn.onclick = () => {
+        let key;
+        let rerender;
+        if (window.location.pathname.includes("movie")) {
+          key = recentViewedVideoKey();
+          rerender = renderRecentViewed;
+        } else if (window.location.pathname.includes("music")) {
+          key = recentViewedMusicKey();
+          // Gọi hàm đúng cho music recent!
+          rerender = window.renderRecentViewedMusic || renderRecentViewed;
+        } else {
+          key = recentViewedKey();
+          rerender = renderRecentViewed;
+        }
+        localStorage.removeItem(key);
+        rerender([]);
+      };
+      right.appendChild(clearBtn);
     }
-    localStorage.removeItem(key);
-    renderRecentViewed([]);
-  };
-  right.appendChild(clearBtn);
-}
-
-
     header.appendChild(right);
   }
 

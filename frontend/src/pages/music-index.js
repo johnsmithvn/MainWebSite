@@ -37,6 +37,8 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("sidebarToggle")?.addEventListener("click", () => {
     document.getElementById("sidebar-menu")?.classList.toggle("active");
   });
+    window.renderRecentViewedMusic = renderRecentViewedMusic; // THÊM DÒNG NÀY
+
 });
 
 function getInitialPathFromURL() {
