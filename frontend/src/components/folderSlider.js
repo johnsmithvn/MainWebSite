@@ -70,18 +70,29 @@ export function renderFolderSlider({
       right.appendChild(timestamp);
     }
 
-    if (title.includes("Mới đọc")) {
-      const clearBtn = document.createElement("button");
-      clearBtn.textContent = "🗑️ Xoá tất cả";
-      clearBtn.className = "small-button";
-      clearBtn.onclick = () => {
-        const isMoviePage = window.location.pathname.includes("movie");
-        const key = isMoviePage ? recentViewedVideoKey() : recentViewedKey();
-        localStorage.removeItem(key);
-        renderRecentViewed([]);
-      };
-      right.appendChild(clearBtn);
+  if (
+  title.includes("Mới đọc") ||
+  title.includes("Vừa xem") ||
+  title.includes("Vừa nghe")
+) {
+  const clearBtn = document.createElement("button");
+  clearBtn.textContent = "🗑️ Xoá tất cả";
+  clearBtn.className = "small-button";
+  clearBtn.onclick = () => {
+    let key;
+    if (window.location.pathname.includes("movie")) {
+      key = recentViewedVideoKey();
+    } else if (window.location.pathname.includes("music")) {
+      key = recentViewedMusicKey();
+    } else {
+      key = recentViewedKey();
     }
+    localStorage.removeItem(key);
+    renderRecentViewed([]);
+  };
+  right.appendChild(clearBtn);
+}
+
 
     header.appendChild(right);
   }

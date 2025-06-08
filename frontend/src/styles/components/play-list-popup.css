@@ -17,10 +17,14 @@
 }
 
 .popup-title {
+  /* FLEX để căn icon close đúng, không block nữa */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
   font-weight: bold;
   font-size: 1.1em;
   color: #222;
-  text-align: center;
   background: #fafafa;
   padding: 13px 16px 9px 16px;
   border-bottom: 1px solid #eee;
@@ -28,13 +32,18 @@
   top: 0;
   z-index: 2;
   width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
+  /* XÓA text-align, white-space, overflow, text-overflow ở đây! */
+}
+.popup-title-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  box-sizing: border-box;
-  display: block;
-  max-width: 100%;
+  max-width: 220px;   /* Bạn có thể tăng lên 240-260px nếu muốn */
+  display: inline-block;
 }
+
 
 .playlist-list-scroll {
   flex: 1 1 auto;
@@ -126,7 +135,7 @@
 }
 
 /* Mobile tối ưu */
-@media (max-width: 480px) {
+/* @media (max-width: 480px) {
   .playlist-popup {
     width: 96vw;
     min-width: 0;
@@ -152,4 +161,10 @@
     padding-right: 7px;
     padding-left: 6px;
   }
+} */
+
+#playlist-close-btn:hover {
+  color: #e74c3c;
+  background: #fbe8e6;
+  border-radius: 50%;
 }

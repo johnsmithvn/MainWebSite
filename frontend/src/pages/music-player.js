@@ -9,6 +9,7 @@ import {
   setupMusicSidebar,
 } from "/src/core/ui.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
+import { showPlaylistMenu } from "/src/components/playlistMenu.js";
 
 // ========================
 // Hàm render info nổi bật như Spotify
@@ -24,12 +25,15 @@ function renderNowPlayingInfo(track) {
   // Xử lý đường dẫn thumbnail
   let thumb = buildThumbnailUrl(track, "music");
 
-  // Render info nổi bật giống Spotify
+  // Render info nổi bật giống Spotify, THÊM NÚT "+"
   el.innerHTML = `
     <div class="now-playing-cover">
       <img class="now-playing-thumb" src="${thumb}" alt="thumb" />
       <div class="now-playing-meta">
-        <div class="now-title">${track.name}</div>
+        <div class="now-title">
+          ${track.name}
+          <button id="btn-add-playlist" title="Thêm vào playlist" style="margin-left:8px;">+</button>
+        </div>
         <div class="now-artist">${track.artist || "Unknown Artist"}</div>
         <div class="now-extra">
           <span>👁️ ${track.viewCount || 0}</span>
@@ -38,8 +42,13 @@ function renderNowPlayingInfo(track) {
       </div>
     </div>
   `;
-}
 
+  // Gắn sự kiện mở popup playlist
+  document.getElementById("btn-add-playlist")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showPlaylistMenu(track.path, track.name, e.target);
+  });
+}
 // ========================
 // SETUP UI CƠ BẢN
 // ========================

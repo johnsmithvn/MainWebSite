@@ -369,3 +369,21 @@ body, html {
   color: #a259ec;  /* tím nổi bật */
   font-weight: 600;
 }
+
+/* laylisst  */
+#btn-add-playlist {
+  background: #1db954;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 18px;
+  cursor: pointer;
+  margin-left: 10px;
+  vertical-align: middle;
+  transition: background 0.2s;
+}
+#btn-add-playlist:hover {
+  background: #169447;
+}

@@ -1,6 +1,6 @@
 // playlistMenu.js
 import { getSourceKey } from "/src/core/storage.js";
-import { showToast,showConfirm,showInputPrompt } from "/src/core/ui.js";
+import { showToast, showConfirm, showInputPrompt } from "/src/core/ui.js";
 
 export async function showPlaylistMenu(path, name, anchor) {
   let container = document.getElementById("playlist-popup");
@@ -21,12 +21,31 @@ export async function showPlaylistMenu(path, name, anchor) {
   }
 
   // === Render cấu trúc khung popup sticky title + vùng scroll + sticky button add ===
-  container.innerHTML = `
-    <div class="popup-title">Add "${name}"</div>
-    <div class="playlist-list-scroll"></div>
-  `;
-
-  const listScroll = container.querySelector('.playlist-list-scroll');
+container.innerHTML = `
+  <div class="popup-title" style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
+    <span class="popup-title-text" title="${name}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:215px;display:inline-block;">
+      Add "${name}"
+    </span>
+    <button id="playlist-close-btn" title="Đóng" style="
+      background:none;
+      border:none;
+      font-size:1.3em;
+      line-height:1;
+      cursor:pointer;
+      color:#999;
+      margin-left:10px;
+      padding:0 6px 0 6px;
+      flex-shrink:0;
+      ">✖</button>
+  </div>
+  <div class="playlist-list-scroll"></div>
+`;
+  document
+    .getElementById("playlist-close-btn")
+    ?.addEventListener("click", () => {
+      container.remove();
+    });
+  const listScroll = container.querySelector(".playlist-list-scroll");
 
   // Render từng playlist-row vào vùng scroll
   const playlistStatus = await Promise.all(
@@ -110,7 +129,10 @@ export async function showPlaylistMenu(path, name, anchor) {
   newBtn.className = "playlist-option bold playlist-add-btn";
   newBtn.textContent = "➕ Tạo playlist mới...";
   newBtn.onclick = async () => {
-    const value = await showInputPrompt("Nhập tên playlist mới", "Tên playlist");
+    const value = await showInputPrompt(
+      "Nhập tên playlist mới",
+      "Tên playlist"
+    );
     if (!value) return;
     const res = await fetch("/api/music/playlist", {
       method: "POST",
