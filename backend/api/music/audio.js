@@ -1,5 +1,4 @@
-// 📁 backend/api/movie/video.js
-
+// 📁 backend/api/music/audio.js
 const express = require("express");
 const router = express.Router();
 const path = require("path");
@@ -8,20 +7,18 @@ const os = require("os");
 const { getRootPath } = require("../../utils/config");
 const { LRUCache } = require("lru-cache");
 
-// 🧠 Tính toán RAM khả dụng
-const totalRAM = os.totalmem(); // byte
-const usableRAM = totalRAM * 0.5; // dùng 50%
-const maxVideoCount = 5; // tối đa 5 video RAM
-const MAX_VIDEO_SIZE = usableRAM / maxVideoCount; // ~3.2GB nếu RAM 32GB
+const totalRAM = os.totalmem();
+const usableRAM = totalRAM * 0.5;
+const maxAudioCount = 30;
+const MAX_AUDIO_SIZE = usableRAM / maxAudioCount;
 
-// 🧠 RAM cache video
-const videoCache = new LRUCache({
+const audioCache = new LRUCache({
   maxSize: usableRAM,
-  sizeCalculation: (val, key) => val?.length || 0, // Tránh lỗi nếu val null
-  ttl: 1000 * 60 * 60, // 1 tiếng
+  sizeCalculation: (val) => val?.length || 0,
+  ttl: 1000 * 60 * 60,
 });
 
-router.get("/video", (req, res) => {
+router.get("/audio", (req, res) => {
   const key = req.query.key;
   const relPath = req.query.file;
   const rootPath = getRootPath(key);
@@ -32,7 +29,7 @@ router.get("/video", (req, res) => {
 
   const absPath = path.join(rootPath, relPath);
   if (!fs.existsSync(absPath)) {
-    return res.status(404).json({ error: "Không tìm thấy video" });
+    return res.status(404).json({ error: "Không tìm thấy file audio" });
   }
 
   const stat = fs.statSync(absPath);
@@ -40,35 +37,26 @@ router.get("/video", (req, res) => {
   const range = req.headers.range;
   const ext = path.extname(absPath).toLowerCase();
 
-  // MIME
-  let mime = "video/mp4";
-  if (ext === ".mkv") mime = "video/x-matroska";
-  else if (ext === ".webm") mime = "video/webm";
-  else if (ext === ".avi") mime = "video/x-msvideo";
-  else if (ext === ".ts") mime = "video/mp2t"; // Chuẩn MIME của .ts
-else if (ext === ".wmv") mime = "video/x-ms-wmv";
+  let mime = "audio/mpeg";
+  if (ext === ".flac") mime = "audio/flac";
+  else if (ext === ".wav") mime = "audio/wav";
+  else if (ext === ".ogg") mime = "audio/ogg";
 
-  // Header stream chuẩn
   res.setHeader("Accept-Ranges", "bytes");
-  res.setHeader("Cache-Control", "no-store");
-  res.setHeader("Last-Modified", stat.mtime.toUTCString());
   res.setHeader("Content-Type", mime);
-  res.setHeader("X-Content-Type-Options", "nosniff");
 
-  // 🧠 Nếu đủ nhỏ → cache RAM
   let buffer = null;
-  const useRAM = fileSize <= MAX_VIDEO_SIZE && fileSize < 2 * 1024 * 1024 * 1024; // < 2GB
+  const useRAM = fileSize <= MAX_AUDIO_SIZE && fileSize < 512 * 1024 * 1024;
 
   if (useRAM) {
-    buffer = videoCache.get(absPath);
+    buffer = audioCache.get(absPath);
     if (!buffer) {
       try {
         buffer = fs.readFileSync(absPath);
         if (buffer) {
-          videoCache.set(absPath, buffer);
+          audioCache.set(absPath, buffer);
         }
       } catch (err) {
-        console.warn("⚠️ File quá lớn, không cache RAM:", absPath);
         buffer = null;
       }
     }
@@ -94,7 +82,6 @@ else if (ext === ".wmv") mime = "video/x-ms-wmv";
     }
   }
 
-  // Nếu không có range: stream toàn bộ
   res.status(200).setHeader("Content-Length", fileSize);
   if (buffer) {
     return res.end(buffer);

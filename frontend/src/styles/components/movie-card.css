@@ -9,6 +9,8 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   width: 100%;
+  position: relative;
+
   /* max-width: 420px; */
 }
 
@@ -50,7 +52,7 @@
 }
 
 /* Responsive grid */
-.grid {
+.movie-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 20px;

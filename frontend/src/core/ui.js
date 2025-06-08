@@ -108,23 +108,13 @@ export async function filterMovie() {
       const item = document.createElement("div");
       item.className = "search-item";
 
-      // ✅ Xử lý thumbnail theo loại
-      let thumbSrc = "/default/folder-thumb.png";
-
-      if (f.type === "video" || f.type === "file") {
-        thumbSrc = f.thumbnail
-          ? `/video/${f.thumbnail.replace(/\\/g, "/")}`
-          : "/default/video-thumb.png";
-      } else {
-        thumbSrc = f.thumbnail
-          ? `/video/${f.thumbnail.replace(/\\/g, "/")}`
-          : "/default/folder-thumb.png";
-      }
+      // 🔥 Build prefix đúng cho folder/file
+      let thumbSrc = buildThumbnailUrl(f, "movie");
 
       item.innerHTML = `
-        <img src="${thumbSrc}" class="search-thumb" alt="thumb">
-        <div class="search-title">${f.name}</div>
-      `;
+    <img src="${thumbSrc}" class="search-thumb" alt="thumb">
+    <div class="search-title">${f.name}</div>
+  `;
 
       item.onclick = () => {
         dropdown.classList.add("hidden");
@@ -157,7 +147,13 @@ export function toggleDarkMode() {
 /**
  * 📄 Cập nhật UI phân trang
  */
-export function updateFolderPaginationUI(currentPage, totalItems, perPage, onPageChange, target = null) {
+export function updateFolderPaginationUI(
+  currentPage,
+  totalItems,
+  perPage,
+  onPageChange,
+  target = null
+) {
   const totalPages = Math.ceil(totalItems / perPage);
   const container = target || document.getElementById("app");
   if (!container) return;
@@ -278,8 +274,10 @@ export function renderRecentViewed(folders = []) {
   const isMoviePage = window.location.pathname.includes("movie");
 
   const filtered = isMoviePage
-    ? folders.filter(f => f.type === "video" || f.type === "file")
-    : folders.filter(f => !f.type || (f.type !== "video" && f.type !== "file"));
+    ? folders.filter((f) => f.type === "video" || f.type === "file")
+    : folders.filter(
+        (f) => !f.type || (f.type !== "video" && f.type !== "file")
+      );
 
   renderFolderSlider({
     title: isMoviePage ? "🕓 Vừa xem" : "🕘 Mới đọc",
@@ -340,13 +338,12 @@ export function setupSidebar() {
   );
   // 🔁 Reset cache DB + scan lại theo rootFolder
   sidebar.appendChild(
-    createSidebarButton("🔄 Reset DB (Xoá + Scan)", async () => {
-      const ok = await showConfirm("Bạn chắc muốn reset và scan lại DB?", {
-        loading: true,
-      });
-      if (!ok) return;
+    createSidebarButton(
+      "🔄 Reset DB (Xoá + Scan)",
+      withLoading(async () => {
+        const ok = await showConfirm("Bạn chắc muốn reset và scan lại DB?");
+        if (!ok) return;
 
-      try {
         const res = await fetch(
           `/api/manga/reset-cache?root=${encodeURIComponent(
             root
@@ -355,48 +352,39 @@ export function setupSidebar() {
         );
         const data = await res.json();
         showToast(data.message || "✅ Reset DB xong");
-      } catch (err) {
-        showToast("❌ Lỗi reset DB");
-        console.error(err);
-      } finally {
-        const overlay = document.getElementById("loading-overlay");
-        overlay?.classList.add("hidden");
-      }
-    })
+      })
+    )
   );
 
   // 📦 Quét thư mục mới (Scan DB)
   // 📦 Scan folder mới (không xoá DB)
-  sidebar.appendChild(
-    createSidebarButton("📦 Quét thư mục mới", async () => {
-      const ok = await showConfirm("Quét folder mới (không xoá DB)?", {
-        loading: true,
-      });
-      if (!ok) return;
+sidebar.appendChild(
+  createSidebarButton("📦 Quét thư mục mới", withLoading(async () => {
+    // Chỉ gọi showConfirm không truyền {loading: true}
+    const ok = await showConfirm("Quét folder mới (không xoá DB)?");
+    if (!ok) return;
 
-      try {
-        const res = await fetch("/api/manga/scan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ root: root, key: sourceKey }),
-        });
-        const data = await res.json();
-        showToast(
-          `✅ Scan xong:\nInserted ${data.stats.inserted}, Updated ${data.stats.updated}, Skipped ${data.stats.skipped}`
-        );
-      } catch (err) {
-        showToast("❌ Lỗi khi quét folder");
-        console.error(err);
-      } finally {
-        const overlay = document.getElementById("loading-overlay");
-        overlay?.classList.add("hidden");
-      }
-    })
-  );
+    try {
+      const res = await fetch("/api/manga/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ root: root, key: sourceKey }),
+      });
+      const data = await res.json();
+      showToast(
+        `✅ Scan xong:\nInserted ${data.stats.inserted}, Updated ${data.stats.updated}, Skipped ${data.stats.skipped}`
+      );
+    } catch (err) {
+      showToast("❌ Lỗi khi quét folder");
+      console.error(err);
+    }
+  }))
+);
+
 
   // 🧼 Xoá cache folder localStorage
   sidebar.appendChild(
-    createSidebarButton("🧼 Xoá cache folder", async () => {
+    createSidebarButton("🧼 Xoá cache folder", withLoading(async () => {
       const ok = await showConfirm(
         "Bạn có chắc muốn xoá cache folder localStorage?"
       );
@@ -412,7 +400,7 @@ export function setupSidebar() {
       });
       window.location.href = "/home.html"; // ✅ Quay lại chọn root
       showToast(`✅ Đã xoá ${count} cache folder`);
-    })
+    }))
   );
 }
 
@@ -533,17 +521,21 @@ export function setupMovieSidebar() {
   );
 
   // 🗑 Xoá DB Movie
-  sidebar.appendChild(
-    createSidebarButton("🗑 Xoá DB Movie", async () => {
-      const ok = await showConfirm("Bạn có chắc muốn xoá toàn bộ DB Movie?", {
-        loading: true,
-      });
+sidebar.appendChild(
+  createSidebarButton(
+    "🗑 Xoá DB Movie",
+    withLoading(async () => {
+      // KHÔNG truyền {loading: true} nữa!
+      const ok = await showConfirm("Bạn có chắc muốn xoá toàn bộ DB Movie?");
       if (!ok) return;
 
       try {
-        const res = await fetch(`/api/movie/reset-cache-movie?key=${sourceKey}&mode=delete`, {
-          method: "DELETE",
-        });
+        const res = await fetch(
+          `/api/movie/reset-cache-movie?key=${sourceKey}&mode=delete`,
+          {
+            method: "DELETE",
+          }
+        );
         const data = await res.json();
         showToast(data.message || "✅ Đã xoá DB Movie");
         window.location.reload();
@@ -551,44 +543,162 @@ export function setupMovieSidebar() {
         showToast("❌ Lỗi khi gọi API xoá DB Movie");
         console.error(err);
       }
+      // KHÔNG cần finally overlay nữa!
+    })
+  )
+);
+
+  // 🗑 Xoá DB Movie
+  sidebar.appendChild(
+    createSidebarButton(
+      "🗑 Reset DB Movie (xóa và scan)",
+      withLoading(async () => {
+        const ok = await showConfirm("Bạn có chắc muốn xoá toàn bộ DB Movie?", {
+          loading: true,
+        });
+        if (!ok) return;
+
+        try {
+          const res = await fetch(
+            `/api/movie/reset-cache-movie?key=${sourceKey}&mode=reset`,
+            {
+              method: "DELETE",
+            }
+          );
+          const data = await res.json();
+          showToast(data.message || "✅ Đã xoá DB Movie");
+          window.location.reload();
+        } catch (err) {
+          showToast("❌ Lỗi khi gọi API xoá DB Movie");
+          console.error(err);
+        }
+      })
+    )
+  );
+
+  sidebar.appendChild(
+    createSidebarButton(
+      "📦 Quét thư mục mới",
+      withLoading(async () => {
+        const ok = await showConfirm("Quét folder mới (không xoá DB)?", {});
+        if (!ok) return;
+
+        try {
+          const res = await fetch("/api/movie/scan-movie", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: sourceKey }),
+          });
+          const data = await res.json();
+          showToast(
+            `✅ Scan xong:\nInserted ${data.stats.inserted}, Updated ${data.stats.updated}, Skipped ${data.stats.skipped}`
+          );
+        } catch (err) {
+          showToast("❌ Lỗi khi quét folder");
+          console.error(err);
+        }
+      })
+    )
+  );
+
+  // 🧹 Xoá cache movie folder localStorage
+  sidebar.appendChild(
+    createSidebarButton(
+      "🧼 Xoá cache folder",
+      withLoading(async () => {
+        const ok = await showConfirm(
+          "Bạn có chắc muốn xoá cache folder movie localStorage?"
+        );
+        if (!ok) return;
+
+        let count = 0;
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith(`movieCache::${sourceKey}::`)) {
+            localStorage.removeItem(key);
+            count++;
+          }
+        });
+
+        showToast(`✅ Đã xoá ${count} cache folder`);
+      })
+    )
+  );
+}
+
+export function setupMusicSidebar() {
+  const sidebar = document.getElementById("sidebar-menu");
+  if (!sidebar) return;
+  sidebar.innerHTML = "";
+
+  const sourceKey = getSourceKey();
+
+  // 🎼 Đổi Music Folder
+  sidebar.appendChild(
+    createSidebarButton("🎼 Đổi Music Folder", () => {
+      localStorage.removeItem("rootFolder");
+      window.location.href = "/home.html";
     })
   );
 
-    // 🗑 Xoá DB Movie
+  // 🗑 Xoá DB
   sidebar.appendChild(
-    createSidebarButton("🗑 Reset DB Movie (xóa và scan)", async () => {
-      const ok = await showConfirm("Bạn có chắc muốn xoá toàn bộ DB Movie?", {
+    createSidebarButton("🗑 Xoá Music DB", withLoading(async () => {
+      const ok = await showConfirm("Bạn có chắc muốn xoá DB music?", {
         loading: true,
       });
       if (!ok) return;
 
       try {
-        const res = await fetch(`/api/movie/reset-cache-movie?key=${sourceKey}&mode=reset`, {
-          method: "DELETE",
-        });
+        const res = await fetch(
+          `/api/music/reset-cache-music?key=${sourceKey}&mode=delete`,
+          {
+            method: "DELETE",
+          }
+        );
         const data = await res.json();
-        showToast(data.message || "✅ Đã xoá DB Movie");
-        window.location.reload();
+        showToast(data.message || "✅ Đã xoá DB");
       } catch (err) {
-        showToast("❌ Lỗi khi gọi API xoá DB Movie");
-        console.error(err);
+        showToast("❌ Lỗi khi gọi API xoá DB");
       }
-    })
+    }))
   );
 
-
+  // 🔄 Reset DB
   sidebar.appendChild(
-    createSidebarButton("📦 Quét thư mục mới", async () => {
+    createSidebarButton("🔄 Reset DB (Xoá + Scan)", withLoading(async () => {
+      const ok = await showConfirm("Reset DB music và scan lại?", {
+      });
+      if (!ok) return;
+
+      try {
+        const res = await fetch(
+          `/api/music/reset-cache-music?key=${sourceKey}&mode=reset`,
+          {
+            method: "DELETE",
+          }
+        );
+        const data = await res.json();
+        showToast(data.message || "✅ Reset DB xong");
+        window.location.reload();
+      } catch (err) {
+        console.error(err);
+        showToast("❌ Lỗi reset DB");
+      }
+    }))
+  );
+
+  // 📦 Quét thư mục mới
+  sidebar.appendChild(
+    createSidebarButton("📦 Quét thư mục mới",withLoading( async () => {
       const ok = await showConfirm("Quét folder mới (không xoá DB)?", {
-        loading: true,
       });
       if (!ok) return;
 
       try {
-        const res = await fetch("/api/movie/scan-movie", {
+        const res = await fetch(`/api/music/scan-music`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({key : sourceKey}),
+          body: JSON.stringify({ key: sourceKey }),
         });
         const data = await res.json();
         showToast(
@@ -596,28 +706,218 @@ export function setupMovieSidebar() {
         );
       } catch (err) {
         showToast("❌ Lỗi khi quét folder");
-        console.error(err);
       }
-    })
+    }))
   );
 
-  // 🧹 Xoá cache movie folder localStorage
+  // 🧹 Xoá cache folder
   sidebar.appendChild(
-    createSidebarButton("🧼 Xoá cache folder", async () => {
-      const ok = await showConfirm(
-        "Bạn có chắc muốn xoá cache folder movie localStorage?"
-      );
+    createSidebarButton("🧼 Xoá cache folder", withLoading(async () => {
+      const ok = await showConfirm("Xoá toàn bộ cache folder music?");
       if (!ok) return;
 
       let count = 0;
       Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith(`movieCache::${sourceKey}::`)) {
+        if (key.startsWith(`musicCache::${sourceKey}::`)) {
           localStorage.removeItem(key);
           count++;
         }
       });
 
       showToast(`✅ Đã xoá ${count} cache folder`);
-    })
+    }))
   );
+}
+
+// filter music
+export async function filterMusic() {
+  const keyword = document
+    .getElementById("floatingSearchInput")
+    ?.value.trim()
+    .toLowerCase();
+  const dropdown = document.getElementById("search-dropdown");
+  const sourceKey = getSourceKey();
+  const type = document.getElementById("search-type-select")?.value || "audio";
+
+  if (!keyword) {
+    dropdown.classList.add("hidden");
+    dropdown.innerHTML = "";
+    return;
+  }
+
+  dropdown.classList.remove("hidden");
+  dropdown.innerHTML = `<div id="search-loader">🔍 Đang tìm nhạc...</div>`;
+
+  try {
+    const res = await fetch(
+      `/api/music/audio-cache?mode=search&key=${encodeURIComponent(
+        sourceKey
+      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}`
+    );
+    const data = await res.json();
+    dropdown.innerHTML = "";
+
+    if (!data.folders || data.folders.length === 0) {
+      dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy bài hát nào</div>`;
+      return;
+    }
+
+    data.folders.forEach((f) => {
+      const item = document.createElement("div");
+      item.className = "search-item";
+
+      const isAudio = f.type === "audio" || f.type === "file";
+      // 🔥 Sửa chỗ này: folderPrefix phải khác nhau giữa folder và file
+      let thumbSrc = buildThumbnailUrl(f, "music");
+
+      item.innerHTML = `
+        <img src="${thumbSrc}" class="search-thumb" alt="thumb">
+        <div class="search-title">${f.name}</div>
+      `;
+
+      item.onclick = () => {
+        dropdown.classList.add("hidden");
+        if (isAudio) {
+          window.location.href = `/music-player.html?file=${encodeURIComponent(
+            f.path
+          )}`;
+        } else {
+          window.location.href = `/music-index.html?path=${encodeURIComponent(
+            f.path
+          )}`;
+        }
+      };
+
+      dropdown.appendChild(item);
+    });
+  } catch (err) {
+    console.error("❌ Lỗi tìm kiếm nhạc:", err);
+    dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
+  }
+}
+
+export function showInputPrompt(
+  message,
+  placeholder = "",
+  okText = "OK",
+  cancelText = "Hủy"
+) {
+  return new Promise((resolve) => {
+    // Tạo overlay
+    let overlay = document.createElement("div");
+    overlay.className = "popup-overlay";
+    overlay.style.zIndex = "99999";
+    overlay.innerHTML = `
+      <div class="popup-confirm">
+        <div class="popup-message">${message}</div>
+        <input class="popup-input" type="text" placeholder="${placeholder}" autofocus />
+        <div class="popup-actions">
+          <button class="popup-ok">${okText}</button>
+          <button class="popup-cancel">${cancelText}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector(".popup-input");
+    const okBtn = overlay.querySelector(".popup-ok");
+    const cancelBtn = overlay.querySelector(".popup-cancel");
+
+    // Sự kiện OK
+    okBtn.onclick = () => {
+      const value = input.value.trim();
+      overlay.remove();
+      resolve(value || null);
+    };
+    // Sự kiện Hủy
+    cancelBtn.onclick = () => {
+      overlay.remove();
+      resolve(null);
+    };
+    // Enter
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") okBtn.click();
+      if (e.key === "Escape") cancelBtn.click();
+    };
+    input.focus();
+  });
+}
+
+//
+
+/**
+ * Build thumbnail url cho movie/audio: luôn trả về URL tuyệt đối dùng được cho img.src
+ * @param {object} f - object chứa ít nhất .path, .thumbnail, .type
+ * @param {"movie"|"music"} mediaType
+ * @returns {string} url thumbnail
+ */
+export function buildThumbnailUrl(f, mediaType = "movie") {
+  let prefix = "/video/";
+  let defaultFile = "/default/video-thumb.png";
+  let defaultFolder = "/default/folder-thumb.png";
+  if (mediaType === "music") {
+    prefix = "/audio/";
+    defaultFile = "/default/music-thumb.png";
+    defaultFolder = "/default/folder-thumb.png";
+  } else if (mediaType === "manga" || mediaType === "comic") {
+    prefix = "/manga/";
+    defaultFile = "/default/manga-thumb.png";
+    defaultFolder = "/default/folder-thumb.png";
+  }
+
+  // Phân biệt folder/file để lấy prefix đúng
+  let folderPrefix;
+  if (f.type === "folder") {
+    folderPrefix = f.path || "";
+  } else {
+    folderPrefix = f.path?.split("/").slice(0, -1).join("/") || "";
+  }
+
+  // Nếu không có thumbnail thì trả về default
+  if (!f.thumbnail) {
+    if (mediaType === "music") {
+      return f.type === "audio" || f.type === "file"
+        ? defaultFile
+        : defaultFolder;
+    } else if (mediaType === "manga" || mediaType === "comic") {
+      return f.type === "folder" ? defaultFolder : defaultFile;
+    } else {
+      return f.type === "video" || f.type === "file"
+        ? defaultFile
+        : defaultFolder;
+    }
+  }
+
+  // Nếu thumbnail đã là URL tuyệt đối thì trả luôn
+  if (f.thumbnail.startsWith(prefix) || f.thumbnail.startsWith("http")) {
+    return f.thumbnail;
+  }
+  // Nếu thumbnail đã bị dính prefix folder (do bug hay import DB cũ) thì cắt đi
+  if (folderPrefix && f.thumbnail.startsWith(folderPrefix + "/")) {
+    f.thumbnail = f.thumbnail.slice(folderPrefix.length + 1);
+  }
+  // Build lại URL chuẩn
+  return `${prefix}${
+    folderPrefix ? folderPrefix + "/" : ""
+  }${f.thumbnail.replace(/\\/g, "/")}`;
+}
+
+export function renderRecentViewedMusic(list = []) {
+  // Lọc chỉ lấy audio/file (nếu cần)
+  const filtered = list.filter((f) => f.type === "audio" || f.type === "file");
+
+  renderFolderSlider({
+    title: "🕘 Nhạc vừa nghe",
+    folders: filtered,
+    targetId: "section-recent-music", // Tạo 1 div/section này trong HTML hoặc tự động sinh
+  });
+}
+
+export function hideOverlay() {
+  const overlay = document.getElementById("loading-overlay");
+  if (overlay) overlay.classList.add("hidden");
+}
+export function showOverlay() {
+  const overlay = document.getElementById("loading-overlay");
+  if (overlay) overlay.classList.remove("hidden");
 }

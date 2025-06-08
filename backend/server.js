@@ -6,6 +6,7 @@ const fs = require("fs");
 const {
   getAllMangaKeys,
   getAllMovieKeys,
+  getAllMusicKeys,
   getRootPath,
 } = require("./utils/config");
 const { ROOT_PATHS } = require("./utils/config");
@@ -34,7 +35,9 @@ app.use("/api/manga", require("./api/manga/favorite")); // ⭐ API đánh dấu 
 for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
   // Nếu key là video/movie, mount route riêng
   if (key.startsWith("V_")) {
-    app.use("/video", express.static(absPath));
+    app.use("/video", express.static(absPath, { dotfiles: "allow" }));
+  } else if (key.startsWith("M_")) {
+    app.use("/audio", express.static(absPath, { dotfiles: "allow" }));
   } else {
     app.use("/manga", express.static(absPath));
   }
@@ -99,9 +102,10 @@ app.get(/^\/(?!api|src|manga).*/, (req, res) => {
 app.get("/api/source-keys.js", (req, res) => {
   const manga = getAllMangaKeys(); // ROOT_
   const movie = getAllMovieKeys(); // V_
-  const js = `window.mangaKeys = ${JSON.stringify(
-    manga
-  )};\nwindow.movieKeys = ${JSON.stringify(movie)};`;
+  const music = getAllMusicKeys(); // M_
+  const js = `window.mangaKeys = ${JSON.stringify(manga)};
+window.movieKeys = ${JSON.stringify(movie)};
+window.musicKeys = ${JSON.stringify(music)};`;
   res.type("application/javascript").send(js);
 });
 
@@ -120,3 +124,14 @@ app.use("/api/movie", require("./api/movie/scan-movie"));
 app.use("/api/movie", require("./api/movie/reset-movie-db"));
 app.use("/api/movie", require("./api/movie/video-cache"));
 app.use("/api/movie", require("./api/movie/favorite-movie"));
+app.use("/api/movie", require("./api/movie/extract-movie-thumbnail"));
+
+//
+app.use("/api/music", require("./api/music/scan-music"));
+app.use("/api/music", require("./api/music/music-folder"));
+app.use("/api/music", require("./api/music/audio"));
+app.use("/api/music", require("./api/music/audio-cache"));
+app.use("/api/music", require("./api/music/playlist"));
+app.use("/api/music", require("./api/music/music-meta"));
+app.use("/api/music", require("./api/music/reset-music-db"));
+app.use("/api/music", require("./api/music/extract-thumbnail"));

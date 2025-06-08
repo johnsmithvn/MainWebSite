@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Nghe nhạc</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/src/styles/base.css" />
+    <link rel="stylesheet" href="/src/styles/components/folder-slider.css" />
+    <link rel="stylesheet" href="/src/styles/components/music-card.css" />
+    <link rel="stylesheet" href="/src/styles/pages/music-player.css" />
+     <link rel="stylesheet" href="/src/styles/components/play-list-popup.css" />
+
+  </head>
+  <body>
+    <!-- HEADER: giữ nguyên, không được xoá -->
+    <header class="site-header">
+      <div class="header-left">
+        <button class="menu-button" id="sidebarToggle">☰</button>
+        <div class="logo" onclick="location.href='music-index.html'">
+          🎵 MyMusic
+        </div>
+      </div>
+      <div class="header-right">
+        <button
+          class="icon-button"
+          onclick="location.href='playlist-music.html'"
+        >
+          📁 Playlist
+        </button>
+        <button class="icon-button" id="searchToggle">🔍</button>
+      </div>
+    </header>
+
+    <!-- 🔍 SEARCH FLOATING -->
+    <div id="floating-search" class="floating-search">
+      <input
+        type="text"
+        id="floatingSearchInput"
+        placeholder="Tìm bài hát..."
+      />
+      <select id="search-type-select" class="search-type-dropdown">
+        <option value="audio">🎧 Bài hát</option>
+        <option value="folder">📁 Thư mục</option>
+        <option value="all" selected>🔍 Tất cả</option>
+      </select>
+      <div id="search-dropdown" class="search-dropdown hidden"></div>
+    </div>
+
+    <!-- WRAPPER -->
+    <div id="wrapper" class="layout-wrapper">
+      <aside id="sidebar-menu" class="sidebar"></aside>
+
+      <main class="main-area">
+        <div class="folder-section-header">
+  <span id="folder-title" class="folder-title"></span>
+  <span id="folder-track-count" class="folder-track-count"></span>
+</div>
+        <!-- ⭐⭐ Block now playing info hiển thị nổi bật như Spotify -->
+        <div id="now-playing-info" class="now-playing-info"></div>
+
+        <div class="track-table-wrapper">
+          <table id="track-table" class="track-table">
+            <thead>
+              <tr>
+                <th>Bài hát</th>
+                <th>Album</th>
+                <th>Thư mục</th>
+                <th>Lượt nghe</th>
+                <th>Thời lượng</th>
+              </tr>
+            </thead>
+            <tbody id="track-body">
+              <!-- Sẽ render bằng JS -->
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+
+    <!-- FOOTER: audio player -->
+    <footer class="player-footer">
+      <audio id="audio-player" preload="metadata"></audio>
+      <div class="controls">
+        <button id="btn-shuffle" title="Shuffle">🔀</button>
+        <button id="btn-prev">⏮</button>
+        <button id="btn-play">▶️</button>
+        <button id="btn-next">⏭</button>
+        <button id="btn-repeat" title="Repeat">🔁</button>
+      </div>
+      <div class="seekbar-row">
+        <span id="current-time">0:00</span>
+        <input type="range" id="seekbar" min="0" value="0" step="1" />
+        <span id="duration">0:00</span>
+      </div>
+      <div class="now-playing" id="now-playing">🎵 Chưa chọn bài nào</div>
+    </footer>
+
+    <script type="module" src="/src/pages/music-player.js"></script>
+  </body>
+</html>

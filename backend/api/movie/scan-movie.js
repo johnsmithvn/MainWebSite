@@ -8,12 +8,13 @@ const { scanMovieFolderToDB } = require("../../utils/movie-scan");
  * Body: { key: "V_MOVIE" }
  * Scan toàn bộ tree, lưu vào DB movie
  */
-router.post("/scan-movie", (req, res) => {
+router.post("/scan-movie", async (req, res) => {
   const dbkey = req.body.key;
   if (!dbkey) return res.status(400).json({ error: "Thiếu key" });
 
   try {
-    const stats = scanMovieFolderToDB(dbkey); // ✅ lấy kết quả
+    // PHẢI await vì scanMovieFolderToDB là async (trả về Promise)
+    const stats = await scanMovieFolderToDB(dbkey);
     res.json({
       success: true,
       stats,
@@ -24,3 +25,4 @@ router.post("/scan-movie", (req, res) => {
   }
 });
 module.exports = router;
+

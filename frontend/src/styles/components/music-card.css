@@ -1,0 +1,146 @@
+/* .playlist-popup {
+  position: absolute;
+  z-index: 999;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 6px;
+  min-width: 220px;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+} */
+/* .playlist-popup .popup-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+.playlist-option {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.playlist-option:hover {
+  background-color: #f0f0f0;
+}
+.playlist-option.bold {
+  font-weight: bold;
+  color: #1db954;
+} */
+
+.folder-card {
+  position: relative;
+}
+
+
+/* ⋮ icon menu: đưa xuống góc phải dưới */
+.card-menu-btn {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  z-index: 2;
+  opacity: 0.85;
+  transition: all 0.2s ease;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.card-menu-btn:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+
+
+
+/* card */
+/* music-card.css - thêm vào cuối file hoặc tạo mới */
+.music-card {
+  background: #1c1c1c;
+  border-radius: 10px;
+  color: white;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+  position: relative;
+}
+
+.music-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+}
+
+.music-thumb {
+  aspect-ratio: 3 / 4;     /* Tỷ lệ dọc, ví dụ 3:4 hoặc 2:3 hoặc 4:5 */
+  width: 100%;
+  object-fit: cover;
+  background: #000;
+  flex-shrink: 0;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.music-info {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.music-title {
+  font-size: 15px;
+  font-weight: bold;
+  line-height: 1.22;
+  white-space: normal;
+  display: -webkit-box;
+  display: box;                    /* old spec, optional */
+  -webkit-box-orient: vertical;
+  box-orient: vertical;            /* old spec, optional */
+  -webkit-line-clamp: 2;
+  line-clamp: 2;                   /* new standard */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 2.5em;
+}
+
+.music-sub {
+  font-size: 13px;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Grid layout */
+.music-grid {
+  display: grid;
+  /* chinh cai nay se lam tang so luong card 1 hang */
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+
+@media (max-width: 600px) {
+  .music-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+  .music-card {
+    max-width: 100vw;
+    min-width: 0;
+  }
+  .music-thumb {
+    aspect-ratio: 3/4;
+  }
+}

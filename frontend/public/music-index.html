@@ -3,83 +3,80 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Danh sách phim</title>
+    <title>Danh sách nhạc</title>
     <link rel="stylesheet" href="/src/styles/base.css" />
-    <link rel="stylesheet" href="/src/styles/components/movie-card.css" />
     <link rel="stylesheet" href="/src/styles/components/folder-slider.css" />
+    <link rel="stylesheet" href="/src/styles/components/music-card.css" />
+    <link rel="stylesheet" href="/src/styles/components/play-list-popup.css" />
   </head>
-
   <body>
     <header id="site-header" class="site-header">
       <div class="header-left">
         <button class="menu-button" id="sidebarToggle">☰</button>
-        <div class="logo" onclick="location.href='movie-index.html'">
-          🎬 <span class="logo-text">MyLocalMovie</span>
+        <div class="logo" onclick="location.href='music-index.html'">
+          🎵 <span class="logo-text">MyMusic</span>
         </div>
       </div>
-
       <div class="header-right">
         <button
           class="icon-button"
-          onclick="location.href='favorites-movie.html'"
+          onclick="location.href='playlist-music.html'"
         >
-          ❤️
+          📁 Playlist
         </button>
         <button class="icon-button" id="searchToggle">🔍</button>
       </div>
     </header>
 
-    <!-- ✅ SEARCH FLOATING -->
+    <!-- 🔍 SEARCH FLOATING -->
     <div id="floating-search" class="floating-search">
       <input
         type="text"
         id="floatingSearchInput"
-        placeholder="Tìm kiếm phim..."
+        placeholder="Tìm bài hát..."
       />
-
-      <!-- 🆕 Dropdown chọn loại tìm -->
       <select id="search-type-select" class="search-type-dropdown">
-        <option value="video">🎬 Chỉ video</option>
+        <option value="audio">🎧 Chỉ bài hát</option>
         <option value="folder">📁 Chỉ thư mục</option>
         <option value="all" selected>🔍 Cả hai</option>
       </select>
-
       <div id="search-dropdown" class="search-dropdown hidden"></div>
     </div>
-    <!-- ✅ LAYOUT CHUẨN -->
-    <div id="wrapper">
-      <aside id="sidebar-menu"></aside>
+
+    <div id="wrapper" class="layout-wrapper">
+      <!-- Sidebar cũ -->
+      <aside id="sidebar-menu" class="sidebar"></aside>
+
+      <!-- Sidebar mới theo phong cách Spotify -->
+      <aside id="music-sidebar" class="music-sidebar expanded"></aside>
+
       <div class="main-content">
-        <!-- ✅ CÁC SLIDER RANDOM -->
         <section
           id="randomFolderSection"
           class="folder-slider-section"
         ></section>
-        <section id="section-recent" class="folder-slider-section"></section>
-
+        <section id="section-recent-music"></section>
         <section
-          id="randomVideoSection"
+          id="randomAudioSection"
           class="folder-slider-section"
         ></section>
         <section id="section-topview" class="folder-slider-section"></section>
 
-        <!-- ✅ APP CHÍNH -->
         <button id="back-root" style="display: none">
-          ⬅ Quay lại nguồn phim
+          ⬅ Quay lại nguồn nhạc
         </button>
-        <div id="movie-app"></div>
+        <div id="music-app"></div>
       </div>
     </div>
 
-    <!-- ✅ FOOTER -->
     <footer id="main-footer" class="footer-bar">
       <button id="extract-thumbnail-btn" class="danger-button">
-        🖼 Extract thumbnail (movie)
+        🖼 Extract thumbnail (music)
       </button>
     </footer>
-    <div id="loading-overlay" class="hidden">
-      <div class="loader-text">⏳ Đang tải...</div>
-    </div>
-    <script type="module" src="/src/pages/movie-index.js"></script>
+<div id="loading-overlay" class="hidden">
+  <div class="loader-text">⏳ Đang tải...</div>
+</div>
+    <script type="module" src="/src/pages/music-index.js"></script>
   </body>
 </html>

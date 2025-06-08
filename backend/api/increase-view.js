@@ -4,7 +4,10 @@ const router = express.Router();
 const { getDB } = require("../utils/db");
 // ✅ Lấy path thật của rootKey từ .env
 const { getRootPath } = require("../utils/config");
-const { getMovieDB } = require("../utils/db");
+const { getMovieDB, } = require("../utils/db");
+const { getMusicDB } = require("../utils/db");
+
+
 
 /**
  * 📈 Ghi lượt xem cho folder (POST)
@@ -90,4 +93,29 @@ router.post("/increase-view/movie", (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+
+// 📈 Ghi lượt xem cho bài hát (music)
+router.post("/increase-view/music", (req, res) => {
+  const { key, path } = req.body;
+  if (!key || !path) {
+    return res.status(400).json({ error: "Missing key or path" });
+  }
+  const db = getMusicDB(key);
+  try {
+    // Tăng view count trong bảng folders (giống movie)
+    const row = db.prepare(`SELECT viewCount FROM folders WHERE path = ?`).get(path);
+    if (row) {
+      db.prepare(`UPDATE folders SET viewCount = COALESCE(viewCount,0) + 1 WHERE path = ?`).run(path);
+      return res.json({ ok: true });
+    } else {
+      return res.status(404).json({ error: "Path not found" });
+    }
+  } catch (err) {
+    console.error("❌ Error tăng view music:", err);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
 module.exports = router;

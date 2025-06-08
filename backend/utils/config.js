@@ -11,15 +11,16 @@ const parsedEnv = dotenv.parse(fs.readFileSync(envPath, "utf-8"));
 const ROOT_PATHS = {};
 
 for (const [key, value] of Object.entries(parsedEnv)) {
-  // ✅ Lấy cả ROOT_ (manga) và V_ (movie)
+  // ✅ Lấy cả ROOT_ (manga), V_ (movie), M_ (music)
   if (
-    (key.startsWith("ROOT_") || key.startsWith("V_")) &&
+    (key.startsWith("ROOT_") || key.startsWith("V_") || key.startsWith("M_")) &&
     typeof value === "string" &&
     fs.existsSync(value)
   ) {
     ROOT_PATHS[key] = value;
   }
 }
+
 
 /**
  * ✅ Trả về danh sách các key hợp lệ
@@ -44,10 +45,16 @@ function getAllMangaKeys() {
   return Object.keys(ROOT_PATHS).filter((key) => key.startsWith("ROOT_"));
 }
 
+function getAllMusicKeys() {
+  return Object.keys(ROOT_PATHS).filter((key) => key.startsWith("M_"));
+}
+
+
 module.exports = {
   ROOT_PATHS,
 
   getRootPath,
   getAllMovieKeys, // 🟢 THÊM HÀM NÀY
   getAllMangaKeys, // 🟢 VÀ HÀM NÀY
+  getAllMusicKeys,
 };
