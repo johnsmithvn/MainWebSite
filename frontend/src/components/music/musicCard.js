@@ -101,9 +101,9 @@ menuBtn.textContent = "+"; // ✅ Thay vì "⋮"
     const key = getSourceKey();
 
     if (item.type === "audio" || item.type === "file") {
-      window.location.href = `/music-player.html?file=${encoded}&key=${key}`;
+      window.location.href = `/music/player.html?file=${encoded}&key=${key}`;
     } else {
-      window.location.href = `/music-index.html?path=${encoded}`;
+      window.location.href = `/music/index.html?path=${encoded}`;
     }
   });
 

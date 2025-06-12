@@ -264,6 +264,6 @@ function renderRecentVideoSlider() {
   renderFolderSlider({
     title: "🕓 Vừa xem",
     folders: filtered,
-    targetId: "section-recent", // tạo thêm <div id="section-recent"> trong movie-index.html nếu thiếu
+    targetId: "section-recent", // tạo thêm <div id="section-recent"> trong movie/index.html nếu thiếu
   });
 }

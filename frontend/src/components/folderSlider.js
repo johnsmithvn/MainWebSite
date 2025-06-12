@@ -151,19 +151,19 @@ export function renderFolderSlider({
         (isMusicPage && (f.type === "audio" || f.type === "file")) ||
         (isMoviePage && (f.type === "video" || f.type === "file"))
       ) {
-        // Nếu là file nhạc thì sang music-player, nếu là video thì sang movie-player
-        const page = isMusicPage ? "music-player" : "movie-player";
+        // Nếu là file nhạc thì sang music/player, nếu là video thì sang movie/player
+        const page = isMusicPage ? "music/player" : "movie/player";
         window.location.href = `/${page}.html?file=${encoded}&key=${key}`;
         return;
       }
 
       // Nếu là folder
       if (isMusicPage) {
-        window.location.href = `/music-index.html?path=${encoded}&key=${key}`;
+        window.location.href = `/music/index.html?path=${encoded}&key=${key}`;
       } else if (isMoviePage) {
-        window.location.href = `/movie-index.html?path=${encoded}&key=${key}`;
+        window.location.href = `/movie/index.html?path=${encoded}&key=${key}`;
       } else if (f.isSelfReader && f.images) {
-        window.location.href = `/reader.html?path=${encoded}`;
+        window.location.href = `/manga/reader.html?path=${encoded}`;
       } else if (typeof window.loadFolder === "function") {
         window.loadFolder(f.path);
       }

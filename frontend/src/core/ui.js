@@ -57,7 +57,7 @@ export async function filterManga() {
 
         // Nếu đang trong reader.html thì redirect thủ công
         if (window.location.pathname.includes("reader.html")) {
-          window.location.href = `/index.html?path=${encodeURIComponent(
+          window.location.href = `/manga/index.html?path=${encodeURIComponent(
             f.path
           )}`;
         } else {
@@ -119,11 +119,11 @@ export async function filterMovie() {
       item.onclick = () => {
         dropdown.classList.add("hidden");
         if (f.type === "video" || f.type === "file") {
-          window.location.href = `/movie-player.html?file=${encodeURIComponent(
+          window.location.href = `/movie/player.html?file=${encodeURIComponent(
             f.path
           )}&key=${sourceKey}`;
         } else {
-          window.location.href = `/movie-index.html?path=${encodeURIComponent(
+          window.location.href = `/movie/index.html?path=${encodeURIComponent(
             f.path
           )}`;
         }
@@ -778,11 +778,11 @@ export async function filterMusic() {
       item.onclick = () => {
         dropdown.classList.add("hidden");
         if (isAudio) {
-          window.location.href = `/music-player.html?file=${encodeURIComponent(
+          window.location.href = `/music/player.html?file=${encodeURIComponent(
             f.path
           )}`;
         } else {
-          window.location.href = `/music-index.html?path=${encodeURIComponent(
+          window.location.href = `/music/index.html?path=${encodeURIComponent(
             f.path
           )}`;
         }

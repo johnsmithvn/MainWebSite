@@ -40,7 +40,7 @@ async function loadPlaylists() {
     div.onclick = () => {
       // mở bằng music-player với id playlist
       const key = getSourceKey();
-      window.location.href = `/music-player.html?playlist=${item.id}&key=${key}`;
+      window.location.href = `/music/player.html?playlist=${item.id}&key=${key}`;
     };
 
     // ============ Thêm nút xoá ============

@@ -50,8 +50,8 @@ folderTitle.classList.add("clickable-folder");
 folderTitle.onclick = () => {
   const parentPath = folderPath;
   const target = parentPath
-    ? `/movie-index.html?path=${encodeURIComponent(parentPath)}`
-    : "/movie-index.html";
+    ? `/movie/index.html?path=${encodeURIComponent(parentPath)}`
+    : "/movie/index.html";
   window.location.href = target;
 };
 
@@ -223,7 +223,7 @@ async function loadSiblingVideos(folderPath, currentFile) {
 
   if (prev) {
     btnPrev.onclick = () => {
-      window.location.href = `/movie-player.html?file=${encodeURIComponent(
+      window.location.href = `/movie/player.html?file=${encodeURIComponent(
         prev.path
       )}&key=${sourceKey}`;
     };
@@ -231,7 +231,7 @@ async function loadSiblingVideos(folderPath, currentFile) {
 
   if (next) {
     btnNext.onclick = () => {
-      window.location.href = `/movie-player.html?file=${encodeURIComponent(
+      window.location.href = `/movie/player.html?file=${encodeURIComponent(
         next.path
       )}&key=${sourceKey}`;
     };
@@ -247,7 +247,7 @@ async function loadSiblingVideos(folderPath, currentFile) {
 
     btn.onclick = () => {
       if (item.path === currentFile) return;
-      window.location.href = `/movie-player.html?file=${encodeURIComponent(
+      window.location.href = `/movie/player.html?file=${encodeURIComponent(
         item.path
       )}&key=${sourceKey}`;
     };
@@ -272,7 +272,7 @@ document.getElementById("btn-random-jump").onclick = async () => {
     const random = videoOnly[Math.floor(Math.random() * videoOnly.length)];
     if (!random?.path) return showToast("❌ Video lỗi");
 
-    window.location.href = `/movie-player.html?file=${encodeURIComponent(
+    window.location.href = `/movie/player.html?file=${encodeURIComponent(
       random.path
     )}&key=${sourceKey}`;
   } catch (err) {

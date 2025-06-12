@@ -1,4 +1,4 @@
-// 📁 frontend/src/pages/favorites-movie.js
+// 📁 frontend/src/pages/movie/favorites.js
 
 import { getSourceKey } from "/src/core/storage.js";
 import { showToast } from "/src/core/ui.js";

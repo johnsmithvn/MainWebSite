@@ -1,4 +1,4 @@
-// 📁 frontend/src/pages/music-player.js
+// 📁 frontend/src/pages/music/player.js
 
 // 📦 Import các hàm cần thiết
 import { getSourceKey,saveRecentViewedMusic  } from "/src/core/storage.js";
@@ -105,7 +105,7 @@ function updateFolderHeader() {
     folderTitleEl.classList.add("clickable");
     folderTitleEl.title = "Quay lại thư mục này";
     folderTitleEl.onclick = () => {
-      window.location.href = `/music-index.html?path=${encodeURIComponent(
+      window.location.href = `/music/index.html?path=${encodeURIComponent(
         folderPath
       )}`;
     };
@@ -227,7 +227,7 @@ function renderTrackList() {
       tdFolder.title = "Click để mở thư mục";
       tdFolder.onclick = (e) => {
         e.stopPropagation();
-        window.location.href = `/music-index.html?path=${encodeURIComponent(
+        window.location.href = `/music/index.html?path=${encodeURIComponent(
           folderPath
         )}`;
       };
