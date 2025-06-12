@@ -1,7 +1,7 @@
 import {} from "/src/components/folderCard.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
 import { getSourceKey } from "/src/core/storage.js";
-import { renderMovieCardWithFavorite } from "/src/components/movieCard.js";
+import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
 import { recentViewedVideoKey } from "/src/core/storage.js";
 
 import {

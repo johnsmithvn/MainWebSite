@@ -1,5 +1,5 @@
 import { getSourceKey } from "/src/core/storage.js";
-import { showPlaylistMenu } from "/src/components/playlistMenu.js";
+import { showPlaylistMenu } from "/src/components/music/playlistMenu.js";
 
 /**
  * 🎵 Tạo card bài hát hoặc thư mục nhạc

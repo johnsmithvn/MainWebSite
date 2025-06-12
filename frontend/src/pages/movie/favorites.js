@@ -2,7 +2,7 @@
 
 import { getSourceKey } from "/src/core/storage.js";
 import { showToast } from "/src/core/ui.js";
-import { renderMovieCardWithFavorite } from "/src/components/movieCard.js";
+import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
 
 let allFavorites = [];
 let currentPage = 0;

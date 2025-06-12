@@ -9,7 +9,7 @@ import {
   setupMusicSidebar,
 } from "/src/core/ui.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
-import { showPlaylistMenu } from "/src/components/playlistMenu.js";
+import { showPlaylistMenu } from "/src/components/music/playlistMenu.js";
 
 // ========================
 // Hàm render info nổi bật như Spotify
