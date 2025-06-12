@@ -12,6 +12,7 @@ import {
   showToast,
   toggleSidebar,withLoading
 } from "/src/core/ui.js";
+import { setupExtractThumbnailButton } from "/src/components/extractThumbnailButton.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 import { getMovieCache, setMovieCache } from "/src/core/storage.js";
 import {
@@ -23,7 +24,25 @@ import {
 window.addEventListener("DOMContentLoaded", () => {
   const initialPath = getInitialPathFromURL();
   loadMovieFolder(initialPath);
-  setupExtractThumbnailButton();
+  setupExtractThumbnailButton({
+    confirmText: "Extract lại thumbnail phim cho toàn bộ folder hiện tại?",
+    noSourceMessage: "❌ Không xác định được nguồn phim!",
+    getCurrentPath: () => currentPath,
+    async onExtract(sourceKey, path) {
+      const resp = await fetch("/api/movie/extract-thumbnail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: sourceKey, path }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        showToast("✅ Đã extract thumbnail xong!");
+        loadMovieFolder(path, moviePage);
+      } else {
+        showToast("❌ Lỗi extract thumbnail!");
+      }
+    },
+  });
   setupRandomSectionsIfMissing();
   loadRandomSliders();
   loadTopVideoSlider();
@@ -48,45 +67,6 @@ function getInitialPathFromURL() {
   return urlParams.get("path") || "";
 }
 
-function setupExtractThumbnailButton() {
-  const extractBtn = document.getElementById("extract-thumbnail-btn");
-  if (!extractBtn) return;
-
-  extractBtn.onclick = withLoading(async () => {
-    // KHÔNG truyền {loading: true} nữa
-    const ok = await showConfirm("Extract lại thumbnail phim cho toàn bộ folder hiện tại?");
-    if (!ok) return;
-
-    const sourceKey = getSourceKey();
-    if (!sourceKey) {
-      showToast("❌ Không xác định được nguồn phim!");
-      return;
-    }
-
-
-    try {
-      const resp = await fetch("/api/movie/extract-thumbnail", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: sourceKey,
-          path: currentPath,
-        }),
-      });
-      const data = await resp.json();
-      if (data.success) {
-        showToast("✅ Đã extract thumbnail xong!");
-        loadMovieFolder(currentPath, moviePage);
-      } else {
-        showToast("❌ Lỗi extract thumbnail!");
-      }
-    } catch (err) {
-      showToast("❌ Lỗi khi extract thumbnail!");
-      console.error(err);
-    }
-    // KHÔNG cần finally overlay nữa!
-  });
-}
 
 
 
