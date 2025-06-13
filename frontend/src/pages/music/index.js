@@ -87,6 +87,13 @@ function loadMusicFolder(path = "", page = 0) {
     return;
   }
 
+  if (path === "") {
+    loadPlaylistSlider();
+  } else {
+    const sec = document.getElementById("section-playlists");
+    if (sec) sec.innerHTML = "";
+  }
+
   currentPath = path;
   musicPage = page;
 
