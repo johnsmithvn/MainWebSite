@@ -16,10 +16,11 @@ import {
 } from "/src/core/ui.js";
 import { filterMusic } from "/src/core/ui.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
+import { getPathFromURL, paginate } from "/src/core/helpers.js";
 
 
 window.addEventListener("DOMContentLoaded", () => {
-  const initialPath = getInitialPathFromURL();
+  const initialPath = getPathFromURL();
   loadMusicFolder(initialPath);
   setupMusicSidebar(); // ✅ music
   setupRandomSectionsIfMissing();
@@ -40,11 +41,6 @@ window.addEventListener("DOMContentLoaded", () => {
     window.renderRecentViewedMusic = renderRecentViewedMusic; // THÊM DÒNG NÀY
 
 });
-
-function getInitialPathFromURL() {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get("path") || "";
-}
 
 // function setupDeleteMusicButton() {
 //   const deleteBtn = document.getElementById("delete-music-db");
@@ -74,10 +70,6 @@ const perPage = 20;
 let fullList = [];
 let currentPath = "";
 
-function paginateList(list) {
-  return list.slice(musicPage * perPage, (musicPage + 1) * perPage);
-}
-
 function loadMusicFolder(path = "", page = 0) {
   const sourceKey = getSourceKey();
   if (!sourceKey) {
@@ -92,7 +84,7 @@ function loadMusicFolder(path = "", page = 0) {
   const cached = getMusicCache(sourceKey, path);
   if (cached && Date.now() - cached.timestamp < 6 * 60 * 60 * 1000) {
     fullList = cached.data || [];
-    renderMusicGrid(paginateList(fullList), path);
+    renderMusicGrid(paginate(fullList, musicPage, perPage), path);
     updateMusicPaginationUI(musicPage, fullList.length, perPage);
     return;
   }
@@ -106,7 +98,7 @@ function loadMusicFolder(path = "", page = 0) {
     .then((data) => {
       fullList = data.folders || [];
       setMusicCache(sourceKey, path, fullList);
-      renderMusicGrid(paginateList(fullList), path);
+      renderMusicGrid(paginate(fullList, musicPage, perPage), path);
       updateMusicPaginationUI(musicPage, fullList.length, perPage);
 
     })

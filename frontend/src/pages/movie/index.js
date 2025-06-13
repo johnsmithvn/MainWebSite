@@ -1,8 +1,8 @@
-import {} from "/src/components/folderCard.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
 import { getSourceKey } from "/src/core/storage.js";
 import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
 import { recentViewedVideoKey } from "/src/core/storage.js";
+import { getPathFromURL, paginate } from "/src/core/helpers.js";
 
 import {
   filterMovie,
@@ -21,7 +21,7 @@ import {
 
 // 👉 Gắn sự kiện UI
 window.addEventListener("DOMContentLoaded", () => {
-  const initialPath = getInitialPathFromURL();
+  const initialPath = getPathFromURL();
   loadMovieFolder(initialPath);
   setupExtractThumbnailButton();
   setupRandomSectionsIfMissing();
@@ -42,11 +42,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
   setupGlobalClickToCloseUI(); // ✅ xử lý click ra ngoài để đóng sidebar + search
 });
-
-function getInitialPathFromURL() {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get("path") || "";
-}
 
 function setupExtractThumbnailButton() {
   const extractBtn = document.getElementById("extract-thumbnail-btn");
@@ -94,9 +89,6 @@ let moviePage = 0;
 const moviesPerPage = 20;
 let fullList = []; // danh sách đầy đủ sau khi fetch/cache
 let currentPath = "";
-function paginateList(list) {
-  return list.slice(moviePage * moviesPerPage, (moviePage + 1) * moviesPerPage);
-}
 function loadMovieFolder(path = "", page = 0) {
   const sourceKey = getSourceKey();
   if (!sourceKey) {
@@ -113,7 +105,7 @@ function loadMovieFolder(path = "", page = 0) {
   if (cached && Date.now() - cached.timestamp < 7 * 60 * 60 * 1000) {
     console.log("⚡ Dùng cache movie folder:", path); // 🆕 THÊM: debug
     fullList = cached.data || [];
-    renderMovieGrid(paginateList(fullList), path);
+    renderMovieGrid(paginate(fullList, moviePage, moviesPerPage), path);
     updateMoviePaginationUI(moviePage, fullList.length, moviesPerPage);
     return;
   }
@@ -129,7 +121,7 @@ function loadMovieFolder(path = "", page = 0) {
 
       setMovieCache(sourceKey, path, fullList); // 🆕 THÊM: cache lại dù là root
 
-      renderMovieGrid(paginateList(fullList), path);
+      renderMovieGrid(paginate(fullList, moviePage, moviesPerPage), path);
       updateMoviePaginationUI(moviePage, fullList.length, moviesPerPage);
     })
     .catch((err) => {
