@@ -137,7 +137,7 @@ export function renderFolderSlider({
     wrapper.appendChild(card);
 
     // ✅ Xử lý click tương thích movie & manga
-    const encoded = encodeURIComponent(f.path);
+    const encoded = encodeURIComponent(f.path || "");
     const key = getSourceKey();
 
     card.onclick = (e) => {
@@ -145,6 +145,11 @@ export function renderFolderSlider({
 
       const isMusicPage = window.location.pathname.includes("music");
       const isMoviePage = window.location.pathname.includes("movie");
+
+      if (f.playlistId) {
+        window.location.href = `/music/player.html?playlist=${f.playlistId}&key=${key}`;
+        return;
+      }
 
       // Xử lý mở player cho cả music và movie
       if (

@@ -16,8 +16,17 @@ router.get("/playlists", (req, res) => {
   const rows = db
     .prepare(
       `
-    SELECT id, name, description FROM playlists
-    ORDER BY updatedAt DESC
+    SELECT p.id, p.name, p.description,
+      fi.songPath AS firstPath,
+      f.thumbnail AS firstThumb
+    FROM playlists p
+    LEFT JOIN playlist_items fi
+      ON fi.playlistId = p.id
+      AND fi.sortOrder = (
+        SELECT MIN(sortOrder) FROM playlist_items WHERE playlistId = p.id
+      )
+    LEFT JOIN folders f ON f.path = fi.songPath
+    ORDER BY p.updatedAt DESC
   `
     )
     .all();

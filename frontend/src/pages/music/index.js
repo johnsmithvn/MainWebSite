@@ -29,6 +29,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupMusicSidebar(); // ✅ music
   setupRandomSectionsIfMissing();
   loadRandomSliders("music");
+  loadPlaylistSlider();
   renderRecentMusicOnLoad();
   setupExtractThumbnailButton();
 
@@ -234,4 +235,28 @@ function updateMusicPaginationUI(currentPage, totalItems, perPage) {
     (page) => loadMusicFolder(currentPath, page),
     "music-pagination-info"
   );
+}
+
+async function loadPlaylistSlider() {
+  const key = getSourceKey();
+  if (!key) return;
+  try {
+    const res = await fetch(`/api/music/playlists?key=${key}`);
+    const playlists = await res.json();
+    const folders = playlists.map((p) => ({
+      path: p.firstPath,
+      name: p.name,
+      playlistId: p.id,
+      type: "playlist",
+      thumbnail: p.firstThumb,
+      isPlaylist: true,
+    }));
+    renderFolderSlider({
+      title: "🎵 Playlist",
+      folders,
+      targetId: "section-playlists",
+    });
+  } catch (err) {
+    console.error("Failed to load playlists", err);
+  }
 }

@@ -37,9 +37,13 @@ export function renderFolderCard(folder, showViews = false) {
           ? `<div class="folder-views">👁 ${folder.count}</div>`
           : ""
       }
-      <div class="folder-fav ${folder.isFavorite ? "active" : ""}" title="${
-    folder.isFavorite ? "Bỏ yêu thích" : "Thêm yêu thích"
-  }">${folder.isFavorite ? "❤️" : "🤍"}</div>
+      ${
+        folder.isPlaylist
+          ? ""
+          : `<div class="folder-fav ${folder.isFavorite ? "active" : ""}" title="${
+              folder.isFavorite ? "Bỏ yêu thích" : "Thêm yêu thích"
+            }">${folder.isFavorite ? "❤️" : "🤍"}</div>`
+      }
     </div>
     <div class="folder-title">${displayName}</div>
   `;
@@ -58,7 +62,7 @@ export function renderFolderCard(folder, showViews = false) {
 
   // Xử lý toggle yêu thích
   const favBtn = card.querySelector(".folder-fav");
-  favBtn.onclick = async (e) => {
+  if (favBtn) favBtn.onclick = async (e) => {
     e.stopPropagation();
     const sourceKey = getSourceKey();
     const rootFolder = getRootFolder(); // 👈 Thêm dòng này
