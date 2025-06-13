@@ -4,7 +4,8 @@
   "description": "Web site đọc truyện xem phim local ",
   "main": "backend/server.js",
   "scripts": {
-    "start": "node backend/server.js"
+    "start": "node backend/server.js",
+    "test": "node --test"
   },
   "keywords": [
     "manga",

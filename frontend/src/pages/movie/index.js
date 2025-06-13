@@ -1,8 +1,9 @@
-import {} from "/src/components/folderCard.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
 import { getSourceKey } from "/src/core/storage.js";
 import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
 import { recentViewedVideoKey } from "/src/core/storage.js";
+import { getPathFromURL, paginate } from "/src/core/helpers.js";
+import { renderPaginationUI } from "/src/core/ui.js";
 
 import {
   filterMovie,
@@ -21,7 +22,7 @@ import {
 
 // 👉 Gắn sự kiện UI
 window.addEventListener("DOMContentLoaded", () => {
-  const initialPath = getInitialPathFromURL();
+  const initialPath = getPathFromURL();
   loadMovieFolder(initialPath);
   setupExtractThumbnailButton();
   setupRandomSectionsIfMissing();
@@ -42,11 +43,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
   setupGlobalClickToCloseUI(); // ✅ xử lý click ra ngoài để đóng sidebar + search
 });
-
-function getInitialPathFromURL() {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get("path") || "";
-}
 
 function setupExtractThumbnailButton() {
   const extractBtn = document.getElementById("extract-thumbnail-btn");
@@ -94,9 +90,6 @@ let moviePage = 0;
 const moviesPerPage = 20;
 let fullList = []; // danh sách đầy đủ sau khi fetch/cache
 let currentPath = "";
-function paginateList(list) {
-  return list.slice(moviePage * moviesPerPage, (moviePage + 1) * moviesPerPage);
-}
 function loadMovieFolder(path = "", page = 0) {
   const sourceKey = getSourceKey();
   if (!sourceKey) {
@@ -113,7 +106,7 @@ function loadMovieFolder(path = "", page = 0) {
   if (cached && Date.now() - cached.timestamp < 7 * 60 * 60 * 1000) {
     console.log("⚡ Dùng cache movie folder:", path); // 🆕 THÊM: debug
     fullList = cached.data || [];
-    renderMovieGrid(paginateList(fullList), path);
+    renderMovieGrid(paginate(fullList, moviePage, moviesPerPage), path);
     updateMoviePaginationUI(moviePage, fullList.length, moviesPerPage);
     return;
   }
@@ -129,7 +122,7 @@ function loadMovieFolder(path = "", page = 0) {
 
       setMovieCache(sourceKey, path, fullList); // 🆕 THÊM: cache lại dù là root
 
-      renderMovieGrid(paginateList(fullList), path);
+      renderMovieGrid(paginate(fullList, moviePage, moviesPerPage), path);
       updateMoviePaginationUI(moviePage, fullList.length, moviesPerPage);
     })
     .catch((err) => {
@@ -206,53 +199,10 @@ function loadTopVideoSlider() {
 }
 
 function updateMoviePaginationUI(currentPage, totalItems, perPage) {
-  const totalPages = Math.ceil(totalItems / perPage);
   const app = document.getElementById("movie-app");
-
-  const nav = document.createElement("div");
-  nav.className = "reader-controls";
-
-  const prev = document.createElement("button");
-  prev.textContent = "⬅ Trang trước";
-  prev.disabled = currentPage <= 0;
-  prev.onclick = () => loadMovieFolder(currentPath, currentPage - 1);
-  nav.appendChild(prev);
-
-  const jumpForm = document.createElement("form");
-  jumpForm.style.display = "inline-block";
-  jumpForm.style.margin = "0 10px";
-  jumpForm.onsubmit = (e) => {
-    e.preventDefault();
-    const page = parseInt(jumpInput.value) - 1;
-    if (!isNaN(page) && page >= 0) loadMovieFolder(currentPath, page);
-  };
-
-  const jumpInput = document.createElement("input");
-  jumpInput.type = "number";
-  jumpInput.min = 1;
-  jumpInput.max = totalPages;
-  jumpInput.placeholder = "Trang...";
-  jumpInput.style.width = "60px";
-
-  const jumpBtn = document.createElement("button");
-  jumpBtn.textContent = "⏩";
-  jumpForm.appendChild(jumpInput);
-  jumpForm.appendChild(jumpBtn);
-  nav.appendChild(jumpForm);
-
-  const next = document.createElement("button");
-  next.textContent = "Trang sau ➡";
-  next.disabled = currentPage + 1 >= totalPages;
-  next.onclick = () => loadMovieFolder(currentPath, currentPage + 1);
-  nav.appendChild(next);
-
-  app.appendChild(nav);
-
-  const info = document.createElement("div");
-  info.textContent = `Trang ${currentPage + 1} / ${totalPages}`;
-  info.style.textAlign = "center";
-  info.style.marginTop = "10px";
-  app.appendChild(info);
+  renderPaginationUI(app, currentPage, totalItems, perPage, (page) =>
+    loadMovieFolder(currentPath, page)
+  );
 }
 
 function renderRecentVideoSlider() {
