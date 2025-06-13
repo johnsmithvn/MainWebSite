@@ -292,9 +292,19 @@ async function loadPlaylistSlider() {
   const key = getSourceKey();
   if (!key) return;
 
+  const container = document.getElementById("section-playlists");
+  if (!container) return;
+
+  container.innerHTML = "<p>⏳ Đang tải playlist...</p>";
+
   try {
     const res = await fetch(`/api/music/playlists?key=${key}`);
     const playlists = await res.json();
+
+    if (!Array.isArray(playlists) || playlists.length === 0) {
+      container.innerHTML = "<p>😅 Chưa có playlist nào</p>";
+      return;
+    }
 
     const withThumbs = await Promise.all(
       playlists.map(async (p) => {
@@ -303,9 +313,9 @@ async function loadPlaylistSlider() {
           const detail = await r.json();
           const first = detail.tracks?.[0];
           const thumb = first ? buildThumbnailUrl(first, "music") : "/default/folder-thumb.png";
-          return { ...p, path: p.id.toString(), thumbnail: thumb, isPlaylist: true };
+          return { ...p, path: p.id.toString(), thumbnail: thumb, isPlaylist: true, type: "folder" };
         } catch {
-          return { ...p, path: p.id.toString(), thumbnail: "/default/folder-thumb.png", isPlaylist: true };
+          return { ...p, path: p.id.toString(), thumbnail: "/default/folder-thumb.png", isPlaylist: true, type: "folder" };
         }
       })
     );
@@ -317,5 +327,6 @@ async function loadPlaylistSlider() {
     });
   } catch (err) {
     console.error("loadPlaylistSlider error", err);
+    container.innerHTML = "<p>❌ Lỗi tải playlist</p>";
   }
 }
