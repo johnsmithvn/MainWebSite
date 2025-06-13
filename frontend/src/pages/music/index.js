@@ -24,6 +24,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupMusicSidebar(); // ✅ music
   setupRandomSectionsIfMissing();
   loadRandomSliders("music");
+  loadPlaylistSlider();
   renderRecentMusicOnLoad();
   setupExtractThumbnailButton();
 
@@ -285,4 +286,36 @@ function updateMusicPaginationUI(currentPage, totalItems, perPage) {
   info.style.textAlign = "center";
   info.style.marginTop = "10px";
   app.appendChild(info);
+}
+
+async function loadPlaylistSlider() {
+  const key = getSourceKey();
+  if (!key) return;
+
+  try {
+    const res = await fetch(`/api/music/playlists?key=${key}`);
+    const playlists = await res.json();
+
+    const withThumbs = await Promise.all(
+      playlists.map(async (p) => {
+        try {
+          const r = await fetch(`/api/music/playlist/${p.id}?key=${key}`);
+          const detail = await r.json();
+          const first = detail.tracks?.[0];
+          const thumb = first ? buildThumbnailUrl(first, "music") : "/default/folder-thumb.png";
+          return { ...p, path: p.id.toString(), thumbnail: thumb, isPlaylist: true };
+        } catch {
+          return { ...p, path: p.id.toString(), thumbnail: "/default/folder-thumb.png", isPlaylist: true };
+        }
+      })
+    );
+
+    renderFolderSlider({
+      title: "🎶 Playlist",
+      folders: withThumbs,
+      targetId: "section-playlists",
+    });
+  } catch (err) {
+    console.error("loadPlaylistSlider error", err);
+  }
 }
