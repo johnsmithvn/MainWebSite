@@ -57,9 +57,9 @@ export async function filterManga() {
 
         // Nếu đang trong reader.html thì redirect thủ công
         if (window.location.pathname.includes("reader.html")) {
-          window.location.href = `/manga/index.html?path=${encodeURIComponent(
+          redirectWithLoading(`/manga/index.html?path=${encodeURIComponent(
             f.path
-          )}`;
+          )}`);
         } else {
           window.loadFolder?.(f.path);
         }
@@ -119,13 +119,13 @@ export async function filterMovie() {
       item.onclick = () => {
         dropdown.classList.add("hidden");
         if (f.type === "video" || f.type === "file") {
-          window.location.href = `/movie/player.html?file=${encodeURIComponent(
-            f.path
-          )}&key=${sourceKey}`;
+          redirectWithLoading(
+            `/movie/player.html?file=${encodeURIComponent(f.path)}&key=${sourceKey}`
+          );
         } else {
-          window.location.href = `/movie/index.html?path=${encodeURIComponent(
-            f.path
-          )}`;
+          redirectWithLoading(
+            `/movie/index.html?path=${encodeURIComponent(f.path)}`
+          );
         }
       };
 
@@ -416,7 +416,7 @@ sidebar.appendChild(
           count++;
         }
       });
-      window.location.href = "/home.html"; // ✅ Quay lại chọn root
+      redirectWithLoading("/home.html"); // ✅ Quay lại chọn root
       showToast(`✅ Đã xoá ${count} cache folder`);
     }))
   );
@@ -534,7 +534,7 @@ export function setupMovieSidebar() {
   sidebar.appendChild(
     createSidebarButton("🎬 Đổi Movie Folder", () => {
       localStorage.removeItem("rootFolder");
-      window.location.href = "/home.html";
+      redirectWithLoading("/home.html");
     })
   );
 
@@ -654,7 +654,7 @@ export function setupMusicSidebar() {
   sidebar.appendChild(
     createSidebarButton("🎼 Đổi Music Folder", () => {
       localStorage.removeItem("rootFolder");
-      window.location.href = "/home.html";
+      redirectWithLoading("/home.html");
     })
   );
 
@@ -796,13 +796,13 @@ export async function filterMusic() {
       item.onclick = () => {
         dropdown.classList.add("hidden");
         if (isAudio) {
-          window.location.href = `/music/player.html?file=${encodeURIComponent(
-            f.path
-          )}`;
+          redirectWithLoading(
+            `/music/player.html?file=${encodeURIComponent(f.path)}`
+          );
         } else {
-          window.location.href = `/music/index.html?path=${encodeURIComponent(
-            f.path
-          )}`;
+          redirectWithLoading(
+            `/music/index.html?path=${encodeURIComponent(f.path)}`
+          );
         }
       };
 
@@ -938,4 +938,25 @@ export function hideOverlay() {
 export function showOverlay() {
   const overlay = document.getElementById("loading-overlay");
   if (overlay) overlay.classList.remove("hidden");
+}
+
+// 🌀 Hiển thị loading khi gọi fetch hoặc chuyển trang
+if (typeof window !== "undefined" && typeof document !== "undefined") {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = (...args) => {
+    const overlay = document.getElementById("loading-overlay");
+    overlay?.classList.remove("hidden");
+    return originalFetch(...args).finally(() => overlay?.classList.add("hidden"));
+  };
+
+  window.addEventListener("beforeunload", () => {
+    const overlay = document.getElementById("loading-overlay");
+    overlay?.classList.remove("hidden");
+  });
+}
+
+export function redirectWithLoading(url) {
+  const overlay = document.getElementById("loading-overlay");
+  overlay?.classList.remove("hidden");
+  window.location.href = url;
 }

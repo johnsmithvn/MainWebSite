@@ -1,5 +1,5 @@
 // 📁 frontend/src/storage.js
-import { showToast } from "./ui.js";
+import { showToast, redirectWithLoading } from "./ui.js";
 const MOVIE_CACHE_PREFIX = "movieCache::";
 const FOLDER_CACHE_PREFIX = "folderCache::";
 
@@ -24,7 +24,7 @@ export function getMovieCacheKey(sourceKey, path) {
  */
 export function changeRootFolder() {
   localStorage.removeItem("rootFolder");
-  window.location.href = "/select.html";
+  redirectWithLoading("/select.html");
 }
 
 /**
@@ -35,14 +35,14 @@ export function requireRootFolder() {
 
   if (!root) {
     showToast("⚠️ Chưa chọn thư mục gốc, vui lòng chọn lại!");
-    window.location.href = "/select.html";
+    redirectWithLoading("/select.html");
   }
 }
 export function requireSourceKey() {
   const source = getSourceKey();
   if (!source) {
     showToast("⚠️ Chưa chọn nguồn dữ liệu, vui lòng chọn lại!");
-    window.location.href = "/home.html";
+    redirectWithLoading("/home.html");
   }
 }
 
