@@ -260,7 +260,7 @@ function moveChapter(direction = "next") {
           } else if (isFolderView) {
             // ✅ Nếu đang trong reader.html mà gặp folder chỉ có subfolder
             // → redirect về index.html để hiện list folder
-            window.location.href = `/index.html?path=${encodeURIComponent(
+            window.location.href = `/manga/index.html?path=${encodeURIComponent(
               data.path
             )}`;
             return;
@@ -312,10 +312,10 @@ function updateReaderHeaderTitle(folderName) {
     const parentPath = parts.join("/");
 
     if (!parentPath) {
-      window.location.replace("/index.html");
+      window.location.replace("/manga/index.html");
     } else {
       window.location.replace(
-        `/index.html?path=${encodeURIComponent(parentPath)}`
+        `/manga/index.html?path=${encodeURIComponent(parentPath)}`
       );
     }
   };

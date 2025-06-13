@@ -37,14 +37,14 @@ async function initializeMangaHome() {
     return (window.location.href = "/home.html");
   }
 
-  // 🛑 Nếu là movie ➜ về movie-index.html
+  // 🛑 Nếu là movie ➜ về movie/index.html
   if (sourceKey.startsWith("V_")) {
-    return (window.location.href = "/movie-index.html");
+    return (window.location.href = "/movie/index.html");
   }
 
-    // 🛑 Nếu là music ➜ về music-index.html
+    // 🛑 Nếu là music ➜ về music/index.html
   if (sourceKey.startsWith("M_")) {
-    return (window.location.href = "/music-index.html");
+    return (window.location.href = "/music/index.html");
   }
 
 

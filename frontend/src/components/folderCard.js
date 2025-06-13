@@ -50,7 +50,7 @@ export function renderFolderCard(folder, showViews = false) {
 
     if (folder.isSelfReader && folder.images) {
       const encoded = encodeURIComponent(folder.path);
-      window.location.href = `/reader.html?path=${encoded}`;
+      window.location.href = `/manga/reader.html?path=${encoded}`;
     } else {
       window.loadFolder?.(folder.path);
     }

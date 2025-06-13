@@ -2,7 +2,7 @@ import {
   setupRandomSectionsIfMissing,
   loadRandomSliders,
 } from "/src/components/folderSlider.js";
-import { renderMusicCardWithFavorite } from "/src/components/musicCard.js"; // bạn sẽ clone từ movieCard.js
+import { renderMusicCardWithFavorite } from "/src/components/music/musicCard.js"; // bạn sẽ clone từ movieCard.js
 import {
   getSourceKey,
   getMusicCache,

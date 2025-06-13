@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="/src/styles/base.css" />
     <link rel="stylesheet" href="/src/styles/components/folder-slider.css" />
-    <link rel="stylesheet" href="/src/styles/components/music-card.css" />
-    <link rel="stylesheet" href="/src/styles/pages/music-player.css" />
-     <link rel="stylesheet" href="/src/styles/components/play-list-popup.css" />
+    <link rel="stylesheet" href="/src/styles/components/music/music-card.css" />
+    <link rel="stylesheet" href="/src/styles/pages/music/player.css" />
+    <link rel="stylesheet" href="/src/styles/components/music/play-list-popup.css" />
 
   </head>
   <body>
@@ -16,14 +16,14 @@
     <header class="site-header">
       <div class="header-left">
         <button class="menu-button" id="sidebarToggle">☰</button>
-        <div class="logo" onclick="location.href='music-index.html'">
+        <div class="logo" onclick="location.href='/home.html'">
           🎵 MyMusic
         </div>
       </div>
       <div class="header-right">
         <button
           class="icon-button"
-          onclick="location.href='playlist-music.html'"
+          onclick="location.href='playlist.html'"
         >
           📁 Playlist
         </button>
@@ -95,6 +95,6 @@
       <div class="now-playing" id="now-playing">🎵 Chưa chọn bài nào</div>
     </footer>
 
-    <script type="module" src="/src/pages/music-player.js"></script>
+    <script type="module" src="/src/pages/music/player.js"></script>
   </body>
 </html>

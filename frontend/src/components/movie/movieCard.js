@@ -73,9 +73,9 @@ export function renderMovieCardWithFavorite(item) {
     const encoded = encodeURIComponent(item.path);
     const key = getSourceKey();
     if (item.type === "video" || item.type === "file") {
-      window.location.href = `/movie-player.html?file=${encoded}&key=${key}`;
+      window.location.href = `/movie/player.html?file=${encoded}&key=${key}`;
     } else {
-      window.location.href = `/movie-index.html?path=${encoded}`;
+      window.location.href = `/movie/index.html?path=${encoded}`;
     }
   };
 

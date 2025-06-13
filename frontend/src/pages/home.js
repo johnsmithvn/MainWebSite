@@ -31,7 +31,7 @@ function renderSourceList(listId, keys, type) {
             });
           }
           // Chuyển trang sau khi mọi thứ xong
-          window.location.href = "/movie-index.html";
+          window.location.href = "/movie/index.html";
           overlay?.classList.add("hidden"); // Ẩn overlay nếu lỗi
         } else if (type === "music") {
           const resp = await fetch(`/api/music/music-folder?key=${key}`);
@@ -44,7 +44,7 @@ function renderSourceList(listId, keys, type) {
             });
           }
 
-          window.location.href = "/music-index.html";
+          window.location.href = "/music/index.html";
           overlay?.classList.add("hidden"); // Ẩn overlay nếu lỗi
         }
       } catch (err) {

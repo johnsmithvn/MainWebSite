@@ -95,7 +95,7 @@ app.get("/api/list-roots", (req, res) => {
 
 // 🔥 Fallback tất cả route không match ➔ trả về index.html (SPA mode)
 app.get(/^\/(?!api|src|manga).*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/public/index.html"));
+  res.sendFile(path.join(__dirname, "../frontend/public/manga/index.html"));
 });
 
 // API get source keys

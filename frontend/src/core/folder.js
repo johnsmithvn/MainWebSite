@@ -117,7 +117,7 @@ function renderFromData(data) {
     document.getElementById("loading-overlay")?.classList.remove("hidden");
 
     const encoded = encodeURIComponent(state.currentPath);
-    window.location.href = `/reader.html?path=${encoded}`;
+    window.location.href = `/manga/reader.html?path=${encoded}`;
   }
 }
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Danh sách phim</title>
     <link rel="stylesheet" href="/src/styles/base.css" />
-    <link rel="stylesheet" href="/src/styles/components/movie-card.css" />
+    <link rel="stylesheet" href="/src/styles/components/movie/movie-card.css" />
     <link rel="stylesheet" href="/src/styles/components/folder-slider.css" />
   </head>
 
@@ -13,7 +13,7 @@
     <header id="site-header" class="site-header">
       <div class="header-left">
         <button class="menu-button" id="sidebarToggle">☰</button>
-        <div class="logo" onclick="location.href='movie-index.html'">
+        <div class="logo" onclick="location.href='/home.html'">
           🎬 <span class="logo-text">MyLocalMovie</span>
         </div>
       </div>
@@ -21,7 +21,7 @@
       <div class="header-right">
         <button
           class="icon-button"
-          onclick="location.href='favorites-movie.html'"
+          onclick="location.href='favorites.html'"
         >
           ❤️
         </button>
@@ -80,6 +80,6 @@
     <div id="loading-overlay" class="hidden">
       <div class="loader-text">⏳ Đang tải...</div>
     </div>
-    <script type="module" src="/src/pages/movie-index.js"></script>
+    <script type="module" src="/src/pages/movie/index.js"></script>
   </body>
 </html>

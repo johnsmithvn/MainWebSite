@@ -59,7 +59,7 @@ function createRootFolderCard(folder) {
       alert("✅ Đã quét cache cho root folder.");
     }
 
-    window.location.href = "/"; // ✅ Chuyển sang trang chính
+    window.location.href = "/manga/index.html"; // ✅ Chuyển sang trang chính
   });
 
   return card;
