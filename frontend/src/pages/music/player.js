@@ -10,6 +10,7 @@ import {
 } from "/src/core/ui.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
 import { showPlaylistMenu } from "/src/components/music/playlistMenu.js";
+import { renderFolderSlider } from "/src/components/folderSlider.js";
 
 // ========================
 // Hàm render info nổi bật như Spotify
@@ -432,4 +433,63 @@ if (playlistId) {
   loadPlaylistSongs(playlistId);
 } else {
   loadFolderSongs();
+}
+
+loadPlaylistSlider();
+
+async function loadPlaylistSlider() {
+  const key = getSourceKey();
+  if (!key) return;
+
+  const container = document.getElementById("section-playlists");
+  if (!container) return;
+
+  container.innerHTML = "<p>⏳ Đang tải playlist...</p>";
+
+  try {
+    const res = await fetch(`/api/music/playlists?key=${key}`);
+    const playlists = await res.json();
+
+    if (!Array.isArray(playlists) || playlists.length === 0) {
+      container.innerHTML = "<p>😅 Chưa có playlist nào</p>";
+      return;
+    }
+
+    const withThumbs = await Promise.all(
+      playlists.map(async (p) => {
+        try {
+          const r = await fetch(`/api/music/playlist/${p.id}?key=${key}`);
+          const detail = await r.json();
+          const first = detail.tracks?.[0];
+          const thumb = first
+            ? buildThumbnailUrl(first, "music")
+            : "/default/folder-thumb.png";
+          return {
+            ...p,
+            path: p.id.toString(),
+            thumbnail: thumb,
+            isPlaylist: true,
+            type: "folder",
+          };
+        } catch {
+          return {
+            ...p,
+            path: p.id.toString(),
+            thumbnail: "/default/folder-thumb.png",
+            isPlaylist: true,
+            type: "folder",
+          };
+        }
+      })
+    );
+
+    renderFolderSlider({
+      title: "🎶 Playlist",
+      folders: withThumbs,
+      targetId: "section-playlists",
+    });
+  } catch (err) {
+    console.error("loadPlaylistSlider error", err);
+    container.innerHTML = "<p>❌ Lỗi tải playlist</p>";
+  }
 }
