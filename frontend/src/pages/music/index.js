@@ -6,13 +6,17 @@ import { renderMusicCardWithFavorite } from "/src/components/music/musicCard.js"
 import {
   getSourceKey,
   getMusicCache,
-  setMusicCache,recentViewedMusicKey
+  setMusicCache,
+  recentViewedMusicKey,
 } from "/src/core/storage.js";
 import {
   showToast,
   toggleSearchBar,
   setupMusicSidebar,
-  showConfirm,renderRecentViewedMusic,withLoading
+  showConfirm,
+  renderRecentViewedMusic,
+  withLoading,
+  renderPaginationUI,
 } from "/src/core/ui.js";
 import { filterMusic } from "/src/core/ui.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
@@ -221,60 +225,13 @@ function setupExtractThumbnailButton() {
 
 // Thêm UI phân trang cho Music
 function updateMusicPaginationUI(currentPage, totalItems, perPage) {
-  const totalPages = Math.ceil(totalItems / perPage);
   const app = document.getElementById("music-app");
-
-  // Xoá control cũ nếu có
-  const oldControls = app.querySelector(".reader-controls");
-  if (oldControls) oldControls.remove();
-  const oldInfo = app.querySelector(".music-pagination-info");
-  if (oldInfo) oldInfo.remove();
-
-  // Tạo control chuyển trang
-  const nav = document.createElement("div");
-  nav.className = "reader-controls";
-
-  const prev = document.createElement("button");
-  prev.textContent = "⬅ Trang trước";
-  prev.disabled = currentPage <= 0;
-  prev.onclick = () => loadMusicFolder(currentPath, currentPage - 1);
-  nav.appendChild(prev);
-
-  const jumpForm = document.createElement("form");
-  jumpForm.style.display = "inline-block";
-  jumpForm.style.margin = "0 10px";
-  jumpForm.onsubmit = (e) => {
-    e.preventDefault();
-    const page = parseInt(jumpInput.value) - 1;
-    if (!isNaN(page) && page >= 0) loadMusicFolder(currentPath, page);
-  };
-
-  const jumpInput = document.createElement("input");
-  jumpInput.type = "number";
-  jumpInput.min = 1;
-  jumpInput.max = totalPages;
-  jumpInput.placeholder = "Trang...";
-  jumpInput.style.width = "60px";
-
-  const jumpBtn = document.createElement("button");
-  jumpBtn.textContent = "⏩";
-  jumpForm.appendChild(jumpInput);
-  jumpForm.appendChild(jumpBtn);
-  nav.appendChild(jumpForm);
-
-  const next = document.createElement("button");
-  next.textContent = "Trang sau ➡";
-  next.disabled = currentPage + 1 >= totalPages;
-  next.onclick = () => loadMusicFolder(currentPath, currentPage + 1);
-  nav.appendChild(next);
-
-  app.appendChild(nav);
-
-  // Thêm info số trang
-  const info = document.createElement("div");
-  info.textContent = `Trang ${currentPage + 1} / ${totalPages}`;
-  info.className = "music-pagination-info";
-  info.style.textAlign = "center";
-  info.style.marginTop = "10px";
-  app.appendChild(info);
+  renderPaginationUI(
+    app,
+    currentPage,
+    totalItems,
+    perPage,
+    (page) => loadMusicFolder(currentPath, page),
+    "music-pagination-info"
+  );
 }

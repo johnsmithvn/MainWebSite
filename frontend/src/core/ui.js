@@ -154,9 +154,30 @@ export function updateFolderPaginationUI(
   onPageChange,
   target = null
 ) {
-  const totalPages = Math.ceil(totalItems / perPage);
   const container = target || document.getElementById("app");
+  renderPaginationUI(
+    container,
+    currentPage,
+    totalItems,
+    perPage,
+    (page) => loadFolder(state.currentPath, page),
+    "folder-pagination-info"
+  );
+}
+
+export function renderPaginationUI(
+  container,
+  currentPage,
+  totalItems,
+  perPage,
+  onPageChange,
+  infoClass = "pagination-info"
+) {
   if (!container) return;
+  const totalPages = Math.ceil(totalItems / perPage);
+
+  container.querySelector(".reader-controls")?.remove();
+  container.querySelector(`.${infoClass}`)?.remove();
 
   const nav = document.createElement("div");
   nav.className = "reader-controls";
@@ -164,7 +185,7 @@ export function updateFolderPaginationUI(
   const prev = document.createElement("button");
   prev.textContent = "⬅ Trang trước";
   prev.disabled = currentPage <= 0;
-  prev.onclick = () => loadFolder(state.currentPath, currentPage - 1);
+  prev.onclick = () => onPageChange(currentPage - 1);
   nav.appendChild(prev);
 
   const jumpForm = document.createElement("form");
@@ -172,23 +193,19 @@ export function updateFolderPaginationUI(
   jumpForm.style.margin = "0 10px";
   jumpForm.onsubmit = (e) => {
     e.preventDefault();
-    const inputPage = parseInt(jumpInput.value) - 1;
-    if (!isNaN(inputPage) && inputPage >= 0) {
-      loadFolder(state.currentPath, inputPage);
-    }
+    const page = parseInt(jumpInput.value) - 1;
+    if (!isNaN(page) && page >= 0) onPageChange(page);
   };
 
   const jumpInput = document.createElement("input");
   jumpInput.type = "number";
   jumpInput.min = 1;
   jumpInput.max = totalPages;
-  jumpInput.placeholder = `Trang...`;
-  jumpInput.title = `Tổng ${totalPages} trang`;
+  jumpInput.placeholder = "Trang...";
   jumpInput.style.width = "60px";
 
   const jumpBtn = document.createElement("button");
   jumpBtn.textContent = "⏩";
-
   jumpForm.appendChild(jumpInput);
   jumpForm.appendChild(jumpBtn);
   nav.appendChild(jumpForm);
@@ -196,13 +213,14 @@ export function updateFolderPaginationUI(
   const next = document.createElement("button");
   next.textContent = "Trang sau ➡";
   next.disabled = currentPage + 1 >= totalPages;
-  next.onclick = () => loadFolder(state.currentPath, currentPage + 1);
+  next.onclick = () => onPageChange(currentPage + 1);
   nav.appendChild(next);
 
   container.appendChild(nav);
 
   const info = document.createElement("div");
   info.textContent = `Trang ${currentPage + 1} / ${totalPages}`;
+  info.className = infoClass;
   info.style.textAlign = "center";
   info.style.marginTop = "10px";
   container.appendChild(info);

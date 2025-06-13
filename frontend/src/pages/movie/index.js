@@ -3,6 +3,7 @@ import { getSourceKey } from "/src/core/storage.js";
 import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
 import { recentViewedVideoKey } from "/src/core/storage.js";
 import { getPathFromURL, paginate } from "/src/core/helpers.js";
+import { renderPaginationUI } from "/src/core/ui.js";
 
 import {
   filterMovie,
@@ -198,53 +199,10 @@ function loadTopVideoSlider() {
 }
 
 function updateMoviePaginationUI(currentPage, totalItems, perPage) {
-  const totalPages = Math.ceil(totalItems / perPage);
   const app = document.getElementById("movie-app");
-
-  const nav = document.createElement("div");
-  nav.className = "reader-controls";
-
-  const prev = document.createElement("button");
-  prev.textContent = "⬅ Trang trước";
-  prev.disabled = currentPage <= 0;
-  prev.onclick = () => loadMovieFolder(currentPath, currentPage - 1);
-  nav.appendChild(prev);
-
-  const jumpForm = document.createElement("form");
-  jumpForm.style.display = "inline-block";
-  jumpForm.style.margin = "0 10px";
-  jumpForm.onsubmit = (e) => {
-    e.preventDefault();
-    const page = parseInt(jumpInput.value) - 1;
-    if (!isNaN(page) && page >= 0) loadMovieFolder(currentPath, page);
-  };
-
-  const jumpInput = document.createElement("input");
-  jumpInput.type = "number";
-  jumpInput.min = 1;
-  jumpInput.max = totalPages;
-  jumpInput.placeholder = "Trang...";
-  jumpInput.style.width = "60px";
-
-  const jumpBtn = document.createElement("button");
-  jumpBtn.textContent = "⏩";
-  jumpForm.appendChild(jumpInput);
-  jumpForm.appendChild(jumpBtn);
-  nav.appendChild(jumpForm);
-
-  const next = document.createElement("button");
-  next.textContent = "Trang sau ➡";
-  next.disabled = currentPage + 1 >= totalPages;
-  next.onclick = () => loadMovieFolder(currentPath, currentPage + 1);
-  nav.appendChild(next);
-
-  app.appendChild(nav);
-
-  const info = document.createElement("div");
-  info.textContent = `Trang ${currentPage + 1} / ${totalPages}`;
-  info.style.textAlign = "center";
-  info.style.marginTop = "10px";
-  app.appendChild(info);
+  renderPaginationUI(app, currentPage, totalItems, perPage, (page) =>
+    loadMovieFolder(currentPath, page)
+  );
 }
 
 function renderRecentVideoSlider() {
