@@ -1,6 +1,7 @@
 import {
   setupRandomSectionsIfMissing,
   loadRandomSliders,
+  renderFolderSlider,
 } from "/src/components/folderSlider.js";
 import { renderMusicCardWithFavorite } from "/src/components/music/musicCard.js"; // bạn sẽ clone từ movieCard.js
 import {
