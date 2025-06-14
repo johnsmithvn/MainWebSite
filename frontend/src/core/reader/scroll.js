@@ -81,7 +81,8 @@ export function renderScrollReader(
       const img = document.createElement("img");
       img.dataset.src = imageList[i];
       img.className = "scroll-img loading";
-      img.loading = "lazy";
+      // Tránh lazy-load vì đã có hàng đợi tuần tự
+      img.loading = "eager";
       wrap.appendChild(img);
 
       const spinner = document.createElement("div");
@@ -112,7 +113,8 @@ export function renderScrollReader(
           const img = document.createElement("img");
           img.dataset.src = src;
           img.className = "scroll-img loading";
-          img.loading = "lazy";
+          // Tránh lazy-load vì đã có hàng đợi tuần tự
+          img.loading = "eager";
           wrap.appendChild(img);
 
           const spinner = document.createElement("div");
