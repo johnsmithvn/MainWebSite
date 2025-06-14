@@ -387,3 +387,34 @@ body, html {
 #btn-add-playlist:hover {
   background: #169447;
 }
+
+/* Collapsible playlist */
+.playlist-collapse {
+  margin: 16px 0;
+}
+.playlist-collapse summary {
+  cursor: pointer;
+  padding: 8px 20px;
+  font-size: 1.1em;
+  background: #202020;
+  color: #1db954;
+  border-radius: 12px;
+  list-style: none;
+  position: relative;
+}
+.playlist-collapse summary::after {
+  content: "\25BC"; /* down arrow */
+  position: absolute;
+  right: 16px;
+  transition: transform 0.2s;
+}
+.playlist-collapse[open] summary::after {
+  transform: rotate(180deg);
+}
+.playlist-collapse summary::-webkit-details-marker {
+  display: none;
+}
+.playlist-collapse[open] summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}

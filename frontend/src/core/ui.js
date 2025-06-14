@@ -889,7 +889,11 @@ export function buildThumbnailUrl(f, mediaType = "movie") {
   }
 
   // Nếu thumbnail đã là URL tuyệt đối thì trả luôn
-  if (f.thumbnail.startsWith(prefix) || f.thumbnail.startsWith("http")) {
+  if (
+    f.thumbnail.startsWith(prefix) ||
+    f.thumbnail.startsWith("http") ||
+    f.thumbnail.startsWith("/default/")
+  ) {
     return f.thumbnail;
   }
   // Nếu thumbnail đã bị dính prefix folder (do bug hay import DB cũ) thì cắt đi

@@ -143,6 +143,12 @@ export function renderFolderSlider({
     card.onclick = (e) => {
       if (e.target.classList.contains("folder-fav")) return;
 
+      if (f.isPlaylist) {
+        const key = getSourceKey();
+        window.location.href = `/music/player.html?playlist=${encodeURIComponent(f.path)}&key=${key}`;
+        return;
+      }
+
       const isMusicPage = window.location.pathname.includes("music");
       const isMoviePage = window.location.pathname.includes("movie");
 

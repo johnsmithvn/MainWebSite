@@ -1,6 +1,7 @@
 import {
   setupRandomSectionsIfMissing,
   loadRandomSliders,
+  renderFolderSlider,
 } from "/src/components/folderSlider.js";
 import { renderMusicCardWithFavorite } from "/src/components/music/musicCard.js"; // bạn sẽ clone từ movieCard.js
 import {
@@ -24,6 +25,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupMusicSidebar(); // ✅ music
   setupRandomSectionsIfMissing();
   loadRandomSliders("music");
+  loadPlaylistSlider();
   renderRecentMusicOnLoad();
   setupExtractThumbnailButton();
 
@@ -84,6 +86,13 @@ function loadMusicFolder(path = "", page = 0) {
     alert("Chưa chọn nguồn nhạc!");
     window.location.href = "/home.html";
     return;
+  }
+
+  if (path === "") {
+    loadPlaylistSlider();
+  } else {
+    const sec = document.getElementById("section-playlists");
+    if (sec) sec.innerHTML = "";
   }
 
   currentPath = path;
@@ -285,4 +294,47 @@ function updateMusicPaginationUI(currentPage, totalItems, perPage) {
   info.style.textAlign = "center";
   info.style.marginTop = "10px";
   app.appendChild(info);
+}
+
+async function loadPlaylistSlider() {
+  const key = getSourceKey();
+  if (!key) return;
+
+  const container = document.getElementById("section-playlists");
+  if (!container) return;
+
+  container.innerHTML = "<p>⏳ Đang tải playlist...</p>";
+
+  try {
+    const res = await fetch(`/api/music/playlists?key=${key}`);
+    const playlists = await res.json();
+
+    if (!Array.isArray(playlists) || playlists.length === 0) {
+      container.innerHTML = "<p>😅 Chưa có playlist nào</p>";
+      return;
+    }
+
+    const withThumbs = await Promise.all(
+      playlists.map(async (p) => {
+        try {
+          const r = await fetch(`/api/music/playlist/${p.id}?key=${key}`);
+          const detail = await r.json();
+          const first = detail.tracks?.[0];
+          const thumb = first ? buildThumbnailUrl(first, "music") : "/default/folder-thumb.png";
+          return { ...p, path: p.id.toString(), thumbnail: thumb, isPlaylist: true, type: "folder" };
+        } catch {
+          return { ...p, path: p.id.toString(), thumbnail: "/default/folder-thumb.png", isPlaylist: true, type: "folder" };
+        }
+      })
+    );
+
+    renderFolderSlider({
+      title: "🎶 Playlist",
+      folders: withThumbs,
+      targetId: "section-playlists",
+    });
+  } catch (err) {
+    console.error("loadPlaylistSlider error", err);
+    container.innerHTML = "<p>❌ Lỗi tải playlist</p>";
+  }
 }

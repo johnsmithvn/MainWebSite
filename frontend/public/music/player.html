@@ -21,12 +21,6 @@
         </div>
       </div>
       <div class="header-right">
-        <button
-          class="icon-button"
-          onclick="location.href='playlist.html'"
-        >
-          📁 Playlist
-        </button>
         <button class="icon-button" id="searchToggle">🔍</button>
       </div>
     </header>
@@ -57,6 +51,11 @@
 </div>
         <!-- ⭐⭐ Block now playing info hiển thị nổi bật như Spotify -->
         <div id="now-playing-info" class="now-playing-info"></div>
+
+        <details id="playlist-collapse" class="playlist-collapse">
+          <summary>🎶 Playlist</summary>
+          <section id="section-playlists" class="folder-slider-section"></section>
+        </details>
 
         <div class="track-table-wrapper">
           <table id="track-table" class="track-table">
