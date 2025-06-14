@@ -2,3 +2,5 @@ node_modules/
 backend/data/*
 !backend/data/.gitkeep
 .env
+dist/*
+!dist/.gitkeep

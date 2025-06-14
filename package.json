@@ -4,9 +4,9 @@
   "description": "Web site đọc truyện xem phim local ",
   "main": "backend/server.js",
   "scripts": {
-    "start": "node backend/server.js",
+    "day-la-note-comment-chi-run-thoi": "node backend/server.js",
     "build": "node scripts/build.js",
-    "dev": "npm run build && node backend/server.js"
+    "start": "npm run build && node backend/server.js"
 
   },
   "keywords": [
