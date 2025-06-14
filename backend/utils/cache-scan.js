@@ -40,6 +40,26 @@ const {
       ".DS_Store",
     ];
 
+    // 📌 Thu thập tên các folder rỗng làm otherName cho folder hiện tại
+    if (currentPath) {
+      const alias = entries
+        .filter((e) => e.isDirectory() && !skipNames.includes(e.name))
+        .filter((e) => {
+          const p = path.join(fullPath, e.name);
+          return fs.readdirSync(p).length === 0;
+        })
+        .map((e) => e.name)
+        .join(",");
+      const existingFolder = db
+        .prepare(`SELECT otherName FROM folders WHERE root = ? AND path = ?`)
+        .get(root, currentPath);
+      if (existingFolder && alias !== existingFolder.otherName) {
+        db.prepare(
+          `UPDATE folders SET otherName = ? WHERE root = ? AND path = ?`
+        ).run(alias || null, root, currentPath);
+      }
+    }
+
     for (const entry of entries) {
       if (!entry.isDirectory() || skipNames.includes(entry.name)) continue;
 
@@ -74,8 +94,8 @@ const {
           db.prepare(
             `INSERT INTO folders (
             root, name, path, thumbnail,
-            lastModified, imageCount, chapterCount, type, createdAt, updatedAt
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            lastModified, imageCount, chapterCount, otherName, type, createdAt, updatedAt
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           ).run(
             root,
             entry.name,
@@ -84,6 +104,7 @@ const {
             lastModified,
             imageCount,
             chapterCount,
+            null,
             "folder",
             Date.now(),
             Date.now()
