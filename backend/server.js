@@ -125,6 +125,7 @@ app.use("/api/movie", require("./api/movie/reset-movie-db"));
 app.use("/api/movie", require("./api/movie/video-cache"));
 app.use("/api/movie", require("./api/movie/favorite-movie"));
 app.use("/api/movie", require("./api/movie/extract-movie-thumbnail"));
+app.use("/api/movie", require("./api/movie/set-thumbnail"));
 
 //
 app.use("/api/music", require("./api/music/scan-music"));
