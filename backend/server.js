@@ -49,8 +49,9 @@ for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
 
 // ✅ Serve frontend static files
 app.use(express.static(path.join(__dirname, "../frontend/public")));
+//  dist là thư mục build của frontend, nó được tạo ra khi chạy npm run build để lưu cache fronend (giảm tải cho front end)
 app.use("/dist", express.static(path.join(__dirname, "../frontend/public/dist")));
-app.use("/src", express.static(path.join(__dirname, "../frontend/src")));
+// app.use("/src", express.static(path.join(__dirname, "../frontend/src")));  // bỏ cái này nếu muốn dùng static trong src nghĩa là k dùng trong dist
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/public/home.html"));
 });
