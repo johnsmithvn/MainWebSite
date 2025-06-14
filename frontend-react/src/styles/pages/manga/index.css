@@ -1,0 +1,33 @@
+
+
+
+
+
+/* =============================
+     🔍 RESPONSIVE
+  ============================= */
+  @media (max-width: 600px) {
+    .site-header {
+      flex-direction: row;
+      padding: 8px 12px;
+    }
+  
+    .logo-text {
+      display: none;
+    }
+  
+    .search-box input {
+      display: none;
+    }
+  
+    .header-right {
+      gap: 8px;
+    }
+  
+    .menu-button,
+    .icon-button {
+      padding: 4px;
+      font-size: 18px;
+    }
+  }
+  

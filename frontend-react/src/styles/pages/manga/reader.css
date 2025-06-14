@@ -1,0 +1,253 @@
+/* =============================
+   📖 READER PAGE – CHẾ ĐỘ ĐỌC TRUYỆN
+============================= */
+
+/* Tắt padding wrapper khi vào reader */
+body.reader-page #wrapper {
+  padding-top: 0 !important;
+}
+
+body.reader-page .main-content {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* =============================
+   📌 FIXED HEADER CHO reader.html
+============================= */
+#site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background: rgba(20, 20, 20, 0.85);
+  backdrop-filter: blur(12px);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+}
+
+#site-header.hidden {
+  transform: translateY(-100%);
+}
+
+
+#site-header h1.truncate-folder-name {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 50vw;
+  /* ✅ chỉ chiếm tối đa nửa màn hình */
+  margin: 0 12px;
+  font-size: 18px;
+}
+
+#reader-folder-name {
+  font-size: 16px;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+/* ✨ Nếu element có thể click (gán onclick trong JS) */
+#reader-folder-name.clickable-folder {
+  cursor: pointer;
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+#reader-folder-name.clickable-folder:hover {
+  border: 1px solid #ccc;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.dark-mode #reader-folder-name.clickable-folder:hover {
+  border-color: #555;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/*  */
+/* Khung reader chính */
+
+img {
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.reader {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #000;
+}
+
+.swiper,
+.swiper-wrapper,
+.swiper-slide {
+  height: 100%;
+}
+
+.swiper-slide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: black;
+}
+
+/* Ảnh 1 trang (swipe mode) */
+.reader:not(.scroll-mode) img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block; /* ✅ hoặc flex nếu muốn */
+  margin: 0 auto;
+}
+
+/* reader.css */
+.swiper-slide {
+  position: relative;
+  z-index: 10;
+}
+.pinch-zoom img {
+  z-index: 10;
+  position: relative;
+  display: block;
+}
+
+/* Scroll mode */
+.reader.scroll-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  height: auto;
+  padding: 0;
+  background-color: #000;
+}
+
+/* =============================
+   📷 ẢNH SCROLL MODE
+============================= */
+.scroll-img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  margin-bottom: 20px;
+  display: block;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .scroll-img {
+    width: 100vw;
+    max-width: 100vw;
+  }
+}
+
+/* =============================
+   🧭 TRẠNG THÁI TRANG (hiện ở giữa màn hình)
+============================= */
+.page-indicator {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 16px;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+/* =============================
+   💫 ẢNH LOADING
+============================= */
+.scroll-img.loading,
+.reader img.loading {
+  opacity: 0.3;
+  filter: blur(2px);
+  transition: opacity 0.5s ease, filter 0.5s ease;
+}
+
+/* =============================
+   📦 FOOTER ĐỌC TRUYỆN
+============================= */
+#reader-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  color: white;
+  padding: 10px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.reader-footer-inner {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 auto;
+}
+
+#reader-footer button {
+  background: #ffffff22;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#reader-footer button:hover {
+  background: #ffffff33;
+}
+
+#page-info {
+  flex: 1;
+  text-align: center;
+  font-weight: bold;
+  font-size: 15px;
+  padding: 4px 0;
+}
+
+
+
+/* Count page trong scroll */
+#image-count-info {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  z-index: 999;
+  font-weight: bold;
+}
+
+/* Ẩn image count khi không ở scroll mode */
+.reader:not(.scroll-mode) #image-count-info {
+  display: none;
+}

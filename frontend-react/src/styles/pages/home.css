@@ -1,0 +1,35 @@
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    padding: 40px;
+    max-width: 600px;
+    margin: auto;
+}
+
+
+h1 {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.source-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.source-btn {
+    padding: 16px;
+    font-size: 18px;
+    border: 2px solid #444;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+    background: white;
+}
+
+.source-btn:hover {
+    background: #f0f0f0;
+}
