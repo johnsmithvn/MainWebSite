@@ -39,16 +39,35 @@ export function renderHorizontalReader(
     zoomWrapper.className = "pinch-zoom";
 
     const img = document.createElement("img");
-    img.src = src;
+    img.dataset.src = src; // 🚫 Không gán src ngay để tránh load toàn bộ
     img.className = "loading";
     img.style.zIndex = 10;
     img.style.position = "relative";
-    img.onload = () => img.classList.remove("loading");
 
     zoomWrapper.appendChild(img);
     slide.appendChild(zoomWrapper);
     return slide;
   });
+
+  function loadSlidesAround(page, range = 10) {
+    const start = Math.max(0, page - range);
+    const end = Math.min(slides.length - 1, page + range);
+
+    slides.forEach((slide, index) => {
+      const img = slide.querySelector("img");
+      if (!img) return;
+
+      if (index >= start && index <= end) {
+        if (!img.src) {
+          img.src = img.dataset.src;
+          img.onload = () => img.classList.remove("loading");
+        }
+      } else if (img.src) {
+        img.removeAttribute("src");
+        img.classList.add("loading");
+      }
+    });
+  }
 
   let swiper = null;
   let currentPage = initialPage;
@@ -66,6 +85,7 @@ export function renderHorizontalReader(
           if (!swiper) return; // 👈 fix chắc chắn
 
           currentPage = swiper.activeIndex;
+          loadSlidesAround(currentPage);
           preloadAroundPage(currentPage, images);
           updateReaderPageInfo(currentPage + 1, images.length);
           onPageChange(currentPage);
@@ -82,6 +102,7 @@ export function renderHorizontalReader(
         "🧩 DOM slide count:",
         document.querySelectorAll(".swiper-slide").length
       );
+      loadSlidesAround(currentPage);
     }, 100);
 
     setTimeout(() => {
@@ -94,6 +115,7 @@ export function renderHorizontalReader(
     }, 1000);
 
     // Gọi lần đầu
+    loadSlidesAround(currentPage);
     preloadAroundPage(currentPage, images);
     updateReaderPageInfo(currentPage + 1, images.length);
     onPageChange(currentPage);
@@ -101,7 +123,10 @@ export function renderHorizontalReader(
 
     container.__readerControl = {
       setCurrentPage: (pageIndex) => {
-        if (swiper) swiper.slideTo(pageIndex);
+        if (swiper) {
+          loadSlidesAround(pageIndex);
+          swiper.slideTo(pageIndex);
+        }
       },
     };
   }, 50);
@@ -115,6 +140,7 @@ export function renderHorizontalReader(
     setCurrentPage(pageIndex) {
       if (swiper) {
         currentPage = pageIndex;
+        loadSlidesAround(pageIndex);
         swiper.slideTo(pageIndex);
       } else {
         setTimeout(() => {
