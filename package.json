@@ -4,7 +4,10 @@
   "description": "Web site đọc truyện xem phim local ",
   "main": "backend/server.js",
   "scripts": {
-    "start": "node backend/server.js"
+    "start": "node backend/server.js",
+    "build": "node scripts/build.js",
+    "dev": "npm run build && node backend/server.js"
+
   },
   "keywords": [
     "manga",
@@ -26,7 +29,11 @@
     "lru-cache": "^11.1.0",
     "mime-types": "^3.0.1",
     "music-metadata": "^11.2.3",
+    "compression": "^1.7.4",
     "serve-favicon": "^2.5.0",
     "string-natural-compare": "^3.0.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.0"
   }
 }

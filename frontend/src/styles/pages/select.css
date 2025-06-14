@@ -1,3 +1,7 @@
+@import "../base.css";
+@import "../components/folder-card.css";
+@import "../components/music/music-card.css";
+
 /* Wrapper toàn trang */
 html,
 body {
