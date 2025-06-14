@@ -1,4 +1,5 @@
 // /src/pages/home.js
+import { showToast, showConfirm } from "/src/core/ui.js";
 
 function renderSourceList(listId, keys, type) {
   const container = document.getElementById(listId);
@@ -67,4 +68,16 @@ window.addEventListener("DOMContentLoaded", () => {
   renderSourceList("manga-list", window.mangaKeys || [], "manga");
   renderSourceList("movie-list", window.movieKeys || [], "movie");
   renderSourceList("music-list", window.musicKeys || [], "music");
+  setupClearStorageButton();
 });
+
+function setupClearStorageButton() {
+  const btn = document.getElementById("clear-storage-btn");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const ok = await showConfirm("Xoá toàn bộ localStorage?");
+    if (!ok) return;
+    localStorage.clear();
+    showToast("✅ Đã xoá localStorage");
+  });
+}
