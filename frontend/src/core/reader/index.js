@@ -171,6 +171,10 @@ export function toggleReaderMode() {
   }, 0);
 }
 
+export function getCurrentImage() {
+  return currentImages[currentPage] || null;
+}
+
 /**
  * ⏩ Nút Next/Prev chapter
  */

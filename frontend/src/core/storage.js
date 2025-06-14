@@ -24,7 +24,7 @@ export function getMovieCacheKey(sourceKey, path) {
  */
 export function changeRootFolder() {
   localStorage.removeItem("rootFolder");
-  window.location.href = "/select.html";
+  window.location.href = "/manga/select.html";
 }
 
 /**
@@ -35,7 +35,7 @@ export function requireRootFolder() {
 
   if (!root) {
     showToast("⚠️ Chưa chọn thư mục gốc, vui lòng chọn lại!");
-    window.location.href = "/select.html";
+    window.location.href = "/manga/select.html";
   }
 }
 export function requireSourceKey() {
