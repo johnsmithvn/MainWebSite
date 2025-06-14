@@ -18,10 +18,12 @@ function createRootFolderCard(folder) {
   const sourceKey = getSourceKey();
   requireSourceKey(); // 🔐 Kiểm tra sourceKey
   const card = document.createElement("div");
-  card.className = "select-card";
+  card.className = "folder-card";
+
+  const thumbWrap = document.createElement("div");
+  thumbWrap.className = "folder-thumb";
 
   const thumbnail = document.createElement("img");
-  thumbnail.className = "select-thumbnail";
   thumbnail.src = "/default/default-cover.jpg";
   thumbnail.alt = folder;
   thumbnail.loading = "lazy";
@@ -46,11 +48,13 @@ function createRootFolderCard(folder) {
       .catch((err) => console.error("load thumbnail", err));
   }
 
+  thumbWrap.appendChild(thumbnail);
+  card.appendChild(thumbWrap);
+
   const label = document.createElement("div");
-  label.className = "select-label";
+  label.className = "folder-title";
   label.textContent = folder;
 
-  card.appendChild(thumbnail);
   card.appendChild(label);
 
   card.onclick = withLoading(async () => {
