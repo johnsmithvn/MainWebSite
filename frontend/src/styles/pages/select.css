@@ -34,11 +34,47 @@ footer {
   font-weight: bold;
 }
 
-/* Khu vực danh sách root folder */
-.folder-section.grid {
-  padding-bottom: 72px; /* tạo khoảng trống tránh đụng footer */
+/* Grid chọn folder */
+.select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+  padding: 20px 20px 72px;
 }
 
+/* Card chọn folder */
+.select-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  height: 280px;
+  background: #f9f9f9;
+  border-radius: 12px;
+  overflow: hidden;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
 
-/* Card dùng style chung của music-card */
+.select-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
 
+/* Thumbnail hiển thị ảnh đại diện folder */
+.select-thumbnail {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  background: #ccc;
+}
+
+/* Label tên folder */
+.select-label {
+  padding: 10px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  background: #fff;
+}

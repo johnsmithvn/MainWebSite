@@ -4,8 +4,6 @@
     <meta charset="UTF-8" />
     <title>Chọn Manga Folder</title>
     <link rel="stylesheet" href="/src/styles/base.css" />
-    <link rel="stylesheet" href="/src/styles/components/folder-card.css" />
-    <link rel="stylesheet" href="/src/styles/components/music/music-card.css" />
     <link rel="stylesheet" href="/src/styles/pages/select.css" />
     <link rel="icon" type="image/png" href="/default/favicon.png" />
     <script type="module" src="/src/pages/select.js"></script>
@@ -21,12 +19,8 @@
         </div>
       </header>
 
-      <main>
-        <section class="folder-section grid">
-          <div id="folder-list" class="grid">
-            <!-- JS sẽ render danh sách folder vào đây -->
-          </div>
-        </section>
+      <main id="folder-list" class="select-grid">
+        <!-- JS sẽ render danh sách folder vào đây -->
       </main>
 
       <!-- ✅ Footer phải nằm TRONG wrapper nếu muốn đẩy sát đáy -->
