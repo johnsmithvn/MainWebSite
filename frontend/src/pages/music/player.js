@@ -65,6 +65,7 @@ function renderNowPlayingInfo(track) {
           body: JSON.stringify({ key: sourceKey, playlistId, srcPath: track.path }),
         });
         showToast("✅ Đã đặt thumbnail cho playlist");
+        loadPlaylistSlider();
       } else {
         await fetch("/api/music/folder-thumbnail", {
           method: "POST",

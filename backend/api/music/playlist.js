@@ -66,6 +66,7 @@ router.get("/playlist/:id", (req, res) => {
     id: playlist.id,
     name: playlist.name,
     description: playlist.description,
+    thumbnail: playlist.thumbnail || null,
     tracks: items,
   });
 });
