@@ -36,6 +36,7 @@ function getDB(dbkey) {
       lastModified INTEGER,
       imageCount INTEGER DEFAULT 0,
       chapterCount INTEGER DEFAULT 0,
+      otherName TEXT,
       type TEXT DEFAULT 'folder',
       createdAt INTEGER,
       updatedAt INTEGER,
@@ -58,6 +59,11 @@ function getDB(dbkey) {
       thumbnail TEXT
     );
   `);
+  // ➕ đảm bảo có cột otherName khi nâng cấp DB cũ
+  const cols = db.prepare(`PRAGMA table_info(folders)`).all().map((c) => c.name);
+  if (!cols.includes("otherName")) {
+    db.prepare(`ALTER TABLE folders ADD COLUMN otherName TEXT`).run();
+  }
 
   dbMap[dbkey] = db;
   return db;

@@ -87,9 +87,9 @@ router.get("/folder-cache", async (req, res) => {
       }
       const rows = db.prepare(`
         SELECT name, path, thumbnail, isFavorite FROM folders
-        WHERE root = ? AND name LIKE ?
+        WHERE root = ? AND (name LIKE ? OR otherName LIKE ?)
         ORDER BY name ASC LIMIT 50
-      `).all(root, `%${q}%`);
+      `).all(root, `%${q}%`, `%${q}%`);
       return res.json(rows);
     }
     // Nếu mode không hợp lệ
