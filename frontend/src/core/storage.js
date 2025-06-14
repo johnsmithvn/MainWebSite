@@ -2,6 +2,7 @@
 import { showToast } from "./ui.js";
 const MOVIE_CACHE_PREFIX = "movieCache::";
 const FOLDER_CACHE_PREFIX = "folderCache::";
+const ROOT_THUMB_CACHE_PREFIX = "rootThumb::";
 
 /**
  * 📂 Lấy rootFolder hiện tại từ localStorage
@@ -24,7 +25,7 @@ export function getMovieCacheKey(sourceKey, path) {
  */
 export function changeRootFolder() {
   localStorage.removeItem("rootFolder");
-  window.location.href = "/select.html";
+  window.location.href = "/manga/select.html";
 }
 
 /**
@@ -35,7 +36,7 @@ export function requireRootFolder() {
 
   if (!root) {
     showToast("⚠️ Chưa chọn thư mục gốc, vui lòng chọn lại!");
-    window.location.href = "/select.html";
+    window.location.href = "/manga/select.html";
   }
 }
 export function requireSourceKey() {
@@ -44,6 +45,29 @@ export function requireSourceKey() {
     showToast("⚠️ Chưa chọn nguồn dữ liệu, vui lòng chọn lại!");
     window.location.href = "/home.html";
   }
+}
+
+export function getRootThumbCache(sourceKey, rootFolder) {
+  const key = `${ROOT_THUMB_CACHE_PREFIX}${sourceKey}::${rootFolder}`;
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+  try {
+    const { thumbnail, time } = JSON.parse(raw);
+    if (Date.now() - time > 7 * 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return thumbnail;
+  } catch {
+    localStorage.removeItem(key);
+    return null;
+  }
+}
+
+export function setRootThumbCache(sourceKey, rootFolder, thumbnail) {
+  const key = `${ROOT_THUMB_CACHE_PREFIX}${sourceKey}::${rootFolder}`;
+  const value = { thumbnail, time: Date.now() };
+  localStorage.setItem(key, JSON.stringify(value));
 }
 
 /**

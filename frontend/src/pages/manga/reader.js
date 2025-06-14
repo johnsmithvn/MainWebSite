@@ -2,8 +2,9 @@ import {
   getRootFolder,
   getSourceKey,
   requireRootFolder,
+  setRootThumbCache,
 } from "/src/core/storage.js";
-import { renderReader } from "/src/core/reader/index.js";
+import { renderReader, getCurrentImage } from "/src/core/reader/index.js";
 import {
   setupSidebar,
   toggleSidebar,
@@ -64,4 +65,32 @@ function setupReaderUIEvents() {
   document.getElementById("sidebarToggle")?.addEventListener("click", toggleSidebar);
   document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
   document.getElementById("floatingSearchInput")?.addEventListener("input", filterManga);
+  document.getElementById("setThumbnailBtn")?.addEventListener("click", setRootThumbnail);
+}
+
+async function setRootThumbnail() {
+  const img = getCurrentImage();
+  if (!img) return;
+  const sourceKey = getSourceKey();
+  const rootFolder = getRootFolder();
+  try {
+    await fetch("/api/manga/root-thumbnail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        key: sourceKey,
+        root: rootFolder,
+        thumbnail: img.replace(`/manga/${encodeURIComponent(rootFolder)}/`, ""),
+      }),
+    });
+    setRootThumbCache(
+      sourceKey,
+      rootFolder,
+      img.replace(`/manga/${encodeURIComponent(rootFolder)}/`, "")
+    );
+    showToast("✅ Đã lưu thumbnail");
+  } catch (err) {
+    console.error("set root thumbnail", err);
+    showToast("❌ Lỗi set thumbnail");
+  }
 }

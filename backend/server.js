@@ -29,6 +29,7 @@ app.use("/api/manga", require("./api/manga/reset-cache")); // 🔁 Reset cache D
 // ✅ Đăng ký route /api/scan trong server.js:
 app.use("/api/manga", require("./api/manga/scan"));
 app.use("/api/manga", require("./api/manga/favorite")); // ⭐ API đánh dấu yêu thích
+app.use("/api/manga", require("./api/manga/root-thumbnail"));
 
 // // ✅ Serve static images từ BASE_DIR (E:/File/Manga)
 // app.use("/manga", express.static(BASE_DIR));

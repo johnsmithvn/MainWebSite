@@ -3,7 +3,9 @@ import { withLoading, showToast, showConfirm } from "/src/core/ui.js";
 import {
   requireSourceKey,
   getSourceKey,
-  clearAllFolderCache
+  clearAllFolderCache,
+  getRootThumbCache,
+  setRootThumbCache,
 } from "/src/core/storage.js";
 /**
  * 📂 Fetch danh sách folder gốc và render ra giao diện
@@ -20,13 +22,29 @@ function createRootFolderCard(folder) {
 
   const thumbnail = document.createElement("img");
   thumbnail.className = "select-thumbnail";
-  thumbnail.src = `/manga/${encodeURIComponent(folder)}/cover.jpg`;
+  thumbnail.src = "/default/default-cover.jpg";
   thumbnail.alt = folder;
   thumbnail.loading = "lazy";
 
-  thumbnail.onerror = () => {
-    thumbnail.src = "/default/default-cover.jpg";
-  };
+  const cached = getRootThumbCache(sourceKey, folder);
+  if (cached) {
+    thumbnail.src = `/manga/${encodeURIComponent(folder)}/${cached.replace(/\\/g, "/")}`;
+  } else {
+    fetch(
+      `/api/manga/root-thumbnail?key=${encodeURIComponent(
+        sourceKey
+      )}&root=${encodeURIComponent(folder)}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.thumbnail) {
+          const clean = data.thumbnail.replace(/\\/g, "/");
+          thumbnail.src = `/manga/${encodeURIComponent(folder)}/${clean}`;
+          setRootThumbCache(sourceKey, folder, data.thumbnail);
+        }
+      })
+      .catch((err) => console.error("load thumbnail", err));
+  }
 
   const label = document.createElement("div");
   label.className = "select-label";

@@ -52,6 +52,11 @@ function getDB(dbkey) {
     PRIMARY KEY (root, path)
     );
     CREATE INDEX IF NOT EXISTS idx_folders_favorite ON folders(root, isFavorite);
+
+    CREATE TABLE IF NOT EXISTS root_thumbnails (
+      root TEXT PRIMARY KEY,
+      thumbnail TEXT
+    );
   `);
 
   dbMap[dbkey] = db;
