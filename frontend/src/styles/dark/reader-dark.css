@@ -34,9 +34,23 @@
   .dark-mode #reader-footer button:hover {
     background: #555;
   }
+
+  .dark-mode .scroll-page-btn {
+    background: #333;
+    color: white;
+  }
+
+  .dark-mode .scroll-page-btn:hover {
+    background: #555;
+  }
   
   /* Nút toggle mode 📖 */
   .dark-mode #readerModeButton {
     color: white;
+  }
+
+  .dark-mode .spinner {
+    border-color: rgba(255, 255, 255, 0.7);
+    border-top-color: transparent;
   }
   

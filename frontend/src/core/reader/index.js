@@ -19,6 +19,7 @@ let controller = null; // Giữ instance của chế độ đọc
 let currentImages = [];
 let currentPage = 0;
 let readerMode = "horizontal"; // "vertical" or "horizontal"
+const SCROLL_PAGE_SIZE = 200;
 /**
  * 📖 Hàm render chính (gọi khi vào reader.html hoặc đổi mode)
  */
@@ -74,6 +75,7 @@ export function renderReader(
     setupReaderModeButton();
     setupPageInfoClick();
     setupChapterNavigation();
+    setupScrollPageNavigation();
   }
   // 🧽 Xoá nội dung cũ (ảnh cũ)
   readerContainer.innerHTML = "";
@@ -106,6 +108,17 @@ export function renderReader(
     if (imageCountInfo) {
       imageCountInfo.style.display =
         readerMode === "vertical" ? "block" : "none";
+    }
+    const prevPageBtn = document.getElementById("prev-page-btn");
+    const nextPageBtn = document.getElementById("next-page-btn");
+    if (prevPageBtn && nextPageBtn) {
+      if (readerMode === "vertical") {
+        prevPageBtn.classList.remove("hidden");
+        nextPageBtn.classList.remove("hidden");
+      } else {
+        prevPageBtn.classList.add("hidden");
+        nextPageBtn.classList.add("hidden");
+      }
     }
   });
 }
@@ -185,6 +198,15 @@ function setupChapterNavigation() {
 
   prevBtn.onclick = () => moveChapter("prev");
   nextBtn.onclick = () => moveChapter("next");
+}
+
+function setupScrollPageNavigation() {
+  const prevPage = document.getElementById("prev-page-btn");
+  const nextPage = document.getElementById("next-page-btn");
+  if (!prevPage || !nextPage) return;
+
+  prevPage.onclick = () => moveScrollPage("prev");
+  nextPage.onclick = () => moveScrollPage("next");
 }
 
 function moveChapter(direction = "next") {
@@ -323,4 +345,12 @@ function updateReaderHeaderTitle(folderName) {
       );
     }
   };
+}
+
+function moveScrollPage(direction = "next") {
+  const currentBlock = Math.floor(currentPage / SCROLL_PAGE_SIZE);
+  const targetBlock = direction === "next" ? currentBlock + 1 : currentBlock - 1;
+  const targetIndex = targetBlock * SCROLL_PAGE_SIZE;
+  if (targetIndex < 0 || targetIndex >= currentImages.length) return;
+  controller?.setCurrentPage?.(targetIndex);
 }

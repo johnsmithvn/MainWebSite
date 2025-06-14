@@ -3,6 +3,33 @@ import { toggleReaderUI, updateReaderPageInfo } from "./utils.js";
 const imagesPerPage = 200;
 const lazyBatchSize = 50;
 
+// Hàng đợi load ảnh tuần tự
+let loadQueue = [];
+let isLoadingQueue = false;
+
+function enqueueImages(imgs) {
+  loadQueue.push(...imgs);
+  if (!isLoadingQueue) loadNext();
+}
+
+function loadNext() {
+  const img = loadQueue.shift();
+  if (!img) {
+    isLoadingQueue = false;
+    return;
+  }
+  isLoadingQueue = true;
+  const spinner = img.parentElement.querySelector(".spinner");
+  const clear = () => {
+    img.classList.remove("loading");
+    spinner?.remove();
+    loadNext();
+  };
+  img.onload = clear;
+  img.onerror = clear;
+  img.src = img.dataset.src;
+}
+
 /**
  * 📖 Scroll Mode Reader
  * @param {Array} images
@@ -46,18 +73,29 @@ export function renderScrollReader(
 
   function renderScrollPage(imageList) {
     wrapper.innerHTML = "";
+    const imgs = [];
     for (let i = 0; i < imageList.length; i++) {
+      const wrap = document.createElement("div");
+      wrap.className = "scroll-img-wrapper";
+
       const img = document.createElement("img");
-      img.src = imageList[i];
+      img.dataset.src = imageList[i];
       img.className = "scroll-img loading";
       img.loading = "lazy";
-      img.onload = () => img.classList.remove("loading");
-      wrapper.appendChild(img);
+      wrap.appendChild(img);
+
+      const spinner = document.createElement("div");
+      spinner.className = "spinner";
+      wrap.appendChild(spinner);
+
+      wrapper.appendChild(wrap);
+      imgs.push(img);
     }
+    enqueueImages(imgs);
   }
 
   function setupScrollLazyLoad(wrapper, imagesInPage) {
-    const getLoaded = () => wrapper.querySelectorAll("img").length;
+    const getLoaded = () => wrapper.querySelectorAll("img.scroll-img").length;
 
     window.onscroll = () => {
       const last = wrapper.lastElementChild;
@@ -66,13 +104,25 @@ export function renderScrollReader(
       if (rect.bottom < window.innerHeight + 300) {
         const loaded = getLoaded();
         const toLoad = imagesInPage.slice(loaded, loaded + lazyBatchSize);
+        const imgs = [];
         for (const src of toLoad) {
+          const wrap = document.createElement("div");
+          wrap.className = "scroll-img-wrapper";
+
           const img = document.createElement("img");
-          img.src = src;
-          img.className = "scroll-img";
+          img.dataset.src = src;
+          img.className = "scroll-img loading";
           img.loading = "lazy";
-          wrapper.appendChild(img);
+          wrap.appendChild(img);
+
+          const spinner = document.createElement("div");
+          spinner.className = "spinner";
+          wrap.appendChild(spinner);
+
+          wrapper.appendChild(wrap);
+          imgs.push(img);
         }
+        enqueueImages(imgs);
       }
 
       syncScrollState();
@@ -161,28 +211,8 @@ export function renderScrollReader(
       box.appendChild(btn);
     }
 
-    const nav = document.createElement("div");
-    nav.style.textAlign = "center";
-    nav.style.marginTop = "12px";
-
-    const prev = document.createElement("button");
-    const next = document.createElement("button");
-    prev.textContent = "⬅ Prev";
-    next.textContent = "Next ➡";
-    prev.onclick = () => {
-      if (currentPageIndex > 0) switchScrollPage(currentPageIndex - 1);
-    };
-    next.onclick = () => {
-      if (currentPageIndex < totalPages - 1)
-        switchScrollPage(currentPageIndex + 1);
-    };
-
-    nav.appendChild(prev);
-    nav.appendChild(next);
-
     const wrapperDiv = document.createElement("div");
     wrapperDiv.appendChild(box);
-    wrapperDiv.appendChild(nav);
     modal.appendChild(wrapperDiv);
 
     modal.onclick = (e) => {
