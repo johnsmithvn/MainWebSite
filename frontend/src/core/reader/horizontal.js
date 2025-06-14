@@ -4,6 +4,7 @@ import {
   updateReaderPageInfo,
 } from "./utils.js";
 let clickTimer = null;
+const VISIBLE_RANGE = 5;
 
 /**
  * 📖 Horizontal/Swipe Mode Reader – Virtual Slide + Zoom + Preload
@@ -29,26 +30,15 @@ export function renderHorizontalReader(
   container.appendChild(swiperContainer);
 
   // ⚠️ Tránh renderSlide gây lỗi → dùng HTML chuỗi trực tiếp
-  const slides = images.map((src) => {
-    const slide = document.createElement("div");
-    slide.className = "swiper-slide";
-    slide.style.position = "relative";
-    slide.style.zIndex = 10;
-
-    const zoomWrapper = document.createElement("div");
-    zoomWrapper.className = "pinch-zoom";
-
-    const img = document.createElement("img");
-    img.src = src;
-    img.className = "loading";
-    img.style.zIndex = 10;
-    img.style.position = "relative";
-    img.onload = () => img.classList.remove("loading");
-
-    zoomWrapper.appendChild(img);
-    slide.appendChild(zoomWrapper);
-    return slide;
-  });
+  const slides = images.map(
+    (src) => `
+      <div class="swiper-slide" style="position:relative;z-index:10;">
+        <div class="pinch-zoom">
+          <img data-src="${src}" class="loading" style="position:relative;z-index:10;" />
+        </div>
+      </div>
+    `
+  );
 
   let swiper = null;
   let currentPage = initialPage;
@@ -58,19 +48,25 @@ export function renderHorizontalReader(
       initialSlide: currentPage,
       loop: false,
       virtual: {
-        slides, // HTML dạng string
-        renderSlide: (slide, index) => slide,
+        slides,
+        renderSlide: (slide) => slide,
+        addSlidesBefore: VISIBLE_RANGE,
+        addSlidesAfter: VISIBLE_RANGE,
       },
       on: {
         slideChange: () => {
-          if (!swiper) return; // 👈 fix chắc chắn
+          if (!swiper) return;
 
           currentPage = swiper.activeIndex;
           preloadAroundPage(currentPage, images);
           updateReaderPageInfo(currentPage + 1, images.length);
           onPageChange(currentPage);
 
+          loadImagesAround(currentPage, images, swiperWrapper);
           setTimeout(initPinchZoom, 100);
+        },
+        virtualUpdate: () => {
+          loadImagesAround(currentPage, images, swiperWrapper);
         },
       },
     });
@@ -97,6 +93,7 @@ export function renderHorizontalReader(
     preloadAroundPage(currentPage, images);
     updateReaderPageInfo(currentPage + 1, images.length);
     onPageChange(currentPage);
+    loadImagesAround(currentPage, images, swiperWrapper);
     setTimeout(initPinchZoom, 100);
 
     container.__readerControl = {
@@ -116,6 +113,7 @@ export function renderHorizontalReader(
       if (swiper) {
         currentPage = pageIndex;
         swiper.slideTo(pageIndex);
+        loadImagesAround(pageIndex, images, swiperWrapper);
       } else {
         setTimeout(() => {
           container.__readerControl?.setCurrentPage?.(pageIndex);
@@ -138,6 +136,22 @@ function initPinchZoom() {
       });
     }
   });
+}
+
+function loadImagesAround(page, images, wrapper) {
+  if (!wrapper) return;
+  const start = Math.max(0, page - VISIBLE_RANGE);
+  const end = Math.min(images.length - 1, page + VISIBLE_RANGE);
+
+  for (let i = start; i <= end; i++) {
+    const slide = wrapper.querySelector(
+      `.swiper-slide[data-swiper-slide-index="${i}"] img`
+    );
+    if (slide && !slide.src) {
+      slide.src = slide.dataset.src;
+      slide.onload = () => slide.classList.remove("loading");
+    }
+  }
 }
 
 /**
