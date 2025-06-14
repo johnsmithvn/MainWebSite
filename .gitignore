@@ -1,6 +1,12 @@
 node_modules/
+
+# Bỏ toàn bộ file trong backend/data, trừ .gitkeep
 backend/data/*
 !backend/data/.gitkeep
+
+# Bỏ file .env
 .env
-dist/*
-!dist/.gitkeep
+
+# ✅ Bỏ thư mục dist trong frontend/public
+frontend/public/dist/
+!frontend/public/dist/.gitkeep

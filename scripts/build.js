@@ -1,31 +1,50 @@
-const esbuild = require('esbuild');
-const path = require('path');
-const fs = require('fs');
+const esbuild = require("esbuild");
+const path = require("path");
+const fs = require("fs");
+const glob = require("glob");
 
-// Simple alias plugin so imports like "/src/..." work with esbuild
+// Plugin alias để dùng đường dẫn như "/src/..." trong JS import
 const aliasPlugin = {
-  name: 'alias-src',
+  name: "alias-src",
   setup(build) {
-    build.onResolve({ filter: /^\/src\// }, args => ({
-      path: path.join(__dirname, '../frontend', args.path.slice(1)),
+    build.onResolve({ filter: /^\/src\// }, (args) => ({
+      path: path.join(__dirname, "../frontend", args.path.slice(1)),
     }));
   },
 };
 
-const pages = [
-  'home',
-  'select',
-  'manga/index',
-  'manga/favorites',
-  'manga/reader',
-  'movie/index',
-  'movie/favorites',
-  'movie/player',
-  'music/index',
-  'music/player',
+// 🟢 Bật hoặc tắt chế độ auto scan
+const USE_AUTO_SCAN = false;
+
+// 🔵 CHẾ ĐỘ 1 – THÊM TAY:
+// 👉 Nếu mày muốn kiểm soát chặt và chỉ build 1 số page
+const manualPages = [
+  "home",
+  "select",
+  "manga/index",
+  "manga/favorites",
+  "manga/reader",
+  "movie/index",
+  "movie/favorites",
+  "movie/player",
+  "music/index",
+  "music/player",
 ];
 
-const outDir = path.join(__dirname, '../frontend/public/dist');
+// 🔴 CHẾ ĐỘ 2 – AUTO SCAN:
+// 👉 Nếu mày thêm nhiều file liên tục và không muốn cập nhật tay
+const scannedPages = glob
+  .sync("../frontend/src/pages/**/*.js")
+  .map((f) =>
+    path
+      .relative(path.join(__dirname, "../frontend/src/pages"), f)
+      .replace(/\.js$/, "")
+  )
+  .filter((f) => !f.endsWith(".test")); // Loại bỏ file test nếu có
+
+const pages = USE_AUTO_SCAN ? scannedPages : manualPages;
+
+const outDir = path.join(__dirname, "../frontend/public/dist");
 if (!fs.existsSync(outDir)) {
   fs.mkdirSync(outDir, { recursive: true });
 }
@@ -42,6 +61,7 @@ if (!fs.existsSync(outDir)) {
         plugins: [aliasPlugin],
       });
     }
+
     const entryCss = path.join(__dirname, `../frontend/src/styles/pages/${p}.css`);
     if (fs.existsSync(entryCss)) {
       await esbuild.build({
@@ -49,7 +69,7 @@ if (!fs.existsSync(outDir)) {
         bundle: true,
         minify: true,
         outfile: path.join(outDir, `${p}.css`),
-        loader: { '.css': 'css' },
+        loader: { ".css": "css" },
         plugins: [aliasPlugin],
       });
     }
