@@ -34,6 +34,7 @@ function renderNowPlayingInfo(track) {
         <div class="now-title">
           ${track.name}
           <button id="btn-add-playlist" title="Thêm vào playlist" style="margin-left:8px;">+</button>
+          <button id="btn-add-thumb" title="Dùng thumbnail này" style="margin-left:6px;">🖼️</button>
         </div>
         <div class="now-artist">${track.artist || "Unknown Artist"}</div>
         <div class="now-extra">
@@ -48,6 +49,33 @@ function renderNowPlayingInfo(track) {
   document.getElementById("btn-add-playlist")?.addEventListener("click", (e) => {
     e.stopPropagation();
     showPlaylistMenu(track.path, track.name, e.target);
+  });
+  document.getElementById("btn-add-thumb")?.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    try {
+      await fetch("/api/music/extract-thumbnail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: sourceKey, path: track.path }),
+      });
+      if (playlistId) {
+        await fetch("/api/music/playlist-thumbnail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: sourceKey, playlistId, srcPath: track.path }),
+        });
+        showToast("✅ Đã đặt thumbnail cho playlist");
+      } else {
+        await fetch("/api/music/folder-thumbnail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: sourceKey, folderPath, srcPath: track.path }),
+        });
+        showToast("✅ Đã đặt thumbnail cho thư mục");
+      }
+    } catch {
+      showToast("❌ Lỗi đặt thumbnail");
+    }
   });
 }
 // ========================
@@ -457,6 +485,15 @@ async function loadPlaylistSlider() {
 
     const withThumbs = await Promise.all(
       playlists.map(async (p) => {
+        if (p.thumbnail) {
+          return {
+            ...p,
+            path: p.id.toString(),
+            thumbnail: buildThumbnailUrl({ thumbnail: p.thumbnail, path: "" }, "music"),
+            isPlaylist: true,
+            type: "folder",
+          };
+        }
         try {
           const r = await fetch(`/api/music/playlist/${p.id}?key=${key}`);
           const detail = await r.json();

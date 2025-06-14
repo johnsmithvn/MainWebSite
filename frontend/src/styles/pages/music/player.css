@@ -388,6 +388,23 @@ body, html {
   background: #169447;
 }
 
+#btn-add-thumb {
+  background: #a259ec;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 18px;
+  cursor: pointer;
+  margin-left: 6px;
+  vertical-align: middle;
+  transition: background 0.2s;
+}
+#btn-add-thumb:hover {
+  background: #873fcb;
+}
+
 /* Collapsible playlist */
 .playlist-collapse {
   margin: 16px 0;

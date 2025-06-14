@@ -135,3 +135,4 @@ app.use("/api/music", require("./api/music/playlist"));
 app.use("/api/music", require("./api/music/music-meta"));
 app.use("/api/music", require("./api/music/reset-music-db"));
 app.use("/api/music", require("./api/music/extract-thumbnail"));
+app.use("/api/music", require("./api/music/set-thumbnail"));
