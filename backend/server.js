@@ -3,6 +3,7 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 const {
   getAllMangaKeys,
   getAllMovieKeys,
@@ -13,7 +14,7 @@ const { ROOT_PATHS } = require("./utils/config");
 const authMiddleware = require("./middleware/auth"); // 🆕 Middleware kiểm tra IP/hostname
 
 const app = express();
-const PORT = 3000; // PORT = process.env.PORT || 3000; // ✅ Lấy từ biến môi trường
+const PORT = process.env.PORT || 3000;
 
 // ✅ Middleware parse JSON body
 app.use(express.json());
@@ -109,11 +110,6 @@ window.musicKeys = ${JSON.stringify(music)};`;
   res.type("application/javascript").send(js);
 });
 
-// ✅ Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server is running at http://localhost:${PORT}`);
-});
-
 app.use("/api/movie", require("./api/movie/movie-folder"));
 // Thêm dòng này vào server.js
 app.use("/api/movie", require("./api/movie/video"));
@@ -137,3 +133,8 @@ app.use("/api/music", require("./api/music/music-meta"));
 app.use("/api/music", require("./api/music/reset-music-db"));
 app.use("/api/music", require("./api/music/extract-thumbnail"));
 app.use("/api/music", require("./api/music/set-thumbnail"));
+
+// ✅ Start server
+app.listen(PORT, () => {
+  console.log(`✅ Server is running at http://localhost:${PORT}`);
+});
