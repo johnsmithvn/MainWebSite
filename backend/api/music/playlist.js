@@ -105,12 +105,20 @@ router.post("/playlist/add", (req, res) => {
     .get(playlistId, path);
   if (exists) return res.json({ success: true, message: "Đã có" });
 
+  // Determine next sortOrder so that tracks maintain added order
+  const maxOrderRow = db
+    .prepare(
+      `SELECT MAX(sortOrder) as maxOrder FROM playlist_items WHERE playlistId = ?`
+    )
+    .get(playlistId);
+  const nextOrder = (maxOrderRow?.maxOrder ?? 0) + 1;
+
   db.prepare(
     `
-    INSERT INTO playlist_items (playlistId, songPath)
-    VALUES (?, ?)
+    INSERT INTO playlist_items (playlistId, songPath, sortOrder)
+    VALUES (?, ?, ?)
   `
-  ).run(playlistId, path);
+  ).run(playlistId, path, nextOrder);
 
   db.prepare(`UPDATE playlists SET updatedAt = ? WHERE id = ?`).run(
     now(),
