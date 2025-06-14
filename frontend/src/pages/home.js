@@ -18,7 +18,7 @@ function renderSourceList(listId, keys, type) {
 
       try {
         if (type === "manga") {
-          window.location.href = "/select.html";
+          window.location.href = "/manga/select.html";
         } else if (type === "movie") {
           const resp = await fetch(`/api/movie/movie-folder-empty?key=${key}`);
           const data = await resp.json();
