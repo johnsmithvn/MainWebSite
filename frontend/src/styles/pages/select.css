@@ -42,6 +42,16 @@ footer {
   padding: 16px;
 }
 
+/* Điều chỉnh card khi dùng ngoài folder-section */
+.select-grid .folder-card {
+  width: 100%;
+}
+
+.select-grid .folder-thumb {
+  aspect-ratio: 3/4;
+  height: auto;
+}
+
 
 /* Không cần style riêng cho card vì dùng chung folder-card */
 
