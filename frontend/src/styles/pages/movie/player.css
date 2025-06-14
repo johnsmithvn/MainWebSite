@@ -1,3 +1,7 @@
+@import "../../base.css";
+@import "../../components/movie/movie-card.css";
+@import "../../components/folder-slider.css";
+
 /* 🎬 Nút Prev / Next / Random */
 .video-nav {
   display: flex;

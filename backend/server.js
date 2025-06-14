@@ -1,6 +1,7 @@
 // 📁 backend/server.js
 
 const express = require("express");
+const compression = require("compression");
 const path = require("path");
 const fs = require("fs");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
@@ -18,6 +19,7 @@ const PORT = process.env.PORT || 3000;
 
 // ✅ Middleware parse JSON body
 app.use(express.json());
+app.use(compression());
 
 // 🛡️ Middleware kiểm tra IP/hostname (tách riêng ra file middleware/auth.js)
 app.use(authMiddleware);
@@ -47,6 +49,7 @@ for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
 
 // ✅ Serve frontend static files
 app.use(express.static(path.join(__dirname, "../frontend/public")));
+app.use("/dist", express.static(path.join(__dirname, "../frontend/public/dist")));
 app.use("/src", express.static(path.join(__dirname, "../frontend/src")));
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/public/home.html"));

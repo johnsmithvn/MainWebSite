@@ -1,7 +1,7 @@
-
-
-
-
+@import "../../base.css";
+@import "../../dark/home-dark.css";
+@import "../../components/folder-slider.css";
+@import "../../components/folder-card.css";
 
 /* =============================
      🔍 RESPONSIVE
