@@ -20,13 +20,22 @@ function createRootFolderCard(folder) {
 
   const thumbnail = document.createElement("img");
   thumbnail.className = "select-thumbnail";
-  thumbnail.src = `/manga/${encodeURIComponent(folder)}/cover.jpg`;
-  thumbnail.alt = folder;
   thumbnail.loading = "lazy";
+  thumbnail.alt = folder;
+  thumbnail.src = "/default/default-cover.jpg";
 
-  thumbnail.onerror = () => {
-    thumbnail.src = "/default/default-cover.jpg";
-  };
+  fetch(
+    `/api/manga/root-thumbnail?key=${encodeURIComponent(
+      sourceKey
+    )}&root=${encodeURIComponent(folder)}`
+  )
+    .then((r) => r.json())
+    .then((d) => {
+      if (d.thumbnail) {
+        thumbnail.src = `/manga/${encodeURIComponent(folder)}/${d.thumbnail}`;
+      }
+    })
+    .catch(() => {});
 
   const label = document.createElement("div");
   label.className = "select-label";

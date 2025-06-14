@@ -51,6 +51,10 @@ function getDB(dbkey) {
     count INTEGER DEFAULT 1,
     PRIMARY KEY (root, path)
     );
+    CREATE TABLE IF NOT EXISTS root_thumbnails (
+      root TEXT PRIMARY KEY,
+      thumbnail TEXT
+    );
     CREATE INDEX IF NOT EXISTS idx_folders_favorite ON folders(root, isFavorite);
   `);
 
