@@ -34,23 +34,9 @@ footer {
   font-weight: bold;
 }
 
-/* Grid chọn folder */
-.select-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 16px;
-  padding: 16px;
-  padding-bottom: 72px; /* tránh card cuối dính sát footer */
-}
-
-/* Điều chỉnh card khi dùng ngoài folder-section */
-.select-grid .folder-card {
-  width: 100%;
-}
-
-.select-grid .folder-thumb {
-  aspect-ratio: 3/4;
-  height: auto;
+/* Khu vực danh sách root folder */
+.folder-section.grid {
+  padding-bottom: 72px; /* tạo khoảng trống tránh đụng footer */
 }
 
 
