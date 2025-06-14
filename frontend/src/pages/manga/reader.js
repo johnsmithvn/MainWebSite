@@ -2,6 +2,7 @@ import {
   getRootFolder,
   getSourceKey,
   requireRootFolder,
+  setRootThumbCache,
 } from "/src/core/storage.js";
 import { renderReader, getCurrentImage } from "/src/core/reader/index.js";
 import {
@@ -76,8 +77,17 @@ async function setRootThumbnail() {
     await fetch("/api/manga/root-thumbnail", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: sourceKey, root: rootFolder, thumbnail: img.replace(`/manga/${encodeURIComponent(rootFolder)}/`, "") }),
+      body: JSON.stringify({
+        key: sourceKey,
+        root: rootFolder,
+        thumbnail: img.replace(`/manga/${encodeURIComponent(rootFolder)}/`, ""),
+      }),
     });
+    setRootThumbCache(
+      sourceKey,
+      rootFolder,
+      img.replace(`/manga/${encodeURIComponent(rootFolder)}/`, "")
+    );
     showToast("✅ Đã lưu thumbnail");
   } catch (err) {
     console.error("set root thumbnail", err);
