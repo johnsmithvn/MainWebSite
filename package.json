@@ -5,7 +5,9 @@
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js",
+    "dev": "npm run build && node backend/server.js"
+
   },
   "keywords": [
     "manga",
