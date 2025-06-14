@@ -40,14 +40,14 @@ async function initializeReader() {
         sourceKey
       )}&root=${encodeURIComponent(rootFolder)}&path=${encodeURIComponent(
         path
-      )}`
+      )}&limit=200&offset=0`
     );
     const data = await response.json();
 
     if (data.type === "reader" && Array.isArray(data.images)) {
       document.getElementById("loading-overlay")?.classList.add("hidden");  // ✅ Ẩn overlay sau khi render
 
-      renderReader(data.images);
+      renderReader(data.images, false, 0, data.totalImages);
       setupReaderUIEvents();
     } else {
       showToast("❌ Folder này không chứa ảnh hoặc không hợp lệ!");

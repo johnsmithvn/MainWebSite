@@ -19,13 +19,15 @@ let controller = null; // Giữ instance của chế độ đọc
 let currentImages = [];
 let currentPage = 0;
 let readerMode = "horizontal"; // "vertical" or "horizontal"
+let totalImages = 0;
 /**
  * 📖 Hàm render chính (gọi khi vào reader.html hoặc đổi mode)
  */
 export function renderReader(
   images,
   preserveCurrentPage = false,
-  scrollPage = 0
+  scrollPage = 0,
+  total = images.length
 ) {
   // tang view
   const urlParams = new URLSearchParams(window.location.search);
@@ -60,6 +62,7 @@ export function renderReader(
   }
   //
   currentImages = images;
+  totalImages = total;
   if (!preserveCurrentPage) currentPage = 0;
 
   const app = document.getElementById("app");
@@ -95,11 +98,12 @@ export function renderReader(
       (newPage) => {
         currentPage = newPage;
       },
-      readerMode === "vertical" ? scrollPage : currentPage
+      readerMode === "vertical" ? scrollPage : currentPage,
+      totalImages
     );
 
     if (readerMode === "horizontal") {
-      updateReaderPageInfo(currentPage + 1, currentImages.length);
+      updateReaderPageInfo(currentPage + 1, totalImages);
       setupPageInfoClick(); // ✅ Gán lại click Trang X/Y về dạng input
     }
     const imageCountInfo = document.getElementById("image-count-info");
@@ -158,7 +162,7 @@ export function toggleReaderMode() {
     readerMode = "vertical";
   }
 
-  renderReader(currentImages, true, scrollPage);
+  renderReader(currentImages, true, scrollPage, totalImages);
 
   setTimeout(() => {
     if (controller?.setCurrentPage) {
@@ -260,7 +264,7 @@ function moveChapter(direction = "next") {
             }?path=${encodeURIComponent(readerPath)}`;
             window.history.replaceState({}, "", newURL);
 
-            renderReader(chapter.images);
+            renderReader(chapter.images, false, 0, chapter.totalImages);
           } else if (isFolderView) {
             // ✅ Nếu đang trong reader.html mà gặp folder chỉ có subfolder
             // → redirect về index.html để hiện list folder
@@ -286,7 +290,7 @@ function setupPageInfoClick() {
 
   pageInfo.onclick = () => {
     if (readerMode === "vertical") return; // scroll mode có modal riêng
-    showJumpPageInput(currentPage, currentImages.length, (newPage) => {
+    showJumpPageInput(currentPage, totalImages, (newPage) => {
       currentPage = newPage;
       if (controller?.setCurrentPage) {
         controller.setCurrentPage(newPage);

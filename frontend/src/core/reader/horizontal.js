@@ -3,6 +3,7 @@ import {
   preloadAroundPage,
   updateReaderPageInfo,
 } from "./utils.js";
+import { getRootFolder, getSourceKey } from "/src/core/storage.js";
 let clickTimer = null;
 
 /**
@@ -12,7 +13,8 @@ export function renderHorizontalReader(
   images,
   container,
   onPageChange = () => {},
-  initialPage = 0
+  initialPage = 0,
+  totalImages = images.length
 ) {
   if (!images || images.length === 0) return;
   console.log("✅ Swiper version:", window.Swiper?.version);
@@ -28,8 +30,10 @@ export function renderHorizontalReader(
   swiperContainer.appendChild(swiperWrapper);
   container.appendChild(swiperContainer);
 
-  // ⚠️ Tránh renderSlide gây lỗi → dùng HTML chuỗi trực tiếp
-  const slides = images.map((src) => {
+  const LIMIT = 200;
+  let imagesList = [...images];
+
+  function createSlide(src) {
     const slide = document.createElement("div");
     slide.className = "swiper-slide";
     slide.style.position = "relative";
@@ -48,7 +52,50 @@ export function renderHorizontalReader(
     zoomWrapper.appendChild(img);
     slide.appendChild(zoomWrapper);
     return slide;
-  });
+  }
+
+  // ⚠️ Tránh renderSlide gây lỗi → dùng HTML chuỗi trực tiếp
+  const slides = imagesList.map(createSlide);
+
+  async function fetchMoreImages() {
+    const offset = imagesList.length;
+    if (offset >= totalImages) return [];
+
+    const key = getSourceKey();
+    const root = getRootFolder();
+    const urlParams = new URLSearchParams(window.location.search);
+    const path = urlParams.get("path") || "";
+
+    try {
+      const res = await fetch(
+        `/api/manga/folder-cache?mode=path&key=${encodeURIComponent(
+          key
+        )}&root=${encodeURIComponent(root)}&path=${encodeURIComponent(
+          path
+        )}&limit=${LIMIT}&offset=${offset}`
+      );
+      const data = await res.json();
+      if (Array.isArray(data.images) && data.images.length > 0) {
+        imagesList = imagesList.concat(data.images);
+        const newSlides = data.images.map(createSlide);
+        if (swiper) {
+          swiper.virtual.appendSlide(newSlides);
+          swiper.virtual.update();
+        }
+        return data.images;
+      }
+    } catch (err) {
+      console.error("❌ load more images", err);
+    }
+    return [];
+  }
+
+  async function ensureLoaded(targetIndex) {
+    while (targetIndex >= imagesList.length && imagesList.length < totalImages) {
+      const added = await fetchMoreImages();
+      if (added.length === 0) break;
+    }
+  }
 
   let swiper = null;
   let currentPage = initialPage;
@@ -62,12 +109,20 @@ export function renderHorizontalReader(
         renderSlide: (slide, index) => slide,
       },
       on: {
-        slideChange: () => {
+        slideChange: async () => {
           if (!swiper) return; // 👈 fix chắc chắn
 
           currentPage = swiper.activeIndex;
-          preloadAroundPage(currentPage, images);
-          updateReaderPageInfo(currentPage + 1, images.length);
+
+          if (
+            imagesList.length < totalImages &&
+            currentPage >= imagesList.length - 5
+          ) {
+            await fetchMoreImages();
+          }
+
+          preloadAroundPage(currentPage, imagesList);
+          updateReaderPageInfo(currentPage + 1, totalImages);
           onPageChange(currentPage);
 
           setTimeout(initPinchZoom, 100);
@@ -94,13 +149,14 @@ export function renderHorizontalReader(
     }, 1000);
 
     // Gọi lần đầu
-    preloadAroundPage(currentPage, images);
-    updateReaderPageInfo(currentPage + 1, images.length);
+    preloadAroundPage(currentPage, imagesList);
+    updateReaderPageInfo(currentPage + 1, totalImages);
     onPageChange(currentPage);
     setTimeout(initPinchZoom, 100);
 
     container.__readerControl = {
-      setCurrentPage: (pageIndex) => {
+      setCurrentPage: async (pageIndex) => {
+        await ensureLoaded(pageIndex);
         if (swiper) swiper.slideTo(pageIndex);
       },
     };
@@ -112,8 +168,9 @@ export function renderHorizontalReader(
   );
 
   return {
-    setCurrentPage(pageIndex) {
+    async setCurrentPage(pageIndex) {
       if (swiper) {
+        await ensureLoaded(pageIndex);
         currentPage = pageIndex;
         swiper.slideTo(pageIndex);
       } else {
