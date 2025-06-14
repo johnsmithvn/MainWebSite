@@ -97,6 +97,11 @@ async function loadRootFolders() {
     showToast("❌ Chưa chọn nguồn manga!");
     return (window.location.href = "/home.html");
   }
+  // 🛑 Nếu source hiện tại không phải manga thì về lại home
+  if (!dbkey.startsWith("ROOT_")) {
+    showToast("⚠️ Nguồn hiện tại không phải manga!");
+    return (window.location.href = "/home.html");
+  }
   try {
     const res = await fetch(`/api/list-roots?key=${encodeURIComponent(dbkey)}`);
     if (!res.ok) {
