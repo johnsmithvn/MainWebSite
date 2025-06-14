@@ -97,7 +97,7 @@ favBtn.onclick = async () => {
 
 if (setThumbBtn) setThumbBtn.onclick = async () => {
   try {
-    await fetch("/api/movie/extract-movie-thumbnail", {
+    await fetch("/api/movie/extract-thumbnail", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key: sourceKey, path: file }),
