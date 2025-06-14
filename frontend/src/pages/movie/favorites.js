@@ -1,7 +1,7 @@
 // 📁 frontend/src/pages/movie/favorites.js
 
 import { getSourceKey } from "/src/core/storage.js";
-import { showToast } from "/src/core/ui.js";
+import { showToast, showOverlay, hideOverlay } from "/src/core/ui.js";
 import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
 
 let allFavorites = [];
@@ -91,7 +91,7 @@ async function loadFavoritesMovie() {
   const key = getSourceKey();
   if (!key) return showToast("❌ Thiếu sourceKey");
 
-  document.getElementById("loading-overlay")?.classList.remove("hidden");
+  showOverlay();
 
   try {
     const res = await fetch(`/api/movie/favorite-movie?key=${encodeURIComponent(key)}`);
@@ -102,7 +102,7 @@ async function loadFavoritesMovie() {
     showToast("❌ Lỗi khi tải danh sách yêu thích phim");
     console.error("favorite-movie.js error:", err);
   } finally {
-    document.getElementById("loading-overlay")?.classList.add("hidden");
+    hideOverlay();
   }
 }
 
