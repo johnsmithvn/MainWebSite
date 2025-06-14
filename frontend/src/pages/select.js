@@ -1,5 +1,11 @@
 // 📁 frontend/src/select.js
-import { withLoading, showToast, showConfirm } from "/src/core/ui.js";
+import {
+  withLoading,
+  showToast,
+  showConfirm,
+  showOverlay,
+  hideOverlay,
+} from "/src/core/ui.js";
 import {
   requireSourceKey,
   getSourceKey,
@@ -144,8 +150,7 @@ document
       showToast("❌ Lỗi khi xoá DB");
       console.error("❌ reset-all-db:", err);
     } finally {
-      const overlay = document.getElementById("loading-overlay");
-      overlay?.classList.add("hidden");
+      hideOverlay();
     }
   });
 

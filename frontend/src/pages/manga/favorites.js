@@ -2,7 +2,7 @@
 
 import { getRootFolder, getSourceKey } from "/src/core/storage.js";
 import { renderFolderCard } from "/src/components/folderCard.js";
-import { showToast } from "/src/core/ui.js";
+import { showToast, showOverlay, hideOverlay } from "/src/core/ui.js";
 import { loadFolder } from "/src/core/folder.js";
 let allFavorites = [];
 let currentPage = 0;
@@ -84,7 +84,7 @@ async function loadFavorites() {
   const key = getSourceKey();
   if (!root || !key) return showToast("❌ Thiếu root hoặc sourceKey");
 
-  document.getElementById("loading-overlay")?.classList.remove("hidden");
+  showOverlay();
 
   try {
     const res = await fetch(
@@ -99,7 +99,7 @@ async function loadFavorites() {
     showToast("❌ Lỗi khi tải danh sách yêu thích");
     console.error("favorite.js error:", err);
   } finally {
-    document.getElementById("loading-overlay")?.classList.add("hidden");
+    hideOverlay();
   }
 }
 

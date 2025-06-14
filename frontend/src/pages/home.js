@@ -1,5 +1,5 @@
 // /src/pages/home.js
-import { showToast, showConfirm } from "/src/core/ui.js";
+import { showToast, showConfirm, showOverlay, hideOverlay } from "/src/core/ui.js";
 
 function renderSourceList(listId, keys, type) {
   const container = document.getElementById(listId);
@@ -14,8 +14,7 @@ function renderSourceList(listId, keys, type) {
       localStorage.setItem("sourceKey", key);
 
       // Hiện overlay loading
-      const overlay = document.getElementById("loading-overlay");
-      overlay?.classList.remove("hidden");
+      showOverlay();
 
       try {
         if (type === "manga") {
@@ -33,7 +32,7 @@ function renderSourceList(listId, keys, type) {
           }
           // Chuyển trang sau khi mọi thứ xong
           window.location.href = "/movie/index.html";
-          overlay?.classList.add("hidden"); // Ẩn overlay nếu lỗi
+          hideOverlay(); // Ẩn overlay nếu lỗi
         } else if (type === "music") {
           const resp = await fetch(`/api/music/music-folder?key=${key}`);
           const data = await resp.json();
@@ -46,13 +45,13 @@ function renderSourceList(listId, keys, type) {
           }
 
           window.location.href = "/music/index.html";
-          overlay?.classList.add("hidden"); // Ẩn overlay nếu lỗi
+          hideOverlay(); // Ẩn overlay nếu lỗi
         }
       } catch (err) {
         // Có thể hiện toast lỗi nếu muốn
         console.error("❌ Lỗi check/scan DB:", err);
         alert("Lỗi khi load dữ liệu!"); // hoặc showToast nếu đã dùng ở home
-        overlay?.classList.add("hidden"); // Ẩn overlay nếu lỗi
+        hideOverlay(); // Ẩn overlay nếu lỗi
       }
     };
     container.appendChild(btn);
@@ -62,8 +61,7 @@ function renderSourceList(listId, keys, type) {
 // Đảm bảo 2 script đã load lên window trước khi render (script inline .js nên yên tâm)
 // Đảm bảo overlay luôn ẩn khi vào lại trang Home
 window.addEventListener("DOMContentLoaded", () => {
-  const overlay = document.getElementById("loading-overlay");
-  overlay?.classList.add("hidden");
+  hideOverlay();
   // ... gọi renderSourceList như cũ
   renderSourceList("manga-list", window.mangaKeys || [], "manga");
   renderSourceList("movie-list", window.movieKeys || [], "movie");
