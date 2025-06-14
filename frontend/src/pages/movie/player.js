@@ -24,6 +24,7 @@ const file = urlParams.get("file");
 const sourceKey = getSourceKey();
 const videoEl = document.getElementById("video-player");
 const favBtn = document.getElementById("fav-btn");
+const setThumbBtn = document.getElementById("set-thumb-btn");
 if (!file || !sourceKey) {
   showToast("❌ Thiếu file hoặc sourceKey");
   throw new Error("Missing file or sourceKey");
@@ -91,6 +92,25 @@ favBtn.onclick = async () => {
   } catch (err) {
     console.error("❌ Failed to toggle favorite:", err);
     showToast("❌ Lỗi khi toggle yêu thích");
+  }
+};
+
+if (setThumbBtn) setThumbBtn.onclick = async () => {
+  try {
+    await fetch("/api/movie/extract-thumbnail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: sourceKey, path: file }),
+    });
+    await fetch("/api/movie/folder-thumbnail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: sourceKey, folderPath, srcPath: file }),
+    });
+    showToast("✅ Đã đặt thumbnail");
+  } catch (err) {
+    console.error("set-thumb error", err);
+    showToast("❌ Lỗi đặt thumbnail");
   }
 };
 

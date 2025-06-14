@@ -316,6 +316,9 @@ async function loadPlaylistSlider() {
 
     const withThumbs = await Promise.all(
       playlists.map(async (p) => {
+        if (p.thumbnail) {
+          return { ...p, path: p.id.toString(), thumbnail: buildThumbnailUrl({ thumbnail: p.thumbnail, path: "" }, "music"), isPlaylist: true, type: "folder" };
+        }
         try {
           const r = await fetch(`/api/music/playlist/${p.id}?key=${key}`);
           const detail = await r.json();

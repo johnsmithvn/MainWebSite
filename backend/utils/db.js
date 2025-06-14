@@ -146,6 +146,7 @@ function getMusicDB(dbkey) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       description TEXT,
+      thumbnail TEXT,
       createdAt INTEGER,
       updatedAt INTEGER
     );
@@ -158,6 +159,14 @@ function getMusicDB(dbkey) {
       PRIMARY KEY (playlistId, songPath)
     );
   `);
+
+  const cols = db
+    .prepare("PRAGMA table_info(playlists)")
+    .all()
+    .map((c) => c.name);
+  if (!cols.includes("thumbnail")) {
+    db.exec("ALTER TABLE playlists ADD COLUMN thumbnail TEXT");
+  }
 
   dbMap[dbkey] = db;
   return db;

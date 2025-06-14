@@ -16,7 +16,7 @@ router.get("/playlists", (req, res) => {
   const rows = db
     .prepare(
       `
-    SELECT id, name, description FROM playlists
+    SELECT id, name, description, thumbnail FROM playlists
     ORDER BY updatedAt DESC
   `
     )
@@ -36,7 +36,7 @@ router.get("/playlist/:id", (req, res) => {
 
   // Lấy thông tin tên playlist
   const playlist = db
-    .prepare(`SELECT id, name, description FROM playlists WHERE id = ?`)
+    .prepare(`SELECT id, name, description, thumbnail FROM playlists WHERE id = ?`)
     .get(id);
 
   // Lấy danh sách track
@@ -66,6 +66,7 @@ router.get("/playlist/:id", (req, res) => {
     id: playlist.id,
     name: playlist.name,
     description: playlist.description,
+    thumbnail: playlist.thumbnail || null,
     tracks: items,
   });
 });
