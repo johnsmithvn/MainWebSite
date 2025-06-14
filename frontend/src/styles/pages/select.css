@@ -40,6 +40,7 @@ footer {
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 16px;
   padding: 16px;
+  padding-bottom: 72px; /* tránh card cuối dính sát footer */
 }
 
 /* Điều chỉnh card khi dùng ngoài folder-section */
