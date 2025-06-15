@@ -1,7 +1,6 @@
 import { toggleReaderUI, updateReaderPageInfo } from "./utils.js";
 
 const imagesPerPage = 200;
-const lazyBatchSize = 50;
 
 /**
  * 📖 Scroll Mode Reader
@@ -30,7 +29,7 @@ export function renderScrollReader(
   let currentPageIndex = startPageIndex;
   renderScrollPage(pages[currentPageIndex]);
 
-  setupScrollLazyLoad(wrapper, pages[currentPageIndex]);
+  setupScrollLazyLoad(wrapper);
   syncScrollState();
 
   wrapper.addEventListener("click", toggleReaderUI);
@@ -63,35 +62,29 @@ export function renderScrollReader(
 
   function renderScrollPage(imageList) {
     wrapper.innerHTML = "";
-    for (let i = 0; i < imageList.length; i++) {
+
+    let index = 0;
+
+    function loadNext() {
+      if (index >= imageList.length) return;
+
       const img = document.createElement("img");
-      img.src = imageList[i];
       img.className = "scroll-img loading";
       img.loading = "lazy";
-      img.onload = () => img.classList.remove("loading");
+      img.onload = () => {
+        img.classList.remove("loading");
+        index++;
+        loadNext();
+      };
+      img.src = imageList[index];
       wrapper.appendChild(img);
     }
+
+    loadNext();
   }
 
-  function setupScrollLazyLoad(wrapper, imagesInPage) {
-    const getLoaded = () => wrapper.querySelectorAll("img").length;
-
+  function setupScrollLazyLoad(wrapper) {
     window.onscroll = () => {
-      const last = wrapper.lastElementChild;
-      if (!last) return;
-      const rect = last.getBoundingClientRect();
-      if (rect.bottom < window.innerHeight + 300) {
-        const loaded = getLoaded();
-        const toLoad = imagesInPage.slice(loaded, loaded + lazyBatchSize);
-        for (const src of toLoad) {
-          const img = document.createElement("img");
-          img.src = src;
-          img.className = "scroll-img";
-          img.loading = "lazy";
-          wrapper.appendChild(img);
-        }
-      }
-
       syncScrollState();
     };
   }
@@ -128,7 +121,7 @@ export function renderScrollReader(
   function switchScrollPage(index) {
     currentPageIndex = index;
     renderScrollPage(pages[currentPageIndex]);
-    setupScrollLazyLoad(wrapper, pages[currentPageIndex]);
+    setupScrollLazyLoad(wrapper);
     updateReaderPageInfo(currentPageIndex + 1, totalPages);
     updateNavButtons();
     scrollTo(wrapper);
