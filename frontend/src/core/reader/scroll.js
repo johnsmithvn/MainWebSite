@@ -63,12 +63,17 @@ export function renderScrollReader(
 
   function renderScrollPage(imageList) {
     wrapper.innerHTML = "";
+    const overlay = document.getElementById("loading-overlay");
+    overlay?.classList.remove("hidden");
     for (let i = 0; i < imageList.length; i++) {
       const img = document.createElement("img");
       img.src = imageList[i];
       img.className = "scroll-img loading";
       img.loading = "lazy";
-      img.onload = () => img.classList.remove("loading");
+      img.onload = () => {
+        img.classList.remove("loading");
+        if (i === 0) overlay?.classList.add("hidden");
+      };
       wrapper.appendChild(img);
     }
   }
