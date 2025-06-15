@@ -212,6 +212,15 @@ img {
   margin: 0 auto;
 }
 
+.footer-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+}
+
 #reader-footer button {
   background: #ffffff22;
   color: white;
@@ -232,6 +241,20 @@ img {
   font-weight: bold;
   font-size: 15px;
   padding: 4px 0;
+}
+
+.scroll-page-btn.hidden {
+  display: none;
+}
+
+.scroll-page-btn .label {
+  margin: 0 4px;
+}
+
+@media (max-width: 768px) {
+  .scroll-page-btn .label {
+    display: none;
+  }
 }
 
 
