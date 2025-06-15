@@ -1,2 +1,32 @@
 @import "../../base.css";
 @import "../../components/movie/movie-card.css";
+
+.favorite-collapse {
+  margin: 16px 0;
+}
+.favorite-collapse summary {
+  cursor: pointer;
+  padding: 8px 20px;
+  font-size: 1.1em;
+  background: #202020;
+  color: #e74c3c;
+  border-radius: 12px;
+  list-style: none;
+  position: relative;
+}
+.favorite-collapse summary::after {
+  content: "\25BC";
+  position: absolute;
+  right: 16px;
+  transition: transform 0.2s;
+}
+.favorite-collapse[open] summary::after {
+  transform: rotate(180deg);
+}
+.favorite-collapse summary::-webkit-details-marker {
+  display: none;
+}
+.favorite-collapse[open] summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}

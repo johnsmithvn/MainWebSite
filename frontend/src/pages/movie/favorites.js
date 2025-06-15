@@ -1,7 +1,12 @@
 // 📁 frontend/src/pages/movie/favorites.js
 
 import { getSourceKey } from "/src/core/storage.js";
-import { showToast, showOverlay, hideOverlay } from "/src/core/ui.js";
+import {
+  showToast,
+  showOverlay,
+  hideOverlay,
+  buildThumbnailUrl,
+} from "/src/core/ui.js";
 import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
 
 let allFavorites = [];
@@ -27,29 +32,51 @@ function renderGridPage() {
   header.appendChild(title);
   section.appendChild(header);
 
-  const grid = document.createElement("div");
-  grid.className = "movie-grid"; // đồng bộ style với index
+  const paged = allFavorites.slice(
+    currentPage * perPage,
+    (currentPage + 1) * perPage
+  );
 
-  const paged = allFavorites.slice(currentPage * perPage, (currentPage + 1) * perPage);
-  paged.forEach((item) => {
-    const parts = item.path?.split("/").filter(Boolean) || [];
-    if (item.type === "video" || item.type === "file") parts.pop();
-    const prefix = parts.join("/");
-    const thumbnailUrl = item.thumbnail
-      ? `/video/${prefix ? prefix + "/" : ""}${item.thumbnail.replace(/\\/g, "/")}`
-      : item.type === "video" || item.type === "file"
-      ? "/default/video-thumb.png"
-      : "/default/folder-thumb.png";
+  const folders = paged.filter((i) => i.type === "folder");
+  const videos = paged.filter((i) => i.type === "video" || i.type === "file");
 
-    const card = renderMovieCardWithFavorite({
-      ...item,
-      thumbnail: thumbnailUrl,
+  if (folders.length) {
+    const det = document.createElement("details");
+    det.className = "favorite-collapse";
+    const sum = document.createElement("summary");
+    sum.textContent = "📁 Folder yêu thích";
+    det.appendChild(sum);
+
+    const grid = document.createElement("div");
+    grid.className = "movie-grid";
+    folders.forEach((item) => {
+      const thumb = buildThumbnailUrl(item, "movie");
+      const card = renderMovieCardWithFavorite({ ...item, thumbnail: thumb });
+      grid.appendChild(card);
     });
+    det.appendChild(grid);
+    section.appendChild(det);
+  }
 
-    grid.appendChild(card);
-  });
+  if (videos.length) {
+    const det = document.createElement("details");
+    det.className = "favorite-collapse";
+    det.open = true;
+    const sum = document.createElement("summary");
+    sum.textContent = "🎬 Video yêu thích";
+    det.appendChild(sum);
 
-  section.appendChild(grid);
+    const grid = document.createElement("div");
+    grid.className = "movie-grid";
+    videos.forEach((item) => {
+      const thumb = buildThumbnailUrl(item, "movie");
+      const card = renderMovieCardWithFavorite({ ...item, thumbnail: thumb });
+      grid.appendChild(card);
+    });
+    det.appendChild(grid);
+    section.appendChild(det);
+  }
+
   app.appendChild(section);
 
   renderPagination();
@@ -131,6 +158,10 @@ async function loadFavoritesMovie() {
   try {
     const res = await fetch(`/api/movie/favorite-movie?key=${encodeURIComponent(key)}`);
     allFavorites = await res.json();
+    allFavorites.sort((a, b) => {
+      if (a.type === b.type) return a.name.localeCompare(b.name);
+      return a.type === "folder" ? -1 : 1;
+    });
     currentPage = 0;
     renderGridPage();
   } catch (err) {
