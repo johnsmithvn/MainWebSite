@@ -318,10 +318,11 @@ setupMovieSidebar(); // ✅ render nội dung sidebar (quét, reset DB, v.v.)
 
 // ⚙️ Double tap và vuốt để tua
 // Thay đổi hai hằng dưới đây nếu muốn điều chỉnh hành vi
+// Có thể đặt data-skip="..." và data-pixels="..." trên thẻ <video>
 // Số giây tua khi double tap
-const SKIP_SECONDS = 10;
+const SKIP_SECONDS = parseFloat(videoEl.dataset.skip) || 10;
 // Số pixel cần vuốt để tua 1 giây (giảm giá trị này để vuốt ngắn nhưng tua nhiều)
-const PIXELS_PER_SECOND = 10;
+const PIXELS_PER_SECOND = parseFloat(videoEl.dataset.pixels) || 10;
 
 // ⚡ Double tap trái/phải để tua đúng 10s
 videoEl.addEventListener("dblclick", (e) => {
@@ -348,6 +349,7 @@ let startTime = 0;
 let dragging = false;
 const SWIPE_THRESHOLD = 5; // px
 
+// Bắt đầu theo dõi khi người dùng chạm vào màn hình
 gestureTarget.addEventListener("pointerdown", (e) => {
   dragStartX = e.clientX;
   startTime = videoEl.currentTime;
@@ -355,6 +357,7 @@ gestureTarget.addEventListener("pointerdown", (e) => {
   gestureTarget.setPointerCapture(e.pointerId);
 });
 
+// Khi ngón tay di chuyển, cập nhật thời gian preview
 gestureTarget.addEventListener("pointermove", (e) => {
   if (dragStartX === null) return;
   const diff = e.clientX - dragStartX;
@@ -367,6 +370,7 @@ gestureTarget.addEventListener("pointermove", (e) => {
   videoEl.currentTime = Math.max(0, Math.min(videoEl.duration, preview));
 });
 
+// Kết thúc vuốt, áp dụng thay đổi thời gian và hiển thị thông báo
 gestureTarget.addEventListener("pointerup", (e) => {
   if (dragStartX === null) return;
   const diff = e.clientX - dragStartX;
@@ -382,6 +386,7 @@ gestureTarget.addEventListener("pointerup", (e) => {
   gestureTarget.releasePointerCapture(e.pointerId);
 });
 
+// Hủy thao tác nếu hệ điều hành cắt ngang (ví dụ có cuộc gọi đến)
 gestureTarget.addEventListener("pointercancel", () => {
   dragStartX = null;
   dragging = false;
