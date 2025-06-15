@@ -1,4 +1,8 @@
-import { toggleReaderUI, updateReaderPageInfo } from "./utils.js";
+import {
+  toggleReaderUI,
+  updateReaderPageInfo,
+  hideReaderUI,
+} from "./utils.js";
 
 const imagesPerPage = 200;
 
@@ -32,8 +36,29 @@ export function renderScrollReader(
   setupScrollLazyLoad(wrapper);
   syncScrollState();
 
-  wrapper.addEventListener("click", toggleReaderUI);
-  window.onscroll = syncScrollState;
+  let clickTimer = null;
+  wrapper.addEventListener("click", (e) => handleClick(e));
+
+  function handleClick(e) {
+    if (clickTimer !== null) {
+      clearTimeout(clickTimer);
+      clickTimer = null;
+      return; // double click -> zoom handled by pinch-zoom lib
+    }
+    clickTimer = setTimeout(() => {
+      clickTimer = null;
+      const pinch = e.target.closest(".pinch-zoom");
+      const scale = pinch?.style?.transform;
+      if (!scale || scale.includes("scale(1")) {
+        toggleReaderUI();
+      }
+    }, 120);
+  }
+
+  window.onscroll = () => {
+    hideReaderUI();
+    syncScrollState();
+  };
 
   const pageInfo = document.getElementById("page-info");
   const prevPageBtn = document.getElementById("prev-page-btn");
@@ -68,16 +93,20 @@ export function renderScrollReader(
     function loadNext() {
       if (index >= imageList.length) return;
 
+      const pinch = document.createElement("div");
+      pinch.className = "pinch-zoom";
       const img = document.createElement("img");
       img.className = "scroll-img loading";
       img.loading = "lazy";
       img.onload = () => {
         img.classList.remove("loading");
+        initPinchZoom();
         index++;
         loadNext();
       };
       img.src = imageList[index];
-      wrapper.appendChild(img);
+      pinch.appendChild(img);
+      wrapper.appendChild(pinch);
     }
 
     loadNext();
@@ -85,6 +114,7 @@ export function renderScrollReader(
 
   function setupScrollLazyLoad(wrapper) {
     window.onscroll = () => {
+      hideReaderUI();
       syncScrollState();
     };
   }
@@ -214,6 +244,18 @@ export function renderScrollReader(
     currentPageIndex = targetPage; // 🛠️ cập nhật page chính xác
     switchScrollPage(targetPage);
     updateReaderPageInfo(currentPageIndex + 1, totalPages); // 🧠 cập nhật lại Trang X/Y
+  }
+
+  function initPinchZoom() {
+    wrapper.querySelectorAll('.pinch-zoom').forEach((el) => {
+      if (!el.__pinchZoomInitialized) {
+        el.__pinchZoomInitialized = true;
+        new window.PinchZoom.default(el, {
+          draggableUnzoomed: false,
+          tapZoomFactor: 2,
+        });
+      }
+    });
   }
 
   return { setCurrentPage };
