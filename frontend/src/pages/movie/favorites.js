@@ -16,12 +16,15 @@ let folderPage = 0;
 let videoPage = 0;
 const perPageFolder = 16;
 const perPageVideo = 16;
+let folderOpen = false;
+let videoOpen = true;
 
 // Tạo một section hiển thị danh sách và phân trang
-function createSection(items, page, perPage, title, open, onChange) {
+function createSection(items, page, perPage, title, open, setOpen, onChange) {
   const det = document.createElement("details");
   det.className = "favorite-collapse";
-  if (open) det.open = true;
+  det.open = open;
+  det.addEventListener("toggle", () => setOpen(det.open));
 
   const sum = document.createElement("summary");
   sum.textContent = title;
@@ -115,7 +118,10 @@ function renderGridPage() {
         folderPage,
         perPageFolder,
         "📁 Folder yêu thích",
-        false,
+        folderOpen,
+        (open) => {
+          folderOpen = open;
+        },
         (p) => {
           folderPage = p;
           renderGridPage();
@@ -131,7 +137,10 @@ function renderGridPage() {
         videoPage,
         perPageVideo,
         "🎬 Video yêu thích",
-        true,
+        videoOpen,
+        (open) => {
+          videoOpen = open;
+        },
         (p) => {
           videoPage = p;
           renderGridPage();
