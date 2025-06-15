@@ -8,17 +8,6 @@ import { renderFolderSlider } from "/src/components/folderSlider.js";
 
 const SEARCH_LIMIT = 50;
 
-function autoLoadMore(dropdown, done, loading, loadMoreFn) {
-  if (
-    !done &&
-    !loading &&
-    dropdown.scrollTop + dropdown.clientHeight >=
-      dropdown.scrollHeight - 20
-  ) {
-    loadMoreFn();
-  }
-}
-
 // State cho tìm kiếm
 let mangaSearchOffset = 0;
 let mangaSearchKeyword = "";
@@ -125,9 +114,6 @@ export async function filterManga(loadMore = false) {
     console.error("❌ Lỗi tìm kiếm:", err);
   } finally {
     mangaSearchLoading = false;
-    autoLoadMore(dropdown, mangaSearchDone, mangaSearchLoading, () =>
-      filterManga(true)
-    );
   }
 }
 export async function filterMovie(loadMore = false) {
@@ -220,9 +206,6 @@ export async function filterMovie(loadMore = false) {
     dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
   } finally {
     movieSearchLoading = false;
-    autoLoadMore(dropdown, movieSearchDone, movieSearchLoading, () =>
-      filterMovie(true)
-    );
   }
 }
 
@@ -910,9 +893,6 @@ export async function filterMusic(loadMore = false) {
     dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
   } finally {
     musicSearchLoading = false;
-    autoLoadMore(dropdown, musicSearchDone, musicSearchLoading, () =>
-      filterMusic(true)
-    );
   }
 }
 

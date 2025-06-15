@@ -29,10 +29,12 @@ export function setupSearchLoadMore(onLoadMore) {
   const dropdown = document.getElementById("search-dropdown");
   if (!dropdown || dropdown.dataset.loadMoreInit) return;
   dropdown.dataset.loadMoreInit = "1";
+
   dropdown.addEventListener("scroll", () => {
     if (
+      !dropdown.classList.contains("hidden") &&
       dropdown.scrollTop + dropdown.clientHeight >=
-      dropdown.scrollHeight - 20
+        dropdown.scrollHeight - 20
     ) {
       onLoadMore();
     }
