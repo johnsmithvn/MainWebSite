@@ -60,6 +60,11 @@ function renderPagination() {
   const app = document.getElementById("movie-app");
   const totalPages = Math.ceil(allFavorites.length / perPage);
 
+  const oldControls = app.querySelector(".reader-controls");
+  if (oldControls) oldControls.remove();
+  const oldInfo = app.querySelector(".favorite-page-info");
+  if (oldInfo) oldInfo.remove();
+
   const nav = document.createElement("div");
   nav.className = "reader-controls";
 
@@ -72,9 +77,30 @@ function renderPagination() {
   };
   nav.appendChild(prev);
 
-  const info = document.createElement("div");
-  info.textContent = `Trang ${currentPage + 1} / ${totalPages}`;
-  nav.appendChild(info);
+  const jumpForm = document.createElement("form");
+  jumpForm.style.display = "inline-block";
+  jumpForm.style.margin = "0 10px";
+  jumpForm.onsubmit = (e) => {
+    e.preventDefault();
+    const page = parseInt(jumpInput.value) - 1;
+    if (!isNaN(page) && page >= 0) {
+      currentPage = page;
+      renderGridPage();
+    }
+  };
+
+  const jumpInput = document.createElement("input");
+  jumpInput.type = "number";
+  jumpInput.min = 1;
+  jumpInput.max = totalPages;
+  jumpInput.placeholder = "Trang...";
+  jumpInput.style.width = "60px";
+
+  const jumpBtn = document.createElement("button");
+  jumpBtn.textContent = "⏩";
+  jumpForm.appendChild(jumpInput);
+  jumpForm.appendChild(jumpBtn);
+  nav.appendChild(jumpForm);
 
   const next = document.createElement("button");
   next.textContent = "Trang sau ➡";
@@ -86,6 +112,13 @@ function renderPagination() {
   nav.appendChild(next);
 
   app.appendChild(nav);
+
+  const info = document.createElement("div");
+  info.textContent = `Trang ${currentPage + 1} / ${totalPages}`;
+  info.className = "favorite-page-info";
+  info.style.textAlign = "center";
+  info.style.marginTop = "10px";
+  app.appendChild(info);
 }
 
 // ✅ Gọi API và khởi động
