@@ -10,12 +10,14 @@ import {
 import { buildThumbnailUrl } from "../core/ui.js";
 
 /**
- * Hiển thị slider thư mục (truyện hoặc phim) dạng ngang scroll
- * @param {Object} options
- * @param {string} options.title - tiêu đề (ví dụ: "✨ Random")
- * @param {Array} options.folders - danh sách folder
- * @param {boolean} options.showViews - có hiển thị lượt xem không
- * @param {string} [options.targetId] - nếu truyền thì render đúng vào container đó
+ * Hiển thị thanh trượt thư mục/phim/nhạc.
+ * Dùng scroll ngang và có nút chuyển slide.
+ * @param {Object} options Thông tin cấu hình
+ * @param {string} options.title Tiêu đề hiển thị
+ * @param {Array} options.folders Danh sách folder hoặc file
+ * @param {boolean} options.showViews Có hiện lượt xem hay không
+ * @param {string} [options.targetId] Id section sẽ render vào
+ * @param {Function} [options.onRefresh] Hàm gọi lại khi ấn refresh
  */
 export function renderFolderSlider({
   title,
@@ -268,8 +270,7 @@ export function renderFolderSlider({
   wrapper.addEventListener("mouseleave", startAutoScroll);
 }
 
-// 👉 Tạo section nếu thiếu trên trang
-// 👉 Tạo section nếu thiếu nếu chưa có section (movie-player dùng)
+// 👉 Tạo sẵn các section random nếu trang chưa có (dùng cho player)
 export function setupRandomSectionsIfMissing() {
   ["randomFolderSection", "randomVideoSection"].forEach((id) => {
     if (!document.getElementById(id)) {
@@ -280,7 +281,7 @@ export function setupRandomSectionsIfMissing() {
   });
 }
 
-// 👉 Hàm load 2 slider random (folder + video)
+// 👉 Hàm tải 2 slider ngẫu nhiên (folder và video/audio)
 export function loadRandomSliders(contentType = "movie") {
   const sourceKey = getSourceKey();
   const isMusic = contentType === "music";
@@ -308,7 +309,7 @@ export function loadRandomSliders(contentType = "movie") {
   );
 }
 
-// ✅ Hàm riêng gọi API và render
+// ✅ Hàm gọi API lấy dữ liệu ngẫu nhiên và render slider
 async function loadRandomSection(
   type,
   sourceKey,

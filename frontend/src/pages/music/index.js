@@ -26,6 +26,7 @@ window.addEventListener("DOMContentLoaded", () => {
   setupRandomSectionsIfMissing();
   loadRandomSliders("music");
   loadPlaylistSlider();
+  loadTopAudioSlider();
   renderRecentMusicOnLoad();
   setupExtractThumbnailButton();
 
@@ -43,6 +44,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
 });
 
+// Lấy path ban đầu từ URL nếu có
 function getInitialPathFromURL() {
   const urlParams = new URLSearchParams(window.location.search);
   return urlParams.get("path") || "";
@@ -76,10 +78,12 @@ const perPage = 20;
 let fullList = [];
 let currentPath = "";
 
+// Phân trang danh sách theo số lượng mặc định
 function paginateList(list) {
   return list.slice(musicPage * perPage, (musicPage + 1) * perPage);
 }
 
+// Tải thư mục nhạc hiện tại và hiển thị grid bài hát
 function loadMusicFolder(path = "", page = 0) {
   const sourceKey = getSourceKey();
   if (!sourceKey) {
@@ -125,6 +129,7 @@ function loadMusicFolder(path = "", page = 0) {
     });
 }
 
+// Render danh sách bài hát vào lưới hiển thị
 function renderMusicGrid(list) {
   const app = document.getElementById("music-app");
   app.innerHTML = "";
@@ -167,6 +172,7 @@ grid.className = "music-grid";
 
 
 
+// Khi trang load, hiển thị danh sách nhạc vừa nghe từ localStorage
 function renderRecentMusicOnLoad() {
   const raw = localStorage.getItem(recentViewedMusicKey());
   if (raw) {
@@ -177,6 +183,7 @@ function renderRecentMusicOnLoad() {
 
 
 
+// Gắn sự kiện extract lại thumbnail cho toàn bộ folder hiện tại
 function setupExtractThumbnailButton() {
   const extractBtn = document.getElementById("extract-thumbnail-btn");
   if (!extractBtn) return;
@@ -236,7 +243,7 @@ function setupExtractThumbnailButton() {
 
 
 
-// Thêm UI phân trang cho Music
+// Thêm giao diện phân trang cho danh sách nhạc
 function updateMusicPaginationUI(currentPage, totalItems, perPage) {
   const totalPages = Math.ceil(totalItems / perPage);
   const app = document.getElementById("music-app");
@@ -296,6 +303,7 @@ function updateMusicPaginationUI(currentPage, totalItems, perPage) {
   app.appendChild(info);
 }
 
+// 👉 Tải slider danh sách Playlist
 async function loadPlaylistSlider() {
   const key = getSourceKey();
   if (!key) return;
@@ -340,4 +348,22 @@ async function loadPlaylistSlider() {
     console.error("loadPlaylistSlider error", err);
     container.innerHTML = "<p>❌ Lỗi tải playlist</p>";
   }
+}
+
+// 👉 Tải slider top bài hát có nhiều lượt nghe nhất
+function loadTopAudioSlider() {
+  const key = getSourceKey();
+  if (!key) return;
+
+  fetch(`/api/music/audio-cache?key=${key}&mode=top`)
+    .then((res) => res.json())
+    .then((data) => {
+      renderFolderSlider({
+        title: "🔥 Xem nhiều",
+        folders: data.folders,
+        showViews: true,
+        targetId: "section-topview",
+      });
+    })
+    .catch((err) => console.error("loadTopAudioSlider error", err));
 }
