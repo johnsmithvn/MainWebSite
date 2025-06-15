@@ -33,3 +33,15 @@
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
+
+/* ⭐ Highlight cho khu vực Playlist */
+#section-playlists .folder-section-header {
+  border: 2px solid #1db954;
+  background: rgba(29, 185, 84, 0.1);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+#section-playlists .folder-section-title {
+  color: #1db954;
+}
