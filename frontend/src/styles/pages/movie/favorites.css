@@ -1,5 +1,6 @@
 @import "../../base.css";
 @import "../../components/movie/movie-card.css";
+@import "../../components/folder-slider.css";
 
 .favorite-collapse {
   margin: 16px 0;
@@ -39,4 +40,10 @@
 .favorite-collapse .movie-grid {
   margin-top: 16px;
   width: 100%;
+  padding: 0 16px;
+}
+
+.favorite-collapse .reader-controls,
+.favorite-page-info {
+  padding: 0 16px;
 }
