@@ -15,8 +15,12 @@ import {
   hideOverlay,
 } from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
+// Update local caches when toggling favorite so other pages reflect the change
+import { updateFavoriteEverywhere } from "/src/components/folderCard.js";
 
 window.addEventListener("DOMContentLoaded", initializeReader);
+let isFavorite = false;
+let currentFolderPath = "";
 /**
  * Fetch and render reader data based on the URL path.
  */
@@ -34,7 +38,8 @@ async function initializeReader() {
     return;
   }
 
-  const path = rawPath;  // 🔥 Giữ nguyên path, backend tự lo /__self__
+  const path = rawPath; // 🔥 Giữ nguyên path, backend tự lo /__self__
+  currentFolderPath = path.replace(/\/__self__$/, "");
 
   try {
     const response = await fetch(
@@ -51,6 +56,7 @@ async function initializeReader() {
 
       renderReader(data.images);
       setupReaderUIEvents();
+      checkFavoriteState();
     } else {
       showToast("❌ Folder này không chứa ảnh hoặc không hợp lệ!");
     }
@@ -68,6 +74,7 @@ function setupReaderUIEvents() {
   document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
   document.getElementById("floatingSearchInput")?.addEventListener("input", filterManga);
   document.getElementById("setThumbnailBtn")?.addEventListener("click", setRootThumbnail);
+  document.getElementById("favToggleBtn")?.addEventListener("click", toggleFavorite);
 }
 
 async function setRootThumbnail() {
@@ -94,5 +101,50 @@ async function setRootThumbnail() {
   } catch (err) {
     console.error("set root thumbnail", err);
     showToast("❌ Lỗi set thumbnail");
+  }
+}
+
+function updateFavBtn() {
+  const btn = document.getElementById("favToggleBtn");
+  if (!btn) return;
+  btn.textContent = isFavorite ? "❤️" : "🤍";
+  btn.title = isFavorite ? "Bỏ yêu thích" : "Thêm yêu thích";
+}
+
+async function checkFavoriteState() {
+  const key = getSourceKey();
+  const root = getRootFolder();
+  if (!key || !root) return;
+  try {
+    const res = await fetch(
+      `/api/manga/favorite?key=${encodeURIComponent(key)}&root=${encodeURIComponent(
+        root
+      )}`
+    );
+    const list = await res.json();
+    isFavorite = list.some((f) => f.path === currentFolderPath);
+    updateFavBtn();
+  } catch (err) {
+    console.warn("❌ Failed to check favorite:", err);
+  }
+}
+
+async function toggleFavorite() {
+  const key = getSourceKey();
+  const root = getRootFolder();
+  if (!key || !root) return;
+  isFavorite = !isFavorite;
+  updateFavBtn();
+  try {
+    await fetch("/api/manga/favorite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dbkey: key, path: currentFolderPath, value: isFavorite }),
+    });
+    // Sync caches (folder lists, random sliders, etc.) with new favorite state
+    updateFavoriteEverywhere(key, root, currentFolderPath, isFavorite);
+  } catch (err) {
+    console.error("❌ Lỗi khi toggle favorite:", err);
+    showToast("❌ Lỗi khi toggle yêu thích");
   }
 }
