@@ -2,3 +2,46 @@
 @import "../../components/folder-slider.css";
 @import "../../components/music/music-card.css";
 @import "../../components/music/play-list-popup.css";
+
+/* Collapsible section for random folder */
+.random-collapse {
+  margin: 16px 0;
+}
+.random-collapse summary {
+  cursor: pointer;
+  padding: 8px 20px;
+  font-size: 1.1em;
+  background: #202020;
+  color: #f39c12;
+  border-radius: 12px;
+  list-style: none;
+  position: relative;
+}
+.random-collapse summary::after {
+  content: "\25BC";
+  position: absolute;
+  right: 16px;
+  transition: transform 0.2s;
+}
+.random-collapse[open] summary::after {
+  transform: rotate(180deg);
+}
+.random-collapse summary::-webkit-details-marker {
+  display: none;
+}
+.random-collapse[open] summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* ⭐ Highlight cho khu vực Playlist */
+#section-playlists .folder-section-header {
+  border: 2px solid #1db954;
+  background: rgba(29, 185, 84, 0.1);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+#section-playlists .folder-section-title {
+  color: #1db954;
+}

@@ -49,17 +49,22 @@
       <aside id="sidebar-menu"></aside>
       <div class="main-content">
         <!-- ✅ CÁC SLIDER RANDOM -->
-        <section
-          id="randomFolderSection"
-          class="folder-slider-section"
-        ></section>
-        <section id="section-recent" class="folder-slider-section"></section>
-
-        <section
-          id="randomVideoSection"
-          class="folder-slider-section"
-        ></section>
-        <section id="section-topview" class="folder-slider-section"></section>
+        <details id="random-video-collapse" class="random-collapse" open>
+          <summary>🎬 Video ngẫu nhiên</summary>
+          <section id="randomVideoSection" class="folder-slider-section"></section>
+        </details>
+        <details id="recent-video-collapse" class="random-collapse" open>
+          <summary>🕓 Vừa xem</summary>
+          <section id="section-recent" class="folder-slider-section"></section>
+        </details>
+        <details id="topview-video-collapse" class="random-collapse" open>
+          <summary>🔥 Xem nhiều</summary>
+          <section id="section-topview" class="folder-slider-section"></section>
+        </details>
+        <details id="random-folder-collapse" class="random-collapse">
+          <summary>🎲 Folder ngẫu nhiên</summary>
+          <section id="randomFolderSection" class="folder-slider-section"></section>
+        </details>
 
         <!-- ✅ APP CHÍNH -->
         <button id="back-root" style="display: none">
