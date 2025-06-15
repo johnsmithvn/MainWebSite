@@ -1,6 +1,6 @@
 {
   "name": "MainWebSite",
-  "version": "1.4.5",
+  "version": "1.4.6",
   "description": "Web site đọc truyện xem phim local ",
   "main": "backend/server.js",
   "scripts": {

@@ -321,10 +321,11 @@ setupMovieSidebar(); // ✅ render nội dung sidebar (quét, reset DB, v.v.)
 // Có thể đặt data-skip="..." và data-pixels="..." trên thẻ <video>
 // Số giây tua khi double tap
 const SKIP_SECONDS = parseFloat(videoEl.dataset.skip) || 10;
-// Số pixel cần vuốt để tua 1 giây (giảm giá trị này để vuốt ngắn nhưng tua nhiều)
+// Số pixel cần vuốt để tua 1 giây.
+// Giảm giá trị này nếu muốn vuốt ngắn nhưng tua nhiều hơn
 const PIXELS_PER_SECOND = parseFloat(videoEl.dataset.pixels) || 10;
 
-// ⚡ Double tap trái/phải để tua đúng 10s
+// ⚡ Double tap trái/phải để tua đúng SKIP_SECONDS giây
 videoEl.addEventListener("dblclick", (e) => {
   const x = e.clientX;
   const width = videoEl.clientWidth;
