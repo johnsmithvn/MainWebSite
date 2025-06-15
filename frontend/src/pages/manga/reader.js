@@ -15,6 +15,7 @@ import {
   hideOverlay,
 } from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
+// Update local caches when toggling favorite so other pages reflect the change
 import { updateFavoriteEverywhere } from "/src/components/folderCard.js";
 
 window.addEventListener("DOMContentLoaded", initializeReader);
@@ -140,6 +141,7 @@ async function toggleFavorite() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ dbkey: key, path: currentFolderPath, value: isFavorite }),
     });
+    // Sync caches (folder lists, random sliders, etc.) with new favorite state
     updateFavoriteEverywhere(key, root, currentFolderPath, isFavorite);
   } catch (err) {
     console.error("❌ Lỗi khi toggle favorite:", err);
