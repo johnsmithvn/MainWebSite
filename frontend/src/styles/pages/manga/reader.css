@@ -214,7 +214,11 @@ img {
 
 .footer-center {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
+  gap: 10px;
 }
 
 #reader-footer button {
@@ -239,23 +243,16 @@ img {
   padding: 4px 0;
 }
 
-.scroll-page-nav {
-  margin-top: 6px;
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-
-.scroll-page-nav.hidden {
+.scroll-page-btn.hidden {
   display: none;
 }
 
-.scroll-page-nav .label {
-  margin: 0 2px;
+.scroll-page-btn .label {
+  margin: 0 4px;
 }
 
 @media (max-width: 768px) {
-  .scroll-page-nav .label {
+  .scroll-page-btn .label {
     display: none;
   }
 }

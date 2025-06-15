@@ -39,7 +39,6 @@ export function renderScrollReader(
   const pageInfo = document.getElementById("page-info");
   const prevPageBtn = document.getElementById("prev-page-btn");
   const nextPageBtn = document.getElementById("next-page-btn");
-  const scrollPageNav = document.getElementById("scroll-page-nav");
   if (pageInfo) {
     pageInfo.style.cursor = "pointer";
     pageInfo.onclick = null; // 🧹 xoá sự kiện cũ trước khi gán mới
@@ -47,9 +46,10 @@ export function renderScrollReader(
     updateReaderPageInfo(currentPageIndex + 1, totalPages);
   }
 
-  if (scrollPageNav && prevPageBtn && nextPageBtn) {
+  if (prevPageBtn && nextPageBtn) {
     if (totalPages > 1) {
-      scrollPageNav.classList.remove("hidden");
+      prevPageBtn.classList.remove("hidden");
+      nextPageBtn.classList.remove("hidden");
     }
     prevPageBtn.onclick = () => {
       if (currentPageIndex > 0) switchScrollPage(currentPageIndex - 1);
