@@ -328,57 +328,38 @@ videoEl.addEventListener("dblclick", (e) => {
   }
 });
 
-// 🎯 Gắn gesture cho video
-const hammer = new Hammer(videoEl);
-hammer.get("pan").set({ direction: Hammer.DIRECTION_HORIZONTAL });
+// 🎯 Vuốt ngang để tua
+const gestureLayer = document.getElementById("gesture-layer");
+let dragStartX = null;
+let startTime = 0;
 
-let panDeltaX = 0;
-
-hammer.on("pan", (ev) => {
-  panDeltaX = ev.deltaX;
-
-  // 👉 Optional: hiệu ứng preview hoặc bar (nếu bạn muốn)
+gestureLayer.addEventListener("pointerdown", (e) => {
+  dragStartX = e.clientX;
+  startTime = videoEl.currentTime;
+  gestureLayer.setPointerCapture(e.pointerId);
 });
 
-hammer.on("panend", () => {
-  const skipSeconds = Math.floor(panDeltaX / 10); // 10px = 1s
-  if (skipSeconds !== 0) {
-    videoEl.currentTime = Math.max(
-      0,
-      Math.min(videoEl.duration, videoEl.currentTime + skipSeconds)
-    );
-    showToast(`${skipSeconds > 0 ? "⏩" : "⏪"} ${Math.abs(skipSeconds)}s`);
+gestureLayer.addEventListener("pointermove", (e) => {
+  if (dragStartX === null) return;
+  const diff = e.clientX - dragStartX;
+  const preview = startTime + diff / 10;
+  videoEl.currentTime = Math.max(0, Math.min(videoEl.duration, preview));
+});
+
+gestureLayer.addEventListener("pointerup", (e) => {
+  if (dragStartX === null) return;
+  const diff = e.clientX - dragStartX;
+  const skipped = Math.floor(diff / 10);
+  if (skipped !== 0) {
+    showToast(`${skipped > 0 ? "⏩" : "⏪"} ${Math.abs(skipped)}s`);
   }
-  panDeltaX = 0;
+  dragStartX = null;
+  gestureLayer.releasePointerCapture(e.pointerId);
 });
-// // 📱 Vuốt ngang để tua (mobile only)
-// let isDragging = false;
-// let startX = 0;
-// let lastDelta = 0;
 
-// videoEl.addEventListener("touchstart", (e) => {
-//   if (e.touches.length !== 1) return;
-//   isDragging = true;
-//   startX = e.touches[0].clientX;
-//   lastDelta = 0;
-// }, { passive: true });
-
-// videoEl.addEventListener("touchmove", (e) => {
-//   if (!isDragging || e.touches.length !== 1) return;
-//   const deltaX = e.touches[0].clientX - startX;
-//   lastDelta = deltaX;
-// }, { passive: true });
-
-// videoEl.addEventListener("touchend", () => {
-//   if (!isDragging) return;
-//   isDragging = false;
-
-//   const skipSeconds = Math.floor(lastDelta / 10); // 10px = 1s
-//   if (skipSeconds !== 0) {
-//     videoEl.currentTime = Math.max(0, Math.min(videoEl.duration, videoEl.currentTime + skipSeconds));
-//     showToast(`${skipSeconds > 0 ? "⏩" : "⏪"} ${Math.abs(skipSeconds)}s`);
-//   }
-// });
+gestureLayer.addEventListener("pointercancel", () => {
+  dragStartX = null;
+});
 
 // 👉 Nút "Mở bằng ExoPlayer" (nếu app hỗ trợ)
 document.getElementById("btn-open-exoplayer")?.addEventListener("click", () => {
