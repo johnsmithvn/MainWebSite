@@ -3,6 +3,8 @@
 
 .favorite-collapse {
   margin: 16px 0;
+  display: block;
+  width: 100%;
 }
 .favorite-collapse summary {
   cursor: pointer;
@@ -29,10 +31,6 @@
 .favorite-collapse[open] summary {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
-}
-
-.favorite-collapse {
-  width: 100%;
 }
 
 .favorite-collapse .movie-grid {
