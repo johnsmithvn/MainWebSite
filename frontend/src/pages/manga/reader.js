@@ -11,6 +11,8 @@ import {
   filterManga,
   toggleSearchBar,
   showToast,
+  showOverlay,
+  hideOverlay,
 } from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 
@@ -19,7 +21,7 @@ window.addEventListener("DOMContentLoaded", initializeReader);
  * Fetch and render reader data based on the URL path.
  */
 async function initializeReader() {
-  document.getElementById("loading-overlay")?.classList.remove("hidden");
+  showOverlay();
 
   const sourceKey = getSourceKey();
   const rootFolder = getRootFolder();
@@ -45,7 +47,7 @@ async function initializeReader() {
     const data = await response.json();
 
     if (data.type === "reader" && Array.isArray(data.images)) {
-      document.getElementById("loading-overlay")?.classList.add("hidden");  // ✅ Ẩn overlay sau khi render
+      hideOverlay(); // ✅ Ẩn overlay sau khi render
 
       renderReader(data.images);
       setupReaderUIEvents();
