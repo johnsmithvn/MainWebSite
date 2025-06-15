@@ -116,3 +116,9 @@
   border-color: #888;
 }
 
+/* 🎚 Cấu hình cho gesture trên video */
+#video-player {
+  touch-action: pan-y;
+  user-select: none;
+}
+

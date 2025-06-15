@@ -316,10 +316,10 @@ document.getElementById("sidebarToggle")?.addEventListener("click", () => {
 
 setupMovieSidebar(); // ✅ render nội dung sidebar (quét, reset DB, v.v.)
 
-// ⚙️ Double tap để tua 10s
+// ⚙️ Double tap và vuốt để tua
+// Thay đổi hai hằng dưới đây nếu muốn điều chỉnh hành vi
 // Số giây tua khi double tap
 const SKIP_SECONDS = 10;
-
 // Số pixel cần vuốt để tua 1 giây (giảm giá trị này để vuốt ngắn nhưng tua nhiều)
 const PIXELS_PER_SECOND = 10;
 
@@ -341,19 +341,28 @@ videoEl.addEventListener("dblclick", (e) => {
 });
 
 // 🎯 Vuốt ngang để tua (dùng hằng PIXELS_PER_SECOND để chỉnh độ nhạy)
+// Nếu không di chuyển quá SWIPE_THRESHOLD thì sự kiện vẫn được tính là nhấn
 const gestureTarget = videoEl;
 let dragStartX = null;
 let startTime = 0;
+let dragging = false;
+const SWIPE_THRESHOLD = 5; // px
 
 gestureTarget.addEventListener("pointerdown", (e) => {
   dragStartX = e.clientX;
   startTime = videoEl.currentTime;
+  dragging = false;
   gestureTarget.setPointerCapture(e.pointerId);
 });
 
 gestureTarget.addEventListener("pointermove", (e) => {
   if (dragStartX === null) return;
   const diff = e.clientX - dragStartX;
+  if (!dragging && Math.abs(diff) >= SWIPE_THRESHOLD) {
+    dragging = true;
+  }
+  if (!dragging) return;
+  e.preventDefault();
   const preview = startTime + diff / PIXELS_PER_SECOND;
   videoEl.currentTime = Math.max(0, Math.min(videoEl.duration, preview));
 });
@@ -361,16 +370,21 @@ gestureTarget.addEventListener("pointermove", (e) => {
 gestureTarget.addEventListener("pointerup", (e) => {
   if (dragStartX === null) return;
   const diff = e.clientX - dragStartX;
-  const skipped = Math.floor(diff / PIXELS_PER_SECOND);
-  if (skipped !== 0) {
-    showToast(`${skipped > 0 ? "⏩" : "⏪"} ${Math.abs(skipped)}s`);
+  if (dragging) {
+    e.preventDefault();
+    const skipped = Math.floor(diff / PIXELS_PER_SECOND);
+    if (skipped !== 0) {
+      showToast(`${skipped > 0 ? "⏩" : "⏪"} ${Math.abs(skipped)}s`);
+    }
   }
   dragStartX = null;
+  dragging = false;
   gestureTarget.releasePointerCapture(e.pointerId);
 });
 
 gestureTarget.addEventListener("pointercancel", () => {
   dragStartX = null;
+  dragging = false;
 });
 
 // 👉 Nút "Mở bằng ExoPlayer" (nếu app hỗ trợ)
