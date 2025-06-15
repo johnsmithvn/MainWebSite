@@ -81,15 +81,20 @@ router.get("/folder-cache", async (req, res) => {
       });
     }
     if (mode === "search") {
-      // Tìm kiếm theo tên
+      // Tìm kiếm theo tên có phân trang
       if (!q || typeof q !== "string") {
         return res.status(400).json({ error: "Missing query" });
       }
-      const rows = db.prepare(`
-        SELECT name, path, thumbnail, isFavorite FROM folders
-        WHERE root = ? AND (name LIKE ? OR otherName LIKE ?)
-        ORDER BY name ASC LIMIT 50
-      `).all(root, `%${q}%`, `%${q}%`);
+
+      const lim = limitNum > 0 ? limitNum : 50;
+      const off = offsetNum > 0 ? offsetNum : 0;
+      const rows = db
+        .prepare(
+          `SELECT name, path, thumbnail, isFavorite FROM folders
+           WHERE root = ? AND (name LIKE ? OR otherName LIKE ?)
+           ORDER BY name COLLATE NOCASE ASC LIMIT ? OFFSET ?`
+        )
+        .all(root, `%${q}%`, `%${q}%`, lim, off);
       return res.json(rows);
     }
     // Nếu mode không hợp lệ

@@ -5,7 +5,7 @@ const { getMusicDB } = require("../../utils/db");
 const { getRootPath } = require("../../utils/config");
 
 router.get("/audio-cache", async (req, res) => {
-  const { key, mode, type } = req.query;
+  const { key, mode, type, limit = 0, offset = 0 } = req.query;
 
   if (!key || !mode) return res.status(400).json({ error: "Missing key or mode" });
 
@@ -61,6 +61,8 @@ router.get("/audio-cache", async (req, res) => {
       }
 
       const searchType = req.query.type || "audio";
+      const lim = parseInt(limit) > 0 ? parseInt(limit) : 50;
+      const off = parseInt(offset) > 0 ? parseInt(offset) : 0;
       if (searchType === "folder") {
         rows = db.prepare(`
           SELECT name, path, thumbnail, type, viewCount, isFavorite
@@ -69,7 +71,8 @@ router.get("/audio-cache", async (req, res) => {
             AND name != '.thumbnail'
             AND name LIKE ?
           ORDER BY name COLLATE NOCASE ASC
-        `).all(`%${q}%`);
+          LIMIT ? OFFSET ?
+        `).all(`%${q}%`, lim, off);
       } else if (searchType === "all") {
         rows = db.prepare(`
           SELECT name, path, thumbnail, type, viewCount, isFavorite
@@ -77,7 +80,8 @@ router.get("/audio-cache", async (req, res) => {
           WHERE name != '.thumbnail'
             AND name LIKE ?
           ORDER BY name COLLATE NOCASE ASC
-        `).all(`%${q}%`);
+          LIMIT ? OFFSET ?
+        `).all(`%${q}%`, lim, off);
       } else {
         rows = db.prepare(`
           SELECT name, path, thumbnail, type, viewCount, isFavorite
@@ -86,7 +90,8 @@ router.get("/audio-cache", async (req, res) => {
             AND name != '.thumbnail'
             AND name LIKE ?
           ORDER BY name COLLATE NOCASE ASC
-        `).all(`%${q}%`);
+          LIMIT ? OFFSET ?
+        `).all(`%${q}%`, lim, off);
       }
 
       return res.json({ folders: rows });

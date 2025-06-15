@@ -9,6 +9,8 @@ router.get("/video-cache", async (req, res) => {
     key,
     mode,
     type, // file | folder
+    limit = 0,
+    offset = 0,
   } = req.query;
 
   if (!key || !mode)
@@ -72,6 +74,8 @@ router.get("/video-cache", async (req, res) => {
       }
 
       const type = req.query.type || "video"; // mặc định video
+      const lim = parseInt(limit) > 0 ? parseInt(limit) : 50;
+      const off = parseInt(offset) > 0 ? parseInt(offset) : 0;
       let rows = [];
 
       if (type === "folder") {
@@ -83,9 +87,10 @@ router.get("/video-cache", async (req, res) => {
     WHERE (type IS NULL OR type = 'folder')
       AND name LIKE ?
     ORDER BY name COLLATE NOCASE ASC
+    LIMIT ? OFFSET ?
   `
           )
-          .all(`%${q}%`);
+          .all(`%${q}%`, lim, off);
       } else if (type === "all") {
         rows = db
           .prepare(
@@ -94,9 +99,10 @@ router.get("/video-cache", async (req, res) => {
     FROM folders
     WHERE name LIKE ?
     ORDER BY name COLLATE NOCASE ASC
+    LIMIT ? OFFSET ?
   `
           )
-          .all(`%${q}%`);
+          .all(`%${q}%`, lim, off);
       } else {
         rows = db
           .prepare(
@@ -106,9 +112,10 @@ router.get("/video-cache", async (req, res) => {
     WHERE (type = 'video' OR type = 'file')
       AND name LIKE ?
     ORDER BY name COLLATE NOCASE ASC
+    LIMIT ? OFFSET ?
   `
           )
-          .all(`%${q}%`);
+          .all(`%${q}%`, lim, off);
       }
 
       return res.json({ folders: rows });
