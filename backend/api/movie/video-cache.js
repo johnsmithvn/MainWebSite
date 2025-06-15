@@ -87,6 +87,7 @@ router.get("/video-cache", async (req, res) => {
     WHERE (type IS NULL OR type = 'folder')
       AND name LIKE ?
     ORDER BY name COLLATE NOCASE ASC
+    LIMIT ? OFFSET ?
   `
           )
           .all(`%${q}%`, lim, off);
@@ -98,6 +99,7 @@ router.get("/video-cache", async (req, res) => {
     FROM folders
     WHERE name LIKE ?
     ORDER BY name COLLATE NOCASE ASC
+    LIMIT ? OFFSET ?
   `
           )
           .all(`%${q}%`, lim, off);
@@ -110,6 +112,7 @@ router.get("/video-cache", async (req, res) => {
     WHERE (type = 'video' OR type = 'file')
       AND name LIKE ?
     ORDER BY name COLLATE NOCASE ASC
+    LIMIT ? OFFSET ?
   `
           )
           .all(`%${q}%`, lim, off);
