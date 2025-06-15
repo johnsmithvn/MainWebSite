@@ -8,6 +8,7 @@ import {
   filterMusic,
   setupMusicSidebar,
 } from "/src/core/ui.js";
+import { setupSearchLoadMore } from "/src/core/events.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
 import { showPlaylistMenu } from "/src/components/music/playlistMenu.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
@@ -89,6 +90,7 @@ document
 document
   .getElementById("floatingSearchInput")
   ?.addEventListener("input", filterMusic);
+setupSearchLoadMore(() => filterMusic(true));
 document.getElementById("sidebarToggle")?.addEventListener("click", () => {
   document.getElementById("sidebar-menu")?.classList.toggle("active");
 });

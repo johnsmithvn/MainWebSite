@@ -16,6 +16,7 @@ import {
   showConfirm,renderRecentViewedMusic,withLoading
 } from "/src/core/ui.js";
 import { filterMusic } from "/src/core/ui.js";
+import { setupSearchLoadMore } from "/src/core/events.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
 
 
@@ -33,6 +34,7 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("floatingSearchInput")
     ?.addEventListener("input", filterMusic);
+  setupSearchLoadMore(() => filterMusic(true));
 
   document
     .getElementById("searchToggle")

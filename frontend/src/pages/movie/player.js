@@ -18,6 +18,7 @@ import {
   setupRandomSectionsIfMissing,
 } from "/src/components/folderSlider.js";
 import { saveRecentViewedVideo } from "/src/core/storage.js";
+import { setupSearchLoadMore } from "/src/core/events.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const file = urlParams.get("file");
@@ -190,6 +191,7 @@ checkFavorite();
 document
   .getElementById("floatingSearchInput")
   ?.addEventListener("input", filterMovie);
+setupSearchLoadMore(() => filterMovie(true));
 
 document
   .getElementById("searchToggle")

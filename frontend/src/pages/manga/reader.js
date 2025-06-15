@@ -14,7 +14,7 @@ import {
   showOverlay,
   hideOverlay,
 } from "/src/core/ui.js";
-import { setupGlobalClickToCloseUI } from "/src/core/events.js";
+import { setupGlobalClickToCloseUI, setupSearchLoadMore } from "/src/core/events.js";
 
 window.addEventListener("DOMContentLoaded", initializeReader);
 /**
@@ -67,6 +67,7 @@ function setupReaderUIEvents() {
   document.getElementById("sidebarToggle")?.addEventListener("click", toggleSidebar);
   document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
   document.getElementById("floatingSearchInput")?.addEventListener("input", filterManga);
+  setupSearchLoadMore(() => filterManga(true));
   document.getElementById("setThumbnailBtn")?.addEventListener("click", setRootThumbnail);
 }
 

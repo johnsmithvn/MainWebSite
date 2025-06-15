@@ -12,7 +12,7 @@ import {
   showToast,
   toggleSidebar,withLoading
 } from "/src/core/ui.js";
-import { setupGlobalClickToCloseUI } from "/src/core/events.js";
+import { setupGlobalClickToCloseUI, setupSearchLoadMore } from "/src/core/events.js";
 import { getMovieCache, setMovieCache } from "/src/core/storage.js";
 import {
   loadRandomSliders,
@@ -33,6 +33,7 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("floatingSearchInput")
     ?.addEventListener("input", filterMovie);
+  setupSearchLoadMore(() => filterMovie(true));
   document
     .getElementById("searchToggle")
     ?.addEventListener("click", toggleSearchBar);

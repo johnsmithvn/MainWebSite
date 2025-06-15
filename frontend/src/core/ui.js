@@ -6,11 +6,29 @@ import { state, loadFolder } from "/src/core/folder.js";
 import { changeRootFolder } from "./storage.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
 
+const SEARCH_LIMIT = 50;
+
+// State cho tìm kiếm
+let mangaSearchOffset = 0;
+let mangaSearchKeyword = "";
+let mangaSearchLoading = false;
+let mangaSearchDone = false;
+
+let movieSearchOffset = 0;
+let movieSearchKeyword = "";
+let movieSearchLoading = false;
+let movieSearchDone = false;
+
+let musicSearchOffset = 0;
+let musicSearchKeyword = "";
+let musicSearchLoading = false;
+let musicSearchDone = false;
+
 /**
  * 🔍 Lọc danh sách truyện theo từ khóa
  */
 
-export async function filterManga() {
+export async function filterManga(loadMore = false) {
   const keyword = document
     .getElementById("floatingSearchInput")
     ?.value.trim()
@@ -18,30 +36,51 @@ export async function filterManga() {
   const dropdown = document.getElementById("search-dropdown");
   const rootFolder = getRootFolder();
   const sourceKey = getSourceKey();
+
   if (!keyword) {
     dropdown.classList.add("hidden");
     dropdown.innerHTML = "";
+    mangaSearchOffset = 0;
+    mangaSearchDone = false;
+    mangaSearchKeyword = "";
     return;
   }
 
-  // Hiện dropdown + loader
-  dropdown.classList.remove("hidden");
-  dropdown.innerHTML = `<div id="search-loader">🔍 Đang tìm kiếm...</div>`;
+  if (!loadMore) {
+    mangaSearchOffset = 0;
+    mangaSearchDone = false;
+    mangaSearchKeyword = keyword;
+    dropdown.scrollTop = 0;
+    dropdown.classList.remove("hidden");
+    dropdown.innerHTML = `<div id="search-loader">🔍 Đang tìm kiếm...</div>`;
+  } else {
+    if (mangaSearchLoading || mangaSearchDone || keyword !== mangaSearchKeyword)
+      return;
+    const more = document.createElement("div");
+    more.id = "search-loader-more";
+    more.textContent = "⏳";
+    dropdown.appendChild(more);
+  }
 
+  mangaSearchLoading = true;
   try {
     const res = await fetch(
       `/api/manga/folder-cache?mode=search&key=${encodeURIComponent(
         sourceKey
       )}&root=${encodeURIComponent(rootFolder)}&q=${encodeURIComponent(
         keyword
-      )}`
+      )}&offset=${mangaSearchOffset}&limit=${SEARCH_LIMIT}`
     );
     const results = await res.json();
 
-    dropdown.innerHTML = "";
+    if (!loadMore) dropdown.innerHTML = "";
+    document.getElementById("search-loader-more")?.remove();
 
     if (results.length === 0) {
-      dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy kết quả</div>`;
+      if (mangaSearchOffset === 0) {
+        dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy kết quả</div>`;
+      }
+      mangaSearchDone = true;
       return;
     }
 
@@ -67,12 +106,17 @@ export async function filterManga() {
 
       dropdown.appendChild(item);
     });
+
+    mangaSearchOffset += results.length;
+    if (results.length < SEARCH_LIMIT) mangaSearchDone = true;
   } catch (err) {
     dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
     console.error("❌ Lỗi tìm kiếm:", err);
+  } finally {
+    mangaSearchLoading = false;
   }
 }
-export async function filterMovie() {
+export async function filterMovie(loadMore = false) {
   const keyword = document
     .getElementById("floatingSearchInput")
     ?.value.trim()
@@ -80,27 +124,50 @@ export async function filterMovie() {
   const dropdown = document.getElementById("search-dropdown");
   const sourceKey = localStorage.getItem("sourceKey");
   const type = document.getElementById("search-type-select")?.value || "video"; // ✅ loại tìm
-
   if (!keyword) {
     dropdown.classList.add("hidden");
     dropdown.innerHTML = "";
+    movieSearchOffset = 0;
+    movieSearchDone = false;
+    movieSearchKeyword = "";
     return;
   }
 
-  dropdown.classList.remove("hidden");
-  dropdown.innerHTML = `<div id="search-loader">🔍 Đang tìm video...</div>`;
+  if (!loadMore) {
+    movieSearchOffset = 0;
+    movieSearchDone = false;
+    movieSearchKeyword = keyword;
+    dropdown.scrollTop = 0;
+    dropdown.classList.remove("hidden");
+    dropdown.innerHTML = `<div id="search-loader">🔍 Đang tìm video...</div>`;
+  } else {
+    if (movieSearchLoading || movieSearchDone || keyword !== movieSearchKeyword)
+      return;
+    const more = document.createElement("div");
+    more.id = "search-loader-more";
+    more.textContent = "⏳";
+    dropdown.appendChild(more);
+  }
 
+  movieSearchLoading = true;
   try {
     const res = await fetch(
       `/api/movie/video-cache?mode=search&key=${encodeURIComponent(
         sourceKey
-      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}`
+      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(
+        type
+      )}&offset=${movieSearchOffset}&limit=${SEARCH_LIMIT}`
     );
     const data = await res.json();
-    dropdown.innerHTML = "";
+
+    if (!loadMore) dropdown.innerHTML = "";
+    document.getElementById("search-loader-more")?.remove();
 
     if (!data.folders || data.folders.length === 0) {
-      dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy video nào</div>`;
+      if (movieSearchOffset === 0) {
+        dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy video nào</div>`;
+      }
+      movieSearchDone = true;
       return;
     }
 
@@ -131,9 +198,14 @@ export async function filterMovie() {
 
       dropdown.appendChild(item);
     });
+
+    movieSearchOffset += data.folders.length;
+    if (data.folders.length < SEARCH_LIMIT) movieSearchDone = true;
   } catch (err) {
     console.error("❌ Lỗi tìm kiếm video:", err);
     dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
+  } finally {
+    movieSearchLoading = false;
   }
 }
 
@@ -730,7 +802,7 @@ export function setupMusicSidebar() {
 }
 
 // filter music
-export async function filterMusic() {
+export async function filterMusic(loadMore = false) {
   const keyword = document
     .getElementById("floatingSearchInput")
     ?.value.trim()
@@ -742,23 +814,47 @@ export async function filterMusic() {
   if (!keyword) {
     dropdown.classList.add("hidden");
     dropdown.innerHTML = "";
+    musicSearchOffset = 0;
+    musicSearchDone = false;
+    musicSearchKeyword = "";
     return;
   }
 
-  dropdown.classList.remove("hidden");
-  dropdown.innerHTML = `<div id="search-loader">🔍 Đang tìm nhạc...</div>`;
+  if (!loadMore) {
+    musicSearchOffset = 0;
+    musicSearchDone = false;
+    musicSearchKeyword = keyword;
+    dropdown.scrollTop = 0;
+    dropdown.classList.remove("hidden");
+    dropdown.innerHTML = `<div id="search-loader">🔍 Đang tìm nhạc...</div>`;
+  } else {
+    if (musicSearchLoading || musicSearchDone || keyword !== musicSearchKeyword)
+      return;
+    const more = document.createElement("div");
+    more.id = "search-loader-more";
+    more.textContent = "⏳";
+    dropdown.appendChild(more);
+  }
 
+  musicSearchLoading = true;
   try {
     const res = await fetch(
       `/api/music/audio-cache?mode=search&key=${encodeURIComponent(
         sourceKey
-      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}`
+      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(
+        type
+      )}&offset=${musicSearchOffset}&limit=${SEARCH_LIMIT}`
     );
     const data = await res.json();
-    dropdown.innerHTML = "";
+
+    if (!loadMore) dropdown.innerHTML = "";
+    document.getElementById("search-loader-more")?.remove();
 
     if (!data.folders || data.folders.length === 0) {
-      dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy bài hát nào</div>`;
+      if (musicSearchOffset === 0) {
+        dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy bài hát nào</div>`;
+      }
+      musicSearchDone = true;
       return;
     }
 
@@ -790,9 +886,13 @@ export async function filterMusic() {
 
       dropdown.appendChild(item);
     });
+    musicSearchOffset += data.folders.length;
+    if (data.folders.length < SEARCH_LIMIT) musicSearchDone = true;
   } catch (err) {
     console.error("❌ Lỗi tìm kiếm nhạc:", err);
     dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
+  } finally {
+    musicSearchLoading = false;
   }
 }
 

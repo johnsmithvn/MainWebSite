@@ -9,6 +9,8 @@ router.get("/video-cache", async (req, res) => {
     key,
     mode,
     type, // file | folder
+    limit = 0,
+    offset = 0,
   } = req.query;
 
   if (!key || !mode)
@@ -18,6 +20,9 @@ router.get("/video-cache", async (req, res) => {
   const rootPath = getRootPath(key);
   if (!db || !rootPath)
     return res.status(400).json({ error: "Invalid source key" });
+
+  const limitNum = parseInt(limit);
+  const offsetNum = parseInt(offset);
 
   try {
     if (mode === "random") {
@@ -77,38 +82,35 @@ router.get("/video-cache", async (req, res) => {
       if (type === "folder") {
         rows = db
           .prepare(
-            `
-    SELECT name, path, thumbnail, type, viewCount,isFavorite
-    FROM folders
-    WHERE (type IS NULL OR type = 'folder')
-      AND name LIKE ?
-    ORDER BY name COLLATE NOCASE ASC
-  `
+            `SELECT name, path, thumbnail, type, viewCount,isFavorite
+             FROM folders
+             WHERE (type IS NULL OR type = 'folder')
+               AND name LIKE ?
+             ORDER BY name COLLATE NOCASE ASC
+             LIMIT ? OFFSET ?`
           )
-          .all(`%${q}%`);
+          .all(`%${q}%`, limitNum > 0 ? limitNum : 50, offsetNum > 0 ? offsetNum : 0);
       } else if (type === "all") {
         rows = db
           .prepare(
-            `
-    SELECT name, path, thumbnail, type, viewCount,isFavorite
-    FROM folders
-    WHERE name LIKE ?
-    ORDER BY name COLLATE NOCASE ASC
-  `
+            `SELECT name, path, thumbnail, type, viewCount,isFavorite
+             FROM folders
+             WHERE name LIKE ?
+             ORDER BY name COLLATE NOCASE ASC
+             LIMIT ? OFFSET ?`
           )
-          .all(`%${q}%`);
+          .all(`%${q}%`, limitNum > 0 ? limitNum : 50, offsetNum > 0 ? offsetNum : 0);
       } else {
         rows = db
           .prepare(
-            `
-    SELECT name, path, thumbnail, type, viewCount,isFavorite
-    FROM folders
-    WHERE (type = 'video' OR type = 'file')
-      AND name LIKE ?
-    ORDER BY name COLLATE NOCASE ASC
-  `
+            `SELECT name, path, thumbnail, type, viewCount,isFavorite
+             FROM folders
+             WHERE (type = 'video' OR type = 'file')
+               AND name LIKE ?
+             ORDER BY name COLLATE NOCASE ASC
+             LIMIT ? OFFSET ?`
           )
-          .all(`%${q}%`);
+          .all(`%${q}%`, limitNum > 0 ? limitNum : 50, offsetNum > 0 ? offsetNum : 0);
       }
 
       return res.json({ folders: rows });

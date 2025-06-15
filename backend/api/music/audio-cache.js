@@ -5,13 +5,16 @@ const { getMusicDB } = require("../../utils/db");
 const { getRootPath } = require("../../utils/config");
 
 router.get("/audio-cache", async (req, res) => {
-  const { key, mode, type } = req.query;
+  const { key, mode, type, limit = 0, offset = 0 } = req.query;
 
   if (!key || !mode) return res.status(400).json({ error: "Missing key or mode" });
 
   const db = getMusicDB(key);
   const rootPath = getRootPath(key);
   if (!db || !rootPath) return res.status(400).json({ error: "Invalid source key" });
+
+  const limitNum = parseInt(limit);
+  const offsetNum = parseInt(offset);
 
   try {
     let rows = [];
@@ -62,31 +65,52 @@ router.get("/audio-cache", async (req, res) => {
 
       const searchType = req.query.type || "audio";
       if (searchType === "folder") {
-        rows = db.prepare(`
-          SELECT name, path, thumbnail, type, viewCount, isFavorite
-          FROM folders
-          WHERE (type IS NULL OR type = 'folder')
-            AND name != '.thumbnail'
-            AND name LIKE ?
-          ORDER BY name COLLATE NOCASE ASC
-        `).all(`%${q}%`);
+        rows = db
+          .prepare(
+            `SELECT name, path, thumbnail, type, viewCount, isFavorite
+             FROM folders
+             WHERE (type IS NULL OR type = 'folder')
+               AND name != '.thumbnail'
+               AND name LIKE ?
+             ORDER BY name COLLATE NOCASE ASC
+             LIMIT ? OFFSET ?`
+          )
+          .all(
+            `%${q}%`,
+            limitNum > 0 ? limitNum : 50,
+            offsetNum > 0 ? offsetNum : 0
+          );
       } else if (searchType === "all") {
-        rows = db.prepare(`
-          SELECT name, path, thumbnail, type, viewCount, isFavorite
-          FROM folders
-          WHERE name != '.thumbnail'
-            AND name LIKE ?
-          ORDER BY name COLLATE NOCASE ASC
-        `).all(`%${q}%`);
+        rows = db
+          .prepare(
+            `SELECT name, path, thumbnail, type, viewCount, isFavorite
+             FROM folders
+             WHERE name != '.thumbnail'
+               AND name LIKE ?
+             ORDER BY name COLLATE NOCASE ASC
+             LIMIT ? OFFSET ?`
+          )
+          .all(
+            `%${q}%`,
+            limitNum > 0 ? limitNum : 50,
+            offsetNum > 0 ? offsetNum : 0
+          );
       } else {
-        rows = db.prepare(`
-          SELECT name, path, thumbnail, type, viewCount, isFavorite
-          FROM folders
-          WHERE (type = 'audio' OR type = 'file')
-            AND name != '.thumbnail'
-            AND name LIKE ?
-          ORDER BY name COLLATE NOCASE ASC
-        `).all(`%${q}%`);
+        rows = db
+          .prepare(
+            `SELECT name, path, thumbnail, type, viewCount, isFavorite
+             FROM folders
+             WHERE (type = 'audio' OR type = 'file')
+               AND name != '.thumbnail'
+               AND name LIKE ?
+             ORDER BY name COLLATE NOCASE ASC
+             LIMIT ? OFFSET ?`
+          )
+          .all(
+            `%${q}%`,
+            limitNum > 0 ? limitNum : 50,
+            offsetNum > 0 ? offsetNum : 0
+          );
       }
 
       return res.json({ folders: rows });

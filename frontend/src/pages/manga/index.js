@@ -18,7 +18,7 @@ import {
   changeRootFolder,
   recentViewedKey,
 } from "/src/core/storage.js";
-import { setupGlobalClickToCloseUI } from "/src/core/events.js";
+import { setupGlobalClickToCloseUI, setupSearchLoadMore } from "/src/core/events.js";
 
 window.loadFolder = loadFolder;
 window.toggleDarkMode = toggleDarkMode;
@@ -64,6 +64,7 @@ async function initializeMangaHome() {
   renderRecentViewFromLocal();
 
   document.getElementById("floatingSearchInput")?.addEventListener("input", filterManga);
+  setupSearchLoadMore(() => filterManga(true));
   document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
   document.getElementById("sidebarToggle")?.addEventListener("click", toggleSidebar);
 
