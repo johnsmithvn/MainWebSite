@@ -33,6 +33,9 @@ function createSection(items, page, perPage, title, open, onChange) {
   paged.forEach((item) => {
     const thumb = buildThumbnailUrl(item, "movie");
     const card = renderMovieCardWithFavorite({ ...item, thumbnail: thumb });
+    if (item.type === "folder") {
+      card.onclick = () => openFolder(item.path);
+    }
     grid.appendChild(card);
   });
   det.appendChild(grid);
@@ -138,6 +141,11 @@ function renderGridPage() {
   }
 
   app.appendChild(section);
+}
+
+function openFolder(path) {
+  const encoded = encodeURIComponent(path);
+  window.location.href = `/movie/index.html?path=${encoded}`;
 }
 
 // ✅ Gọi API và khởi động
