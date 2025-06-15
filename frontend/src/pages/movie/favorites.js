@@ -1,20 +1,106 @@
 // 📁 frontend/src/pages/movie/favorites.js
 
 import { getSourceKey } from "/src/core/storage.js";
-import { showToast, showOverlay, hideOverlay } from "/src/core/ui.js";
+import {
+  showToast,
+  showOverlay,
+  hideOverlay,
+  buildThumbnailUrl,
+} from "/src/core/ui.js";
 import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
 
 let allFavorites = [];
-let currentPage = 0;
-const perPage = 20;
+let allFolders = [];
+let allVideos = [];
+let folderPage = 0;
+let videoPage = 0;
+const perPageFolder = 16;
+const perPageVideo = 16;
+let folderOpen = false;
+let videoOpen = true;
 
-// ✅ Render grid từng page
+// Tạo một section hiển thị danh sách và phân trang
+function createSection(items, page, perPage, title, open, setOpen, onChange) {
+  const det = document.createElement("details");
+  det.className = "favorite-collapse";
+  det.open = open;
+  det.addEventListener("toggle", () => setOpen(det.open));
+
+  const sum = document.createElement("summary");
+  sum.textContent = title;
+  det.appendChild(sum);
+
+  const grid = document.createElement("div");
+  grid.className = "movie-grid";
+  const paged = items.slice(page * perPage, (page + 1) * perPage);
+  paged.forEach((item) => {
+    const thumb = buildThumbnailUrl(item, "movie");
+    const card = renderMovieCardWithFavorite({ ...item, thumbnail: thumb });
+    if (item.type === "folder") {
+      card.onclick = () => openFolder(item.path);
+    }
+    grid.appendChild(card);
+  });
+  det.appendChild(grid);
+
+  const totalPages = Math.ceil(items.length / perPage);
+  const nav = document.createElement("div");
+  nav.className = "reader-controls";
+
+  const prev = document.createElement("button");
+  prev.textContent = "⬅ Trang trước";
+  prev.disabled = page <= 0;
+  prev.onclick = () => onChange(page - 1);
+  nav.appendChild(prev);
+
+  const jumpForm = document.createElement("form");
+  jumpForm.style.display = "inline-block";
+  jumpForm.style.margin = "0 10px";
+
+  const jumpInput = document.createElement("input");
+  jumpInput.type = "number";
+  jumpInput.min = 1;
+  jumpInput.max = totalPages;
+  jumpInput.placeholder = "Trang...";
+  jumpInput.style.width = "60px";
+
+  jumpForm.onsubmit = (e) => {
+    e.preventDefault();
+    const p = parseInt(jumpInput.value) - 1;
+    if (!isNaN(p) && p >= 0 && p < totalPages) onChange(p);
+  };
+
+  const jumpBtn = document.createElement("button");
+  jumpBtn.textContent = "⏩";
+  jumpForm.appendChild(jumpInput);
+  jumpForm.appendChild(jumpBtn);
+  nav.appendChild(jumpForm);
+
+  const next = document.createElement("button");
+  next.textContent = "Trang sau ➡";
+  next.disabled = page + 1 >= totalPages;
+  next.onclick = () => onChange(page + 1);
+  nav.appendChild(next);
+
+  det.appendChild(nav);
+
+  const info = document.createElement("div");
+  info.textContent = `Trang ${page + 1} / ${totalPages}`;
+  info.className = "favorite-page-info";
+  info.style.textAlign = "center";
+  info.style.marginTop = "10px";
+  det.appendChild(info);
+
+  return det;
+}
+
+// ✅ Render toàn bộ danh sách
 function renderGridPage() {
-  const app = document.getElementById("movie-app"); // ✅ đúng ID giống movie-index
+  const app = document.getElementById("movie-app");
   app.innerHTML = "";
 
   const section = document.createElement("section");
-  section.className = "folder-section"; // ❌ KHÔNG thêm grid ở đây
+  section.className = "folder-section";
 
   const header = document.createElement("div");
   header.className = "folder-section-header";
@@ -22,68 +108,53 @@ function renderGridPage() {
   const title = document.createElement("h2");
   title.className = "folder-section-title";
   title.textContent = `❤️ Phim yêu thích (${allFavorites.length})`;
-
-  // ❌ KHÔNG gắn onclick (vì là root page, không back gì hết)
   header.appendChild(title);
   section.appendChild(header);
 
-  const grid = document.createElement("div");
-  grid.className = "grid";
+  if (allFolders.length) {
+    section.appendChild(
+      createSection(
+        allFolders,
+        folderPage,
+        perPageFolder,
+        "📁 Folder yêu thích",
+        folderOpen,
+        (open) => {
+          folderOpen = open;
+        },
+        (p) => {
+          folderPage = p;
+          renderGridPage();
+        }
+      )
+    );
+  }
 
-  const paged = allFavorites.slice(currentPage * perPage, (currentPage + 1) * perPage);
-  paged.forEach((item) => {
-    const thumbnailUrl = item.thumbnail
-      ? `/video/${item.thumbnail.replace(/\\/g, "/")}`
-      : item.type === "video" || item.type === "file"
-      ? "/default/video-thumb.png"
-      : "/default/folder-thumb.png";
+  if (allVideos.length) {
+    section.appendChild(
+      createSection(
+        allVideos,
+        videoPage,
+        perPageVideo,
+        "🎬 Video yêu thích",
+        videoOpen,
+        (open) => {
+          videoOpen = open;
+        },
+        (p) => {
+          videoPage = p;
+          renderGridPage();
+        }
+      )
+    );
+  }
 
-    const card = renderMovieCardWithFavorite({
-      ...item,
-      thumbnail: thumbnailUrl,
-    });
-
-    grid.appendChild(card);
-  });
-
-  section.appendChild(grid);
   app.appendChild(section);
-
-  renderPagination();
-  console.log(getComputedStyle(grid).display);
 }
 
-// ✅ Render phân trang
-function renderPagination() {
-  const app = document.getElementById("movie-app");
-  const totalPages = Math.ceil(allFavorites.length / perPage);
-
-  const nav = document.createElement("div");
-  nav.className = "reader-controls";
-
-  const prev = document.createElement("button");
-  prev.textContent = "⬅ Trang trước";
-  prev.disabled = currentPage <= 0;
-  prev.onclick = () => {
-    currentPage--;
-    renderGridPage();
-  };
-  nav.appendChild(prev);
-
-  const info = document.createElement("div");
-  info.textContent = `Trang ${currentPage + 1} / ${totalPages}`;
-  nav.appendChild(info);
-
-  const next = document.createElement("button");
-  next.textContent = "Trang sau ➡";
-  next.disabled = currentPage + 1 >= totalPages;
-  next.onclick = () => {
-    currentPage++;
-    renderGridPage();
-  };
-  nav.appendChild(next);
-
-  app.appendChild(nav);
+function openFolder(path) {
+  const encoded = encodeURIComponent(path);
+  window.location.href = `/movie/index.html?path=${encoded}`;
 }
 
 // ✅ Gọi API và khởi động
@@ -96,7 +167,14 @@ async function loadFavoritesMovie() {
   try {
     const res = await fetch(`/api/movie/favorite-movie?key=${encodeURIComponent(key)}`);
     allFavorites = await res.json();
-    currentPage = 0;
+    allFolders = allFavorites
+      .filter((i) => i.type === "folder")
+      .sort((a, b) => a.name.localeCompare(b.name));
+    allVideos = allFavorites
+      .filter((i) => i.type === "video" || i.type === "file")
+      .sort((a, b) => a.name.localeCompare(b.name));
+    folderPage = 0;
+    videoPage = 0;
     renderGridPage();
   } catch (err) {
     showToast("❌ Lỗi khi tải danh sách yêu thích phim");
