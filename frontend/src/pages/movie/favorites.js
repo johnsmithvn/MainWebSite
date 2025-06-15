@@ -28,12 +28,15 @@ function renderGridPage() {
   section.appendChild(header);
 
   const grid = document.createElement("div");
-  grid.className = "grid";
+  grid.className = "movie-grid"; // đồng bộ style với index
 
   const paged = allFavorites.slice(currentPage * perPage, (currentPage + 1) * perPage);
   paged.forEach((item) => {
+    const parts = item.path?.split("/").filter(Boolean) || [];
+    if (item.type === "video" || item.type === "file") parts.pop();
+    const prefix = parts.join("/");
     const thumbnailUrl = item.thumbnail
-      ? `/video/${item.thumbnail.replace(/\\/g, "/")}`
+      ? `/video/${prefix ? prefix + "/" : ""}${item.thumbnail.replace(/\\/g, "/")}`
       : item.type === "video" || item.type === "file"
       ? "/default/video-thumb.png"
       : "/default/folder-thumb.png";
@@ -50,7 +53,6 @@ function renderGridPage() {
   app.appendChild(section);
 
   renderPagination();
-  console.log(getComputedStyle(grid).display);
 }
 
 // ✅ Render phân trang
