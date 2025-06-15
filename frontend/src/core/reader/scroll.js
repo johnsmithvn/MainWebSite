@@ -37,11 +37,28 @@ export function renderScrollReader(
   window.onscroll = syncScrollState;
 
   const pageInfo = document.getElementById("page-info");
+  const prevPageBtn = document.getElementById("prev-page-btn");
+  const nextPageBtn = document.getElementById("next-page-btn");
+  const scrollPageNav = document.getElementById("scroll-page-nav");
   if (pageInfo) {
     pageInfo.style.cursor = "pointer";
     pageInfo.onclick = null; // 🧹 xoá sự kiện cũ trước khi gán mới
     pageInfo.onclick = () => showPageModal();
     updateReaderPageInfo(currentPageIndex + 1, totalPages);
+  }
+
+  if (scrollPageNav && prevPageBtn && nextPageBtn) {
+    if (totalPages > 1) {
+      scrollPageNav.classList.remove("hidden");
+    }
+    prevPageBtn.onclick = () => {
+      if (currentPageIndex > 0) switchScrollPage(currentPageIndex - 1);
+    };
+    nextPageBtn.onclick = () => {
+      if (currentPageIndex < totalPages - 1)
+        switchScrollPage(currentPageIndex + 1);
+    };
+    updateNavButtons();
   }
 
   function renderScrollPage(imageList) {
@@ -113,7 +130,14 @@ export function renderScrollReader(
     renderScrollPage(pages[currentPageIndex]);
     setupScrollLazyLoad(wrapper, pages[currentPageIndex]);
     updateReaderPageInfo(currentPageIndex + 1, totalPages);
+    updateNavButtons();
     scrollTo(wrapper);
+  }
+
+  function updateNavButtons() {
+    if (!prevPageBtn || !nextPageBtn) return;
+    prevPageBtn.disabled = currentPageIndex === 0;
+    nextPageBtn.disabled = currentPageIndex >= totalPages - 1;
   }
 
   function scrollTo(elem) {

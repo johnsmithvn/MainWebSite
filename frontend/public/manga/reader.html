@@ -53,8 +53,18 @@
     <footer id="reader-footer">
       <div class="reader-footer-inner">
         <button id="prev-chapter-btn">⬅ Prev</button>
-        <div style="text-align: center">
+        <div class="footer-center">
           <div id="page-info">Trang ? / ?</div>
+          <div id="scroll-page-nav" class="scroll-page-nav hidden">
+            <button id="prev-page-btn" aria-label="Prev page">
+              <span class="icon">⬅</span>
+              <span class="label">Prev Page</span>
+            </button>
+            <button id="next-page-btn" aria-label="Next page">
+              <span class="label">Next Page</span>
+              <span class="icon">➡</span>
+            </button>
+          </div>
           <div
             id="image-count-info"
             style="font-size: 13px; color: #ccc; margin-top: 2px"
