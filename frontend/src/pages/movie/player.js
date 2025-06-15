@@ -329,24 +329,24 @@ videoEl.addEventListener("dblclick", (e) => {
 });
 
 // 🎯 Vuốt ngang để tua
-const gestureLayer = document.getElementById("gesture-layer");
+const gestureTarget = videoEl;
 let dragStartX = null;
 let startTime = 0;
 
-gestureLayer.addEventListener("pointerdown", (e) => {
+gestureTarget.addEventListener("pointerdown", (e) => {
   dragStartX = e.clientX;
   startTime = videoEl.currentTime;
-  gestureLayer.setPointerCapture(e.pointerId);
+  gestureTarget.setPointerCapture(e.pointerId);
 });
 
-gestureLayer.addEventListener("pointermove", (e) => {
+gestureTarget.addEventListener("pointermove", (e) => {
   if (dragStartX === null) return;
   const diff = e.clientX - dragStartX;
   const preview = startTime + diff / 10;
   videoEl.currentTime = Math.max(0, Math.min(videoEl.duration, preview));
 });
 
-gestureLayer.addEventListener("pointerup", (e) => {
+gestureTarget.addEventListener("pointerup", (e) => {
   if (dragStartX === null) return;
   const diff = e.clientX - dragStartX;
   const skipped = Math.floor(diff / 10);
@@ -354,10 +354,10 @@ gestureLayer.addEventListener("pointerup", (e) => {
     showToast(`${skipped > 0 ? "⏩" : "⏪"} ${Math.abs(skipped)}s`);
   }
   dragStartX = null;
-  gestureLayer.releasePointerCapture(e.pointerId);
+  gestureTarget.releasePointerCapture(e.pointerId);
 });
 
-gestureLayer.addEventListener("pointercancel", () => {
+gestureTarget.addEventListener("pointercancel", () => {
   dragStartX = null;
 });
 
