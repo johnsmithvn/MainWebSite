@@ -1,3 +1,34 @@
 @import "../../base.css";
 @import "../../components/movie/movie-card.css";
 @import "../../components/folder-slider.css";
+
+/* Collapsible section for random folder */
+.random-collapse {
+  margin: 16px 0;
+}
+.random-collapse summary {
+  cursor: pointer;
+  padding: 8px 20px;
+  font-size: 1.1em;
+  background: #202020;
+  color: #f39c12;
+  border-radius: 12px;
+  list-style: none;
+  position: relative;
+}
+.random-collapse summary::after {
+  content: "\25BC";
+  position: absolute;
+  right: 16px;
+  transition: transform 0.2s;
+}
+.random-collapse[open] summary::after {
+  transform: rotate(180deg);
+}
+.random-collapse summary::-webkit-details-marker {
+  display: none;
+}
+.random-collapse[open] summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
