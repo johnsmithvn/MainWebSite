@@ -59,6 +59,7 @@ folderTitle.onclick = () => {
 // ❤️ Yêu thích toggle
 let isFavorite = false;
 
+// Kiểm tra xem video hiện tại có thuộc danh sách yêu thích không
 async function checkFavorite() {
   try {
     const res = await fetch(`/api/movie/favorite-movie?key=${sourceKey}`);
@@ -71,11 +72,13 @@ async function checkFavorite() {
   }
 }
 
+// Cập nhật giao diện nút yêu thích
 function updateFavBtn() {
   favBtn.textContent = isFavorite ? "❤️" : "🤍";
   favBtn.title = isFavorite ? "Bỏ yêu thích" : "Thêm yêu thích";
 }
 
+// Toggle trạng thái yêu thích và lưu vào server
 favBtn.onclick = async () => {
   isFavorite = !isFavorite;
   updateFavBtn();
@@ -95,6 +98,7 @@ favBtn.onclick = async () => {
   }
 };
 
+// Gửi yêu cầu đặt thumbnail cho video này
 if (setThumbBtn) setThumbBtn.onclick = async () => {
   try {
     await fetch("/api/movie/extract-thumbnail", {
@@ -141,6 +145,7 @@ document
 // 🔁 Gọi random video
 loadRandomSection();
 
+// Lấy danh sách video ngẫu nhiên và lưu cache
 async function loadRandomSection(force = false) {
   const cacheKey = `randomVideos-${sourceKey}`;
   const tsId = "random-timestamp-video";
@@ -196,9 +201,10 @@ setupRandomSectionsIfMissing();
 // 👉 Hiển thị 2 random slider
 loadRandomSliders();
 
-// 🧭 Load video trước/sau cùng thư mục
+// 🧭 Load video trước/sau của video hiện tại trong thư mục
 loadSiblingVideos(folderPath, file);
 
+// Tải danh sách video trong thư mục rồi hiển thị tập trước/sau
 async function loadSiblingVideos(folderPath, currentFile) {
   let videoList = [];
 
@@ -276,6 +282,7 @@ async function loadSiblingVideos(folderPath, currentFile) {
   });
 }
 
+// Nhảy đến một video ngẫu nhiên trong nguồn
 document.getElementById("btn-random-jump").onclick = async () => {
   try {
     const res = await fetch(
@@ -301,6 +308,7 @@ document.getElementById("btn-random-jump").onclick = async () => {
   }
 };
 
+// Mở/đóng thanh sidebar
 document.getElementById("sidebarToggle")?.addEventListener("click", () => {
   const sidebar = document.getElementById("sidebar-menu");
   if (sidebar) sidebar.classList.toggle("active");
@@ -308,8 +316,13 @@ document.getElementById("sidebarToggle")?.addEventListener("click", () => {
 
 setupMovieSidebar(); // ✅ render nội dung sidebar (quét, reset DB, v.v.)
 
-// ⚙️ Double tap để tua 10s
-const SKIP_SECONDS = 10;
+// ⚙️ Double tap và vuốt để tua
+// Thay đổi hai hằng dưới đây nếu muốn điều chỉnh hành vi
+// Có thể đặt data-skip="..." và data-pixels="..." trên thẻ <video>
+// Số giây tua khi double tap
+const SKIP_SECONDS = parseFloat(videoEl.dataset.skip) || 10;
+// Số pixel cần vuốt để tua 1 giây (giảm giá trị này để vuốt ngắn nhưng tua nhiều)
+const PIXELS_PER_SECOND = parseFloat(videoEl.dataset.pixels) || 10;
 
 // ⚡ Double tap trái/phải để tua đúng 10s
 videoEl.addEventListener("dblclick", (e) => {
@@ -328,57 +341,56 @@ videoEl.addEventListener("dblclick", (e) => {
   }
 });
 
-// 🎯 Gắn gesture cho video
-const hammer = new Hammer(videoEl);
-hammer.get("pan").set({ direction: Hammer.DIRECTION_HORIZONTAL });
+// 🎯 Vuốt ngang để tua (dùng hằng PIXELS_PER_SECOND để chỉnh độ nhạy)
+// Nếu không di chuyển quá SWIPE_THRESHOLD thì sự kiện vẫn được tính là nhấn
+const gestureTarget = videoEl;
+let dragStartX = null;
+let startTime = 0;
+let dragging = false;
+const SWIPE_THRESHOLD = 5; // px
 
-let panDeltaX = 0;
-
-hammer.on("pan", (ev) => {
-  panDeltaX = ev.deltaX;
-
-  // 👉 Optional: hiệu ứng preview hoặc bar (nếu bạn muốn)
+// Bắt đầu theo dõi khi người dùng chạm vào màn hình
+gestureTarget.addEventListener("pointerdown", (e) => {
+  dragStartX = e.clientX;
+  startTime = videoEl.currentTime;
+  dragging = false;
+  gestureTarget.setPointerCapture(e.pointerId);
 });
 
-hammer.on("panend", () => {
-  const skipSeconds = Math.floor(panDeltaX / 10); // 10px = 1s
-  if (skipSeconds !== 0) {
-    videoEl.currentTime = Math.max(
-      0,
-      Math.min(videoEl.duration, videoEl.currentTime + skipSeconds)
-    );
-    showToast(`${skipSeconds > 0 ? "⏩" : "⏪"} ${Math.abs(skipSeconds)}s`);
+// Khi ngón tay di chuyển, cập nhật thời gian preview
+gestureTarget.addEventListener("pointermove", (e) => {
+  if (dragStartX === null) return;
+  const diff = e.clientX - dragStartX;
+  if (!dragging && Math.abs(diff) >= SWIPE_THRESHOLD) {
+    dragging = true;
   }
-  panDeltaX = 0;
+  if (!dragging) return;
+  e.preventDefault();
+  const preview = startTime + diff / PIXELS_PER_SECOND;
+  videoEl.currentTime = Math.max(0, Math.min(videoEl.duration, preview));
 });
-// // 📱 Vuốt ngang để tua (mobile only)
-// let isDragging = false;
-// let startX = 0;
-// let lastDelta = 0;
 
-// videoEl.addEventListener("touchstart", (e) => {
-//   if (e.touches.length !== 1) return;
-//   isDragging = true;
-//   startX = e.touches[0].clientX;
-//   lastDelta = 0;
-// }, { passive: true });
+// Kết thúc vuốt, áp dụng thay đổi thời gian và hiển thị thông báo
+gestureTarget.addEventListener("pointerup", (e) => {
+  if (dragStartX === null) return;
+  const diff = e.clientX - dragStartX;
+  if (dragging) {
+    e.preventDefault();
+    const skipped = Math.floor(diff / PIXELS_PER_SECOND);
+    if (skipped !== 0) {
+      showToast(`${skipped > 0 ? "⏩" : "⏪"} ${Math.abs(skipped)}s`);
+    }
+  }
+  dragStartX = null;
+  dragging = false;
+  gestureTarget.releasePointerCapture(e.pointerId);
+});
 
-// videoEl.addEventListener("touchmove", (e) => {
-//   if (!isDragging || e.touches.length !== 1) return;
-//   const deltaX = e.touches[0].clientX - startX;
-//   lastDelta = deltaX;
-// }, { passive: true });
-
-// videoEl.addEventListener("touchend", () => {
-//   if (!isDragging) return;
-//   isDragging = false;
-
-//   const skipSeconds = Math.floor(lastDelta / 10); // 10px = 1s
-//   if (skipSeconds !== 0) {
-//     videoEl.currentTime = Math.max(0, Math.min(videoEl.duration, videoEl.currentTime + skipSeconds));
-//     showToast(`${skipSeconds > 0 ? "⏩" : "⏪"} ${Math.abs(skipSeconds)}s`);
-//   }
-// });
+// Hủy thao tác nếu hệ điều hành cắt ngang (ví dụ có cuộc gọi đến)
+gestureTarget.addEventListener("pointercancel", () => {
+  dragStartX = null;
+  dragging = false;
+});
 
 // 👉 Nút "Mở bằng ExoPlayer" (nếu app hỗ trợ)
 document.getElementById("btn-open-exoplayer")?.addEventListener("click", () => {
