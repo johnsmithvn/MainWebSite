@@ -17,6 +17,7 @@ function login(key, password) {
 }
 
 function middleware(req, res, next) {
+  if (req.path === '/api/login' || req.path === '/login') return next();
   if (secureKeys.length === 0) return next();
   const key = (req.query.key || req.body?.key || '').toUpperCase();
   if (!secureKeys.includes(key)) return next();
