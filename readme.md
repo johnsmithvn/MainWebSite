@@ -6,15 +6,17 @@ Sau đây là các bước cài đặt cơ bản.
 ## Chuẩn bị môi trường
 
 1. Cài đặt **Node.js** (khuyến nghị >= v18).
-2. Tại thư mục `backend/` sao chép file `.env exampe` thành `.env` và chỉnh sửa các đường dẫn:
+2. Tại thư mục `backend/` sao chép file `.env.example` thành `.env` và chỉnh sửa các đường dẫn:
    ```bash
-   cp backend/.env\ exampe backend/.env
+   cp backend/.env.example backend/.env
    # Mở backend/.env và thay đổi ROOT_*, V_*, M_* cho phù hợp
    ```
    - `ROOT_*`   : Thư mục chứa manga.
    - `V_*`      : Thư mục chứa phim.
    - `M_*`      : Thư mục chứa nhạc.
    - `ALLOWED_HOSTNAMES` và `ALLOWED_IPS` dùng để giới hạn truy cập.
+   - `SECURITY` liệt kê các root key bảo vệ bằng mật khẩu, phân tách bằng dấu phẩy.
+   - `SECURITY_PASSWORD` mật khẩu dùng cho các root key ở biến `SECURITY`.
 
 ## Cài đặt phụ thuộc
 
