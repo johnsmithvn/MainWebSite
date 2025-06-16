@@ -68,7 +68,14 @@ function renderSourceList(listId, keys, type) {
 // Đảm bảo overlay luôn ẩn khi vào lại trang Home
 window.addEventListener("DOMContentLoaded", () => {
   hideOverlay();
-  // ... gọi renderSourceList như cũ
+
+  const lastKey = localStorage.getItem("sourceKey");
+  if (lastKey && !isSecureKey(lastKey)) {
+    if (lastKey.startsWith("ROOT_")) return (window.location.href = "/manga/index.html");
+    if (lastKey.startsWith("V_")) return (window.location.href = "/movie/index.html");
+    if (lastKey.startsWith("M_")) return (window.location.href = "/music/index.html");
+  }
+
   renderSourceList("manga-list", window.mangaKeys || [], "manga");
   renderSourceList("movie-list", window.movieKeys || [], "movie");
   renderSourceList("music-list", window.musicKeys || [], "music");
