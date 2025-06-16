@@ -19,6 +19,7 @@ import {
   recentViewedKey,
 } from "/src/core/storage.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
+import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
 
 window.loadFolder = loadFolder;
 window.toggleDarkMode = toggleDarkMode;
@@ -30,6 +31,11 @@ window.addEventListener("DOMContentLoaded", initializeMangaHome);
 
 async function initializeMangaHome() {
    const sourceKey = getSourceKey();
+
+  if (isSecureKey(sourceKey) && !getToken(sourceKey)) {
+    const ok = await showLoginModal(sourceKey);
+    if (!ok) return;
+  }
 
   // 🛑 Nếu chưa chọn source ➜ về home
   if (!sourceKey) {

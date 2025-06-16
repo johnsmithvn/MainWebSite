@@ -10,6 +10,12 @@ const parsedEnv = dotenv.parse(fs.readFileSync(envPath, "utf-8"));
 // ✅ Debug log rõ ràng toàn bộ env đầu vào
 const ROOT_PATHS = {};
 
+const SECURITY_KEYS = (parsedEnv.SECURITY || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const SECURITY_PASSWORD = parsedEnv.SECURITY_PASSWORD || "";
+
 for (const [key, value] of Object.entries(parsedEnv)) {
   // ✅ Lấy cả ROOT_ (manga), V_ (movie), M_ (music)
   if (
@@ -57,4 +63,6 @@ module.exports = {
   getAllMovieKeys, // 🟢 THÊM HÀM NÀY
   getAllMangaKeys, // 🟢 VÀ HÀM NÀY
   getAllMusicKeys,
+  SECURITY_KEYS,
+  SECURITY_PASSWORD,
 };
