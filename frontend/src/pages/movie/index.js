@@ -27,7 +27,7 @@ window.goHome = goHome;
 // 👉 Gắn sự kiện UI
 window.addEventListener("DOMContentLoaded", async () => {
   const key = getSourceKey();
-  if (isSecureKey(key) && !getToken(key)) {
+  if (isSecureKey(key) && !getToken()) {
     const ok = await showLoginModal(key);
     if (!ok) {
       goHome();

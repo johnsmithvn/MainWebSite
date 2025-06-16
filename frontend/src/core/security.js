@@ -3,12 +3,12 @@ export function isSecureKey(key) {
   return list.includes(key && key.toUpperCase());
 }
 
-export function getToken(key) {
-  return localStorage.getItem(`secureToken_${key}`);
+export function getToken() {
+  return localStorage.getItem('secureToken');
 }
 
-export function setToken(key, token) {
-  localStorage.setItem(`secureToken_${key}`, token);
+export function setToken(token) {
+  localStorage.setItem('secureToken', token);
 }
 
 export async function showLoginModal(key) {
@@ -51,7 +51,7 @@ export async function showLoginModal(key) {
         });
         if (res.ok) {
           const data = await res.json();
-          setToken(key, data.token);
+          setToken(data.token);
           cleanup();
           resolve(true);
         } else {
@@ -77,7 +77,7 @@ window.fetch = function(url, options = {}) {
   try {
     const key = localStorage.getItem('sourceKey');
     if (key && isSecureKey(key)) {
-      const token = getToken(key);
+      const token = getToken();
       if (token) {
         options.headers = Object.assign({}, options.headers, { 'x-secure-token': token });
       }

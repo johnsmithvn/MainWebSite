@@ -34,7 +34,7 @@ window.addEventListener("DOMContentLoaded", initializeMangaHome);
 async function initializeMangaHome() {
    const sourceKey = getSourceKey();
 
-  if (isSecureKey(sourceKey) && !getToken(sourceKey)) {
+  if (isSecureKey(sourceKey) && !getToken()) {
     const ok = await showLoginModal(sourceKey);
     if (!ok) {
       goHome();

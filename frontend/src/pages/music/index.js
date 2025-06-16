@@ -27,7 +27,7 @@ window.goHome = goHome;
 
 window.addEventListener("DOMContentLoaded", async () => {
   const key = getSourceKey();
-  if (isSecureKey(key) && !getToken(key)) {
+  if (isSecureKey(key) && !getToken()) {
     const ok = await showLoginModal(key);
     if (!ok) {
       goHome();
