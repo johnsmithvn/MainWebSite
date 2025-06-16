@@ -13,19 +13,24 @@ import {
   showToast,
   toggleSearchBar,
   setupMusicSidebar,
-  showConfirm,renderRecentViewedMusic,withLoading
+  showConfirm,
+  renderRecentViewedMusic,
+  withLoading,
+  goHome
 } from "/src/core/ui.js";
 import { filterMusic } from "/src/core/ui.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
 import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
 
 
+window.goHome = goHome;
+
 window.addEventListener("DOMContentLoaded", async () => {
   const key = getSourceKey();
   if (isSecureKey(key) && !getToken(key)) {
     const ok = await showLoginModal(key);
     if (!ok) {
-      window.location.href = "/home.html";
+      goHome();
       return;
     }
   }
@@ -97,7 +102,7 @@ function loadMusicFolder(path = "", page = 0) {
   const sourceKey = getSourceKey();
   if (!sourceKey) {
     alert("Chưa chọn nguồn nhạc!");
-    window.location.href = "/home.html";
+    goHome();
     return;
   }
 

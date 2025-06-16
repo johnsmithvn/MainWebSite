@@ -11,7 +11,9 @@ import {
   setupMovieSidebar,
   showConfirm,
   showToast,
-  toggleSidebar,withLoading
+  toggleSidebar,
+  withLoading,
+  goHome
 } from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 import { getMovieCache, setMovieCache } from "/src/core/storage.js";
@@ -20,13 +22,15 @@ import {
   setupRandomSectionsIfMissing,
 } from "/src/components/folderSlider.js";
 
+window.goHome = goHome;
+
 // 👉 Gắn sự kiện UI
 window.addEventListener("DOMContentLoaded", async () => {
   const key = getSourceKey();
   if (isSecureKey(key) && !getToken(key)) {
     const ok = await showLoginModal(key);
     if (!ok) {
-      window.location.href = "/home.html";
+      goHome();
       return;
     }
   }
@@ -110,7 +114,7 @@ function loadMovieFolder(path = "", page = 0) {
   const sourceKey = getSourceKey();
   if (!sourceKey) {
     alert("Chưa chọn nguồn phim!");
-    window.location.href = "/home.html";
+    goHome();
     return;
   }
 

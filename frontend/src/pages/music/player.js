@@ -2,7 +2,7 @@
 
 // 📦 Import các hàm cần thiết
 import { getSourceKey,saveRecentViewedMusic  } from "/src/core/storage.js";
-import { showToast } from "/src/core/ui.js";
+import { showToast, goHome } from "/src/core/ui.js";
 import {
   toggleSearchBar,
   filterMusic,
@@ -11,6 +11,8 @@ import {
 import { buildThumbnailUrl } from "/src/core/ui.js";
 import { showPlaylistMenu } from "/src/components/music/playlistMenu.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
+
+window.goHome = goHome;
 
 // ========================
 // Hàm render info nổi bật như Spotify

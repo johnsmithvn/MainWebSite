@@ -6,9 +6,11 @@ import {
   showOverlay,
   hideOverlay,
   buildThumbnailUrl,
+  goHome,
 } from "/src/core/ui.js";
 import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
 
+window.goHome = goHome;
 let allFavorites = [];
 let allFolders = [];
 let allVideos = [];

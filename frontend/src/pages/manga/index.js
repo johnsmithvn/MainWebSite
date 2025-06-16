@@ -10,6 +10,7 @@ import {
   showToast,
   setupSidebar,
   toggleSidebar,
+  goHome,
 } from "/src/core/ui.js";
 import {
   getRootFolder,
@@ -26,6 +27,7 @@ window.toggleDarkMode = toggleDarkMode;
 window.toggleSearchBar = toggleSearchBar;
 window.changeRootFolder = changeRootFolder;
 window.getRootFolder = getRootFolder;
+window.goHome = goHome;
 
 window.addEventListener("DOMContentLoaded", initializeMangaHome);
 
@@ -35,7 +37,7 @@ async function initializeMangaHome() {
   if (isSecureKey(sourceKey) && !getToken(sourceKey)) {
     const ok = await showLoginModal(sourceKey);
     if (!ok) {
-      window.location.href = "/home.html";
+      goHome();
       return;
     }
   }
@@ -43,7 +45,7 @@ async function initializeMangaHome() {
   // 🛑 Nếu chưa chọn source ➜ về home
   if (!sourceKey) {
     showToast("⚠️ Chưa chọn nguồn dữ liệu, vui lòng chọn lại!");
-    return (window.location.href = "/home.html");
+    return goHome();
   }
 
   // 🛑 Nếu là movie ➜ về movie/index.html

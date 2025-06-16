@@ -5,6 +5,7 @@ import {
   showConfirm,
   showOverlay,
   hideOverlay,
+  goHome,
 } from "/src/core/ui.js";
 import {
   requireSourceKey,
@@ -13,6 +14,8 @@ import {
   getRootThumbCache,
   setRootThumbCache,
 } from "/src/core/storage.js";
+
+window.goHome = goHome;
 /**
  * 📂 Fetch danh sách folder gốc và render ra giao diện
  */
@@ -101,12 +104,12 @@ async function loadRootFolders() {
   const dbkey = localStorage.getItem("sourceKey");
   if (!dbkey) {
     showToast("❌ Chưa chọn nguồn manga!");
-    return (window.location.href = "/home.html");
+    return goHome();
   }
   // 🛑 Nếu source hiện tại không phải manga thì về lại home
   if (!dbkey.startsWith("ROOT_")) {
     showToast("⚠️ Nguồn hiện tại không phải manga!");
-    return (window.location.href = "/home.html");
+    return goHome();
   }
   try {
     const res = await fetch(`/api/list-roots?key=${encodeURIComponent(dbkey)}`);

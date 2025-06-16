@@ -13,10 +13,13 @@ import {
   showToast,
   showOverlay,
   hideOverlay,
+  goHome,
 } from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 // Update local caches when toggling favorite so other pages reflect the change
 import { updateFavoriteEverywhere } from "/src/components/folderCard.js";
+
+window.goHome = goHome;
 
 window.addEventListener("DOMContentLoaded", initializeReader);
 let isFavorite = false;
