@@ -12,7 +12,7 @@ const ROOT_PATHS = {};
 
 const SECURITY_KEYS = (parsedEnv.SECURITY || "")
   .split(",")
-  .map((s) => s.trim())
+  .map((s) => s.trim().toUpperCase())
   .filter(Boolean);
 const SECURITY_PASSWORD = parsedEnv.SECURITY_PASSWORD || "";
 

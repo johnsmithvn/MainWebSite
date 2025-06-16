@@ -24,7 +24,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   const key = getSourceKey();
   if (isSecureKey(key) && !getToken(key)) {
     const ok = await showLoginModal(key);
-    if (!ok) return;
+    if (!ok) {
+      window.location.href = "/home.html";
+      return;
+    }
   }
   const initialPath = getInitialPathFromURL();
   loadMusicFolder(initialPath);

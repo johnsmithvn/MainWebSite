@@ -34,7 +34,10 @@ async function initializeMangaHome() {
 
   if (isSecureKey(sourceKey) && !getToken(sourceKey)) {
     const ok = await showLoginModal(sourceKey);
-    if (!ok) return;
+    if (!ok) {
+      window.location.href = "/home.html";
+      return;
+    }
   }
 
   // 🛑 Nếu chưa chọn source ➜ về home

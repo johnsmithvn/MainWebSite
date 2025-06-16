@@ -1,6 +1,6 @@
 export function isSecureKey(key) {
   const list = window.secureKeys || [];
-  return list.includes(key);
+  return list.includes(key && key.toUpperCase());
 }
 
 export function getToken(key) {
