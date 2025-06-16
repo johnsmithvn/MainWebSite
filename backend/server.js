@@ -13,6 +13,7 @@ const {
 } = require("./utils/config");
 const { ROOT_PATHS } = require("./utils/config");
 const authMiddleware = require("./middleware/auth"); // 🆕 Middleware kiểm tra IP/hostname
+const tokenAuth = require("./middleware/tokenAuth"); // 🆕 Token authentication
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,6 +24,8 @@ app.use(compression());
 
 // 🛡️ Middleware kiểm tra IP/hostname (tách riêng ra file middleware/auth.js)
 app.use(authMiddleware);
+// 🛡️ Token authentication cho toàn bộ API
+app.use(tokenAuth);
 
 // ✅ API chính
 app.use("/api/manga", require("./api/manga/folder-cache")); // 🌟 API gộp random, top, search, path, folders

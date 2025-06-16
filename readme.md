@@ -14,7 +14,8 @@ Sau đây là các bước cài đặt cơ bản.
    - `ROOT_*`   : Thư mục chứa manga.
    - `V_*`      : Thư mục chứa phim.
    - `M_*`      : Thư mục chứa nhạc.
-   - `ALLOWED_HOSTNAMES` và `ALLOWED_IPS` dùng để giới hạn truy cập.
+  - `ALLOWED_HOSTNAMES` và `ALLOWED_IPS` dùng để giới hạn truy cập.
+  - `API_TOKEN` thiết lập token truy cập API (gửi qua header `Authorization`).
 
 ## Cài đặt phụ thuộc
 
