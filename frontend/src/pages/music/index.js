@@ -9,6 +9,7 @@ import {
   getMusicCache,
   setMusicCache,recentViewedMusicKey
 } from "/src/core/storage.js";
+import { ensureAuth, setupSecurityFetch } from "/src/core/security.js";
 import {
   showToast,
   toggleSearchBar,
@@ -19,7 +20,12 @@ import { filterMusic } from "/src/core/ui.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
 
 
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
+  setupSecurityFetch();
+  const key = getSourceKey();
+  if (!(await ensureAuth(key))) {
+    return (window.location.href = "/home.html");
+  }
   const initialPath = getInitialPathFromURL();
   loadMusicFolder(initialPath);
   setupMusicSidebar(); // ✅ music

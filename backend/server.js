@@ -13,6 +13,7 @@ const {
 } = require("./utils/config");
 const { ROOT_PATHS } = require("./utils/config");
 const authMiddleware = require("./middleware/auth"); // 🆕 Middleware kiểm tra IP/hostname
+const security = require("./middleware/security");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,10 +24,12 @@ app.use(compression());
 
 // 🛡️ Middleware kiểm tra IP/hostname (tách riêng ra file middleware/auth.js)
 app.use(authMiddleware);
+app.use(security.middleware);
 
 // ✅ API chính
 app.use("/api/manga", require("./api/manga/folder-cache")); // 🌟 API gộp random, top, search, path, folders
 app.use("/api", require("./api/increase-view")); // 📈 Ghi lượt xem
+app.use("/api", require("./api/login"));
 app.use("/api/manga", require("./api/manga/reset-cache")); // 🔁 Reset cache DB
 // ✅ Đăng ký route /api/scan trong server.js:
 app.use("/api/manga", require("./api/manga/scan"));
@@ -109,9 +112,14 @@ app.get("/api/source-keys.js", (req, res) => {
   const manga = getAllMangaKeys(); // ROOT_
   const movie = getAllMovieKeys(); // V_
   const music = getAllMusicKeys(); // M_
+  const secure = (process.env.SECURITY || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   const js = `window.mangaKeys = ${JSON.stringify(manga)};
 window.movieKeys = ${JSON.stringify(movie)};
-window.musicKeys = ${JSON.stringify(music)};`;
+window.musicKeys = ${JSON.stringify(music)};
+window.securityKeys = ${JSON.stringify(secure)};`;
   res.type("application/javascript").send(js);
 });
 

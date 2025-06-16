@@ -5,6 +5,10 @@ ROOT_CARTOON=E:\disk3
 ### root movie
 V_MOVIE=E:\File\Videos
 
+# Keys cần mật khẩu
+SECURITY=V_MOVIE
+SECURITY_PASSWORD=changeme
+
 # -------- IP allow
 ALLOWED_HOSTNAMES=exampe
 ALLOWED_IPS=exampe

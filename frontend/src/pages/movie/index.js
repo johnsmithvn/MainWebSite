@@ -1,6 +1,7 @@
 import {} from "/src/components/folderCard.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
 import { getSourceKey } from "/src/core/storage.js";
+import { ensureAuth, setupSecurityFetch } from "/src/core/security.js";
 import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
 import { recentViewedVideoKey } from "/src/core/storage.js";
 
@@ -20,7 +21,12 @@ import {
 } from "/src/components/folderSlider.js";
 
 // 👉 Gắn sự kiện UI
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
+  setupSecurityFetch();
+  const key = getSourceKey();
+  if (!(await ensureAuth(key))) {
+    return (window.location.href = "/home.html");
+  }
   const initialPath = getInitialPathFromURL();
   loadMovieFolder(initialPath);
   setupExtractThumbnailButton();

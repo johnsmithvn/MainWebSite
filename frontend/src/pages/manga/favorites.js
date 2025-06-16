@@ -3,6 +3,7 @@
 import { getRootFolder, getSourceKey } from "/src/core/storage.js";
 import { renderFolderCard } from "/src/components/folderCard.js";
 import { showToast, showOverlay, hideOverlay } from "/src/core/ui.js";
+import { ensureAuth, setupSecurityFetch } from "/src/core/security.js";
 import { loadFolder } from "/src/core/folder.js";
 let allFavorites = [];
 let currentPage = 0;
@@ -103,5 +104,12 @@ async function loadFavorites() {
   }
 }
 
-window.addEventListener("DOMContentLoaded", loadFavorites);
+window.addEventListener("DOMContentLoaded", async () => {
+  setupSecurityFetch();
+  const key = getSourceKey();
+  if (!(await ensureAuth(key))) {
+    return (window.location.href = "/home.html");
+  }
+  loadFavorites();
+});
 window.loadFolder = loadFolder;

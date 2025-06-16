@@ -1,6 +1,7 @@
 // 📁 frontend/src/pages/movie/favorites.js
 
 import { getSourceKey } from "/src/core/storage.js";
+import { ensureAuth, setupSecurityFetch } from "/src/core/security.js";
 import {
   showToast,
   showOverlay,
@@ -184,4 +185,11 @@ async function loadFavoritesMovie() {
   }
 }
 
-window.addEventListener("DOMContentLoaded", loadFavoritesMovie);
+window.addEventListener("DOMContentLoaded", async () => {
+  setupSecurityFetch();
+  const key = getSourceKey();
+  if (!(await ensureAuth(key))) {
+    return (window.location.href = "/home.html");
+  }
+  loadFavoritesMovie();
+});

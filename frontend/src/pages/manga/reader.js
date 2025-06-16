@@ -4,6 +4,7 @@ import {
   requireRootFolder,
   setRootThumbCache,
 } from "/src/core/storage.js";
+import { ensureAuth, setupSecurityFetch } from "/src/core/security.js";
 import { renderReader, getCurrentImage } from "/src/core/reader/index.js";
 import {
   setupSidebar,
@@ -25,6 +26,11 @@ let currentFolderPath = "";
  * Fetch and render reader data based on the URL path.
  */
 async function initializeReader() {
+  setupSecurityFetch();
+  const k = getSourceKey();
+  if (!(await ensureAuth(k))) {
+    return (window.location.href = "/home.html");
+  }
   showOverlay();
 
   const sourceKey = getSourceKey();

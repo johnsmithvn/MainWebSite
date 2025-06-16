@@ -13,6 +13,7 @@ import {
   getRootThumbCache,
   setRootThumbCache,
 } from "/src/core/storage.js";
+import { ensureAuth, setupSecurityFetch } from "/src/core/security.js";
 /**
  * 📂 Fetch danh sách folder gốc và render ra giao diện
  */
@@ -170,4 +171,11 @@ document
     location.reload();
   });
 
-window.addEventListener("DOMContentLoaded", loadRootFolders);
+window.addEventListener("DOMContentLoaded", async () => {
+  setupSecurityFetch();
+  const key = getSourceKey();
+  if (!(await ensureAuth(key))) {
+    return (window.location.href = "/home.html");
+  }
+  loadRootFolders();
+});

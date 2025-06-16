@@ -18,6 +18,7 @@ import {
   changeRootFolder,
   recentViewedKey,
 } from "/src/core/storage.js";
+import { ensureAuth, setupSecurityFetch } from "/src/core/security.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 
 window.loadFolder = loadFolder;
@@ -29,7 +30,11 @@ window.getRootFolder = getRootFolder;
 window.addEventListener("DOMContentLoaded", initializeMangaHome);
 
 async function initializeMangaHome() {
-   const sourceKey = getSourceKey();
+  setupSecurityFetch();
+  const sourceKey = getSourceKey();
+  if (!(await ensureAuth(sourceKey))) {
+    return (window.location.href = "/home.html");
+  }
 
   // 🛑 Nếu chưa chọn source ➜ về home
   if (!sourceKey) {

@@ -1,5 +1,6 @@
 // /src/pages/home.js
 import { showToast, showConfirm, showOverlay, hideOverlay } from "/src/core/ui.js";
+import { ensureAuth, setupSecurityFetch } from "/src/core/security.js";
 
 function renderSourceList(listId, keys, type) {
   const container = document.getElementById(listId);
@@ -12,7 +13,7 @@ function renderSourceList(listId, keys, type) {
     btn.textContent = `📁 ${key}`;
     btn.onclick = async () => {
       localStorage.setItem("sourceKey", key);
-
+      if (!(await ensureAuth(key))) return;
       // Hiện overlay loading
       showOverlay();
 
@@ -61,6 +62,7 @@ function renderSourceList(listId, keys, type) {
 // Đảm bảo 2 script đã load lên window trước khi render (script inline .js nên yên tâm)
 // Đảm bảo overlay luôn ẩn khi vào lại trang Home
 window.addEventListener("DOMContentLoaded", () => {
+  setupSecurityFetch();
   hideOverlay();
   // ... gọi renderSourceList như cũ
   renderSourceList("manga-list", window.mangaKeys || [], "manga");

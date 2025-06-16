@@ -15,6 +15,8 @@ Sau đây là các bước cài đặt cơ bản.
    - `V_*`      : Thư mục chứa phim.
    - `M_*`      : Thư mục chứa nhạc.
    - `ALLOWED_HOSTNAMES` và `ALLOWED_IPS` dùng để giới hạn truy cập.
+   - `SECURITY` : Danh sách root key yêu cầu mật khẩu, phân cách bằng dấu phẩy.
+   - `SECURITY_PASSWORD` : Mật khẩu truy cập cho các key trên.
 
 ## Cài đặt phụ thuộc
 
