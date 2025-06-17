@@ -1,6 +1,6 @@
 // /src/pages/home.js
 import { showToast, showConfirm, showOverlay, hideOverlay } from "/src/core/ui.js";
-import { isSecureKey, showLoginModal } from "/src/core/security.js";
+import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
 
 function renderSourceList(listId, keys, type) {
   const container = document.getElementById(listId);
@@ -14,7 +14,7 @@ function renderSourceList(listId, keys, type) {
     btn.onclick = async () => {
       localStorage.setItem("sourceKey", key);
 
-      if (isSecureKey(key)) {
+      if (isSecureKey(key) && !getToken()) {
         const ok = await showLoginModal(key);
         if (!ok) return;
       }

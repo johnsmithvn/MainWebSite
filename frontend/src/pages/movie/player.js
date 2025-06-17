@@ -19,7 +19,7 @@ import {
   setupRandomSectionsIfMissing,
 } from "/src/components/folderSlider.js";
 import { saveRecentViewedVideo } from "/src/core/storage.js";
-import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
+import { isSecureKey, getToken } from "/src/core/security.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const file = urlParams.get("file");
@@ -28,11 +28,9 @@ if (urlParams.get("key")) localStorage.setItem("sourceKey", sourceKey);
 
 async function init() {
   if (isSecureKey(sourceKey) && !getToken()) {
-    const ok = await showLoginModal(sourceKey);
-    if (!ok) {
-      goHome();
-      return;
-    }
+    showToast("⚠️ Cần đăng nhập trước");
+    goHome();
+    return;
   }
   const token = getToken();
   const videoEl = document.getElementById("video-player");

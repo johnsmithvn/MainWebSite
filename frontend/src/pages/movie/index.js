@@ -1,7 +1,7 @@
 import {} from "/src/components/folderCard.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
 import { getSourceKey } from "/src/core/storage.js";
-import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
+import { isSecureKey, getToken } from "/src/core/security.js";
 import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
 import { recentViewedVideoKey } from "/src/core/storage.js";
 
@@ -28,11 +28,8 @@ window.goHome = goHome;
 window.addEventListener("DOMContentLoaded", async () => {
   const key = getSourceKey();
   if (isSecureKey(key) && !getToken()) {
-    const ok = await showLoginModal(key);
-    if (!ok) {
-      goHome();
-      return;
-    }
+    showToast("⚠️ Cần đăng nhập trước");
+    return goHome();
   }
   const initialPath = getInitialPathFromURL();
   loadMovieFolder(initialPath);

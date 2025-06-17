@@ -20,7 +20,7 @@ import {
 } from "/src/core/ui.js";
 import { filterMusic } from "/src/core/ui.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
-import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
+import { isSecureKey, getToken } from "/src/core/security.js";
 
 
 window.goHome = goHome;
@@ -28,11 +28,8 @@ window.goHome = goHome;
 window.addEventListener("DOMContentLoaded", async () => {
   const key = getSourceKey();
   if (isSecureKey(key) && !getToken()) {
-    const ok = await showLoginModal(key);
-    if (!ok) {
-      goHome();
-      return;
-    }
+    showToast("⚠️ Cần đăng nhập trước");
+    return goHome();
   }
   const initialPath = getInitialPathFromURL();
   loadMusicFolder(initialPath);
