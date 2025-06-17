@@ -9,7 +9,7 @@ V_MOVIE=E:\File\Videos
 ALLOWED_HOSTNAMES=exampe
 ALLOWED_IPS=exampe
 
-# Token để truy cập API
+# Token cho các route /api
 API_TOKEN=mysecret
 
 PORT =3000

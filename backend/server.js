@@ -24,8 +24,8 @@ app.use(compression());
 
 // 🛡️ Middleware kiểm tra IP/hostname (tách riêng ra file middleware/auth.js)
 app.use(authMiddleware);
-// 🛡️ Token authentication cho toàn bộ API
-app.use(tokenAuth);
+// 🛡️ Token authentication cho các route /api
+app.use('/api', tokenAuth);
 
 // ✅ API chính
 app.use("/api/manga", require("./api/manga/folder-cache")); // 🌟 API gộp random, top, search, path, folders
