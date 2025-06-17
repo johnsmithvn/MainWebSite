@@ -9,6 +9,7 @@ import {
   goHome,
 } from "/src/core/ui.js";
 import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
+import { isSecureKey, getToken } from "/src/core/security.js";
 
 window.goHome = goHome;
 let allFavorites = [];
@@ -163,6 +164,10 @@ function openFolder(path) {
 async function loadFavoritesMovie() {
   const key = getSourceKey();
   if (!key) return showToast("❌ Thiếu sourceKey");
+  if (isSecureKey(key) && !getToken()) {
+    showToast("⚠️ Cần đăng nhập trước");
+    return goHome();
+  }
 
   showOverlay();
 
