@@ -1,17 +1,33 @@
 // /src/pages/home.js
 import { showToast, showConfirm, showOverlay, hideOverlay } from "/src/core/ui.js";
+import { isSecureKey, showLoginModal } from "/src/core/security.js";
+
+let showSecure = false;
+
+function renderAll() {
+  renderSourceList("manga-list", window.mangaKeys || [], "manga");
+  renderSourceList("movie-list", window.movieKeys || [], "movie");
+  renderSourceList("music-list", window.musicKeys || [], "music");
+}
 
 function renderSourceList(listId, keys, type) {
   const container = document.getElementById(listId);
   if (!container) return;
   container.innerHTML = "";
 
-  keys.forEach((key) => {
-    const btn = document.createElement("div");
-    btn.className = "source-btn";
-    btn.textContent = `📁 ${key}`;
-    btn.onclick = async () => {
-      localStorage.setItem("sourceKey", key);
+  keys
+    .filter((k) => showSecure || !isSecureKey(k))
+    .forEach((key) => {
+      const btn = document.createElement("div");
+      btn.className = "source-btn";
+      btn.textContent = `📁 ${key}`;
+      btn.onclick = async () => {
+        localStorage.setItem("sourceKey", key);
+
+      if (isSecureKey(key)) {
+        const ok = await showLoginModal(key);
+        if (!ok) return;
+      }
 
       // Hiện overlay loading
       showOverlay();
@@ -54,19 +70,25 @@ function renderSourceList(listId, keys, type) {
         hideOverlay(); // Ẩn overlay nếu lỗi
       }
     };
-    container.appendChild(btn);
-  });
+      container.appendChild(btn);
+    });
 }
 
 // Đảm bảo 2 script đã load lên window trước khi render (script inline .js nên yên tâm)
 // Đảm bảo overlay luôn ẩn khi vào lại trang Home
 window.addEventListener("DOMContentLoaded", () => {
   hideOverlay();
-  // ... gọi renderSourceList như cũ
-  renderSourceList("manga-list", window.mangaKeys || [], "manga");
-  renderSourceList("movie-list", window.movieKeys || [], "movie");
-  renderSourceList("music-list", window.musicKeys || [], "music");
+
+  const lastKey = localStorage.getItem("sourceKey");
+  if (lastKey && !isSecureKey(lastKey)) {
+    if (lastKey.startsWith("ROOT_")) return (window.location.href = "/manga/index.html");
+    if (lastKey.startsWith("V_")) return (window.location.href = "/movie/index.html");
+    if (lastKey.startsWith("M_")) return (window.location.href = "/music/index.html");
+  }
+
+  renderAll();
   setupClearStorageButton();
+  setupToggleSecureButton();
 });
 
 function setupClearStorageButton() {
@@ -79,3 +101,19 @@ function setupClearStorageButton() {
     showToast("✅ Đã xoá localStorage");
   });
 }
+
+function setupToggleSecureButton() {
+  const btn = document.getElementById("toggle-secure-btn");
+  if (!btn) return;
+  const update = () => {
+    btn.textContent = showSecure ? "🙈" : "👁️";
+    btn.title = showSecure ? "Ẩn nguồn bảo mật" : "Hiển thị nguồn bảo mật";
+  };
+  btn.addEventListener("click", () => {
+    showSecure = !showSecure;
+    update();
+    renderAll();
+  });
+  update();
+}
+

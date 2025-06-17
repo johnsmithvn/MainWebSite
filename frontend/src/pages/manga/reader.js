@@ -13,10 +13,14 @@ import {
   showToast,
   showOverlay,
   hideOverlay,
+  goHome,
 } from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 // Update local caches when toggling favorite so other pages reflect the change
 import { updateFavoriteEverywhere } from "/src/components/folderCard.js";
+import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
+
+window.goHome = goHome;
 
 window.addEventListener("DOMContentLoaded", initializeReader);
 let isFavorite = false;
@@ -30,6 +34,11 @@ async function initializeReader() {
   const sourceKey = getSourceKey();
   const rootFolder = getRootFolder();
   requireRootFolder();
+
+  if (isSecureKey(sourceKey) && !getToken()) {
+    const ok = await showLoginModal(sourceKey);
+    if (!ok) return goHome();
+  }
 
   const urlParams = new URLSearchParams(window.location.search);
   const rawPath = urlParams.get("path");

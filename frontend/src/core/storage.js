@@ -1,5 +1,5 @@
 // 📁 frontend/src/storage.js
-import { showToast } from "./ui.js";
+import { showToast, goHome } from "./ui.js";
 const MOVIE_CACHE_PREFIX = "movieCache::";
 const FOLDER_CACHE_PREFIX = "folderCache::";
 const ROOT_THUMB_CACHE_PREFIX = "rootThumb::";
@@ -43,7 +43,7 @@ export function requireSourceKey() {
   const source = getSourceKey();
   if (!source) {
     showToast("⚠️ Chưa chọn nguồn dữ liệu, vui lòng chọn lại!");
-    window.location.href = "/home.html";
+    goHome();
   }
 }
 
