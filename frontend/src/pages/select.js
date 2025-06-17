@@ -14,6 +14,7 @@ import {
   getRootThumbCache,
   setRootThumbCache,
 } from "/src/core/storage.js";
+import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
 
 window.goHome = goHome;
 /**
@@ -173,4 +174,19 @@ document
     location.reload();
   });
 
-window.addEventListener("DOMContentLoaded", loadRootFolders);
+async function init() {
+  const key = getSourceKey();
+  if (!key) {
+    showToast("❌ Thiếu sourceKey");
+    return goHome();
+  }
+
+  if (isSecureKey(key) && !getToken()) {
+    const ok = await showLoginModal(key);
+    if (!ok) return goHome();
+  }
+
+  loadRootFolders();
+}
+
+window.addEventListener("DOMContentLoaded", init);
