@@ -16,6 +16,7 @@ Sau đây là các bước cài đặt cơ bản.
    - `M_*`      : Thư mục chứa nhạc.
   - `ALLOWED_HOSTNAMES` và `ALLOWED_IPS` dùng để giới hạn truy cập.
   - `API_TOKEN` dùng để bảo vệ các route `/api` (gửi qua header `Authorization`).
+    Riêng endpoint `/api/source-keys.js` không yêu cầu token để frontend có thể tải script.
 
 ## Cài đặt phụ thuộc
 

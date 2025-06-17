@@ -24,8 +24,11 @@ app.use(compression());
 
 // 🛡️ Middleware kiểm tra IP/hostname (tách riêng ra file middleware/auth.js)
 app.use(authMiddleware);
-// 🛡️ Token authentication cho các route /api
-app.use('/api', tokenAuth);
+// 🛡️ Token authentication cho các route /api, trừ file nguồn khóa
+app.use('/api', (req, res, next) => {
+  if (req.path === '/source-keys.js') return next();
+  return tokenAuth(req, res, next);
+});
 
 // ✅ API chính
 app.use("/api/manga", require("./api/manga/folder-cache")); // 🌟 API gộp random, top, search, path, folders
