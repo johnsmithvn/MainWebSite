@@ -111,15 +111,24 @@ router.get("/next-chapter", (req, res) => {
   if (!key || !root || !path || !["next", "prev"].includes(dir)) {
     return res.status(400).json({ error: "Thiếu tham số hoặc sai direction" });
   }
-  const db = getDB(key);
-  const current = db.prepare(`SELECT id FROM folders WHERE root = ? AND path = ?`).get(root, path);
-  if (!current) return res.json({ path: null });
-  const order = dir === "next" ? "ASC" : "DESC";
-  const compare = dir === "next" ? ">" : "<";
-  const next = db.prepare(
-    `SELECT path FROM folders WHERE root = ? AND id ${compare} ? ORDER BY id ${order} LIMIT 1`
-  ).get(root, current.id);
-  res.json({ path: next?.path || null });
+  try {
+    const db = getDB(key);
+    const current = db
+      .prepare(`SELECT id FROM folders WHERE root = ? AND path = ?`)
+      .get(root, path);
+    if (!current) return res.json({ path: null });
+    const order = dir === "next" ? "ASC" : "DESC";
+    const compare = dir === "next" ? ">" : "<";
+    const next = db
+      .prepare(
+        `SELECT path FROM folders WHERE root = ? AND id ${compare} ? ORDER BY id ${order} LIMIT 1`
+      )
+      .get(root, current.id);
+    res.json({ path: next?.path || null });
+  } catch (err) {
+    console.error("next-chapter", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 module.exports = router;

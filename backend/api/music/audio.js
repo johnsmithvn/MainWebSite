@@ -27,15 +27,16 @@ router.get("/audio", (req, res) => {
     return res.status(400).json({ error: "Thiếu key hoặc file" });
   }
 
-  const absPath = path.join(rootPath, relPath);
-  if (!fs.existsSync(absPath)) {
-    return res.status(404).json({ error: "Không tìm thấy file audio" });
-  }
+  try {
+    const absPath = path.join(rootPath, relPath);
+    if (!fs.existsSync(absPath)) {
+      return res.status(404).json({ error: "Không tìm thấy file audio" });
+    }
 
-  const stat = fs.statSync(absPath);
-  const fileSize = stat.size;
-  const range = req.headers.range;
-  const ext = path.extname(absPath).toLowerCase();
+    const stat = fs.statSync(absPath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+    const ext = path.extname(absPath).toLowerCase();
 
   let mime = "audio/mpeg";
   if (ext === ".flac") mime = "audio/flac";
@@ -82,11 +83,15 @@ router.get("/audio", (req, res) => {
     }
   }
 
-  res.status(200).setHeader("Content-Length", fileSize);
-  if (buffer) {
-    return res.end(buffer);
-  } else {
-    return fs.createReadStream(absPath).pipe(res);
+    res.status(200).setHeader("Content-Length", fileSize);
+    if (buffer) {
+      return res.end(buffer);
+    } else {
+      return fs.createReadStream(absPath).pipe(res);
+    }
+  } catch (err) {
+    console.error("audio", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 

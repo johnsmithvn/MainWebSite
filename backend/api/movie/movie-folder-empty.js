@@ -10,9 +10,14 @@ const { getMovieDB } = require("../../utils/db");
 router.get("/movie-folder-empty", (req, res) => {
   const dbkey = req.query.key;
   if (!dbkey) return res.status(400).json({ error: "Thiếu key" });
-  const db = getMovieDB(dbkey);
-  const row = db.prepare("SELECT COUNT(*) AS count FROM folders").get();
-  res.json({ empty: row.count === 0 });
+  try {
+    const db = getMovieDB(dbkey);
+    const row = db.prepare("SELECT COUNT(*) AS count FROM folders").get();
+    res.json({ empty: row.count === 0 });
+  } catch (err) {
+    console.error("movie-folder-empty", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 module.exports = router;

@@ -7,11 +7,14 @@ router.get("/music-meta", (req, res) => {
   const relPath = req.query.path;
 
   if (!dbkey || !relPath) return res.status(400).json({ error: "Thiếu key hoặc path" });
-
-  const db = getMusicDB(dbkey);
-  const row = db.prepare(`SELECT * FROM songs WHERE path = ?`).get(relPath);
-
-  res.json(row || {});
+  try {
+    const db = getMusicDB(dbkey);
+    const row = db.prepare(`SELECT * FROM songs WHERE path = ?`).get(relPath);
+    res.json(row || {});
+  } catch (err) {
+    console.error("music-meta", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 module.exports = router;
