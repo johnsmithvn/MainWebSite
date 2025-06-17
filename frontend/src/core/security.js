@@ -3,14 +3,24 @@ export function isSecureKey(key) {
   return list.includes(key && key.toUpperCase());
 }
 
-let currentToken = null;
+const STORAGE_KEY = 'secureToken';
 
 export function getToken() {
-  return currentToken;
+  try {
+    return sessionStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export function setToken(token) {
-  currentToken = token;
+  try {
+    if (token) {
+      sessionStorage.setItem(STORAGE_KEY, token);
+    } else {
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
+  } catch {}
 }
 
 export async function showLoginModal(key) {
