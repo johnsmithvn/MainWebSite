@@ -5,6 +5,11 @@ module.exports = function (req, res, next) {
     return next();
   }
 
+  // Skip token check for static HTML files so the page can load
+  if (req.method === 'GET' && req.path.endsWith('.html')) {
+    return next();
+  }
+
   const key = (req.query.key || req.body?.key || '').toUpperCase();
   if (key && SECURITY_KEYS.includes(key)) {
     const token =
