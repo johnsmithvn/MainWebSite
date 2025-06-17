@@ -13,6 +13,7 @@ const {
 } = require("./utils/config");
 const { ROOT_PATHS } = require("./utils/config");
 const authMiddleware = require("./middleware/auth"); // 🆕 Middleware kiểm tra IP/hostname
+const loadRoutes = require("./loadRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,14 +25,8 @@ app.use(compression());
 // 🛡️ Middleware kiểm tra IP/hostname (tách riêng ra file middleware/auth.js)
 app.use(authMiddleware);
 
-// ✅ API chính
-app.use("/api/manga", require("./api/manga/folder-cache")); // 🌟 API gộp random, top, search, path, folders
-app.use("/api", require("./api/increase-view")); // 📈 Ghi lượt xem
-app.use("/api/manga", require("./api/manga/reset-cache")); // 🔁 Reset cache DB
-// ✅ Đăng ký route /api/scan trong server.js:
-app.use("/api/manga", require("./api/manga/scan"));
-app.use("/api/manga", require("./api/manga/favorite")); // ⭐ API đánh dấu yêu thích
-app.use("/api/manga", require("./api/manga/root-thumbnail"));
+// ✅ Load all API routes automatically
+loadRoutes(app);
 
 // // ✅ Serve static images từ BASE_DIR (E:/File/Manga)
 // app.use("/manga", express.static(BASE_DIR));
@@ -115,29 +110,6 @@ window.musicKeys = ${JSON.stringify(music)};`;
   res.type("application/javascript").send(js);
 });
 
-app.use("/api/movie", require("./api/movie/movie-folder"));
-// Thêm dòng này vào server.js
-app.use("/api/movie", require("./api/movie/video"));
-
-app.use("/api/movie", require("./api/movie/movie-folder-empty"));
-app.use("/api/movie", require("./api/movie/scan-movie"));
-
-app.use("/api/movie", require("./api/movie/reset-movie-db"));
-app.use("/api/movie", require("./api/movie/video-cache"));
-app.use("/api/movie", require("./api/movie/favorite-movie"));
-app.use("/api/movie", require("./api/movie/extract-movie-thumbnail"));
-app.use("/api/movie", require("./api/movie/set-thumbnail"));
-
-//
-app.use("/api/music", require("./api/music/scan-music"));
-app.use("/api/music", require("./api/music/music-folder"));
-app.use("/api/music", require("./api/music/audio"));
-app.use("/api/music", require("./api/music/audio-cache"));
-app.use("/api/music", require("./api/music/playlist"));
-app.use("/api/music", require("./api/music/music-meta"));
-app.use("/api/music", require("./api/music/reset-music-db"));
-app.use("/api/music", require("./api/music/extract-thumbnail"));
-app.use("/api/music", require("./api/music/set-thumbnail"));
 
 // ✅ Start server
 app.listen(PORT, () => {

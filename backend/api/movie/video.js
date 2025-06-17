@@ -30,15 +30,16 @@ router.get("/video", (req, res) => {
     return res.status(400).json({ error: "Thiếu key hoặc file" });
   }
 
-  const absPath = path.join(rootPath, relPath);
-  if (!fs.existsSync(absPath)) {
-    return res.status(404).json({ error: "Không tìm thấy video" });
-  }
+  try {
+    const absPath = path.join(rootPath, relPath);
+    if (!fs.existsSync(absPath)) {
+      return res.status(404).json({ error: "Không tìm thấy video" });
+    }
 
-  const stat = fs.statSync(absPath);
-  const fileSize = stat.size;
-  const range = req.headers.range;
-  const ext = path.extname(absPath).toLowerCase();
+    const stat = fs.statSync(absPath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+    const ext = path.extname(absPath).toLowerCase();
 
   // MIME
   let mime = "video/mp4";
@@ -94,12 +95,16 @@ else if (ext === ".wmv") mime = "video/x-ms-wmv";
     }
   }
 
-  // Nếu không có range: stream toàn bộ
-  res.status(200).setHeader("Content-Length", fileSize);
-  if (buffer) {
-    return res.end(buffer);
-  } else {
-    return fs.createReadStream(absPath).pipe(res);
+    // Nếu không có range: stream toàn bộ
+    res.status(200).setHeader("Content-Length", fileSize);
+    if (buffer) {
+      return res.end(buffer);
+    } else {
+      return fs.createReadStream(absPath).pipe(res);
+    }
+  } catch (err) {
+    console.error("video", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 

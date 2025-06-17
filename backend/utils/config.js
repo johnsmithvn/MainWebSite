@@ -22,12 +22,6 @@ for (const [key, value] of Object.entries(parsedEnv)) {
 }
 
 
-/**
- * ✅ Trả về danh sách các key hợp lệ
- */
-// function getAllRootKeys() {
-//   return Object.keys(ROOT_PATHS);
-// }
 
 /**
  * ✅ Trả về path thật từ root key
