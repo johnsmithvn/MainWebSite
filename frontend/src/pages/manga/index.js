@@ -75,11 +75,11 @@ async function initializeMangaHome() {
   document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
   document.getElementById("sidebarToggle")?.addEventListener("click", toggleSidebar);
 
-  const header = document.getElementById("site-header");
-  const wrapper = document.getElementById("wrapper");
-  if (header && wrapper) {
-    wrapper.style.paddingTop = `${header.offsetHeight}px`;
-  }
+  // const header = document.getElementById("site-header");
+  // const wrapper = document.getElementById("wrapper");
+  // if (header && wrapper) {
+  //   wrapper.style.paddingTop = `${header.offsetHeight}px`;
+  // }
 
   document.getElementById("reset-cache-btn")?.addEventListener("click", resetCache);
 }
