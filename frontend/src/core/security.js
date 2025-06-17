@@ -3,12 +3,14 @@ export function isSecureKey(key) {
   return list.includes(key && key.toUpperCase());
 }
 
+let currentToken = null;
+
 export function getToken() {
-  return localStorage.getItem('secureToken');
+  return currentToken;
 }
 
 export function setToken(token) {
-  localStorage.setItem('secureToken', token);
+  currentToken = token;
 }
 
 export async function showLoginModal(key) {

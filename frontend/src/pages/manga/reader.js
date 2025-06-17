@@ -18,7 +18,7 @@ import {
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 // Update local caches when toggling favorite so other pages reflect the change
 import { updateFavoriteEverywhere } from "/src/components/folderCard.js";
-import { isSecureKey, getToken } from "/src/core/security.js";
+import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
 
 window.goHome = goHome;
 
@@ -36,8 +36,8 @@ async function initializeReader() {
   requireRootFolder();
 
   if (isSecureKey(sourceKey) && !getToken()) {
-    showToast("⚠️ Cần đăng nhập trước");
-    return goHome();
+    const ok = await showLoginModal(sourceKey);
+    if (!ok) return goHome();
   }
 
   const urlParams = new URLSearchParams(window.location.search);

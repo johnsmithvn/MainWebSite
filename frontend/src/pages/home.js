@@ -14,7 +14,7 @@ function renderSourceList(listId, keys, type) {
     btn.onclick = async () => {
       localStorage.setItem("sourceKey", key);
 
-      if (isSecureKey(key) && !getToken()) {
+      if (isSecureKey(key)) {
         const ok = await showLoginModal(key);
         if (!ok) return;
       }

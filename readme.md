@@ -16,7 +16,8 @@ Sau đây là các bước cài đặt cơ bản.
    - `M_*`      : Thư mục chứa nhạc.
    - `ALLOWED_HOSTNAMES` và `ALLOWED_IPS` dùng để giới hạn truy cập.
    - `SECURITY` liệt kê các root key bảo vệ bằng mật khẩu, phân tách bằng dấu phẩy.
-   - `SECURITY_PASSWORD` mật khẩu dùng cho các root key ở biến `SECURITY`.
+  - `SECURITY_PASSWORD` mật khẩu dùng cho các root key ở biến `SECURITY`.
+  - Mật khẩu chỉ lưu trong bộ nhớ tạm thời nên mỗi lần truy cập nguồn được bảo vệ bạn sẽ phải nhập lại.
 
 ## Cài đặt phụ thuộc
 

@@ -11,7 +11,7 @@ import {
 import { buildThumbnailUrl } from "/src/core/ui.js";
 import { showPlaylistMenu } from "/src/components/music/playlistMenu.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
-import { isSecureKey, getToken } from "/src/core/security.js";
+import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
 
 window.goHome = goHome;
 
@@ -107,9 +107,11 @@ if (urlParams.get("key")) localStorage.setItem("sourceKey", sourceKey);
 
 (async () => {
   if (isSecureKey(sourceKey) && !getToken()) {
-    showToast("⚠️ Cần đăng nhập trước");
-    goHome();
-    return;
+    const ok = await showLoginModal(sourceKey);
+    if (!ok) {
+      goHome();
+      return;
+    }
   }
 })();
 
