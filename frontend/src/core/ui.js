@@ -13,215 +13,171 @@ const searchStates = {
   music: { keyword: "", offset: 0, loading: false, hasMore: true, attached: false, type: "" },
 };
 
+function createSearchFilter({
+  state,
+  loaderFirst,
+  loaderMore,
+  emptyMessage,
+  fetchFunc,
+  renderItem,
+  getExtra,
+}) {
+  async function searchFn(fromScroll = false) {
+    const keyword = document
+      .getElementById("floatingSearchInput")
+      ?.value.trim()
+      .toLowerCase();
+    const dropdown = document.getElementById("search-dropdown");
+    if (!dropdown) return;
+
+    const extra = getExtra ? getExtra() : null;
+
+    if (!keyword) {
+      dropdown.classList.add("hidden");
+      dropdown.innerHTML = "";
+      state.keyword = "";
+      state.offset = 0;
+      state.hasMore = true;
+      state.type = extra;
+      state.extra = extra;
+      return;
+    }
+
+    const extraChanged = JSON.stringify(extra) !== JSON.stringify(state.extra);
+    if (keyword !== state.keyword || extraChanged) {
+      state.keyword = keyword;
+      state.extra = extra;
+      state.type = extra;
+      state.offset = 0;
+      state.hasMore = true;
+      dropdown.innerHTML = "";
+    } else if (fromScroll && !state.hasMore) {
+      return;
+    }
+
+    if (state.loading) return;
+
+    state.loading = true;
+    dropdown.classList.remove("hidden");
+    const loader = document.createElement("div");
+    loader.id = "search-loader";
+    loader.textContent = state.offset === 0 ? loaderFirst : loaderMore;
+    dropdown.appendChild(loader);
+
+    try {
+      const data = await fetchFunc(keyword, state.offset, extra);
+      dropdown.removeChild(loader);
+      const results = Array.isArray(data) ? data : data.folders || [];
+      if (results.length === 0) {
+        if (state.offset === 0) {
+          dropdown.innerHTML = `<div id="search-loader">${emptyMessage}</div>`;
+        }
+        state.hasMore = false;
+        state.loading = false;
+        return;
+      }
+
+      results.forEach((item) => renderItem(item, dropdown));
+      state.offset += results.length;
+      if (results.length < SEARCH_LIMIT) state.hasMore = false;
+    } catch (err) {
+      dropdown.removeChild(loader);
+      console.error("❌ Search error:", err);
+      dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
+    } finally {
+      state.loading = false;
+      if (!state.attached) {
+        dropdown.addEventListener("scroll", () => {
+          if (
+            dropdown.scrollTop + dropdown.clientHeight >=
+            dropdown.scrollHeight - 10
+          ) {
+            searchFn(true);
+          }
+        });
+        state.attached = true;
+      }
+    }
+  }
+  return searchFn;
+}
+
 /**
  * 🔍 Lọc danh sách truyện theo từ khóa
  */
 
-export async function filterManga(fromScroll = false) {
-  const keyword = document
-    .getElementById("floatingSearchInput")
-    ?.value.trim()
-    .toLowerCase();
-  const dropdown = document.getElementById("search-dropdown");
-  const rootFolder = getRootFolder();
-  const sourceKey = getSourceKey();
-
-  const state = searchStates.manga;
-
-  if (!keyword) {
-    dropdown.classList.add("hidden");
-    dropdown.innerHTML = "";
-    state.keyword = "";
-    state.offset = 0;
-    state.hasMore = true;
-    return;
-  }
-
-  if (keyword !== state.keyword) {
-    state.keyword = keyword;
-    state.offset = 0;
-    state.hasMore = true;
-    dropdown.innerHTML = "";
-  } else if (fromScroll && !state.hasMore) {
-    return;
-  }
-
-  if (state.loading) return;
-
-  state.loading = true;
-  dropdown.classList.remove("hidden");
-  const loader = document.createElement("div");
-  loader.id = "search-loader";
-  loader.textContent = state.offset === 0 ? "🔍 Đang tìm kiếm..." : "🔄 Đang tải thêm...";
-  dropdown.appendChild(loader);
-
-  try {
-    const res = await fetch(
-      `/api/manga/folder-cache?mode=search&key=${encodeURIComponent(
-        sourceKey
-      )}&root=${encodeURIComponent(rootFolder)}&q=${encodeURIComponent(
-        keyword
-      )}&limit=${SEARCH_LIMIT}&offset=${state.offset}`
-    );
-    const results = await res.json();
-
-    dropdown.removeChild(loader);
-
-    if (state.offset === 0 && results.length === 0) {
-      dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy kết quả</div>`;
-      state.hasMore = false;
-      state.loading = false;
-      return;
-    }
-
-    results.forEach((f) => {
-      const item = document.createElement("div");
-      item.className = "search-item";
-      item.innerHTML = `
-        <img src="${f.thumbnail}" class="search-thumb" alt="thumb">
-        <div class="search-title">${f.name}</div>
-      `;
-      item.onclick = () => {
-        dropdown.classList.add("hidden");
-
-        if (window.location.pathname.includes("reader.html")) {
-          window.location.href = `/manga/index.html?path=${encodeURIComponent(
-            f.path
-          )}`;
-        } else {
-          window.loadFolder?.(f.path);
-        }
-      };
-
-      dropdown.appendChild(item);
-    });
-
-    state.offset += results.length;
-    if (results.length < SEARCH_LIMIT) state.hasMore = false;
-  } catch (err) {
-    dropdown.removeChild(loader);
-    dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
-    console.error("❌ Lỗi tìm kiếm:", err);
-  } finally {
-    state.loading = false;
-    if (!state.attached) {
-      dropdown.addEventListener("scroll", () => {
-        if (
-          dropdown.scrollTop + dropdown.clientHeight >=
-          dropdown.scrollHeight - 10
-        ) {
-          filterManga(true);
-        }
-      });
-      state.attached = true;
-    }
-  }
-}
-export async function filterMovie(fromScroll = false) {
-  const keyword = document
-    .getElementById("floatingSearchInput")
-    ?.value.trim()
-    .toLowerCase();
-  const dropdown = document.getElementById("search-dropdown");
-  const sourceKey = localStorage.getItem("sourceKey");
-  const type = document.getElementById("search-type-select")?.value || "video"; // ✅ loại tìm
-
-  const state = searchStates.movie;
-
-  if (!keyword) {
-    dropdown.classList.add("hidden");
-    dropdown.innerHTML = "";
-    state.keyword = "";
-    state.offset = 0;
-    state.hasMore = true;
-    return;
-  }
-
-  if (keyword !== state.keyword || type !== state.type) {
-    state.keyword = keyword;
-    state.type = type;
-    state.offset = 0;
-    state.hasMore = true;
-    dropdown.innerHTML = "";
-  } else if (fromScroll && !state.hasMore) {
-    return;
-  }
-
-  if (state.loading) return;
-
-  state.loading = true;
-  dropdown.classList.remove("hidden");
-  const loader = document.createElement("div");
-  loader.id = "search-loader";
-  loader.textContent = state.offset === 0 ? "🔍 Đang tìm video..." : "🔄 Đang tải thêm...";
-  dropdown.appendChild(loader);
-
-  try {
-    const res = await fetch(
-      `/api/movie/video-cache?mode=search&key=${encodeURIComponent(
-        sourceKey
-      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}&limit=${SEARCH_LIMIT}&offset=${state.offset}`
-    );
-    const data = await res.json();
-    dropdown.removeChild(loader);
-
-    if (!data.folders || data.folders.length === 0) {
-      if (state.offset === 0) {
-        dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy video nào</div>`;
+export const filterManga = createSearchFilter({
+  state: searchStates.manga,
+  loaderFirst: "🔍 Đang tìm kiếm...",
+  loaderMore: "🔄 Đang tải thêm...",
+  emptyMessage: "❌ Không tìm thấy kết quả",
+  fetchFunc: (keyword, offset) => {
+    const rootFolder = getRootFolder();
+    const sourceKey = getSourceKey();
+    const url = `/api/manga/folder-cache?mode=search&key=${encodeURIComponent(
+      sourceKey
+    )}&root=${encodeURIComponent(rootFolder)}&q=${encodeURIComponent(
+      keyword
+    )}&limit=${SEARCH_LIMIT}&offset=${offset}`;
+    return fetch(url).then((r) => r.json());
+  },
+  renderItem: (f, dropdown) => {
+    const item = document.createElement("div");
+    item.className = "search-item";
+    item.innerHTML = `
+      <img src="${f.thumbnail}" class="search-thumb" alt="thumb">
+      <div class="search-title">${f.name}</div>
+    `;
+    item.onclick = () => {
+      dropdown.classList.add("hidden");
+      if (window.location.pathname.includes("reader.html")) {
+        window.location.href = `/manga/index.html?path=${encodeURIComponent(
+          f.path
+        )}`;
+      } else {
+        window.loadFolder?.(f.path);
       }
-      state.hasMore = false;
-      state.loading = false;
-      return;
-    }
-
-    data.folders.forEach((f) => {
-      const item = document.createElement("div");
-      item.className = "search-item";
-
-      let thumbSrc = buildThumbnailUrl(f, "movie");
-
-      item.innerHTML = `
+    };
+    dropdown.appendChild(item);
+  },
+});
+export const filterMovie = createSearchFilter({
+  state: searchStates.movie,
+  loaderFirst: "🔍 Đang tìm video...",
+  loaderMore: "🔄 Đang tải thêm...",
+  emptyMessage: "❌ Không tìm thấy video nào",
+  fetchFunc: (keyword, offset, type) => {
+    const sourceKey = getSourceKey();
+    const url = `/api/movie/video-cache?mode=search&key=${encodeURIComponent(
+      sourceKey
+    )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}&limit=${SEARCH_LIMIT}&offset=${offset}`;
+    return fetch(url).then((r) => r.json());
+  },
+  renderItem: (f, dropdown) => {
+    const item = document.createElement("div");
+    item.className = "search-item";
+    const thumbSrc = buildThumbnailUrl(f, "movie");
+    item.innerHTML = `
     <img src="${thumbSrc}" class="search-thumb" alt="thumb">
     <div class="search-title">${f.name}</div>
   `;
-
-      item.onclick = () => {
-        dropdown.classList.add("hidden");
-        if (f.type === "video" || f.type === "file") {
-          window.location.href = `/movie/player.html?file=${encodeURIComponent(
-            f.path
-          )}&key=${sourceKey}`;
-        } else {
-          window.location.href = `/movie/index.html?path=${encodeURIComponent(
-            f.path
-          )}`;
-        }
-      };
-
-      dropdown.appendChild(item);
-    });
-
-    state.offset += data.folders.length;
-    if (data.folders.length < SEARCH_LIMIT) state.hasMore = false;
-  } catch (err) {
-    dropdown.removeChild(loader);
-    console.error("❌ Lỗi tìm kiếm video:", err);
-    dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
-  } finally {
-    state.loading = false;
-    if (!state.attached) {
-      dropdown.addEventListener("scroll", () => {
-        if (
-          dropdown.scrollTop + dropdown.clientHeight >=
-          dropdown.scrollHeight - 10
-        ) {
-          filterMovie(true);
-        }
-      });
-      state.attached = true;
-    }
-  }
-}
+    item.onclick = () => {
+      dropdown.classList.add("hidden");
+      const key = getSourceKey();
+      if (f.type === "video" || f.type === "file") {
+        window.location.href = `/movie/player.html?file=${encodeURIComponent(
+          f.path
+        )}&key=${key}`;
+      } else {
+        window.location.href = `/movie/index.html?path=${encodeURIComponent(
+          f.path
+        )}`;
+      }
+    };
+    dropdown.appendChild(item);
+  },
+  getExtra: () => document.getElementById("search-type-select")?.value || "video",
+});
 
 /**
  * 🌙 Bật / tắt chế độ dark mode
@@ -233,16 +189,20 @@ export function toggleDarkMode() {
 /**
  * 📄 Cập nhật UI phân trang
  */
-export function updateFolderPaginationUI(
+export function updatePagination(
+  container,
   currentPage,
   totalItems,
   perPage,
-  onPageChange,
-  target = null
+  onPageChange
 ) {
-  const totalPages = Math.ceil(totalItems / perPage);
-  const container = target || document.getElementById("app");
   if (!container) return;
+
+  // Remove old pagination elements if present
+  container.querySelector(".reader-controls")?.remove();
+  container.querySelector(".pagination-info")?.remove();
+
+  const totalPages = Math.ceil(totalItems / perPage);
 
   const nav = document.createElement("div");
   nav.className = "reader-controls";
@@ -250,7 +210,7 @@ export function updateFolderPaginationUI(
   const prev = document.createElement("button");
   prev.textContent = "⬅ Trang trước";
   prev.disabled = currentPage <= 0;
-  prev.onclick = () => loadFolder(state.currentPath, currentPage - 1);
+  prev.onclick = () => onPageChange(currentPage - 1);
   nav.appendChild(prev);
 
   const jumpForm = document.createElement("form");
@@ -258,17 +218,15 @@ export function updateFolderPaginationUI(
   jumpForm.style.margin = "0 10px";
   jumpForm.onsubmit = (e) => {
     e.preventDefault();
-    const inputPage = parseInt(jumpInput.value) - 1;
-    if (!isNaN(inputPage) && inputPage >= 0) {
-      loadFolder(state.currentPath, inputPage);
-    }
+    const page = parseInt(jumpInput.value) - 1;
+    if (!isNaN(page) && page >= 0) onPageChange(page);
   };
 
   const jumpInput = document.createElement("input");
   jumpInput.type = "number";
   jumpInput.min = 1;
   jumpInput.max = totalPages;
-  jumpInput.placeholder = `Trang...`;
+  jumpInput.placeholder = "Trang...";
   jumpInput.title = `Tổng ${totalPages} trang`;
   jumpInput.style.width = "60px";
 
@@ -282,16 +240,31 @@ export function updateFolderPaginationUI(
   const next = document.createElement("button");
   next.textContent = "Trang sau ➡";
   next.disabled = currentPage + 1 >= totalPages;
-  next.onclick = () => loadFolder(state.currentPath, currentPage + 1);
+  next.onclick = () => onPageChange(currentPage + 1);
   nav.appendChild(next);
 
   container.appendChild(nav);
 
   const info = document.createElement("div");
+  info.className = "pagination-info";
   info.textContent = `Trang ${currentPage + 1} / ${totalPages}`;
   info.style.textAlign = "center";
   info.style.marginTop = "10px";
   container.appendChild(info);
+}
+
+export function updateFolderPaginationUI(
+  currentPage,
+  totalItems,
+  perPage,
+  onPageChange,
+  target = null
+) {
+  const container = target || document.getElementById("app");
+  updatePagination(container, currentPage, totalItems, perPage, (page) => {
+    loadFolder(state.currentPath, page);
+    onPageChange?.(page);
+  });
 }
 
 /**
@@ -816,112 +789,43 @@ export function setupMusicSidebar() {
 }
 
 // filter music
-export async function filterMusic(fromScroll = false) {
-  const keyword = document
-    .getElementById("floatingSearchInput")
-    ?.value.trim()
-    .toLowerCase();
-  const dropdown = document.getElementById("search-dropdown");
-  const sourceKey = getSourceKey();
-  const type = document.getElementById("search-type-select")?.value || "audio";
-
-  const state = searchStates.music;
-
-  if (!keyword) {
-    dropdown.classList.add("hidden");
-    dropdown.innerHTML = "";
-    state.keyword = "";
-    state.offset = 0;
-    state.hasMore = true;
-    return;
-  }
-
-  if (keyword !== state.keyword || type !== state.type) {
-    state.keyword = keyword;
-    state.type = type;
-    state.offset = 0;
-    state.hasMore = true;
-    dropdown.innerHTML = "";
-  } else if (fromScroll && !state.hasMore) {
-    return;
-  }
-
-  if (state.loading) return;
-
-  state.loading = true;
-  dropdown.classList.remove("hidden");
-  const loader = document.createElement("div");
-  loader.id = "search-loader";
-  loader.textContent = state.offset === 0 ? "🔍 Đang tìm nhạc..." : "🔄 Đang tải thêm...";
-  dropdown.appendChild(loader);
-
-  try {
-    const res = await fetch(
-      `/api/music/audio-cache?mode=search&key=${encodeURIComponent(
-        sourceKey
-      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}&limit=${SEARCH_LIMIT}&offset=${state.offset}`
-    );
-    const data = await res.json();
-    dropdown.removeChild(loader);
-
-    if (!data.folders || data.folders.length === 0) {
-      if (state.offset === 0) {
-        dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy bài hát nào</div>`;
-      }
-      state.hasMore = false;
-      state.loading = false;
-      return;
-    }
-
-    data.folders.forEach((f) => {
-      const item = document.createElement("div");
-      item.className = "search-item";
-
-      const isAudio = f.type === "audio" || f.type === "file";
-      let thumbSrc = buildThumbnailUrl(f, "music");
-
-      item.innerHTML = `
+export const filterMusic = createSearchFilter({
+  state: searchStates.music,
+  loaderFirst: "🔍 Đang tìm nhạc...",
+  loaderMore: "🔄 Đang tải thêm...",
+  emptyMessage: "❌ Không tìm thấy bài hát nào",
+  fetchFunc: (keyword, offset, type) => {
+    const sourceKey = getSourceKey();
+    const url = `/api/music/audio-cache?mode=search&key=${encodeURIComponent(
+      sourceKey
+    )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}&limit=${SEARCH_LIMIT}&offset=${offset}`;
+    return fetch(url).then((r) => r.json());
+  },
+  renderItem: (f, dropdown) => {
+    const item = document.createElement("div");
+    item.className = "search-item";
+    const isAudio = f.type === "audio" || f.type === "file";
+    const thumbSrc = buildThumbnailUrl(f, "music");
+    item.innerHTML = `
         <img src="${thumbSrc}" class="search-thumb" alt="thumb">
         <div class="search-title">${f.name}</div>
       `;
-
-      item.onclick = () => {
-        dropdown.classList.add("hidden");
-        if (isAudio) {
-          window.location.href = `/music/player.html?file=${encodeURIComponent(
-            f.path
-          )}`;
-        } else {
-          window.location.href = `/music/index.html?path=${encodeURIComponent(
-            f.path
-          )}`;
-        }
-      };
-
-      dropdown.appendChild(item);
-    });
-
-    state.offset += data.folders.length;
-    if (data.folders.length < SEARCH_LIMIT) state.hasMore = false;
-  } catch (err) {
-    dropdown.removeChild(loader);
-    console.error("❌ Lỗi tìm kiếm nhạc:", err);
-    dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
-  } finally {
-    state.loading = false;
-    if (!state.attached) {
-      dropdown.addEventListener("scroll", () => {
-        if (
-          dropdown.scrollTop + dropdown.clientHeight >=
-          dropdown.scrollHeight - 10
-        ) {
-          filterMusic(true);
-        }
-      });
-      state.attached = true;
-    }
-  }
-}
+    item.onclick = () => {
+      dropdown.classList.add("hidden");
+      if (isAudio) {
+        window.location.href = `/music/player.html?file=${encodeURIComponent(
+          f.path
+        )}`;
+      } else {
+        window.location.href = `/music/index.html?path=${encodeURIComponent(
+          f.path
+        )}`;
+      }
+    };
+    dropdown.appendChild(item);
+  },
+  getExtra: () => document.getElementById("search-type-select")?.value || "audio",
+});
 
 export function showInputPrompt(
   message,

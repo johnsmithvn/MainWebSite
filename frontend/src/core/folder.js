@@ -1,6 +1,6 @@
 // 📁 frontend/src/folder.js
 
-import { showToast, updateFolderPaginationUI } from "./ui.js";
+import { showToast, updatePagination } from "./ui.js";
 import {
   getRootFolder,
   getSourceKey,
@@ -112,7 +112,13 @@ function renderFromData(data) {
     renderFolderGrid(pagedFolders);
 
     // 🆕 update đúng phân trang: dùng tổng số folders
-    updateFolderPaginationUI(folderPage, totalFolders, foldersPerPage);
+    updatePagination(
+      document.getElementById("app"),
+      folderPage,
+      totalFolders,
+      foldersPerPage,
+      (page) => loadFolder(state.currentPath, page)
+    );
   } else if (data.type === "reader") {
     document.getElementById("loading-overlay")?.classList.remove("hidden");
 
