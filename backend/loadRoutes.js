@@ -12,9 +12,12 @@ function loadRoutes(app) {
   for (const [prefix, dir] of Object.entries(mapping)) {
     const absDir = path.join(__dirname, dir);
     if (!fs.existsSync(absDir)) continue;
-    const files = fs.readdirSync(absDir);
+    const files = fs
+      .readdirSync(absDir)
+      .filter((f) => f.endsWith(".js"))
+      .sort();
+
     for (const file of files) {
-      if (!file.endsWith('.js')) continue;
       const mod = require(path.join(absDir, file));
       app.use(prefix, mod);
     }
