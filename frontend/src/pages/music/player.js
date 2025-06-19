@@ -2,7 +2,7 @@
 
 // 📦 Import các hàm cần thiết
 import { getSourceKey,saveRecentViewedMusic  } from "/src/core/storage.js";
-import { showToast } from "/src/core/ui.js";
+import { showToast, goHome } from "/src/core/ui.js";
 import {
   toggleSearchBar,
   filterMusic,
@@ -11,6 +11,9 @@ import {
 import { buildThumbnailUrl } from "/src/core/ui.js";
 import { showPlaylistMenu } from "/src/components/music/playlistMenu.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
+import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
+
+window.goHome = goHome;
 
 // ========================
 // Hàm render info nổi bật như Spotify
@@ -99,7 +102,18 @@ document.getElementById("sidebarToggle")?.addEventListener("click", () => {
 const urlParams = new URLSearchParams(window.location.search);
 const currentFile = urlParams.get("file");
 const playlistId = urlParams.get("playlist");
-const sourceKey = urlParams.get("key") || getSourceKey(); // Ưu tiên lấy từ URL
+let sourceKey = urlParams.get("key") || getSourceKey(); // Ưu tiên lấy từ URL
+if (urlParams.get("key")) localStorage.setItem("sourceKey", sourceKey);
+
+(async () => {
+  if (isSecureKey(sourceKey) && !getToken()) {
+    const ok = await showLoginModal(sourceKey);
+    if (!ok) {
+      goHome();
+      return;
+    }
+  }
+})();
 
 if (!sourceKey) {
   showToast("❌ Thiếu sourceKey");
@@ -294,9 +308,10 @@ function playAtIndex(index) {
   currentIndex = index;
 
   const file = audioList[realIdx];
+  const token = getToken();
   const src = `/api/music/audio?key=${sourceKey}&file=${encodeURIComponent(
     file.path
-  )}`;
+  )}${token ? `&token=${encodeURIComponent(token)}` : ""}`;
 
   audioEl.src = src;
   audioEl.play().catch(() => {

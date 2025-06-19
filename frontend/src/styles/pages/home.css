@@ -35,3 +35,13 @@ h1 {
 .source-btn:hover {
     background: #f0f0f0;
 }
+
+#main-footer {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+#toggle-secure-btn {
+    font-size: 18px;
+}

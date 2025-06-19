@@ -10,7 +10,7 @@
     <header id="site-header" class="site-header">
       <div class="header-left">
         <button class="menu-button" id="sidebarToggle">☰</button>
-        <div class="logo" onclick="location.href='/home.html'">
+        <div class="logo" onclick="goHome()">
           🎵 <span class="logo-text">MyMusic</span>
         </div>
       </div>
@@ -75,6 +75,7 @@
 <div id="loading-overlay" class="hidden">
   <div class="loader-text">⏳ Đang tải...</div>
 </div>
+    <script src="/api/security-keys.js"></script>
     <script src="/dist/music/index.js"></script>
   </body>
 </html>

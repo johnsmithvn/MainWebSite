@@ -13,6 +13,7 @@ const {
 } = require("./utils/config");
 const { ROOT_PATHS } = require("./utils/config");
 const authMiddleware = require("./middleware/auth"); // 🆕 Middleware kiểm tra IP/hostname
+const securityMiddleware = require("./middleware/security");
 const loadRoutes = require("./loadRoutes");
 
 const app = express();
@@ -24,6 +25,7 @@ app.use(compression());
 
 // 🛡️ Middleware kiểm tra IP/hostname (tách riêng ra file middleware/auth.js)
 app.use(authMiddleware);
+app.use(securityMiddleware);
 
 // ✅ Load all API routes automatically
 loadRoutes(app);
@@ -108,6 +110,21 @@ app.get("/api/source-keys.js", (req, res) => {
 window.movieKeys = ${JSON.stringify(movie)};
 window.musicKeys = ${JSON.stringify(music)};`;
   res.type("application/javascript").send(js);
+});
+
+app.get("/api/security-keys.js", (req, res) => {
+  const { SECURITY_KEYS } = require("./utils/config");
+  const js = `window.secureKeys = ${JSON.stringify(SECURITY_KEYS)};`;
+  res.type("application/javascript").send(js);
+});
+
+app.post("/api/login", (req, res) => {
+  const { SECURITY_PASSWORD, SECURITY_KEYS } = require("./utils/config");
+  const key = (req.body.key || "").toUpperCase();
+  const pass = req.body.password || "";
+  if (!SECURITY_KEYS.includes(key)) return res.status(400).json({ error: "invalid key" });
+  if (pass !== SECURITY_PASSWORD) return res.status(401).json({ error: "wrong" });
+  res.json({ token: SECURITY_PASSWORD });
 });
 
 

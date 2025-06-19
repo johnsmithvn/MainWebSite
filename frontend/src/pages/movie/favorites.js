@@ -6,9 +6,12 @@ import {
   showOverlay,
   hideOverlay,
   buildThumbnailUrl,
+  goHome,
 } from "/src/core/ui.js";
 import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
+import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
 
+window.goHome = goHome;
 let allFavorites = [];
 let allFolders = [];
 let allVideos = [];
@@ -161,6 +164,10 @@ function openFolder(path) {
 async function loadFavoritesMovie() {
   const key = getSourceKey();
   if (!key) return showToast("❌ Thiếu sourceKey");
+  if (isSecureKey(key) && !getToken()) {
+    const ok = await showLoginModal(key);
+    if (!ok) return goHome();
+  }
 
   showOverlay();
 

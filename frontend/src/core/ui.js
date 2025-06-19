@@ -484,7 +484,7 @@ sidebar.appendChild(
           count++;
         }
       });
-      window.location.href = "/home.html"; // ✅ Quay lại chọn root
+      goHome(); // ✅ Quay lại chọn root
       showToast(`✅ Đã xoá ${count} cache folder`);
     }))
   );
@@ -602,7 +602,7 @@ export function setupMovieSidebar() {
   sidebar.appendChild(
     createSidebarButton("🎬 Đổi Movie Folder", () => {
       localStorage.removeItem("rootFolder");
-      window.location.href = "/home.html";
+      goHome();
     })
   );
 
@@ -722,7 +722,7 @@ export function setupMusicSidebar() {
   sidebar.appendChild(
     createSidebarButton("🎼 Đổi Music Folder", () => {
       localStorage.removeItem("rootFolder");
-      window.location.href = "/home.html";
+      goHome();
     })
   );
 
@@ -1051,4 +1051,9 @@ export function hideOverlay() {
 export function showOverlay() {
   const overlay = document.getElementById("loading-overlay");
   if (overlay) overlay.classList.remove("hidden");
+}
+
+export function goHome() {
+  localStorage.removeItem("sourceKey");
+  window.location.href = "/home.html";
 }

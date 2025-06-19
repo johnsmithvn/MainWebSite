@@ -6,6 +6,7 @@
     <link rel="icon" type="image/png" href="/default/favicon.png" />
     <title>📚 MyLocalManga</title>
     <link rel="stylesheet" href="/dist/manga/index.css" />
+    <script src="/api/security-keys.js"></script>
     <script src="/dist/manga/index.js"></script>
   </head>
   <body>
@@ -13,7 +14,7 @@
     <header id="site-header" class="site-header">
       <div class="header-left">
         <button class="menu-button" id="sidebarToggle">☰</button>
-        <div class="logo" onclick="location.href='/home.html'">
+        <div class="logo" onclick="goHome()">
           📚 <span class="logo-text">MyLocalManga</span>
         </div>
       </div>

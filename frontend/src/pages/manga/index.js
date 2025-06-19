@@ -10,6 +10,7 @@ import {
   showToast,
   setupSidebar,
   toggleSidebar,
+  goHome,
 } from "/src/core/ui.js";
 import {
   getRootFolder,
@@ -19,22 +20,29 @@ import {
   recentViewedKey,
 } from "/src/core/storage.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
+import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
 
 window.loadFolder = loadFolder;
 window.toggleDarkMode = toggleDarkMode;
 window.toggleSearchBar = toggleSearchBar;
 window.changeRootFolder = changeRootFolder;
 window.getRootFolder = getRootFolder;
+window.goHome = goHome;
 
 window.addEventListener("DOMContentLoaded", initializeMangaHome);
 
 async function initializeMangaHome() {
    const sourceKey = getSourceKey();
 
+  if (isSecureKey(sourceKey) && !getToken()) {
+    const ok = await showLoginModal(sourceKey);
+    if (!ok) return goHome();
+  }
+
   // 🛑 Nếu chưa chọn source ➜ về home
   if (!sourceKey) {
     showToast("⚠️ Chưa chọn nguồn dữ liệu, vui lòng chọn lại!");
-    return (window.location.href = "/home.html");
+    return goHome();
   }
 
   // 🛑 Nếu là movie ➜ về movie/index.html
@@ -67,11 +75,11 @@ async function initializeMangaHome() {
   document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
   document.getElementById("sidebarToggle")?.addEventListener("click", toggleSidebar);
 
-  const header = document.getElementById("site-header");
-  const wrapper = document.getElementById("wrapper");
-  if (header && wrapper) {
-    wrapper.style.paddingTop = `${header.offsetHeight}px`;
-  }
+  // const header = document.getElementById("site-header");
+  // const wrapper = document.getElementById("wrapper");
+  // if (header && wrapper) {
+  //   wrapper.style.paddingTop = `${header.offsetHeight}px`;
+  // }
 
   document.getElementById("reset-cache-btn")?.addEventListener("click", resetCache);
 }

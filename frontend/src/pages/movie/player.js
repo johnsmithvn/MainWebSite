@@ -1,6 +1,6 @@
 import {
   getSourceKey,
-  
+
   getMovieCache,
 } from "/src/core/storage.js";
 import { updateFavoriteEverywhere } from "/src/components/folderCard.js";
@@ -12,28 +12,41 @@ import {
   showRandomUpdatedTime,
   filterMovie,
   setupMovieSidebar,
+  goHome,
 } from "/src/core/ui.js";
 import {
   loadRandomSliders,
   setupRandomSectionsIfMissing,
 } from "/src/components/folderSlider.js";
 import { saveRecentViewedVideo } from "/src/core/storage.js";
+import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
 
 const urlParams = new URLSearchParams(window.location.search);
 const file = urlParams.get("file");
-const sourceKey = getSourceKey();
-const videoEl = document.getElementById("video-player");
-const favBtn = document.getElementById("fav-btn");
-const setThumbBtn = document.getElementById("set-thumb-btn");
-if (!file || !sourceKey) {
-  showToast("❌ Thiếu file hoặc sourceKey");
-  throw new Error("Missing file or sourceKey");
-}
+let sourceKey = urlParams.get("key") || getSourceKey();
+if (urlParams.get("key")) localStorage.setItem("sourceKey", sourceKey);
 
-const src = `/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(
-  file
-)}`;
-videoEl.src = src;
+async function init() {
+  if (isSecureKey(sourceKey) && !getToken()) {
+    const ok = await showLoginModal(sourceKey);
+    if (!ok) {
+      goHome();
+      return;
+    }
+  }
+  const token = getToken();
+  const videoEl = document.getElementById("video-player");
+  const favBtn = document.getElementById("fav-btn");
+  const setThumbBtn = document.getElementById("set-thumb-btn");
+  if (!file || !sourceKey) {
+    showToast("❌ Thiếu file hoặc sourceKey");
+    return;
+  }
+
+  const src = `/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(
+    file
+  )}${token ? `&token=${encodeURIComponent(token)}` : ""}`;
+  videoEl.src = src;
 
 // 📁 Extract folder info
 
@@ -396,10 +409,16 @@ gestureTarget.addEventListener("pointercancel", () => {
 document.getElementById("btn-open-exoplayer")?.addEventListener("click", () => {
   const videoUrl = `${
     location.origin
-  }/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(file)}`;
+  }/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(file)}${
+    token ? `&token=${encodeURIComponent(token)}` : ""
+  }`;
   if (window.Android?.openExoPlayer) {
     window.Android.openExoPlayer(videoUrl);
   } else {
     showToast("❌ Ứng dụng không hỗ trợ ExoPlayer");
   }
 });
+
+}
+
+window.addEventListener("DOMContentLoaded", init);
