@@ -47,6 +47,14 @@ export function renderReader(
 
   if (!sourceKey) return;
 
+  if (controller?.destroy) {
+    try {
+      controller.destroy();
+    } catch (e) {
+      console.error("destroy reader error", e);
+    }
+  }
+
   if (!preserveCurrentPage) {
     fetch("/api/increase-view", {
       method: "POST",

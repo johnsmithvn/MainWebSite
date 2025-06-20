@@ -42,6 +42,8 @@ export function renderHorizontalReader(
 
   let swiper = null;
   let currentPage = initialPage;
+  const handleClick = (e) =>
+    handleReaderClickEvent(e, swiperContainer, swiper);
 
   setTimeout(() => {
     swiper = new Swiper(swiperContainer, {
@@ -104,9 +106,7 @@ export function renderHorizontalReader(
   }, 50);
   // 🖱 Toggle UI khi click ảnh
 
-  swiperContainer.addEventListener("click", (e) =>
-    handleReaderClickEvent(e, swiperContainer, swiper)
-  );
+  swiperContainer.addEventListener("click", handleClick);
 
   return {
     setCurrentPage(pageIndex) {
@@ -118,6 +118,12 @@ export function renderHorizontalReader(
         setTimeout(() => {
           container.__readerControl?.setCurrentPage?.(pageIndex);
         }, 100);
+      }
+    },
+    destroy() {
+      swiperContainer.removeEventListener("click", handleClick);
+      if (swiper) {
+        swiper.destroy(true, true);
       }
     },
   };
