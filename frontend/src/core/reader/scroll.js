@@ -27,13 +27,18 @@ export function renderScrollReader(
   container.appendChild(wrapper);
 
   let currentPageIndex = startPageIndex;
+  let active = true;
+  const handleScroll = () => {
+    if (active) syncScrollState();
+  };
+  const handleWrapperClick = () => toggleReaderUI();
   renderScrollPage(pages[currentPageIndex]);
 
   setupScrollLazyLoad(wrapper);
   syncScrollState();
 
-  wrapper.addEventListener("click", toggleReaderUI);
-  window.onscroll = syncScrollState;
+  wrapper.addEventListener("click", handleWrapperClick);
+  window.addEventListener("scroll", handleScroll);
 
   const pageInfo = document.getElementById("page-info");
   const prevPageBtn = document.getElementById("prev-page-btn");
@@ -66,15 +71,17 @@ export function renderScrollReader(
     let index = 0;
 
     function loadNext() {
-      if (index >= imageList.length) return;
+      if (!active || index >= imageList.length) return;
 
       const img = document.createElement("img");
       img.className = "scroll-img loading";
       img.loading = "lazy";
       img.onload = () => {
-        img.classList.remove("loading");
-        index++;
-        loadNext();
+        if (active) {
+          img.classList.remove("loading");
+          index++;
+          loadNext();
+        }
       };
       img.src = imageList[index];
       wrapper.appendChild(img);
@@ -84,9 +91,8 @@ export function renderScrollReader(
   }
 
   function setupScrollLazyLoad(wrapper) {
-    window.onscroll = () => {
-      syncScrollState();
-    };
+    window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll);
   }
 
   function syncScrollState() {
@@ -216,5 +222,11 @@ export function renderScrollReader(
     updateReaderPageInfo(currentPageIndex + 1, totalPages); // 🧠 cập nhật lại Trang X/Y
   }
 
-  return { setCurrentPage };
+  function destroy() {
+    active = false;
+    window.removeEventListener("scroll", handleScroll);
+    wrapper.removeEventListener("click", handleWrapperClick);
+  }
+
+  return { setCurrentPage, destroy };
 }

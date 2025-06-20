@@ -47,6 +47,14 @@ export function renderReader(
 
   if (!sourceKey) return;
 
+  if (controller?.destroy) {
+    try {
+      controller.destroy();
+    } catch (e) {
+      console.error("destroy reader error", e);
+    }
+  }
+
   if (!preserveCurrentPage) {
     fetch("/api/increase-view", {
       method: "POST",
@@ -159,16 +167,7 @@ export function toggleReaderMode() {
   }
 
   renderReader(currentImages, true, scrollPage);
-
-  setTimeout(() => {
-    if (controller?.setCurrentPage) {
-      if (readerMode === "horizontal") {
-        controller.setCurrentPage(currentPage);
-      } else {
-        controller.setCurrentPage(scrollPage * 200); // → scroll page đầu tiên chứa ảnh đang xem
-      }
-    }
-  }, 0);
+  // ⚠️ Không cần setCurrentPage sau khi render vì đã truyền startPage
 }
 
 export function getCurrentImage() {
