@@ -19,9 +19,19 @@ export function renderFolderCard(folder, showViews = false) {
   card.className = "folder-card";
 
   // Ảnh thumbnail (nếu có)
-  const imgTag = folder.thumbnail
-    ? `<img src="${folder.thumbnail}" alt="${folder.name}" loading="lazy">`
-    : `<div class="folder-thumb-placeholder">Không có ảnh</div>`;
+  let thumbContent;
+  if (folder.thumbnail) {
+    const img = document.createElement("img");
+    img.src = folder.thumbnail;
+    img.alt = folder.name;
+    img.loading = "lazy";
+    thumbContent = img;
+  } else {
+    const placeholder = document.createElement("div");
+    placeholder.className = "folder-thumb-placeholder";
+    placeholder.textContent = "Không có ảnh";
+    thumbContent = placeholder;
+  }
 
   let displayName = folder.name;
   if (folder.name === "__self__") {
@@ -29,20 +39,28 @@ export function renderFolderCard(folder, showViews = false) {
     displayName = parts.at(-2) || "Ảnh";
   }
   // HTML bên trong card
-  card.innerHTML = `
-    <div class="folder-thumb">
-      ${imgTag}
-      ${
-        showViews && folder.count
-          ? `<div class="folder-views">👁 ${folder.count}</div>`
-          : ""
-      }
-      <div class="folder-fav ${folder.isFavorite ? "active" : ""}" title="${
-    folder.isFavorite ? "Bỏ yêu thích" : "Thêm yêu thích"
-  }">${folder.isFavorite ? "❤️" : "🤍"}</div>
-    </div>
-    <div class="folder-title">${displayName}</div>
-  `;
+  const thumbWrapper = document.createElement("div");
+  thumbWrapper.className = "folder-thumb";
+  thumbWrapper.appendChild(thumbContent);
+
+  if (showViews && folder.count) {
+    const views = document.createElement("div");
+    views.className = "folder-views";
+    views.textContent = `👁 ${folder.count}`;
+    thumbWrapper.appendChild(views);
+  }
+
+  const favDiv = document.createElement("div");
+  favDiv.className = "folder-fav" + (folder.isFavorite ? " active" : "");
+  favDiv.title = folder.isFavorite ? "Bỏ yêu thích" : "Thêm yêu thích";
+  favDiv.textContent = folder.isFavorite ? "❤️" : "🤍";
+  thumbWrapper.appendChild(favDiv);
+
+  const titleDiv = document.createElement("div");
+  titleDiv.className = "folder-title";
+  titleDiv.textContent = displayName;
+
+  card.append(thumbWrapper, titleDiv);
 
   // Xử lý click vào ảnh (tránh click vào nút yêu thích)
   card.onclick = (e) => {
