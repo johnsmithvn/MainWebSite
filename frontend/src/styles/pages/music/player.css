@@ -30,7 +30,7 @@ body, html {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* padding-top: 52px; Đẩy xuống dưới header */
+  padding-top: 52px;
 }
 .main-area {
   flex: 1 1 auto;
