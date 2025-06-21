@@ -112,14 +112,29 @@ router.get("/next-chapter", (req, res) => {
     return res.status(400).json({ error: "Thiếu tham số hoặc sai direction" });
   }
   const db = getDB(key);
-  const current = db.prepare(`SELECT id FROM folders WHERE root = ? AND path = ?`).get(root, path);
-  if (!current) return res.json({ path: null });
-  const order = dir === "next" ? "ASC" : "DESC";
-  const compare = dir === "next" ? ">" : "<";
-  const next = db.prepare(
-    `SELECT path FROM folders WHERE root = ? AND id ${compare} ? ORDER BY id ${order} LIMIT 1`
-  ).get(root, current.id);
-  res.json({ path: next?.path || null });
+
+  // 🔎 Lấy tất cả chapter cùng cấp với chapter hiện tại
+  const all = db.prepare(`SELECT path FROM folders WHERE root = ?`).all(root);
+  const parent = path.split("/").slice(0, -1).join("/");
+  const depth = path.split("/").length;
+  const naturalCompare = require("string-natural-compare");
+
+  const siblings = all
+    .map((r) => r.path)
+    .filter((p) => {
+      if (parent) {
+        if (!p.startsWith(parent + "/")) return false;
+      } else if (p.includes("/")) {
+        return false;
+      }
+      return p.split("/").length === depth;
+    })
+    .sort((a, b) => naturalCompare(a, b));
+
+  const index = siblings.indexOf(path);
+  if (index === -1) return res.json({ path: null });
+  const nextPath = dir === "next" ? siblings[index + 1] : siblings[index - 1];
+  res.json({ path: nextPath || null });
 });
 
 module.exports = router;
