@@ -113,27 +113,23 @@ router.get("/next-chapter", (req, res) => {
   }
   const db = getDB(key);
 
-  // 🔎 Lấy tất cả chapter cùng cấp với chapter hiện tại
-  const all = db.prepare(`SELECT path FROM folders WHERE root = ?`).all(root);
-  const parent = path.split("/").slice(0, -1).join("/");
-  const depth = path.split("/").length;
+  // 🔎 Sắp xếp toàn bộ chapter của root theo thứ tự tự nhiên
+  const rows = db.prepare(`SELECT path FROM folders WHERE root = ?`).all(root);
   const naturalCompare = require("string-natural-compare");
+  const naturalPathCompare = (a, b) => {
+    const as = a.split("/");
+    const bs = b.split("/");
+    for (let i = 0; i < Math.min(as.length, bs.length); i++) {
+      const diff = naturalCompare(as[i], bs[i]);
+      if (diff !== 0) return diff;
+    }
+    return as.length - bs.length;
+  };
 
-  const siblings = all
-    .map((r) => r.path)
-    .filter((p) => {
-      if (parent) {
-        if (!p.startsWith(parent + "/")) return false;
-      } else if (p.includes("/")) {
-        return false;
-      }
-      return p.split("/").length === depth;
-    })
-    .sort((a, b) => naturalCompare(a, b));
-
-  const index = siblings.indexOf(path);
+  const paths = rows.map((r) => r.path).sort(naturalPathCompare);
+  const index = paths.indexOf(path);
   if (index === -1) return res.json({ path: null });
-  const nextPath = dir === "next" ? siblings[index + 1] : siblings[index - 1];
+  const nextPath = dir === "next" ? paths[index + 1] : paths[index - 1];
   res.json({ path: nextPath || null });
 });
 
