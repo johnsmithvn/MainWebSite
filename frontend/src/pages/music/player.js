@@ -30,23 +30,54 @@ function renderNowPlayingInfo(track) {
   let thumb = buildThumbnailUrl(track, "music");
 
   // Render info nổi bật giống Spotify, THÊM NÚT "+"
-  el.innerHTML = `
-    <div class="now-playing-cover">
-      <img class="now-playing-thumb" src="${thumb}" alt="thumb" />
-      <div class="now-playing-meta">
-        <div class="now-title">
-          ${track.name}
-          <button id="btn-add-playlist" title="Thêm vào playlist" style="margin-left:8px;">+</button>
-          <button id="btn-add-thumb" title="Dùng thumbnail này" style="margin-left:6px;">🖼️</button>
-        </div>
-        <div class="now-artist">${track.artist || "Unknown Artist"}</div>
-        <div class="now-extra">
-          <span>👁️ ${track.viewCount || 0}</span>
-          <span>${track.album ? "• " + track.album : ""}</span>
-        </div>
-      </div>
-    </div>
-  `;
+  el.innerHTML = "";
+
+  const cover = document.createElement("div");
+  cover.className = "now-playing-cover";
+
+  const img = document.createElement("img");
+  img.className = "now-playing-thumb";
+  img.src = thumb;
+  img.alt = "thumb";
+
+  const meta = document.createElement("div");
+  meta.className = "now-playing-meta";
+
+  const titleDiv = document.createElement("div");
+  titleDiv.className = "now-title";
+
+  const titleText = document.createElement("span");
+  titleText.textContent = track.name;
+
+  const addBtn = document.createElement("button");
+  addBtn.id = "btn-add-playlist";
+  addBtn.title = "Thêm vào playlist";
+  addBtn.style.marginLeft = "8px";
+  addBtn.textContent = "+";
+
+  const thumbBtn = document.createElement("button");
+  thumbBtn.id = "btn-add-thumb";
+  thumbBtn.title = "Dùng thumbnail này";
+  thumbBtn.style.marginLeft = "6px";
+  thumbBtn.textContent = "🖼️";
+
+  titleDiv.append(titleText, addBtn, thumbBtn);
+
+  const artistDiv = document.createElement("div");
+  artistDiv.className = "now-artist";
+  artistDiv.textContent = track.artist || "Unknown Artist";
+
+  const extraDiv = document.createElement("div");
+  extraDiv.className = "now-extra";
+  const viewsSpan = document.createElement("span");
+  viewsSpan.textContent = `👁️ ${track.viewCount || 0}`;
+  const albumSpan = document.createElement("span");
+  if (track.album) albumSpan.textContent = `• ${track.album}`;
+  extraDiv.append(viewsSpan, albumSpan);
+
+  meta.append(titleDiv, artistDiv, extraDiv);
+  cover.append(img, meta);
+  el.appendChild(cover);
 
   // Gắn sự kiện mở popup playlist
   document.getElementById("btn-add-playlist")?.addEventListener("click", (e) => {
@@ -245,15 +276,28 @@ function renderTrackList() {
 
     const thumb = buildThumbnailUrl(item, "music");
     const tdSong = document.createElement("td");
-    tdSong.innerHTML = `
-  <div class="track-flex">
-    <img class="track-thumb" src="${thumb}" alt="thumb" />
-    <div class="track-info">
-      <div class="track-title">${item.name}</div>
-      <div class="track-artist">${item.artist || "Unknown"}</div>
-    </div>
-  </div>
-`;
+    const flexDiv = document.createElement("div");
+    flexDiv.className = "track-flex";
+
+    const img = document.createElement("img");
+    img.className = "track-thumb";
+    img.src = thumb;
+    img.alt = "thumb";
+
+    const infoDiv = document.createElement("div");
+    infoDiv.className = "track-info";
+
+    const titleDiv = document.createElement("div");
+    titleDiv.className = "track-title";
+    titleDiv.textContent = item.name;
+
+    const artistDiv = document.createElement("div");
+    artistDiv.className = "track-artist";
+    artistDiv.textContent = item.artist || "Unknown";
+
+    infoDiv.append(titleDiv, artistDiv);
+    flexDiv.append(img, infoDiv);
+    tdSong.appendChild(flexDiv);
     const tdAlbum = document.createElement("td");
     tdAlbum.textContent = item.album || "Unknown";
 

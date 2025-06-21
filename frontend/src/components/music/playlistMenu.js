@@ -21,31 +21,47 @@ export async function showPlaylistMenu(path, name, anchor) {
   }
 
   // === Render cấu trúc khung popup sticky title + vùng scroll + sticky button add ===
-container.innerHTML = `
-  <div class="popup-title" style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
-    <span class="popup-title-text" title="${name}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:215px;display:inline-block;">
-      Add "${name}"
-    </span>
-    <button id="playlist-close-btn" title="Đóng" style="
-      background:none;
-      border:none;
-      font-size:1.3em;
-      line-height:1;
-      cursor:pointer;
-      color:#999;
-      margin-left:10px;
-      padding:0 6px 0 6px;
-      flex-shrink:0;
-      ">✖</button>
-  </div>
-  <div class="playlist-list-scroll"></div>
-`;
-  document
-    .getElementById("playlist-close-btn")
-    ?.addEventListener("click", () => {
-      container.remove();
-    });
-  const listScroll = container.querySelector(".playlist-list-scroll");
+  container.innerHTML = "";
+
+  const titleBar = document.createElement("div");
+  titleBar.className = "popup-title";
+  titleBar.style.display = "flex";
+  titleBar.style.alignItems = "center";
+  titleBar.style.justifyContent = "space-between";
+  titleBar.style.gap = "4px";
+
+  const titleText = document.createElement("span");
+  titleText.className = "popup-title-text";
+  titleText.title = name;
+  titleText.style.whiteSpace = "nowrap";
+  titleText.style.overflow = "hidden";
+  titleText.style.textOverflow = "ellipsis";
+  titleText.style.maxWidth = "215px";
+  titleText.style.display = "inline-block";
+  titleText.textContent = `Add "${name}"`;
+
+  const closeBtn = document.createElement("button");
+  closeBtn.id = "playlist-close-btn";
+  closeBtn.title = "Đóng";
+  closeBtn.style.background = "none";
+  closeBtn.style.border = "none";
+  closeBtn.style.fontSize = "1.3em";
+  closeBtn.style.lineHeight = "1";
+  closeBtn.style.cursor = "pointer";
+  closeBtn.style.color = "#999";
+  closeBtn.style.marginLeft = "10px";
+  closeBtn.style.padding = "0 6px 0 6px";
+  closeBtn.style.flexShrink = "0";
+  closeBtn.textContent = "✖";
+  closeBtn.addEventListener("click", () => {
+    container.remove();
+  });
+
+  titleBar.append(titleText, closeBtn);
+  const listScroll = document.createElement("div");
+  listScroll.className = "playlist-list-scroll";
+
+  container.append(titleBar, listScroll);
 
   // Render từng playlist-row vào vùng scroll
   const playlistStatus = await Promise.all(
@@ -64,7 +80,7 @@ container.innerHTML = `
     // Nút tick add/remove bài
     const btn = document.createElement("button");
     btn.className = "playlist-option" + (p.contains ? " bold" : "");
-    btn.innerHTML = p.contains ? `✅ ${p.name}` : p.name;
+    btn.textContent = p.contains ? `✅ ${p.name}` : p.name;
     btn.style.flex = "1";
     btn.style.textAlign = "left";
     btn.onclick = async () => {

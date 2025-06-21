@@ -77,10 +77,17 @@ export async function filterManga(fromScroll = false) {
     results.forEach((f) => {
       const item = document.createElement("div");
       item.className = "search-item";
-      item.innerHTML = `
-        <img src="${f.thumbnail}" class="search-thumb" alt="thumb">
-        <div class="search-title">${f.name}</div>
-      `;
+
+      const img = document.createElement("img");
+      img.src = f.thumbnail;
+      img.className = "search-thumb";
+      img.alt = "thumb";
+
+      const title = document.createElement("div");
+      title.className = "search-title";
+      title.textContent = f.name;
+
+      item.append(img, title);
       item.onclick = () => {
         dropdown.classList.add("hidden");
 
@@ -180,10 +187,16 @@ export async function filterMovie(fromScroll = false) {
 
       let thumbSrc = buildThumbnailUrl(f, "movie");
 
-      item.innerHTML = `
-    <img src="${thumbSrc}" class="search-thumb" alt="thumb">
-    <div class="search-title">${f.name}</div>
-  `;
+      const img = document.createElement("img");
+      img.src = thumbSrc;
+      img.className = "search-thumb";
+      img.alt = "thumb";
+
+      const title = document.createElement("div");
+      title.className = "search-title";
+      title.textContent = f.name;
+
+      item.append(img, title);
 
       item.onclick = () => {
         dropdown.classList.add("hidden");
@@ -880,10 +893,16 @@ export async function filterMusic(fromScroll = false) {
       const isAudio = f.type === "audio" || f.type === "file";
       let thumbSrc = buildThumbnailUrl(f, "music");
 
-      item.innerHTML = `
-        <img src="${thumbSrc}" class="search-thumb" alt="thumb">
-        <div class="search-title">${f.name}</div>
-      `;
+      const img = document.createElement("img");
+      img.src = thumbSrc;
+      img.className = "search-thumb";
+      img.alt = "thumb";
+
+      const title = document.createElement("div");
+      title.className = "search-title";
+      title.textContent = f.name;
+
+      item.append(img, title);
 
       item.onclick = () => {
         dropdown.classList.add("hidden");
@@ -931,24 +950,38 @@ export function showInputPrompt(
 ) {
   return new Promise((resolve) => {
     // Tạo overlay
-    let overlay = document.createElement("div");
+    const overlay = document.createElement("div");
     overlay.className = "popup-overlay";
     overlay.style.zIndex = "99999";
-    overlay.innerHTML = `
-      <div class="popup-confirm">
-        <div class="popup-message">${message}</div>
-        <input class="popup-input" type="text" placeholder="${placeholder}" autofocus />
-        <div class="popup-actions">
-          <button class="popup-ok">${okText}</button>
-          <button class="popup-cancel">${cancelText}</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(overlay);
 
-    const input = overlay.querySelector(".popup-input");
-    const okBtn = overlay.querySelector(".popup-ok");
-    const cancelBtn = overlay.querySelector(".popup-cancel");
+    const box = document.createElement("div");
+    box.className = "popup-confirm";
+
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "popup-message";
+    msgDiv.textContent = message;
+
+    const input = document.createElement("input");
+    input.className = "popup-input";
+    input.type = "text";
+    input.placeholder = placeholder;
+    input.autofocus = true;
+
+    const actions = document.createElement("div");
+    actions.className = "popup-actions";
+
+    const okBtn = document.createElement("button");
+    okBtn.className = "popup-ok";
+    okBtn.textContent = okText;
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "popup-cancel";
+    cancelBtn.textContent = cancelText;
+
+    actions.append(okBtn, cancelBtn);
+    box.append(msgDiv, input, actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
 
     // Sự kiện OK
     okBtn.onclick = () => {
