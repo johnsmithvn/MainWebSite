@@ -112,14 +112,25 @@ router.get("/next-chapter", (req, res) => {
     return res.status(400).json({ error: "Thiếu tham số hoặc sai direction" });
   }
   const db = getDB(key);
-  const current = db.prepare(`SELECT id FROM folders WHERE root = ? AND path = ?`).get(root, path);
-  if (!current) return res.json({ path: null });
-  const order = dir === "next" ? "ASC" : "DESC";
-  const compare = dir === "next" ? ">" : "<";
-  const next = db.prepare(
-    `SELECT path FROM folders WHERE root = ? AND id ${compare} ? ORDER BY id ${order} LIMIT 1`
-  ).get(root, current.id);
-  res.json({ path: next?.path || null });
+
+  // 🔎 Sắp xếp toàn bộ chapter của root theo thứ tự tự nhiên
+  const rows = db.prepare(`SELECT path FROM folders WHERE root = ?`).all(root);
+  const naturalCompare = require("string-natural-compare");
+  const naturalPathCompare = (a, b) => {
+    const as = a.split("/");
+    const bs = b.split("/");
+    for (let i = 0; i < Math.min(as.length, bs.length); i++) {
+      const diff = naturalCompare(as[i], bs[i]);
+      if (diff !== 0) return diff;
+    }
+    return as.length - bs.length;
+  };
+
+  const paths = rows.map((r) => r.path).sort(naturalPathCompare);
+  const index = paths.indexOf(path);
+  if (index === -1) return res.json({ path: null });
+  const nextPath = dir === "next" ? paths[index + 1] : paths[index - 1];
+  res.json({ path: nextPath || null });
 });
 
 module.exports = router;
