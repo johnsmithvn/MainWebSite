@@ -1,6 +1,6 @@
 import { toggleReaderUI, updateReaderPageInfo } from "./utils.js";
 
-const imagesPerPage = 200;
+const imagesPerPage = 400;
 
 /**
  * 📖 Scroll Mode Reader
