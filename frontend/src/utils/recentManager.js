@@ -1,12 +1,11 @@
 // 📁 frontend/src/utils/recentManager.js
-import { getSourceKey, getRootFolder } from "/src/core/storage.js";
-import { CACHE_SETTINGS } from "/shared/constants.js";
+import { CACHE, LIMITS } from "/frontend/constants/index.js";
 
 /**
  * 📚 Recent Viewed Manager - Quản lý lịch sử xem chung
  */
 class RecentManager {
-  constructor(storageKey, maxItems = CACHE_SETTINGS.MAX_RECENT_ITEMS) {
+  constructor(storageKey, maxItems = LIMITS.MAX_RECENT_ITEMS) {
     this.storageKey = storageKey;
     this.maxItems = maxItems;
   }
@@ -25,7 +24,7 @@ class RecentManager {
       // Filter out expired items
       const now = Date.now();
       const filtered = parsed.filter(item => {
-        return !item.timestamp || (now - item.timestamp < 30 * 24 * 60 * 60 * 1000); // 30 days
+        return !item.timestamp || (now - item.timestamp < CACHE.TIME.WEEK * 4); // 4 tuần
       });
       
       if (filtered.length !== parsed.length) {
@@ -110,7 +109,7 @@ class RecentManager {
       oldestTimestamp: recent.length > 0 ? recent[recent.length - 1].timestamp : null,
       newestTimestamp: recent.length > 0 ? recent[0].timestamp : null,
       usage: ((recent.length / this.maxItems) * 100).toFixed(1) + '%',
-      recentCount: recent.filter(r => r.timestamp && (now - r.timestamp < 24 * 60 * 60 * 1000)).length // Last 24h
+      recentCount: recent.filter(r => r.timestamp && (now - r.timestamp < CACHE.TIME.DAY)).length // Last 24h
     };
   }
 
@@ -151,7 +150,7 @@ class RecentManager {
       }
       
       const diff = now - item.timestamp;
-      const days = diff / (24 * 60 * 60 * 1000);
+      const days = diff / CACHE.TIME.DAY;
       
       if (days < 1) {
         stats.today++;
@@ -173,28 +172,26 @@ class RecentManager {
 /**
  * 🔑 Tạo storage key cho recent
  */
-function createRecentKey(type) {
-  const sourceKey = getSourceKey();
-  const rootFolder = getRootFolder();
+function createRecentKey(type, sourceKey, rootFolder) {
   return `recentViewed${type}::${sourceKey}::${rootFolder}`;
 }
 
 // Export instances cho từng loại
-export const mangaRecentManager = new RecentManager(() => createRecentKey(""));
-export const movieRecentManager = new RecentManager(() => createRecentKey("Video"));
-export const musicRecentManager = new RecentManager(() => createRecentKey("Music"));
+export const mangaRecentManager = new RecentManager('recentViewed::', 30);
+export const movieRecentManager = new RecentManager('recentViewedVideo::', 30);
+export const musicRecentManager = new RecentManager('recentViewedMusic::', 30);
 
 /**
  * 📖 Helper functions cho manga
  */
-export function saveRecentViewed(folder) {
-  const key = createRecentKey("");
+export function saveRecentViewed(folder, sourceKey, rootFolder) {
+  const key = createRecentKey("", sourceKey, rootFolder);
   const manager = new RecentManager(key);
   manager.saveRecent(folder);
 }
 
-export function getRecentViewed() {
-  const key = createRecentKey("");
+export function getRecentViewed(sourceKey, rootFolder) {
+  const key = createRecentKey("", sourceKey, rootFolder);
   const manager = new RecentManager(key);
   return manager.getRecent();
 }
@@ -202,14 +199,14 @@ export function getRecentViewed() {
 /**
  * 🎬 Helper functions cho movie
  */
-export function saveRecentViewedVideo(video) {
-  const key = createRecentKey("Video");
+export function saveRecentViewedVideo(video, sourceKey, rootFolder) {
+  const key = createRecentKey("Video", sourceKey, rootFolder);
   const manager = new RecentManager(key);
   manager.saveRecent(video);
 }
 
-export function getRecentViewedVideo() {
-  const key = createRecentKey("Video");
+export function getRecentViewedVideo(sourceKey, rootFolder) {
+  const key = createRecentKey("Video", sourceKey, rootFolder);
   const manager = new RecentManager(key);
   return manager.getRecent();
 }
@@ -217,14 +214,14 @@ export function getRecentViewedVideo() {
 /**
  * 🎵 Helper functions cho music
  */
-export function saveRecentViewedMusic(song) {
-  const key = createRecentKey("Music");
+export function saveRecentViewedMusic(song, sourceKey, rootFolder) {
+  const key = createRecentKey("Music", sourceKey, rootFolder);
   const manager = new RecentManager(key);
   manager.saveRecent(song);
 }
 
-export function getRecentViewedMusic() {
-  const key = createRecentKey("Music");
+export function getRecentViewedMusic(sourceKey, rootFolder) {
+  const key = createRecentKey("Music", sourceKey, rootFolder);
   const manager = new RecentManager(key);
   return manager.getRecent();
 }

@@ -1,6 +1,7 @@
 // playlistMenu.js
 import { getSourceKey } from "/src/core/storage.js";
 import { showToast, showConfirm, showInputPrompt } from "/src/core/ui.js";
+import { LIMITS, TIMING } from '/frontend/constants/index.js';
 
 export async function showPlaylistMenu(path, name, anchor) {
   let container = document.getElementById("playlist-popup");
@@ -163,14 +164,14 @@ export async function showPlaylistMenu(path, name, anchor) {
   };
   container.appendChild(newBtn);
 
-  // Popup căn giữa (mobile/desktop)
-  const isMobile = window.innerWidth <= 480;
+  // Popup căn giữa (mobile/desktop) sử dụng constants
+  const isMobile = window.innerWidth <= LIMITS.MOBILE_BREAKPOINT;
   container.style.position = "fixed";
   container.style.left = "50%";
   container.style.top = "50%";
   container.style.transform = "translate(-50%, -50%)";
-  container.style.width = isMobile ? "min(96vw, 400px)" : "340px";
-  container.style.maxWidth = isMobile ? "96vw" : "340px";
+  container.style.width = isMobile ? `min(96vw, ${LIMITS.PLAYLIST_MOBILE_WIDTH}px)` : `${LIMITS.PLAYLIST_DESKTOP_WIDTH}px`;
+  container.style.maxWidth = isMobile ? "96vw" : `${LIMITS.PLAYLIST_DESKTOP_WIDTH}px`;
   container.style.maxHeight = isMobile ? "87vh" : "70vh";
 
   // Click ngoài sẽ ẩn popup

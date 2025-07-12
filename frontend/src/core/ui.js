@@ -5,8 +5,15 @@ import { getRootFolder, getSourceKey } from "./storage.js";
 import { state, loadFolder } from "/src/core/folder.js";
 import { changeRootFolder } from "./storage.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
+import { TIMING, LIMITS, UI, CACHE } from '/frontend/constants/index.js';
 
-const SEARCH_LIMIT = 50;
+// Helper function to safely remove child elements
+const safeRemoveChild = (parent, child) => {
+  if (parent && child && parent.contains(child)) {
+    parent.removeChild(child);
+  }
+};
+
 const searchStates = {
   manga: { keyword: "", offset: 0, loading: false, hasMore: true, attached: false },
   movie: { keyword: "", offset: 0, loading: false, hasMore: true, attached: false, type: "" },
@@ -61,11 +68,11 @@ export async function filterManga(fromScroll = false) {
         sourceKey
       )}&root=${encodeURIComponent(rootFolder)}&q=${encodeURIComponent(
         keyword
-      )}&limit=${SEARCH_LIMIT}&offset=${state.offset}`
+      )}&limit=${LIMITS.SEARCH_LIMIT}&offset=${state.offset}`
     );
     const results = await res.json();
 
-    dropdown.removeChild(loader);
+    safeRemoveChild(dropdown, loader);
 
     if (state.offset === 0 && results.length === 0) {
       dropdown.innerHTML = `<div id="search-loader">❌ Không tìm thấy kết quả</div>`;
@@ -104,9 +111,9 @@ export async function filterManga(fromScroll = false) {
     });
 
     state.offset += results.length;
-    if (results.length < SEARCH_LIMIT) state.hasMore = false;
+    if (results.length < LIMITS.SEARCH_LIMIT) state.hasMore = false;
   } catch (err) {
-    dropdown.removeChild(loader);
+    safeRemoveChild(dropdown, loader);
     dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
     console.error("❌ Lỗi tìm kiếm:", err);
   } finally {
@@ -167,10 +174,10 @@ export async function filterMovie(fromScroll = false) {
     const res = await fetch(
       `/api/movie/video-cache?mode=search&key=${encodeURIComponent(
         sourceKey
-      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}&limit=${SEARCH_LIMIT}&offset=${state.offset}`
+      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}&limit=${LIMITS.SEARCH_LIMIT}&offset=${state.offset}`
     );
     const data = await res.json();
-    dropdown.removeChild(loader);
+    safeRemoveChild(dropdown, loader);
 
     if (!data.folders || data.folders.length === 0) {
       if (state.offset === 0) {
@@ -215,9 +222,9 @@ export async function filterMovie(fromScroll = false) {
     });
 
     state.offset += data.folders.length;
-    if (data.folders.length < SEARCH_LIMIT) state.hasMore = false;
+    if (data.folders.length < LIMITS.SEARCH_LIMIT) state.hasMore = false;
   } catch (err) {
-    dropdown.removeChild(loader);
+    safeRemoveChild(dropdown, loader);
     console.error("❌ Lỗi tìm kiếm video:", err);
     dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
   } finally {
@@ -332,8 +339,9 @@ export function showRandomUpdatedTime(timestamp, id = "random-timestamp") {
   const info = document.getElementById(id);
   if (!info) return;
 
-  const diff = Math.floor((Date.now() - timestamp) / 60000);
-  const isMobile = window.innerWidth <= 480;
+  // Sử dụng constants từ uiConstants.js
+  const diff = Math.floor((Date.now() - timestamp) / CACHE.MINUTE_IN_MS);
+  const isMobile = window.innerWidth <= LIMITS.MOBILE_BREAKPOINT;
 
   if (isMobile) {
     info.textContent = `🎲 ${diff === 0 ? "now" : `${diff}m`}`;
@@ -534,13 +542,13 @@ export function showToast(msg) {
     toast.id = "global-toast";
     toast.style.position = "fixed";
     toast.style.bottom = "20px";
-    toast.style.left = "50%";
-    toast.style.transform = "translateX(-50%)";
-    toast.style.background = "#333";
+    toast.style.left = UI_STYLES.POSITIONING.CENTER_HORIZONTAL;
+    toast.style.transform = UI_STYLES.POSITIONING.CENTER_TRANSFORM;
+    toast.style.background = UI_STYLES.COLORS.TOAST_BACKGROUND;
     toast.style.color = "white";
     toast.style.padding = "10px 20px";
     toast.style.borderRadius = "8px";
-    toast.style.zIndex = "9999";
+    toast.style.zIndex = UI_STYLES.Z_INDEX.TOAST;
     toast.style.fontSize = "14px";
     document.body.appendChild(toast);
   }
@@ -548,7 +556,7 @@ export function showToast(msg) {
   toast.style.display = "block";
   setTimeout(() => {
     toast.style.display = "none";
-  }, 3000);
+  }, TIMING.TOAST_TIMEOUT);
 }
 
 export function showConfirm(message, options = {}) {
@@ -872,10 +880,10 @@ export async function filterMusic(fromScroll = false) {
     const res = await fetch(
       `/api/music/audio-cache?mode=search&key=${encodeURIComponent(
         sourceKey
-      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}&limit=${SEARCH_LIMIT}&offset=${state.offset}`
+      )}&q=${encodeURIComponent(keyword)}&type=${encodeURIComponent(type)}&limit=${LIMITS.SEARCH_LIMIT}&offset=${state.offset}`
     );
     const data = await res.json();
-    dropdown.removeChild(loader);
+    safeRemoveChild(dropdown, loader);
 
     if (!data.folders || data.folders.length === 0) {
       if (state.offset === 0) {
@@ -921,9 +929,9 @@ export async function filterMusic(fromScroll = false) {
     });
 
     state.offset += data.folders.length;
-    if (data.folders.length < SEARCH_LIMIT) state.hasMore = false;
+    if (data.folders.length < LIMITS.SEARCH_LIMIT) state.hasMore = false;
   } catch (err) {
-    dropdown.removeChild(loader);
+    safeRemoveChild(dropdown, loader);
     console.error("❌ Lỗi tìm kiếm nhạc:", err);
     dropdown.innerHTML = `<div id="search-loader">⚠️ Lỗi khi tìm kiếm</div>`;
   } finally {
@@ -952,7 +960,7 @@ export function showInputPrompt(
     // Tạo overlay
     const overlay = document.createElement("div");
     overlay.className = "popup-overlay";
-    overlay.style.zIndex = "99999";
+    overlay.style.zIndex = UI_STYLES.Z_INDEX.OVERLAY;
 
     const box = document.createElement("div");
     box.className = "popup-confirm";

@@ -1,8 +1,15 @@
 // 📁 frontend/src/core/storage.js
 import { showToast, goHome } from "./ui.js";
 import { folderCacheManager, movieCacheManager, musicCacheManager } from "/src/utils/cacheManager.js";
-import { mangaRecentManager, movieRecentManager, musicRecentManager } from "/src/utils/recentManager.js";
-import { CACHE_SETTINGS } from "/shared/constants.js";
+import { 
+  saveRecentViewed as saveRecentViewedHelper,
+  getRecentViewed as getRecentViewedHelper,
+  saveRecentViewedVideo as saveRecentViewedVideoHelper,
+  getRecentViewedVideo as getRecentViewedVideoHelper,
+  saveRecentViewedMusic as saveRecentViewedMusicHelper,
+  getRecentViewedMusic as getRecentViewedMusicHelper
+} from "/src/utils/recentManager.js";
+import { CACHE } from "/frontend/constants/index.js";
 
 const ROOT_THUMB_CACHE_PREFIX = "rootThumb::";
 
@@ -181,20 +188,18 @@ export function recentViewedKey() {
 
 export function saveRecentViewed(folder) {
   const rootFolder = getRootFolder();
-  if (!rootFolder) return;
+  const sourceKey = getSourceKey();
+  if (!rootFolder || !sourceKey) return;
   
-  mangaRecentManager.addItem(rootFolder, {
-    name: folder.name,
-    path: folder.path,
-    thumbnail: folder.thumbnail,
-  });
+  saveRecentViewedHelper(folder, sourceKey, rootFolder);
 }
 
 export function getRecentViewed() {
   const rootFolder = getRootFolder();
-  if (!rootFolder) return [];
+  const sourceKey = getSourceKey();
+  if (!rootFolder || !sourceKey) return [];
   
-  return mangaRecentManager.getItems(rootFolder);
+  return getRecentViewedHelper(sourceKey, rootFolder);
 }
 
 // ========== RECENT VIEWED VIDEO ==========
@@ -207,19 +212,14 @@ export function saveRecentViewedVideo(video) {
   const sourceKey = getSourceKey();
   if (!sourceKey) return;
   
-  movieRecentManager.addItem(sourceKey, {
-    name: video.name,
-    path: video.path,
-    thumbnail: video.thumbnail,
-    type: "video",
-  });
+  saveRecentViewedVideoHelper(video, sourceKey, null);
 }
 
 export function getRecentViewedVideo() {
   const sourceKey = getSourceKey();
   if (!sourceKey) return [];
   
-  return movieRecentManager.getItems(sourceKey);
+  return getRecentViewedVideoHelper(sourceKey, null);
 }
 
 // ========== RECENT VIEWED MUSIC ==========
@@ -232,18 +232,12 @@ export function saveRecentViewedMusic(song) {
   const sourceKey = getSourceKey();
   if (!sourceKey) return;
   
-  musicRecentManager.addItem(sourceKey, {
-    name: song.name,
-    path: song.path,
-    thumbnail: song.thumbnail,
-    type: "audio",
-    artist: song.artist,
-  });
+  saveRecentViewedMusicHelper(song, sourceKey, null);
 }
 
 export function getRecentViewedMusic() {
   const sourceKey = getSourceKey();
   if (!sourceKey) return [];
   
-  return musicRecentManager.getItems(sourceKey);
+  return getRecentViewedMusicHelper(sourceKey, null);
 }

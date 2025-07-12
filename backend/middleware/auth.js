@@ -2,6 +2,7 @@ const dns = require("dns").promises;
 const dotenv = require("dotenv");
 const path = require("path");
 const fs = require("fs");
+const { SERVER } = require("../constants");
 
 // Đọc biến môi trường từ .env
 const envPath = path.join(__dirname, "../.env");
@@ -41,11 +42,11 @@ module.exports = async function (req, res, next) {
     const hostname = resolved[0] || "";
     if (!allowedHostnames.includes(hostname)) {
       console.warn("❌ Truy cập bị chặn từ hostname:", hostname);
-      return res.status(403).send("Forbidden (blocked)");
+      return res.status(SERVER.HTTP_STATUS.FORBIDDEN).send("Forbidden (blocked)");
     }
     next();
   } catch (err) {
     console.error("❌ Reverse DNS failed:", err.message);
-    return res.status(403).send("Forbidden (lookup failed)");
+    return res.status(SERVER.HTTP_STATUS.FORBIDDEN).send("Forbidden (lookup failed)");
   }
 }; 

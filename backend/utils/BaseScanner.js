@@ -3,8 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const { getRootPath } = require("./config");
 const { findThumbnail } = require("./thumbnailUtils");
-const { DatabaseUtils } = require("./databaseUtils");
-const { FILE_EXTENSIONS } = require("../../shared/constants");
+const { upsertFolder, getDbStats } = require("./databaseUtils");
+const { FILE_EXTENSIONS } = require("../constants");
 
 /**
  * 🔄 Base Scanner class cho Music/Movie/Manga
@@ -37,7 +37,7 @@ class BaseScanner {
   /**
    * 📁 Scan folder và subfolder đệ quy
    */
-  async scanFolderToDB(dbkey, currentPath = "", stats = { inserted: 0, updated: 0, skipped: 0 }) {
+  async scanFolderToDB(dbkey, currentPath = "", stats = { scanned: 0, inserted: 0, updated: 0, skipped: 0 }) {
     const db = this.getDB(dbkey);
     const rootPath = getRootPath(dbkey);
     const basePath = path.join(rootPath, currentPath);
@@ -45,6 +45,7 @@ class BaseScanner {
     if (!fs.existsSync(basePath)) return stats;
 
     const entries = fs.readdirSync(basePath, { withFileTypes: true });
+    stats.scanned = (stats.scanned || 0) + entries.length;
 
     for (const entry of entries) {
       // Skip .thumbnail folder
@@ -91,7 +92,7 @@ class BaseScanner {
       type: 'folder'
     };
 
-    DatabaseUtils.upsertFolder(db, folderData, stats);
+    upsertFolder(db, folderData, stats);
   }
 
   /**
@@ -118,7 +119,7 @@ class BaseScanner {
       modified: stat.mtimeMs
     };
 
-    DatabaseUtils.upsertFolder(db, fileData, stats);
+    upsertFolder(db, fileData, stats);
   }
 
   /**
@@ -134,7 +135,7 @@ class BaseScanner {
    */
   async getScanStats(dbkey) {
     const db = this.getDB(dbkey);
-    return DatabaseUtils.getDbStats(db);
+    return getDbStats(db);
   }
 }
 

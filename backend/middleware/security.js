@@ -1,4 +1,5 @@
 const { SECURITY_KEYS, SECURITY_PASSWORD } = require('../utils/config');
+const { SERVER } = require('../constants');
 
 module.exports = function (req, res, next) {
   if (req.path === '/api/login') {
@@ -15,7 +16,7 @@ module.exports = function (req, res, next) {
     const token =
       req.headers['x-secure-token'] || req.query.token || req.body?.token;
     if (token !== SECURITY_PASSWORD) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(SERVER.HTTP_STATUS.UNAUTHORIZED).json({ error: 'Unauthorized' });
     }
   }
 

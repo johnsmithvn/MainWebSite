@@ -1,11 +1,11 @@
 // 📁 frontend/src/utils/cacheManager.js
-import { CACHE_SETTINGS } from "/shared/constants.js";
+import { LIMITS, CACHE } from '/frontend/constants/index.js';
 
 /**
  * 🗂️ Cache Manager - Quản lý cache chung cho manga/movie/music
  */
 class CacheManager {
-  constructor(prefix, maxSize = CACHE_SETTINGS.MAX_FOLDER_CACHE_SIZE) {
+  constructor(prefix, maxSize = LIMITS.MAX_CACHE_SIZE) {
     this.prefix = prefix;
     this.maxSize = maxSize;
   }
@@ -59,13 +59,13 @@ class CacheManager {
       
       // Kiểm tra kích thước trước khi lưu
       if (this.getCurrentCacheSize() + serialized.length > this.maxSize) {
-        this.cleanUpOldCache(serialized.length + 1024 * 1024); // +1MB buffer
+        this.cleanUpOldCache(serialized.length + (1024 * 1024)); // +1MB buffer
       }
       
       localStorage.setItem(key, serialized);
     } catch (error) {
       console.warn("❌ Cache storage error:", error);
-      this.cleanUpOldCache(50 * 1024 * 1024); // Dọn 50MB
+      this.cleanUpOldCache(LIMITS.CACHE_CLEANUP_THRESHOLD); // Dọn theo constant
       
       // Retry once
       try {
@@ -143,13 +143,14 @@ class CacheManager {
   getCacheStats() {
     const entries = Object.keys(localStorage).filter(key => key.startsWith(this.prefix));
     const totalSize = this.getCurrentCacheSize();
+    const BYTES_PER_MB = 1024 * 1024;
     
     return {
       count: entries.length,
       totalSize,
-      totalSizeMB: (totalSize / 1024 / 1024).toFixed(2),
+      totalSizeMB: (totalSize / BYTES_PER_MB).toFixed(2),
       maxSize: this.maxSize,
-      maxSizeMB: (this.maxSize / 1024 / 1024).toFixed(2),
+      maxSizeMB: (this.maxSize / BYTES_PER_MB).toFixed(2),
       usage: (totalSize / this.maxSize * 100).toFixed(1) + '%'
     };
   }

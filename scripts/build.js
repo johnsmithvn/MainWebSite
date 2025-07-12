@@ -3,12 +3,17 @@ const path = require("path");
 const fs = require("fs");
 const glob = require("glob");
 
-// Plugin alias để dùng đường dẫn như "/src/..." trong JS import
+// Plugin alias để dùng đường dẫn như "/src/..." và "/shared/..." trong JS import
 const aliasPlugin = {
   name: "alias-src",
   setup(build) {
     build.onResolve({ filter: /^\/src\// }, (args) => ({
       path: path.join(__dirname, "../frontend", args.path.slice(1)),
+    }));
+    
+    // Thêm alias cho shared constants
+    build.onResolve({ filter: /^\/shared\// }, (args) => ({
+      path: path.join(__dirname, "..", args.path.slice(1)),
     }));
   },
 };

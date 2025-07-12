@@ -1,4 +1,5 @@
 // 📁 folderSlider.js (Scroll Native version – scroll snap, auto-scroll, hover pause, visibility-aware)
+import { TIMING, LIMITS } from '/frontend/constants/index.js';
 import { renderFolderCard } from "./folderCard.js";
 import { renderRecentViewed, showRandomUpdatedTime } from "../core/ui.js";
 import {
@@ -180,7 +181,7 @@ export function renderFolderSlider({
 
   sliderContainer.appendChild(wrapper);
 
-  const isMobile = window.innerWidth <= 768;
+  const isMobile = window.innerWidth <= LIMITS.TABLET_BREAKPOINT;
   const prevBtn = document.createElement("button");
   const nextBtn = document.createElement("button");
   prevBtn.className = "nav-button prev-button";
@@ -214,7 +215,7 @@ export function renderFolderSlider({
     container.appendChild(section);
   }
 
-  const step = wrapper.querySelector(".folder-card")?.offsetWidth + 16 || 200;
+  const step = wrapper.querySelector(".folder-card")?.offsetWidth + UI.CARD.MARGIN || UI.CARD.DEFAULT_WIDTH;
   const totalSlides = Math.ceil(folders.length / 5);
 
   prevBtn.onclick = () => wrapper.scrollBy({ left: -step, behavior: "smooth" });
@@ -249,7 +250,8 @@ export function renderFolderSlider({
   };
 
   const startAutoScroll = () => {
-    if (!isMobile && !autoTimer) autoTimer = setInterval(scrollInterval, 20000);
+    // Sử dụng TIMING.AUTO_SCROLL_INTERVAL từ uiConstants.js (20 giây)
+    if (!isMobile && !autoTimer) autoTimer = setInterval(scrollInterval, TIMING.AUTO_SCROLL_INTERVAL);
   };
   const stopAutoScroll = () => {
     if (autoTimer) clearInterval(autoTimer);
@@ -354,7 +356,7 @@ async function loadRandomSection(
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        const expired = Date.now() - parsed.timestamp > 30 * 60 * 1000;
+        const expired = Date.now() - parsed.timestamp > CACHE.EXPIRY.MEDIUM;
         if (!expired) {
           renderFolderSlider({
             title,

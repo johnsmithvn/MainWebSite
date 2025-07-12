@@ -34,7 +34,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   loadMovieFolder(initialPath);
   
   // Setup buttons using uiHelpers
-  setupExtractThumbnailButton("extract-thumbnail-btn", () => currentPath, () => loadMovieFolder(currentPath, moviePage));
+  setupExtractThumbnailButton("extract-thumbnail-btn", () => currentPath, () => loadMovieFolder(currentPath, moviePage), "movie");
   
   setupRandomSectionsIfMissing();
   loadRandomSliders();

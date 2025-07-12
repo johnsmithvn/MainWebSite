@@ -2,6 +2,8 @@
 const express = require("express");
 const router = express.Router();
 const { MovieScanner } = require("../../utils/BaseScanner");
+const { getMovieDB } = require("../../utils/db");
+const { SERVER } = require("../../constants");
 
 /**
  * POST /api/scan-movie
@@ -10,18 +12,19 @@ const { MovieScanner } = require("../../utils/BaseScanner");
  */
 router.post("/scan-movie", async (req, res) => {
   const dbkey = req.body.key;
-  if (!dbkey) return res.status(400).json({ error: "Thiếu key" });
+  if (!dbkey) return res.status(SERVER.HTTP_STATUS.BAD_REQUEST).json({ error: "Thiếu key" });
 
   try {
-    const scanner = new MovieScanner(dbkey);
-    const stats = await scanner.scanMovieFolderToDB();
+    const scanner = new MovieScanner(() => getMovieDB(dbkey));
+    const stats = await scanner.scanFolderToDB(dbkey, ""); // Scan từ root
     res.json({
       success: true,
       stats,
       message: "Scan movie thành công!",
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error("❌ Lỗi scan movie:", err);
+    res.status(SERVER.HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, error: err.message });
   }
 });
 

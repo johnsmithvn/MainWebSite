@@ -14,9 +14,10 @@ const {
 const { ROOT_PATHS } = require("./utils/config");
 const authMiddleware = require("./middleware/auth"); // 🆕 Middleware kiểm tra IP/hostname
 const securityMiddleware = require("./middleware/security");
+const { SERVER } = require("./constants"); // Import constants từ backend/constants
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // Giữ nguyên ENV, không dùng constant cho PORT
 
 // ✅ Middleware parse JSON body
 app.use(express.json());
@@ -75,7 +76,7 @@ app.use("/manga", (req, res, next) => {
     req.url = decodedPath;
   } catch (e) {
     console.error("❌ Error decoding URL:", e);
-    return res.status(400).send("Bad Request");
+    return res.status(SERVER.HTTP_STATUS.BAD_REQUEST).send("Bad Request");
   }
   next();
 });
@@ -85,10 +86,10 @@ app.get("/api/list-roots", (req, res) => {
   const dbkey = req.query.key?.toUpperCase();
   const rootDir = getRootPath(dbkey);
   if (!dbkey) {
-    return res.status(400).json({ error: "Thiếu key trong query" });
+    return res.status(SERVER.HTTP_STATUS.BAD_REQUEST).json({ error: "Thiếu key trong query" });
   }
   if (!rootDir || !fs.existsSync(rootDir)) {
-    return res.status(400).json({ error: "Root path không tồn tại" });
+    return res.status(SERVER.HTTP_STATUS.BAD_REQUEST).json({ error: "Root path không tồn tại" });
   }
 
   try {
@@ -97,7 +98,7 @@ app.get("/api/list-roots", (req, res) => {
     res.json(roots);
   } catch (err) {
     console.error("❌ Lỗi đọc thư mục:", err);
-    res.status(500).json({ error: "Lỗi đọc thư mục", detail: err.message });
+    res.status(SERVER.HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: "Lỗi đọc thư mục", detail: err.message });
   }
 });
 
@@ -127,8 +128,8 @@ app.post("/api/login", (req, res) => {
   const { SECURITY_PASSWORD, SECURITY_KEYS } = require("./utils/config");
   const key = (req.body.key || "").toUpperCase();
   const pass = req.body.password || "";
-  if (!SECURITY_KEYS.includes(key)) return res.status(400).json({ error: "invalid key" });
-  if (pass !== SECURITY_PASSWORD) return res.status(401).json({ error: "wrong" });
+  if (!SECURITY_KEYS.includes(key)) return res.status(SERVER.HTTP_STATUS.BAD_REQUEST).json({ error: "invalid key" });
+  if (pass !== SECURITY_PASSWORD) return res.status(SERVER.HTTP_STATUS.UNAUTHORIZED).json({ error: "wrong" });
   res.json({ token: SECURITY_PASSWORD });
 });
 

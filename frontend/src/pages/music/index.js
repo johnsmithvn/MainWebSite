@@ -43,7 +43,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   renderRecentMusicOnLoad();
   
   // Setup buttons using uiHelpers
-  setupExtractThumbnailButton("extract-thumbnail-btn", () => currentPath, () => loadMusicFolder(currentPath, musicPage));
+  setupExtractThumbnailButton("extract-thumbnail-btn", () => currentPath, () => loadMusicFolder(currentPath, musicPage), "music");
 
   document.getElementById("floatingSearchInput")?.addEventListener("input", filterMusic);
   document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
@@ -163,66 +163,6 @@ function renderRecentMusicOnLoad() {
     renderRecentViewedMusic(recentList);
   }
 }
-
-// Gắn sự kiện extract lại thumbnail cho toàn bộ folder hiện tại
-function setupExtractThumbnailButton() {
-  const extractBtn = document.getElementById("extract-thumbnail-btn");
-  if (!extractBtn) return;
-
-  extractBtn.onclick = withLoading(async () => {
-    // Xác nhận
-    const ok = await showConfirm("Extract lại thumbnail nhạc cho toàn bộ folder hiện tại?");
-    if (!ok) return;
-
-    const sourceKey = getSourceKey();
-    if (!sourceKey) {
-      showToast("❌ Không xác định được nguồn nhạc!");
-      return;
-    }
-
-    // Tải danh sách file nhạc trong folder hiện tại
-    const params = new URLSearchParams();
-    if (sourceKey) params.set("key", sourceKey);
-    if (currentPath) params.set("path", currentPath);
-
-    try {
-      const res = await fetch("/api/music/music-folder?" + params.toString());
-      const data = await res.json();
-      const list = data.folders || [];
-
-      // Lọc chỉ lấy các audio file
-      const audioFiles = list.filter(item => item.type === "audio");
-
-      if (audioFiles.length === 0) {
-        showToast("😅 Không có bài hát nào để extract thumbnail.");
-        return;
-      }
-
-      showToast("⏳ Đang extract thumbnail...");
-
-      // Gọi tuần tự từng file
-      for (const item of audioFiles) {
-        const resp = await fetch("/api/music/extract-thumbnail", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: sourceKey, file: item.path }),
-        });
-        const result = await resp.json();
-        // Nếu muốn có thể hiện progress ở đây
-      }
-
-      showToast("✅ Đã extract thumbnail xong!");
-      loadMusicFolder(currentPath, musicPage);
-
-    } catch (err) {
-      showToast("❌ Lỗi extract thumbnail!");
-      console.error(err);
-    }
-    // KHÔNG cần finally hide overlay nữa, withLoading đã lo.
-  });
-}
-
-
 
 // Thêm giao diện phân trang cho danh sách nhạc
 function updateMusicPaginationUI(currentPage, totalItems, perPage) {

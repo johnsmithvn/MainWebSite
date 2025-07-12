@@ -4,7 +4,8 @@ const {
   FILE_EXTENSIONS, 
   CONTENT_TYPES, 
   CACHE_SETTINGS 
-} = require('../shared/constants');
+} = require('../backend/constants');
+const { TIMING } = require('../backend/constants');
 
 // Test constants
 console.log('🧪 Testing constants...');
@@ -18,7 +19,7 @@ if (typeof window !== 'undefined') {
   console.log('🧪 Testing CacheManager...');
   const { CacheManager } = require('../frontend/src/utils/cacheManager');
   
-  const testCache = new CacheManager('test::', 1000); // 1 second TTL
+  const testCache = new CacheManager('test::', TIMING.TEST_CACHE_TTL); // 1 second TTL
   
   // Test set/get
   testCache.setCache('key1', 'test-path', { data: 'test' });
@@ -29,7 +30,7 @@ if (typeof window !== 'undefined') {
   setTimeout(() => {
     const expired = testCache.getCache('key1', 'test-path');
     assert(!expired, 'Cache should expire after TTL');
-  }, 1100);
+  }, TIMING.TEST_TIMEOUT);
 }
 
 // Test DatabaseUtils (backend)

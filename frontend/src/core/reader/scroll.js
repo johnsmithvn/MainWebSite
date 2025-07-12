@@ -1,6 +1,7 @@
 import { toggleReaderUI, updateReaderPageInfo } from "./utils.js";
+import { LIMITS } from '/frontend/constants/index.js';
 
-const imagesPerPage = 400;
+const imagesPerPage = LIMITS.IMAGES_PER_PAGE; // Sử dụng constant thay vì hardcode 400
 
 /**
  * 📖 Scroll Mode Reader
@@ -171,7 +172,7 @@ export function renderScrollReader(
       display: "grid",
       gridTemplateColumns: "repeat(auto-fit, minmax(60px, 1fr))",
       gap: "10px",
-      maxWidth: "400px",
+      maxWidth: `${LIMITS.READER_MAX_WIDTH}px`, // Sử dụng constant
     });
 
     for (let i = 0; i < totalPages; i++) {

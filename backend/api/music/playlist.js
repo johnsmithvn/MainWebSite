@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const { getMusicDB } = require("../../utils/db");
+const { SERVER } = require("../../constants");
 
 function now() {
   return Date.now();
@@ -10,7 +11,7 @@ function now() {
 // 📄 GET /api/music/playlists
 router.get("/playlists", (req, res) => {
   const { key } = req.query;
-  if (!key) return res.status(400).json({ error: "Thiếu key" });
+  if (!key) return res.status(SERVER.HTTP_STATUS.BAD_REQUEST).json({ error: "Thiếu key" });
 
   const db = getMusicDB(key);
   const rows = db
@@ -30,7 +31,7 @@ router.get("/playlists", (req, res) => {
 router.get("/playlist/:id", (req, res) => {
   const { key } = req.query;
   const id = req.params.id;
-  if (!key || !id) return res.status(400).json({ error: "Thiếu key hoặc id" });
+  if (!key || !id) return res.status(SERVER.HTTP_STATUS.BAD_REQUEST).json({ error: "Thiếu key hoặc id" });
 
   const db = getMusicDB(key);
 
@@ -59,7 +60,7 @@ router.get("/playlist/:id", (req, res) => {
     .all(id);
 
   if (!playlist) {
-    return res.status(404).json({ error: "Playlist không tồn tại" });
+    return res.status(SERVER.HTTP_STATUS.NOT_FOUND).json({ error: "Playlist không tồn tại" });
   }
 
   res.json({
@@ -75,7 +76,7 @@ router.get("/playlist/:id", (req, res) => {
 router.post("/playlist", (req, res) => {
   const { key, name, description } = req.body;
   if (!key || !name)
-    return res.status(400).json({ error: "Thiếu key hoặc tên playlist" });
+    return res.status(SERVER.HTTP_STATUS.BAD_REQUEST).json({ error: "Thiếu key hoặc tên playlist" });
 
   const db = getMusicDB(key);
   const id = db
@@ -94,7 +95,7 @@ router.post("/playlist", (req, res) => {
 router.post("/playlist/add", (req, res) => {
   const { key, playlistId, path } = req.body;
   if (!key || !playlistId || !path)
-    return res.status(400).json({ error: "Thiếu dữ liệu" });
+    return res.status(SERVER.HTTP_STATUS.BAD_REQUEST).json({ error: "Thiếu dữ liệu" });
 
   const db = getMusicDB(key);
   const exists = db
@@ -133,7 +134,7 @@ router.post("/playlist/add", (req, res) => {
 router.delete("/playlist/remove", (req, res) => {
   const { key, playlistId, path } = req.body;
   if (!key || !playlistId || !path)
-    return res.status(400).json({ error: "Thiếu dữ liệu" });
+    return res.status(SERVER.HTTP_STATUS.BAD_REQUEST).json({ error: "Thiếu dữ liệu" });
 
   const db = getMusicDB(key);
   db.prepare(
@@ -148,7 +149,7 @@ router.delete("/playlist/remove", (req, res) => {
 // 🗑️ Xoá playlist hoàn toàn
 router.delete("/playlist", (req, res) => {
   const { key, id } = req.body;
-  if (!key || !id) return res.status(400).json({ error: "Thiếu key hoặc id" });
+  if (!key || !id) return res.status(SERVER.HTTP_STATUS.BAD_REQUEST).json({ error: "Thiếu key hoặc id" });
 
   const db = getMusicDB(key);
   db.prepare(`DELETE FROM playlist_items WHERE playlistId = ?`).run(id);

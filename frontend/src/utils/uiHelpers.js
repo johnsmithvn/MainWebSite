@@ -1,7 +1,7 @@
 // 📁 frontend/src/utils/uiHelpers.js
+import { TIMING, API_ENDPOINTS } from '/frontend/constants/index.js';
 import { getSourceKey } from "/src/core/storage.js";
 import { showConfirm, showToast, withLoading } from "/src/core/ui.js";
-import { API_ENDPOINTS } from "/shared/constants.js";
 
 /**
  * 🎨 UI Helper functions - Tái sử dụng logic UI chung
@@ -9,12 +9,13 @@ import { API_ENDPOINTS } from "/shared/constants.js";
 
 /**
  * 🖼️ Setup Extract Thumbnail Button - Generic version
- * @param {string} type - 'movie' hoặc 'music'
- * @param {string} currentPath - Đường dẫn hiện tại
+ * @param {string} buttonId - ID của button
+ * @param {Function} getCurrentPath - Function trả về current path
  * @param {Function} reloadCallback - Callback để reload sau khi extract
+ * @param {string} type - 'movie' hoặc 'music'
  */
-export function setupExtractThumbnailButton(type, currentPath, reloadCallback) {
-  const extractBtn = document.getElementById("extract-thumbnail-btn");
+export function setupExtractThumbnailButton(buttonId, getCurrentPath, reloadCallback, type = 'movie') {
+  const extractBtn = document.getElementById(buttonId);
   if (!extractBtn) return;
 
   extractBtn.onclick = withLoading(async () => {
@@ -28,6 +29,8 @@ export function setupExtractThumbnailButton(type, currentPath, reloadCallback) {
       showToast(`❌ Không xác định được nguồn ${type === 'movie' ? 'phim' : 'nhạc'}!`);
       return;
     }
+
+    const currentPath = getCurrentPath();
 
     try {
       if (type === 'movie') {
@@ -252,12 +255,12 @@ export function createStatusIndicator(containerId, status, type = 'info') {
   
   container.appendChild(indicator);
   
-  // Auto remove after 5 seconds
+  // Auto remove after UI_INDICATOR_TIMEOUT (5 giây)
   setTimeout(() => {
     if (indicator.parentNode) {
       indicator.parentNode.removeChild(indicator);
     }
-  }, 5000);
+  }, TIMING.UI_INDICATOR_TIMEOUT);
 }
 
 export default {

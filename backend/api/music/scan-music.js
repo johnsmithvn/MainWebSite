@@ -2,14 +2,16 @@
 const express = require("express");
 const router = express.Router();
 const { MusicScanner } = require("../../utils/BaseScanner");
+const { getMusicDB } = require("../../utils/db");
+const { SERVER } = require("../../constants");
 
 router.post("/scan-music", async (req, res) => {
   const dbkey = req.body.key;
-  if (!dbkey) return res.status(400).json({ error: "Thiếu key" });
+  if (!dbkey) return res.status(SERVER.HTTP_STATUS.BAD_REQUEST).json({ error: "Thiếu key" });
 
   try {
-    const scanner = new MusicScanner(dbkey);
-    const stats = await scanner.scanMusicFolderToDB();
+    const scanner = new MusicScanner(() => getMusicDB(dbkey));
+    const stats = await scanner.scanFolderToDB(dbkey, ""); // Scan từ root
     res.json({
       success: true,
       stats,
@@ -17,7 +19,7 @@ router.post("/scan-music", async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Lỗi scan music:", err);
-    res.status(500).json({ error: "Lỗi server khi scan music" });
+    res.status(SERVER.HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: "Lỗi server khi scan music" });
   }
 });
 

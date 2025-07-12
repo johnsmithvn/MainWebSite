@@ -1,5 +1,6 @@
 // 📁 backend/utils/databaseUtils.js
 const path = require("path");
+const { CACHE } = require("../constants");
 
 /**
  * 🗃️ Database utility functions
@@ -86,7 +87,7 @@ class DatabaseUtils {
    * @param {number} olderThanDays - Remove entries older than X days
    */
   static cleanOldCache(db, olderThanDays = 30) {
-    const cutoffTime = Date.now() - (olderThanDays * 24 * 60 * 60 * 1000);
+    const cutoffTime = Date.now() - (olderThanDays * CACHE.DAY_IN_MS);
     
     const result = db.prepare(`
       DELETE FROM folders WHERE updatedAt < ?
@@ -122,4 +123,12 @@ class DatabaseUtils {
   }
 }
 
-module.exports = { DatabaseUtils };
+// Export individual functions
+module.exports = {
+  upsertFolder: DatabaseUtils.upsertFolder.bind(DatabaseUtils),
+  incrementViewCount: DatabaseUtils.incrementViewCount.bind(DatabaseUtils),
+  batchUpsertFolders: DatabaseUtils.batchUpsertFolders.bind(DatabaseUtils),
+  cleanOldCache: DatabaseUtils.cleanOldCache.bind(DatabaseUtils),
+  getDbStats: DatabaseUtils.getDbStats.bind(DatabaseUtils),
+  DatabaseUtils // Also export the class if needed
+};
