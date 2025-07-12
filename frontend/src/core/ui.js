@@ -5,8 +5,9 @@ import { getRootFolder, getSourceKey } from "./storage.js";
 import { state, loadFolder } from "/src/core/folder.js";
 import { changeRootFolder } from "./storage.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
+import { SEARCH, UI, PAGINATION } from "../constants.js";
 
-const SEARCH_LIMIT = 50;
+const SEARCH_LIMIT = SEARCH.MAX_SEARCH_RESULTS; // 50 - from constants
 const searchStates = {
   manga: { keyword: "", offset: 0, loading: false, hasMore: true, attached: false },
   movie: { keyword: "", offset: 0, loading: false, hasMore: true, attached: false, type: "" },
@@ -261,7 +262,7 @@ export function updateFolderPaginationUI(
   nav.className = "reader-controls";
 
   const prev = document.createElement("button");
-  prev.textContent = "⬅ Trang trước";
+  prev.textContent = UI.PREV_PAGE_TEXT; // "⬅ Trang trước" - from constants
   prev.disabled = currentPage <= 0;
   prev.onclick = () => loadFolder(state.currentPath, currentPage - 1);
   nav.appendChild(prev);
@@ -281,19 +282,19 @@ export function updateFolderPaginationUI(
   jumpInput.type = "number";
   jumpInput.min = 1;
   jumpInput.max = totalPages;
-  jumpInput.placeholder = `Trang...`;
+  jumpInput.placeholder = UI.JUMP_PLACEHOLDER; // "Trang..." - from constants
   jumpInput.title = `Tổng ${totalPages} trang`;
-  jumpInput.style.width = "60px";
+  jumpInput.style.width = UI.JUMP_INPUT_WIDTH; // "60px" - from constants
 
   const jumpBtn = document.createElement("button");
-  jumpBtn.textContent = "⏩";
+  jumpBtn.textContent = UI.JUMP_BUTTON_TEXT; // "⏩" - from constants
 
   jumpForm.appendChild(jumpInput);
   jumpForm.appendChild(jumpBtn);
   nav.appendChild(jumpForm);
 
   const next = document.createElement("button");
-  next.textContent = "Trang sau ➡";
+  next.textContent = UI.NEXT_PAGE_TEXT; // "Trang sau ➡" - from constants
   next.disabled = currentPage + 1 >= totalPages;
   next.onclick = () => loadFolder(state.currentPath, currentPage + 1);
   nav.appendChild(next);

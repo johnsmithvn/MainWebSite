@@ -17,6 +17,7 @@ import {
 } from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 import { getMovieCache, setMovieCache } from "/src/core/storage.js";
+import { PAGINATION } from "/src/constants.js";
 import {
   loadRandomSliders,
   setupRandomSectionsIfMissing,
@@ -101,7 +102,7 @@ function setupExtractThumbnailButton() {
 
 
 let moviePage = 0;
-const moviesPerPage = 20;
+const moviesPerPage = PAGINATION.MOVIES_PER_PAGE; // 16 - from constants
 let fullList = []; // danh sách đầy đủ sau khi fetch/cache
 let currentPath = "";
 function paginateList(list) {

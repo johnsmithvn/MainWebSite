@@ -9,12 +9,13 @@ import {
 } from "./storage.js";
 import { preloadThumbnails } from "./preload.js";
 import { renderFolderCard } from "../components/folderCard.js";
+import { PAGINATION } from "../constants.js";
 export const state = {
   currentPath: "",
   allFolders: [],
 };
 let folderPage = 0;
-const foldersPerPage = 24;
+const foldersPerPage = PAGINATION.FOLDERS_PER_PAGE; // 24 - from constants
 let totalFolders = 0; // 🆕 Tổng số folder thực tế không bị slice
 
 /**
