@@ -1,9 +1,11 @@
 // 📁 backend/api/manga/folder-cache.js
 const express = require("express");
 const router = express.Router();
-// ✅ Dùng DB dynamic theo dbkey
 const { getDB } = require("../../utils/db");
 const { getRootPath } = require("../../utils/config");
+const { getDbStats } = require("../../utils/databaseUtils");
+const { FOLDER_TYPES } = require("../../../shared/constants");
+
 /**
  * 📦 API duy nhất để xử lý các loại folder cache
  * mode = path | random | top | search | folders
@@ -96,6 +98,11 @@ router.get("/folder-cache", async (req, res) => {
         )
         .all(root, `%${q}%`, `%${q}%`, lim, off);
       return res.json(rows);
+    }
+    if (mode === "stats") {
+      // Lấy thống kê database
+      const stats = getDbStats(db, FOLDER_TYPES.MANGA);
+      return res.json(stats);
     }
     // Nếu mode không hợp lệ
     return res.status(400).json({ error: "Invalid mode" });

@@ -1,14 +1,15 @@
 // 📁 backend/api/music/scan-music.js
 const express = require("express");
 const router = express.Router();
-const { scanMusicFolderToDB } = require("../../utils/music-scan");
+const { MusicScanner } = require("../../utils/BaseScanner");
 
 router.post("/scan-music", async (req, res) => {
   const dbkey = req.body.key;
   if (!dbkey) return res.status(400).json({ error: "Thiếu key" });
 
   try {
-    const stats = await scanMusicFolderToDB(dbkey);
+    const scanner = new MusicScanner(dbkey);
+    const stats = await scanner.scanMusicFolderToDB();
     res.json({
       success: true,
       stats,

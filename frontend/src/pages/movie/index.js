@@ -1,10 +1,8 @@
 import {} from "/src/components/folderCard.js";
 import { renderFolderSlider } from "/src/components/folderSlider.js";
-import { getSourceKey } from "/src/core/storage.js";
+import { getSourceKey, getMovieCache, setMovieCache, getRecentViewedVideo } from "/src/core/storage.js";
 import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
 import { renderMovieCardWithFavorite } from "/src/components/movie/movieCard.js";
-import { recentViewedVideoKey } from "/src/core/storage.js";
-
 import {
   filterMovie,
   toggleSearchBar,
@@ -16,11 +14,11 @@ import {
   goHome
 } from "/src/core/ui.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
-import { getMovieCache, setMovieCache } from "/src/core/storage.js";
 import {
   loadRandomSliders,
   setupRandomSectionsIfMissing,
 } from "/src/components/folderSlider.js";
+import { setupExtractThumbnailButton, setupButton } from "/src/utils/uiHelpers.js";
 
 window.goHome = goHome;
 
@@ -31,26 +29,24 @@ window.addEventListener("DOMContentLoaded", async () => {
     const ok = await showLoginModal(key);
     if (!ok) return goHome();
   }
+  
   const initialPath = getInitialPathFromURL();
   loadMovieFolder(initialPath);
-  setupExtractThumbnailButton();
+  
+  // Setup buttons using uiHelpers
+  setupExtractThumbnailButton("extract-thumbnail-btn", () => currentPath, () => loadMovieFolder(currentPath, moviePage));
+  
   setupRandomSectionsIfMissing();
   loadRandomSliders();
   loadTopVideoSlider();
   setupMovieSidebar();
-  renderRecentVideoSlider(); // 🆕 Thêm dòng này
+  renderRecentVideoSlider();
 
-  document
-    .getElementById("floatingSearchInput")
-    ?.addEventListener("input", filterMovie);
-  document
-    .getElementById("searchToggle")
-    ?.addEventListener("click", toggleSearchBar);
-  document
-    .getElementById("sidebarToggle")
-    ?.addEventListener("click", toggleSidebar);
+  document.getElementById("floatingSearchInput")?.addEventListener("input", filterMovie);
+  document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
+  document.getElementById("sidebarToggle")?.addEventListener("click", toggleSidebar);
 
-  setupGlobalClickToCloseUI(); // ✅ xử lý click ra ngoài để đóng sidebar + search
+  setupGlobalClickToCloseUI();
 });
 
 function getInitialPathFromURL() {
@@ -58,55 +54,15 @@ function getInitialPathFromURL() {
   return urlParams.get("path") || "";
 }
 
-function setupExtractThumbnailButton() {
-  const extractBtn = document.getElementById("extract-thumbnail-btn");
-  if (!extractBtn) return;
-
-  extractBtn.onclick = withLoading(async () => {
-    // KHÔNG truyền {loading: true} nữa
-    const ok = await showConfirm("Extract lại thumbnail phim cho toàn bộ folder hiện tại?");
-    if (!ok) return;
-
-    const sourceKey = getSourceKey();
-    if (!sourceKey) {
-      showToast("❌ Không xác định được nguồn phim!");
-      return;
-    }
-
-
-    try {
-      const resp = await fetch("/api/movie/extract-thumbnail", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: sourceKey,
-          path: currentPath,
-        }),
-      });
-      const data = await resp.json();
-      if (data.success) {
-        showToast("✅ Đã extract thumbnail xong!");
-        loadMovieFolder(currentPath, moviePage);
-      } else {
-        showToast("❌ Lỗi extract thumbnail!");
-      }
-    } catch (err) {
-      showToast("❌ Lỗi khi extract thumbnail!");
-      console.error(err);
-    }
-    // KHÔNG cần finally overlay nữa!
-  });
-}
-
-
-
 let moviePage = 0;
 const moviesPerPage = 20;
 let fullList = []; // danh sách đầy đủ sau khi fetch/cache
 let currentPath = "";
+
 function paginateList(list) {
   return list.slice(moviePage * moviesPerPage, (moviePage + 1) * moviesPerPage);
 }
+
 function loadMovieFolder(path = "", page = 0) {
   const sourceKey = getSourceKey();
   if (!sourceKey) {
@@ -121,7 +77,7 @@ function loadMovieFolder(path = "", page = 0) {
   // ✅ SỬA: dùng path làm cache key
   const cached = getMovieCache(sourceKey, path);
   if (cached && Date.now() - cached.timestamp < 7 * 60 * 60 * 1000) {
-    console.log("⚡ Dùng cache movie folder:", path); // 🆕 THÊM: debug
+    console.log("⚡ Dùng cache movie folder:", path);
     fullList = cached.data || [];
     renderMovieGrid(paginateList(fullList), path);
     updateMoviePaginationUI(moviePage, fullList.length, moviesPerPage);
@@ -136,9 +92,7 @@ function loadMovieFolder(path = "", page = 0) {
     .then((res) => res.json())
     .then((data) => {
       fullList = data.folders || [];
-
-      setMovieCache(sourceKey, path, fullList); // 🆕 THÊM: cache lại dù là root
-
+      setMovieCache(sourceKey, path, fullList);
       renderMovieGrid(paginateList(fullList), path);
       updateMoviePaginationUI(moviePage, fullList.length, moviesPerPage);
     })
@@ -162,11 +116,11 @@ function renderMovieGrid(list) {
   } else {
     const folderName = parts[parts.length - 1];
     title.textContent = "📁 " + folderName;
-    title.title = folderName; // ✅ Tooltip hiện tên đầy đủ
+    title.title = folderName;
     title.style.cursor = "pointer";
     title.onclick = () => {
       const parent = parts.slice(0, -1).join("/");
-      loadMovieFolder(parent); // ⬅️ dùng đúng global currentPath
+      loadMovieFolder(parent);
     };
   }
 
@@ -266,14 +220,14 @@ function updateMoviePaginationUI(currentPage, totalItems, perPage) {
 }
 
 function renderRecentVideoSlider() {
-  const raw = localStorage.getItem(recentViewedVideoKey());
-  if (!raw) return;
-  const list = JSON.parse(raw);
-  const filtered = list.filter((f) => f.type === "video" || f.type === "file");
-
+  const recentList = getRecentViewedVideo();
+  if (!recentList || recentList.length === 0) return;
+  
+  const filtered = recentList.filter((f) => f.type === "video" || f.type === "file");
+  
   renderFolderSlider({
     title: "🕓 Vừa xem",
     folders: filtered,
-    targetId: "section-recent", // tạo thêm <div id="section-recent"> trong movie/index.html nếu thiếu
+    targetId: "section-recent",
   });
 }

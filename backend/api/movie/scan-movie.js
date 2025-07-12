@@ -1,7 +1,7 @@
-// 📁 backend/api/scan-movie.js
+// 📁 backend/api/movie/scan-movie.js
 const express = require("express");
 const router = express.Router();
-const { scanMovieFolderToDB } = require("../../utils/movie-scan");
+const { MovieScanner } = require("../../utils/BaseScanner");
 
 /**
  * POST /api/scan-movie
@@ -13,8 +13,8 @@ router.post("/scan-movie", async (req, res) => {
   if (!dbkey) return res.status(400).json({ error: "Thiếu key" });
 
   try {
-    // PHẢI await vì scanMovieFolderToDB là async (trả về Promise)
-    const stats = await scanMovieFolderToDB(dbkey);
+    const scanner = new MovieScanner(dbkey);
+    const stats = await scanner.scanMovieFolderToDB();
     res.json({
       success: true,
       stats,
@@ -24,5 +24,6 @@ router.post("/scan-movie", async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
 module.exports = router;
 

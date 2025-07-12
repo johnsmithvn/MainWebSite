@@ -3,11 +3,12 @@ import {
   loadRandomSliders,
   renderFolderSlider,
 } from "/src/components/folderSlider.js";
-import { renderMusicCardWithFavorite } from "/src/components/music/musicCard.js"; // bạn sẽ clone từ movieCard.js
+import { renderMusicCardWithFavorite } from "/src/components/music/musicCard.js";
 import {
   getSourceKey,
   getMusicCache,
-  setMusicCache,recentViewedMusicKey
+  setMusicCache,
+  getRecentViewedMusic,
 } from "/src/core/storage.js";
 import {
   showToast,
@@ -16,12 +17,12 @@ import {
   showConfirm,
   renderRecentViewedMusic,
   withLoading,
-  goHome
+  goHome,
+  filterMusic,
+  buildThumbnailUrl,
 } from "/src/core/ui.js";
-import { filterMusic } from "/src/core/ui.js";
-import { buildThumbnailUrl } from "/src/core/ui.js";
 import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
-
+import { setupExtractThumbnailButton, setupButton } from "/src/utils/uiHelpers.js";
 
 window.goHome = goHome;
 
@@ -31,28 +32,26 @@ window.addEventListener("DOMContentLoaded", async () => {
     const ok = await showLoginModal(key);
     if (!ok) return goHome();
   }
+  
   const initialPath = getInitialPathFromURL();
   loadMusicFolder(initialPath);
-  setupMusicSidebar(); // ✅ music
+  setupMusicSidebar();
   setupRandomSectionsIfMissing();
   loadRandomSliders("music");
   loadPlaylistSlider();
   loadTopAudioSlider();
   renderRecentMusicOnLoad();
-  setupExtractThumbnailButton();
+  
+  // Setup buttons using uiHelpers
+  setupExtractThumbnailButton("extract-thumbnail-btn", () => currentPath, () => loadMusicFolder(currentPath, musicPage));
 
-  document
-    .getElementById("floatingSearchInput")
-    ?.addEventListener("input", filterMusic);
-
-  document
-    .getElementById("searchToggle")
-    ?.addEventListener("click", toggleSearchBar);
+  document.getElementById("floatingSearchInput")?.addEventListener("input", filterMusic);
+  document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
   document.getElementById("sidebarToggle")?.addEventListener("click", () => {
     document.getElementById("sidebar-menu")?.classList.toggle("active");
   });
-    window.renderRecentViewedMusic = renderRecentViewedMusic; // THÊM DÒNG NÀY
-
+  
+  window.renderRecentViewedMusic = renderRecentViewedMusic;
 });
 
 // Lấy path ban đầu từ URL nếu có
@@ -60,29 +59,6 @@ function getInitialPathFromURL() {
   const urlParams = new URLSearchParams(window.location.search);
   return urlParams.get("path") || "";
 }
-
-// function setupDeleteMusicButton() {
-//   const deleteBtn = document.getElementById("delete-music-db");
-//   if (!deleteBtn) return;
-
-//   deleteBtn.onclick = async () => {
-//     const ok = await showConfirm("Bạn có chắc muốn xoá sạch DB Music?", {
-//       loading: true,
-//     });
-//     if (!ok) return;
-
-//     const sourceKey = getSourceKey();
-//     try {
-//       await fetch(`/api/music/scan-music?key=${sourceKey}&mode=delete`, {
-//         method: "DELETE",
-//       });
-//       showToast("✅ Đã xoá xong DB Music!");
-//     } catch (err) {
-//       showToast("❌ Lỗi khi xoá DB music!");
-//       console.error(err);
-//     }
-//   };
-// }
 
 let musicPage = 0;
 const perPage = 20;
@@ -132,7 +108,6 @@ function loadMusicFolder(path = "", page = 0) {
       setMusicCache(sourceKey, path, fullList);
       renderMusicGrid(paginateList(fullList), path);
       updateMusicPaginationUI(musicPage, fullList.length, perPage);
-
     })
     .catch((err) => {
       console.error("❌ Failed to load music folder:", err);
@@ -165,7 +140,7 @@ function renderMusicGrid(list) {
   app.appendChild(title);
 
   const grid = document.createElement("div");
-grid.className = "music-grid";
+  grid.className = "music-grid";
 
   list.forEach((item) => {
     let thumb = buildThumbnailUrl(item, "music");
@@ -181,18 +156,13 @@ grid.className = "music-grid";
   app.appendChild(grid);
 }
 
-
-
 // Khi trang load, hiển thị danh sách nhạc vừa nghe từ localStorage
 function renderRecentMusicOnLoad() {
-  const raw = localStorage.getItem(recentViewedMusicKey());
-  if (raw) {
-    const list = JSON.parse(raw);
-    renderRecentViewedMusic(list);
+  const recentList = getRecentViewedMusic();
+  if (recentList && recentList.length > 0) {
+    renderRecentViewedMusic(recentList);
   }
 }
-
-
 
 // Gắn sự kiện extract lại thumbnail cho toàn bộ folder hiện tại
 function setupExtractThumbnailButton() {

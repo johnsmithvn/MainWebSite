@@ -1,4 +1,4 @@
-// 📁 frontend/src/folder.js
+// 📁 frontend/src/core/folder.js
 
 import { showToast, updateFolderPaginationUI } from "./ui.js";
 import {
@@ -6,16 +6,18 @@ import {
   getSourceKey,
   getFolderCache,
   setFolderCache,
+  saveRecentViewed,
 } from "./storage.js";
 import { preloadThumbnails } from "./preload.js";
 import { renderFolderCard } from "../components/folderCard.js";
+
 export const state = {
   currentPath: "",
   allFolders: [],
 };
 let folderPage = 0;
 const foldersPerPage = 24;
-let totalFolders = 0; // 🆕 Tổng số folder thực tế không bị slice
+let totalFolders = 0;
 
 /**
  * 📂 Load folder từ API hoặc cache + hiển thị thư mục / ảnh
@@ -24,7 +26,7 @@ let totalFolders = 0; // 🆕 Tổng số folder thực tế không bị slice
  */
 export function loadFolder(path = "", page = 0) {
   const rootFolder = getRootFolder();
-  const sourceKey = getSourceKey(); // VD: FANTASY
+  const sourceKey = getSourceKey();
 
   state.currentPath = path;
   folderPage = page;
@@ -76,14 +78,19 @@ function renderFromData(data) {
       const parts = state.currentPath.split("/");
       const folderName = parts[parts.length - 1] || "Xem ảnh";
 
-      state.allFolders.push({
+      const folderData = {
         name: folderName,
         path: state.currentPath + "/__self__",
         thumbnail: data.images[0],
         isSelfReader: true,
         images: data.images,
-        hasImages: true, // ✅ Duy nhất chỗ này có thể check được
-      });
+        hasImages: true,
+      };
+
+      state.allFolders.push(folderData);
+
+      // Save to recent viewed when entering a folder with images
+      saveRecentViewed(folderData);
     }
 
     state.allFolders = state.allFolders.concat(data.folders);

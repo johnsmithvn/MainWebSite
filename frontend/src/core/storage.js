@@ -1,7 +1,9 @@
-// 📁 frontend/src/storage.js
+// 📁 frontend/src/core/storage.js
 import { showToast, goHome } from "./ui.js";
-const MOVIE_CACHE_PREFIX = "movieCache::";
-const FOLDER_CACHE_PREFIX = "folderCache::";
+import { folderCacheManager, movieCacheManager, musicCacheManager } from "/src/utils/cacheManager.js";
+import { mangaRecentManager, movieRecentManager, musicRecentManager } from "/src/utils/recentManager.js";
+import { CACHE_SETTINGS } from "/shared/constants.js";
+
 const ROOT_THUMB_CACHE_PREFIX = "rootThumb::";
 
 /**
@@ -14,10 +16,6 @@ export function getRootFolder() {
 
 export function getSourceKey() {
   return localStorage.getItem("sourceKey");
-}
-export function getMovieCacheKey(sourceKey, path) {
-  if (!sourceKey) return null;
-  return `${MOVIE_CACHE_PREFIX}${sourceKey}::${path || ""}`;
 }
 
 /**
@@ -33,12 +31,12 @@ export function changeRootFolder() {
  */
 export function requireRootFolder() {
   const root = getRootFolder();
-
   if (!root) {
     showToast("⚠️ Chưa chọn thư mục gốc, vui lòng chọn lại!");
     window.location.href = "/manga/select.html";
   }
 }
+
 export function requireSourceKey() {
   const source = getSourceKey();
   if (!source) {
@@ -47,13 +45,14 @@ export function requireSourceKey() {
   }
 }
 
+// ========== ROOT THUMBNAIL CACHE ==========
 export function getRootThumbCache(sourceKey, rootFolder) {
   const key = `${ROOT_THUMB_CACHE_PREFIX}${sourceKey}::${rootFolder}`;
   const raw = localStorage.getItem(key);
   if (!raw) return null;
   try {
     const { thumbnail, time } = JSON.parse(raw);
-    if (Date.now() - time > 7 * 24 * 60 * 60 * 1000) {
+    if (Date.now() - time > CACHE_SETTINGS.ROOT_THUMB_CACHE_TTL) {
       localStorage.removeItem(key);
       return null;
     }
@@ -70,41 +69,15 @@ export function setRootThumbCache(sourceKey, rootFolder, thumbnail) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-/**
- * 📦 Lấy cache folder theo path
- */
-
+// ========== FOLDER CACHE (MANGA) ==========
 export function getFolderCacheKey(sourceKey, rootFolder, path) {
-  if (!sourceKey) return null;
-
-  let key = `${FOLDER_CACHE_PREFIX}${sourceKey}`;
-
-  if (rootFolder) key += `::${rootFolder}`;
-  if (path) key += `:${path}`;
-
-  return key;
+  return folderCacheManager.getCacheKey(sourceKey, `${rootFolder}:${path || ""}`);
 }
 
 export function getFolderCache(sourceKey, rootFolder, path) {
-  const key = getFolderCacheKey(sourceKey, rootFolder, path);
-  const raw = localStorage.getItem(key);
-  if (!raw) return null;
-
-  try {
-    const parsed = JSON.parse(raw);
-    return {
-      data: parsed.data,
-      timestamp: parsed.timestamp,
-    };
-  } catch {
-    localStorage.removeItem(key);
-    return null;
-  }
+  return folderCacheManager.getCache(sourceKey, `${rootFolder}:${path || ""}`);
 }
 
-/**
- * 📦 Lưu cache folder
- */
 export function setFolderCache(sourceKey, rootFolder, path, data) {
   if (!sourceKey || rootFolder === null || rootFolder === undefined) {
     const msg = `⚠️ Không cache được do thiếu thông tin: sourceKey = ${sourceKey}, rootFolder = ${rootFolder}`;
@@ -124,132 +97,24 @@ export function setFolderCache(sourceKey, rootFolder, path, data) {
     console.warn("⚠️ Dữ liệu rỗng, không lưu cache:", path);
     return;
   }
-  const key = getFolderCacheKey(sourceKey, rootFolder, path);
 
-  const jsonData = JSON.stringify({
-    timestamp: Date.now(),
-    data: data,
-  });
-
-  const maxTotalSize = 4 * 1024 * 1024 + 300; // ✅ Giới hạn tổng 8MB
-  const currentTotalSize = getCurrentCacheSize();
-  // 🆕 Nếu dữ liệu quá lớn (trên 4MB) thì không lưu cache
-  if (jsonData.length > maxTotalSize) {
-    console.warn(`⚠️ Folder quá lớn, không cache localStorage: ${path}`);
-    return;
-  }
-
-  // Nếu vượt quá tổng → xoá cache cũ cho đến khi đủ chỗ
-  if (currentTotalSize + jsonData.length > maxTotalSize) {
-    size = maxTotalSize - jsonData.length;
-    if (size > maxTotalSize / 2) {
-      size = maxTotalSize / 2; // Giới hạn tối đa 50% dung lượng
-    }
-    cleanUpOldCache(size); // giữ lại đủ chỗ
-  }
-
-  localStorage.setItem(key, jsonData);
-}
-function getCurrentCacheSize() {
-  let total = 0;
-  for (const key in localStorage) {
-    if (key.startsWith(FOLDER_CACHE_PREFIX)) {
-      const item = localStorage.getItem(key);
-      total += item?.length || 0;
-    }
-  }
-  return total;
+  folderCacheManager.setCache(sourceKey, `${rootFolder}:${path || ""}`, data);
 }
 
-/**
- * 🧹 Xoá cache cũ theo timestamp cho đến khi trống >= minFreeBytes
- */
-function cleanUpOldCache(minFreeBytes) {
-  const entries = [];
-
-  for (const key in localStorage) {
-    if (key.startsWith(FOLDER_CACHE_PREFIX)) {
-      try {
-        const raw = localStorage.getItem(key);
-        const parsed = JSON.parse(raw);
-        entries.push({
-          key,
-          size: raw.length,
-          timestamp: parsed.timestamp || 0,
-        });
-      } catch {
-        localStorage.removeItem(key); // corrupted
-      }
-    }
-  }
-
-  // Sắp xếp theo timestamp tăng dần (cũ nhất trước)
-  entries.sort((a, b) => a.timestamp - b.timestamp);
-
-  let freed = 0;
-  for (const entry of entries) {
-    localStorage.removeItem(entry.key);
-    freed += entry.size;
-    if (freed >= minFreeBytes) break;
-  }
-
-  console.log(`🧹 Dọn cache: đã xoá ${freed} byte`);
-}
-/**
- * 🧹 Xoá toàn bộ folder cache (theo dạng folderCache::)
- */
 export function clearAllFolderCache() {
-  Object.keys(localStorage).forEach((key) => {
-    if (key.startsWith(getFolderCacheKey(getSourceKey()))) {
-      localStorage.removeItem(key);
-    }
-  });
-}
-
-export function recentViewedKey() {
-  return `recentViewed::${getRootFolder()}::${getRootFolder()}`;
-}
-/** ✅ Ghi lại folder vừa đọc vào localStorage */
-export function saveRecentViewed(folder) {
-  const key = recentViewedKey();
-  try {
-    const raw = localStorage.getItem(key);
-    const list = raw ? JSON.parse(raw) : [];
-
-    // Bỏ item cũ nếu trùng path
-    const filtered = list.filter((item) => item.path !== folder.path);
-
-    // Thêm lên đầu
-    filtered.unshift({
-      name: folder.name,
-      path: folder.path,
-      thumbnail: folder.thumbnail,
-    });
-
-    // Giới hạn 30 item
-    const limited = filtered.slice(0, 30);
-    localStorage.setItem(key, JSON.stringify(limited));
-  } catch (err) {
-    console.warn("❌ Không thể lưu recentViewed:", err);
+  const sourceKey = getSourceKey();
+  if (sourceKey) {
+    folderCacheManager.clearCache(sourceKey);
   }
 }
 
-//  Movie
+// ========== MOVIE CACHE ==========
+export function getMovieCacheKey(sourceKey, path) {
+  return movieCacheManager.getCacheKey(sourceKey, path);
+}
+
 export function getMovieCache(sourceKey, path) {
-  const key = getMovieCacheKey(sourceKey, path);
-  const raw = localStorage.getItem(key);
-  if (!raw) return null;
-
-  try {
-    const parsed = JSON.parse(raw);
-    return {
-      data: parsed.data,
-      timestamp: parsed.timestamp,
-    };
-  } catch {
-    localStorage.removeItem(key);
-    return null;
-  }
+  return movieCacheManager.getCache(sourceKey, path);
 }
 
 export function setMovieCache(sourceKey, path, data) {
@@ -259,164 +124,126 @@ export function setMovieCache(sourceKey, path, data) {
     showToast(msg);
     return;
   }
+  
   // ✅ Kiểm tra data không hợp lệ
   if (!data || (Array.isArray(data) && data.length === 0)) {
     console.warn("⚠️ Movie data rỗng, không lưu cache:", path);
     return;
   }
-  const key = getMovieCacheKey(sourceKey, path);
-  const jsonData = JSON.stringify({
-    timestamp: Date.now(),
-    data: data,
-  });
+  
+  movieCacheManager.setCache(sourceKey, path, data);
+}
 
-  const maxTotalSize = 4 * 1024 * 1024 + 300;
-  const currentTotalSize = getCurrentMovieCacheSize();
+export function clearAllMovieCache() {
+  const sourceKey = getSourceKey();
+  if (sourceKey) {
+    movieCacheManager.clearCache(sourceKey);
+  }
+}
 
-  if (jsonData.length > maxTotalSize) {
-    const msg = `⚠️ Movie folder quá lớn, không cache localStorage: ${path}`;
+// ========== MUSIC CACHE ==========
+export function getMusicCacheKey(sourceKey, path) {
+  return musicCacheManager.getCacheKey(sourceKey, path);
+}
+
+export function getMusicCache(sourceKey, path) {
+  return musicCacheManager.getCache(sourceKey, path);
+}
+
+export function setMusicCache(sourceKey, path, data) {
+  if (!sourceKey) {
+    const msg = `⚠️ Không cache được do thiếu thông tin: sourceKey = ${sourceKey}`;
     console.warn(msg);
     showToast(msg);
     return;
   }
-
-  if (currentTotalSize + jsonData.length > maxTotalSize) {
-    let size = maxTotalSize - jsonData.length;
-    if (size > maxTotalSize / 2) size = maxTotalSize / 2;
-    cleanUpOldMovieCache(size);
+  
+  if (!data || (Array.isArray(data) && data.length === 0)) {
+    console.warn("⚠️ Music data rỗng, không lưu cache:", path);
+    return;
   }
-
-  localStorage.setItem(key, jsonData);
-}
-function getCurrentMovieCacheSize() {
-  let total = 0;
-  for (const key in localStorage) {
-    if (key.startsWith(MOVIE_CACHE_PREFIX)) {
-      const item = localStorage.getItem(key);
-      total += item?.length || 0;
-    }
-  }
-  return total;
+  
+  musicCacheManager.setCache(sourceKey, path, data);
 }
 
-function cleanUpOldMovieCache(minFreeBytes) {
-  const entries = [];
-
-  for (const key in localStorage) {
-    if (key.startsWith(MOVIE_CACHE_PREFIX)) {
-      try {
-        const raw = localStorage.getItem(key);
-        const parsed = JSON.parse(raw);
-        entries.push({
-          key,
-          size: raw.length,
-          timestamp: parsed.timestamp || 0,
-        });
-      } catch {
-        localStorage.removeItem(key);
-      }
-    }
+export function clearAllMusicCache() {
+  const sourceKey = getSourceKey();
+  if (sourceKey) {
+    musicCacheManager.clearCache(sourceKey);
   }
-
-  entries.sort((a, b) => a.timestamp - b.timestamp);
-  let freed = 0;
-  for (const entry of entries) {
-    localStorage.removeItem(entry.key);
-    freed += entry.size;
-    if (freed >= minFreeBytes) break;
-  }
-
-  console.log(`🧹 Dọn movie cache: đã xoá ${freed} byte`);
 }
 
+// ========== RECENT VIEWED (MANGA) ==========
+export function recentViewedKey() {
+  const rootFolder = getRootFolder();
+  return `recentViewed::${rootFolder}::${rootFolder}`;
+}
 
+export function saveRecentViewed(folder) {
+  const rootFolder = getRootFolder();
+  if (!rootFolder) return;
+  
+  mangaRecentManager.addItem(rootFolder, {
+    name: folder.name,
+    path: folder.path,
+    thumbnail: folder.thumbnail,
+  });
+}
+
+export function getRecentViewed() {
+  const rootFolder = getRootFolder();
+  if (!rootFolder) return [];
+  
+  return mangaRecentManager.getItems(rootFolder);
+}
+
+// ========== RECENT VIEWED VIDEO ==========
 export function recentViewedVideoKey() {
-  const key = getSourceKey(); // dùng key làm định danh
+  const key = getSourceKey();
   return `recentViewedVideo::${key}`;
 }
 
-
 export function saveRecentViewedVideo(video) {
-  const key = recentViewedVideoKey();
-  try {
-    const raw = localStorage.getItem(key);
-    const list = raw ? JSON.parse(raw) : [];
-
-    const filtered = list.filter((item) => item.path !== video.path);
-    filtered.unshift({
-      name: video.name,
-      path: video.path,
-      thumbnail: video.thumbnail,
-      type: "video", // quan trọng để phân biệt
-    });
-
-    const limited = filtered.slice(0, 30);
-    localStorage.setItem(key, JSON.stringify(limited));
-  } catch (err) {
-    console.warn("❌ Không thể lưu recentViewedVideo:", err);
-  }
-}
-
-
-// 
-
-const MUSIC_CACHE_PREFIX = "musicCache::";
-
-export function getMusicCacheKey(sourceKey, path) {
-  return `${MUSIC_CACHE_PREFIX}${sourceKey}::${path || ""}`;
-}
-
-export function getMusicCache(sourceKey, path) {
-  const key = getMusicCacheKey(sourceKey, path);
-  const raw = localStorage.getItem(key);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    return {
-      data: parsed.data,
-      timestamp: parsed.timestamp,
-    };
-  } catch {
-    localStorage.removeItem(key);
-    return null;
-  }
-}
-
-export function setMusicCache(sourceKey, path, data) {
-  const key = getMusicCacheKey(sourceKey, path);
-  const jsonData = JSON.stringify({
-    timestamp: Date.now(),
-    data: data,
+  const sourceKey = getSourceKey();
+  if (!sourceKey) return;
+  
+  movieRecentManager.addItem(sourceKey, {
+    name: video.name,
+    path: video.path,
+    thumbnail: video.thumbnail,
+    type: "video",
   });
-
-  localStorage.setItem(key, jsonData);
 }
 
+export function getRecentViewedVideo() {
+  const sourceKey = getSourceKey();
+  if (!sourceKey) return [];
+  
+  return movieRecentManager.getItems(sourceKey);
+}
 
+// ========== RECENT VIEWED MUSIC ==========
 export function recentViewedMusicKey() {
   const key = getSourceKey();
   return `recentViewedMusic::${key}`;
 }
 
-
 export function saveRecentViewedMusic(song) {
-  const key = recentViewedMusicKey();
-  try {
-    const raw = localStorage.getItem(key);
-    const list = raw ? JSON.parse(raw) : [];
+  const sourceKey = getSourceKey();
+  if (!sourceKey) return;
+  
+  musicRecentManager.addItem(sourceKey, {
+    name: song.name,
+    path: song.path,
+    thumbnail: song.thumbnail,
+    type: "audio",
+    artist: song.artist,
+  });
+}
 
-    const filtered = list.filter((item) => item.path !== song.path);
-    filtered.unshift({
-      name: song.name,
-      path: song.path,
-      thumbnail: song.thumbnail,
-      type: "audio", // có thể thêm field type cho đồng bộ UI
-      artist: song.artist, // nếu có
-    });
-
-    const limited = filtered.slice(0, 30);
-    localStorage.setItem(key, JSON.stringify(limited));
-  } catch (err) {
-    console.warn("❌ Không thể lưu recentViewedMusic:", err);
-  }
+export function getRecentViewedMusic() {
+  const sourceKey = getSourceKey();
+  if (!sourceKey) return [];
+  
+  return musicRecentManager.getItems(sourceKey);
 }

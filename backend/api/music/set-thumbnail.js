@@ -4,15 +4,7 @@ const path = require("path");
 const router = express.Router();
 const { getRootPath } = require("../../utils/config");
 const { getMusicDB } = require("../../utils/db");
-
-function findThumbFile(baseDir, baseName) {
-  const exts = [".jpg", ".png", ".jpeg", ".webp", ".avif"];
-  for (const ext of exts) {
-    const file = path.join(baseDir, baseName + ext);
-    if (fs.existsSync(file)) return { file, ext };
-  }
-  return null;
-}
+const { findThumbFile } = require("../../utils/thumbnailUtils");
 
 router.post("/folder-thumbnail", (req, res) => {
   const { key, folderPath, srcPath } = req.body;

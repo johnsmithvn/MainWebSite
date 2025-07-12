@@ -18,9 +18,12 @@ import {
   getSourceKey,
   changeRootFolder,
   recentViewedKey,
+  getRecentViewed,
 } from "/src/core/storage.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
+import { folderCacheManager } from "/src/utils/cacheManager.js";
+import { setupButton } from "/src/utils/uiHelpers.js";
 
 window.loadFolder = loadFolder;
 window.toggleDarkMode = toggleDarkMode;
@@ -32,7 +35,7 @@ window.goHome = goHome;
 window.addEventListener("DOMContentLoaded", initializeMangaHome);
 
 async function initializeMangaHome() {
-   const sourceKey = getSourceKey();
+  const sourceKey = getSourceKey();
 
   if (isSecureKey(sourceKey) && !getToken()) {
     const ok = await showLoginModal(sourceKey);
@@ -50,11 +53,10 @@ async function initializeMangaHome() {
     return (window.location.href = "/movie/index.html");
   }
 
-    // 🛑 Nếu là music ➜ về music/index.html
+  // 🛑 Nếu là music ➜ về music/index.html
   if (sourceKey.startsWith("M_")) {
     return (window.location.href = "/music/index.html");
   }
-
 
   const rootFolder = getRootFolder();
 
@@ -75,13 +77,13 @@ async function initializeMangaHome() {
   document.getElementById("searchToggle")?.addEventListener("click", toggleSearchBar);
   document.getElementById("sidebarToggle")?.addEventListener("click", toggleSidebar);
 
-  // const header = document.getElementById("site-header");
-  // const wrapper = document.getElementById("wrapper");
-  // if (header && wrapper) {
-  //   wrapper.style.paddingTop = `${header.offsetHeight}px`;
-  // }
-
-  document.getElementById("reset-cache-btn")?.addEventListener("click", resetCache);
+  // Setup buttons using uiHelpers
+  setupButton("reset-cache-btn", resetCache, "Reset cache");
+  setupButton("refresh-random-btn", () => {
+    const randomKey = `randomView::${sourceKey}::${rootFolder}`;
+    localStorage.removeItem(randomKey);
+    location.reload();
+  }, "Refresh random");
 }
 
 async function loadRandomBanner(sourceKey, rootFolder) {
@@ -111,10 +113,6 @@ async function loadRandomBanner(sourceKey, rootFolder) {
     renderRandomBanner(listRandom);
     const { time } = JSON.parse(localStorage.getItem(randomKey));
     showRandomUpdatedTime(time);
-    document.getElementById("refresh-random-btn")?.addEventListener("click", () => {
-      localStorage.removeItem(randomKey);
-      location.reload();
-    });
   }
 }
 
@@ -131,10 +129,9 @@ async function loadTopView(sourceKey, rootFolder) {
 }
 
 function renderRecentViewFromLocal() {
-  const recentRaw = localStorage.getItem(recentViewedKey());
-  if (recentRaw) {
-    const list = JSON.parse(recentRaw);
-    renderRecentViewed(list);
+  const recentList = getRecentViewed();
+  if (recentList && recentList.length > 0) {
+    renderRecentViewed(recentList);
   }
 }
 
@@ -160,6 +157,7 @@ async function resetCache() {
     console.error(err);
   }
 }
+
 window.addEventListener("pageshow", (event) => {
   if (event.persisted) {
     // ✅ Trường hợp back từ reader → reload dữ liệu
