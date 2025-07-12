@@ -18,20 +18,25 @@ export const CACHE = {
     WEEK: 7 * 24 * 60 * 60 * 1000,  // 1 tuần
   },
   
-  // Cache key prefixes (frontend)
+  // Cache key prefixes (frontend) - MUST match backend for localStorage compatibility
   PREFIXES: {
-    FOLDER: 'folder:',
-    MOVIE: 'movie:',
-    MUSIC: 'music:',
-    RECENT: 'recent:',
-    SEARCH: 'search:',
-    THUMBNAIL: 'thumb:',
-    RANDOM: 'random:',
-    FAVORITE: 'favorite:',
-    PLAYLIST: 'playlist:',
-    SETTINGS: 'settings:',
-    THEME: 'theme:',
-    USER: 'user:',
+    FOLDER: 'folderCache::',
+    MOVIE: 'movieCache::',
+    MUSIC: 'musicCache::',
+    ROOT_THUMB: 'rootThumb::',
+    RANDOM: 'randomView::',
+    RECENT_MANGA: 'recentViewed::',
+    RECENT_MOVIE: 'recentViewedVideo::',
+    RECENT_MUSIC: 'recentViewedMusic::',
+    SCAN_STATUS: 'scanStatus::',
+    THUMBNAIL: 'thumbnail::',
+    METADATA: 'metadata::',
+    TEST: 'test::',
+    FAVORITE: 'favorite::',
+    PLAYLIST: 'playlist::',
+    SETTINGS: 'settings::',
+    THEME: 'theme::',
+    USER: 'user::',
   },
   
   // Storage settings

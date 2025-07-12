@@ -3,7 +3,7 @@ const assert = require('assert');
 const { 
   FILE_EXTENSIONS, 
   CONTENT_TYPES, 
-  CACHE_SETTINGS 
+  CACHE 
 } = require('../backend/constants');
 const { TIMING } = require('../backend/constants');
 
@@ -12,7 +12,7 @@ console.log('🧪 Testing constants...');
 assert(Array.isArray(FILE_EXTENSIONS.IMAGES), 'FILE_EXTENSIONS.IMAGES should be array');
 assert(FILE_EXTENSIONS.IMAGES.includes('.jpg'), 'Should include .jpg extension');
 assert(CONTENT_TYPES.MANGA === 'manga', 'MANGA content type should be "manga"');
-assert(typeof CACHE_SETTINGS.FOLDER_CACHE_TTL === 'number', 'TTL should be number');
+assert(typeof CACHE.EXPIRY === 'number', 'Cache expiry should be number');
 
 // Test CacheManager (frontend)
 if (typeof window !== 'undefined') {

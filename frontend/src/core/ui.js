@@ -500,7 +500,7 @@ sidebar.appendChild(
       const sourceKey = getSourceKey();
       let count = 0;
       Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith(`folderCache::${sourceKey}::`)) {
+        if (key.startsWith(`${CACHE.PREFIXES.FOLDER}${sourceKey}::`)) {
           localStorage.removeItem(key);
           count++;
         }
@@ -720,7 +720,7 @@ sidebar.appendChild(
 
         let count = 0;
         Object.keys(localStorage).forEach((key) => {
-          if (key.startsWith(`movieCache::${sourceKey}::`)) {
+          if (key.startsWith(`${CACHE.PREFIXES.MOVIE}${sourceKey}::`)) {
             localStorage.removeItem(key);
             count++;
           }

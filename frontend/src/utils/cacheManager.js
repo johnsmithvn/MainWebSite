@@ -29,7 +29,7 @@ class CacheManager {
       const parsed = JSON.parse(raw);
       // Check expiry
       const now = Date.now();
-      if (now - parsed.timestamp > CACHE_SETTINGS.CACHE_EXPIRY) {
+      if (now - parsed.timestamp > CACHE.EXPIRY.LONG) {
         localStorage.removeItem(key);
         return null;
       }
@@ -179,8 +179,8 @@ class CacheManager {
 }
 
 // Export instances cho từng loại
-export const folderCacheManager = new CacheManager("folderCache::", CACHE_SETTINGS.MAX_FOLDER_CACHE_SIZE);
-export const movieCacheManager = new CacheManager("movieCache::", CACHE_SETTINGS.MAX_MOVIE_CACHE_SIZE);
-export const musicCacheManager = new CacheManager("musicCache::", CACHE_SETTINGS.MAX_MUSIC_CACHE_SIZE);
+export const folderCacheManager = new CacheManager(CACHE.PREFIXES.FOLDER, CACHE.STORAGE.MAX_SIZE);
+export const movieCacheManager = new CacheManager(CACHE.PREFIXES.MOVIE, CACHE.STORAGE.MAX_SIZE);
+export const musicCacheManager = new CacheManager(CACHE.PREFIXES.MUSIC, CACHE.STORAGE.MAX_SIZE);
 
 export default CacheManager;

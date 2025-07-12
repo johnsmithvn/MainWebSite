@@ -1,6 +1,7 @@
 // 📁 folderCard.js – component dùng chung để hiển thị 1 thẻ folder
 
 import { getSourceKey } from "/src/core/storage.js"; // ✅ gom về 1 dòng import
+import { CACHE } from "/constants/cache.js";
 import {
   getFolderCacheKey,
   getFolderCache,
@@ -120,7 +121,7 @@ export function updateFavoriteEverywhere(sourceKey, rootFolder, folderPath, newV
 
   // 📦 Nếu là movie ➜ update movieCache
   if (isMovie) {
-    const prefix = `movieCache::${sourceKey}::`;
+    const prefix = `${CACHE.PREFIXES.MOVIE}${sourceKey}::`;
     for (const key in localStorage) {
       if (key.startsWith(prefix)) {
         try {
@@ -172,7 +173,7 @@ export function updateFavoriteEverywhere(sourceKey, rootFolder, folderPath, newV
   }
 
   // 📚 Nếu là manga ➜ giữ nguyên logic cũ
-  const prefix = `folderCache::${sourceKey}::${rootFolder}`;
+  const prefix = `${CACHE.PREFIXES.FOLDER}${sourceKey}::${rootFolder}`;
   for (const key in localStorage) {
     if (key.startsWith(prefix)) {
       try {
@@ -202,7 +203,7 @@ export function updateFavoriteEverywhere(sourceKey, rootFolder, folderPath, newV
 
   // ✅ Update recentViewed (manga)
   try {
-    const recentKey = `recentViewed::${rootFolder}::${rootFolder}`;
+    const recentKey = `${CACHE.PREFIXES.RECENT_MANGA}${rootFolder}::${rootFolder}`;
     const raw = localStorage.getItem(recentKey);
     if (raw) {
       const list = JSON.parse(raw);

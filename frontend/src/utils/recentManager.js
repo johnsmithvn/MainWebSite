@@ -177,9 +177,9 @@ function createRecentKey(type, sourceKey, rootFolder) {
 }
 
 // Export instances cho từng loại
-export const mangaRecentManager = new RecentManager('recentViewed::', 30);
-export const movieRecentManager = new RecentManager('recentViewedVideo::', 30);
-export const musicRecentManager = new RecentManager('recentViewedMusic::', 30);
+export const mangaRecentManager = new RecentManager(CACHE.PREFIXES.RECENT_MANGA, 30);
+export const movieRecentManager = new RecentManager(CACHE.PREFIXES.RECENT_MOVIE, 30);
+export const musicRecentManager = new RecentManager(CACHE.PREFIXES.RECENT_MUSIC, 30);
 
 /**
  * 📖 Helper functions cho manga

@@ -1,6 +1,7 @@
 // 📁 frontend/src/core/storage.js
 import { showToast, goHome } from "./ui.js";
 import { folderCacheManager, movieCacheManager, musicCacheManager } from "/src/utils/cacheManager.js";
+import { CACHE } from "/constants/cache.js";
 import { 
   saveRecentViewed as saveRecentViewedHelper,
   getRecentViewed as getRecentViewedHelper,
@@ -11,7 +12,7 @@ import {
 } from "/src/utils/recentManager.js";
 import { CACHE } from "/frontend/constants/index.js";
 
-const ROOT_THUMB_CACHE_PREFIX = "rootThumb::";
+const ROOT_THUMB_CACHE_PREFIX = CACHE.PREFIXES.ROOT_THUMB;
 
 /**
  * 📂 Lấy rootFolder hiện tại từ localStorage
@@ -59,7 +60,7 @@ export function getRootThumbCache(sourceKey, rootFolder) {
   if (!raw) return null;
   try {
     const { thumbnail, time } = JSON.parse(raw);
-    if (Date.now() - time > CACHE_SETTINGS.ROOT_THUMB_CACHE_TTL) {
+    if (Date.now() - time > CACHE.EXPIRY.LONG) {
       localStorage.removeItem(key);
       return null;
     }
@@ -183,7 +184,7 @@ export function clearAllMusicCache() {
 // ========== RECENT VIEWED (MANGA) ==========
 export function recentViewedKey() {
   const rootFolder = getRootFolder();
-  return `recentViewed::${rootFolder}::${rootFolder}`;
+  return `${CACHE.PREFIXES.RECENT_MANGA}${rootFolder}::${rootFolder}`;
 }
 
 export function saveRecentViewed(folder) {
@@ -205,7 +206,7 @@ export function getRecentViewed() {
 // ========== RECENT VIEWED VIDEO ==========
 export function recentViewedVideoKey() {
   const key = getSourceKey();
-  return `recentViewedVideo::${key}`;
+  return `${CACHE.PREFIXES.RECENT_MOVIE}${key}`;
 }
 
 export function saveRecentViewedVideo(video) {
@@ -225,7 +226,7 @@ export function getRecentViewedVideo() {
 // ========== RECENT VIEWED MUSIC ==========
 export function recentViewedMusicKey() {
   const key = getSourceKey();
-  return `recentViewedMusic::${key}`;
+  return `${CACHE.PREFIXES.RECENT_MUSIC}${key}`;
 }
 
 export function saveRecentViewedMusic(song) {
