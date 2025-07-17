@@ -1061,10 +1061,13 @@ export function buildThumbnailUrl(f, mediaType = "movie") {
   if (folderPrefix && f.thumbnail.startsWith(folderPrefix + "/")) {
     f.thumbnail = f.thumbnail.slice(folderPrefix.length + 1);
   }
-  // Build lại URL chuẩn
-  return `${prefix}${
-    folderPrefix ? folderPrefix + "/" : ""
-  }${f.thumbnail.replace(/\\/g, "/")}`;
+  
+  // 🔥 Encode đường dẫn để xử lý ký tự đặc biệt như # (giống manga)
+  const safeFolderPrefix = folderPrefix ? folderPrefix.split("/").map(encodeURIComponent).join("/") + "/" : "";
+  const safeThumbnail = f.thumbnail.split("/").map(encodeURIComponent).join("/");
+  
+  // Build lại URL chuẩn với encoding
+  return `${prefix}${safeFolderPrefix}${safeThumbnail.replace(/\\/g, "/")}`;
 }
 
 export function renderRecentViewedMusic(list = []) {
