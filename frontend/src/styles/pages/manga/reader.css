@@ -131,6 +131,12 @@ img {
 }
 
 /* Scroll mode */
+
+.reader:not(.scroll-mode) img {
+  touch-action: manipulation;
+  user-select: none;
+}
+
 .reader.scroll-mode {
   display: flex;
   flex-direction: column;
@@ -139,6 +145,8 @@ img {
   height: auto;
   padding: 0;
   background-color: #000;
+  touch-action: auto;
+  user-select: auto;
 }
 
 /* =============================
