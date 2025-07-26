@@ -1,7 +1,7 @@
 import { toggleReaderUI, updateReaderPageInfo } from "./utils.js";
 import { READER } from "../../constants.js";
 
-const imagesPerPage = READER.IMAGES_PER_PAGE; // 200 - from constants
+const imagesPerPage = READER.IMAGES_PER_PAGE; 
 
 /**
  * 📖 Scroll Mode Reader
@@ -29,6 +29,42 @@ export function renderScrollReader(
 
   let currentPageIndex = startPageIndex;
   let active = true;
+
+  const isLazyLoad = READER.LAZY_LOAD;
+
+  function renderScrollPage(imageList) {
+    wrapper.innerHTML = "";
+
+    if (isLazyLoad) {
+      let index = 0;
+      function loadNext() {
+        if (!active || index >= imageList.length) return;
+        const img = document.createElement("img");
+        img.className = "scroll-img loading";
+        img.loading = "lazy";
+        img.onload = () => {
+          if (active) {
+            img.classList.remove("loading");
+            index++;
+            loadNext();
+          }
+        };
+        img.src = imageList[index];
+        wrapper.appendChild(img);
+      }
+      loadNext();
+    } else {
+      imageList.forEach((src) => {
+        const img = document.createElement("img");
+        img.className = "scroll-img loading";
+        img.loading = "lazy";
+        img.onload = () => img.classList.remove("loading");
+        img.src = src;
+        wrapper.appendChild(img);
+      });
+    }
+  }
+
   const handleScroll = () => {
     if (active) syncScrollState();
   };
@@ -64,31 +100,6 @@ export function renderScrollReader(
         switchScrollPage(currentPageIndex + 1);
     };
     updateNavButtons();
-  }
-
-  function renderScrollPage(imageList) {
-    wrapper.innerHTML = "";
-
-    let index = 0;
-
-    function loadNext() {
-      if (!active || index >= imageList.length) return;
-
-      const img = document.createElement("img");
-      img.className = "scroll-img loading";
-      img.loading = "lazy";
-      img.onload = () => {
-        if (active) {
-          img.classList.remove("loading");
-          index++;
-          loadNext();
-        }
-      };
-      img.src = imageList[index];
-      wrapper.appendChild(img);
-    }
-
-    loadNext();
   }
 
   function setupScrollLazyLoad(wrapper) {

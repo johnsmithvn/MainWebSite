@@ -5,11 +5,8 @@ import {
   getSourceKey,
 } from "/src/core/storage.js";
 import { updateReaderPageInfo, showJumpPageInput } from "./utils.js";
-import { showToast } from "../ui.js";
-// let currentImages = [];
-// let currentPage = 0;
-// let readerMode = "horizontal"; // or "vertical"
-// let controller = null; // object: { setCurrentPage(page) }
+import { READER } from "../../constants.js";
+
 
 /**
  * 📖 Gọi từ reader.html – render chế độ đọc
@@ -18,7 +15,7 @@ let readerContainer = null; // Reuse duy nhất 1 thẻ reader DOM
 let controller = null; // Giữ instance của chế độ đọc
 let currentImages = [];
 let currentPage = 0;
-let readerMode = "horizontal"; // "vertical" or "horizontal"
+let readerMode = READER.DEFAULT_MODE; // "horizontal" hoặc "vertical"
 /**
  * 📖 Hàm render chính (gọi khi vào reader.html hoặc đổi mode)
  */

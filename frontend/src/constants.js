@@ -41,6 +41,14 @@ export const PAGINATION = {
  * 📍 Sử dụng: reader/scroll.js, reader/horizontal.js, reader/index.js
  */
 export const READER = {
+
+  //  mode mặc định cho reader
+  DEFAULT_MODE: "vertical", // hoặc "vertical" /"horizontal" nếu muốn mặc định scroll
+
+  // 📚 Lazy load images - false se load tat ca ảnh trong page
+  // false sẽ load ít ảnh và lần lượt
+  LAZY_LOAD: false,  // true: lazy load images, false: load all images
+
   // 📚 Số ảnh load mỗi lần trong scroll mode
   IMAGES_PER_PAGE: 200,           // Từ scroll.js - High number for smooth scrolling
   
