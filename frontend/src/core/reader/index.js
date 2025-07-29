@@ -5,7 +5,7 @@ import {
   getSourceKey,
 } from "/src/core/storage.js";
 import { updateReaderPageInfo, showJumpPageInput } from "./utils.js";
-import { READER } from "../../constants.js";
+import { getReaderSettings } from "/src/components/readerSettingsModal.js";
 
 
 /**
@@ -15,7 +15,7 @@ let readerContainer = null; // Reuse duy nhất 1 thẻ reader DOM
 let controller = null; // Giữ instance của chế độ đọc
 let currentImages = [];
 let currentPage = 0;
-let readerMode = READER.DEFAULT_MODE; // "horizontal" hoặc "vertical"
+let readerMode = getReaderSettings().mode; // Lấy từ localStorage thay vì constants
 /**
  * 📖 Hàm render chính (gọi khi vào reader.html hoặc đổi mode)
  */
@@ -166,6 +166,33 @@ export function toggleReaderMode() {
   renderReader(currentImages, true, scrollPage);
   // ⚠️ Không cần setCurrentPage sau khi render vì đã truyền startPage
 }
+
+/**
+ * 🔄 Reload reader với settings mới từ modal
+ */
+function reloadReaderWithNewSettings(newSettings) {
+  const oldMode = readerMode;
+  readerMode = newSettings.mode;
+  
+  let scrollPage = 0;
+  
+  if (oldMode !== readerMode) {
+    if (oldMode === "vertical" && readerMode === "horizontal") {
+      // scroll ➜ horizontal: tính trang từ ảnh hiện tại
+      const count = document.getElementById("image-count-info");
+      const match = count?.textContent?.match(/Ảnh (\d+)/);
+      if (match) currentPage = parseInt(match[1]) - 1;
+    } else if (oldMode === "horizontal" && readerMode === "vertical") {
+      // horizontal ➜ scroll: tính scroll page
+      scrollPage = Math.floor(currentPage / 200);
+    }
+  }
+  
+  renderReader(currentImages, true, scrollPage);
+}
+
+// ✅ Export function để modal có thể gọi
+window.reloadReaderWithNewSettings = reloadReaderWithNewSettings;
 
 export function getCurrentImage() {
   return currentImages[currentPage] || null;

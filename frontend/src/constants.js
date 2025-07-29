@@ -1,5 +1,6 @@
 // 📁 frontend/src/constants.js
-// 🔧 Frontend Constants - Giữ nguyên logic cũ, chỉ tập trung hóa constants
+// 🔧 Froexport const READER = {
+  // 📚 Số ảnh load mỗi lần trong scroll modetants - Giữ nguyên logic cũ, chỉ tập trung hóa constants
 
 /**
  * 📊 Pagination Settings

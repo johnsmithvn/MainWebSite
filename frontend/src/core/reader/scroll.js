@@ -1,11 +1,13 @@
 
 // ===== IMPORTS =====
 import { toggleReaderUI, updateReaderPageInfo } from "./utils.js";
+import { getReaderSettings } from "/src/components/readerSettingsModal.js";
 import { READER } from "../../constants.js";
 
 // ===== CONFIGURATION =====
 const imagesPerPage = READER.IMAGES_PER_PAGE;
-const isLazyLoad = READER.LAZY_LOAD;
+const readerSettings = getReaderSettings();
+const isLazyLoad = readerSettings.lazyLoad; // ✅ Lấy từ localStorage thay vì constants
 
 /**
  * 📖 Scroll Mode Reader
