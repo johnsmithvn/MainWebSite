@@ -1,8 +1,10 @@
 // 📁 frontend/src/storage.js
 import { showToast, goHome } from "./ui.js";
-const MOVIE_CACHE_PREFIX = "movieCache::";
-const FOLDER_CACHE_PREFIX = "folderCache::";
-const ROOT_THUMB_CACHE_PREFIX = "rootThumb::";
+import { CACHE } from "../constants.js";
+
+const MOVIE_CACHE_PREFIX = CACHE.MOVIE_CACHE_PREFIX; // "movieCache::" - from constants
+const FOLDER_CACHE_PREFIX = CACHE.FOLDER_CACHE_PREFIX; // "folderCache::" - from constants
+const ROOT_THUMB_CACHE_PREFIX = CACHE.ROOT_THUMB_CACHE_PREFIX; // "rootThumb::" - from constants
 
 /**
  * 📂 Lấy rootFolder hiện tại từ localStorage
@@ -53,7 +55,7 @@ export function getRootThumbCache(sourceKey, rootFolder) {
   if (!raw) return null;
   try {
     const { thumbnail, time } = JSON.parse(raw);
-    if (Date.now() - time > 7 * 24 * 60 * 60 * 1000) {
+    if (Date.now() - time > CACHE.THUMBNAIL_CACHE_MS) { // 7 days - from constants
       localStorage.removeItem(key);
       return null;
     }
@@ -131,7 +133,7 @@ export function setFolderCache(sourceKey, rootFolder, path, data) {
     data: data,
   });
 
-  const maxTotalSize = 4 * 1024 * 1024 + 300; // ✅ Giới hạn tổng 8MB
+  const maxTotalSize = CACHE.MAX_TOTAL_CACHE_SIZE; // 4MB + 300 bytes - from constants
   const currentTotalSize = getCurrentCacheSize();
   // 🆕 Nếu dữ liệu quá lớn (trên 4MB) thì không lưu cache
   if (jsonData.length > maxTotalSize) {
@@ -270,7 +272,7 @@ export function setMovieCache(sourceKey, path, data) {
     data: data,
   });
 
-  const maxTotalSize = 4 * 1024 * 1024 + 300;
+  const maxTotalSize = CACHE.MAX_MOVIE_CACHE_SIZE; // 4MB + 300 bytes - from constants
   const currentTotalSize = getCurrentMovieCacheSize();
 
   if (jsonData.length > maxTotalSize) {

@@ -1,6 +1,7 @@
 // playlistMenu.js
 import { getSourceKey } from "/src/core/storage.js";
 import { showToast, showConfirm, showInputPrompt } from "/src/core/ui.js";
+import { RESPONSIVE } from "/src/constants.js";
 
 export async function showPlaylistMenu(path, name, anchor) {
   let container = document.getElementById("playlist-popup");
@@ -164,7 +165,7 @@ export async function showPlaylistMenu(path, name, anchor) {
   container.appendChild(newBtn);
 
   // Popup căn giữa (mobile/desktop)
-  const isMobile = window.innerWidth <= 480;
+  const isMobile = window.innerWidth <= 480; // Note: Using specific mobile breakpoint here
   container.style.position = "fixed";
   container.style.left = "50%";
   container.style.top = "50%";

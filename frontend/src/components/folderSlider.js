@@ -8,6 +8,7 @@ import {
   recentViewedMusicKey,
 } from "../core/storage.js";
 import { buildThumbnailUrl } from "../core/ui.js";
+import { SLIDER, RESPONSIVE, CACHE } from "../constants.js";
 
 /**
  * Hiển thị thanh trượt thư mục/phim/nhạc.
@@ -180,7 +181,7 @@ export function renderFolderSlider({
 
   sliderContainer.appendChild(wrapper);
 
-  const isMobile = window.innerWidth <= 768;
+  const isMobile = window.innerWidth <= RESPONSIVE.MOBILE_BREAKPOINT; // 768 - from constants
   const prevBtn = document.createElement("button");
   const nextBtn = document.createElement("button");
   prevBtn.className = "nav-button prev-button";
@@ -354,7 +355,7 @@ async function loadRandomSection(
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        const expired = Date.now() - parsed.timestamp > 30 * 60 * 1000;
+        const expired = Date.now() - parsed.timestamp > CACHE.SLIDER_CACHE_MS; // 30 minutes - from constants
         if (!expired) {
           renderFolderSlider({
             title,

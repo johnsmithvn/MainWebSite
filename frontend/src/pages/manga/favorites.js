@@ -4,9 +4,11 @@ import { getRootFolder, getSourceKey } from "/src/core/storage.js";
 import { renderFolderCard } from "/src/components/folderCard.js";
 import { showToast, showOverlay, hideOverlay } from "/src/core/ui.js";
 import { loadFolder } from "/src/core/folder.js";
+import { PAGINATION } from "/src/constants.js";
+import { setupMangaSettingsButton, applyMangaSettings } from "/src/core/mangaSettings.js";
 let allFavorites = [];
 let currentPage = 0;
-const perPage = 20; // 👈 số lượng card mỗi trang
+const perPage = PAGINATION.MANGA_FAVORITES_PER_PAGE; // 20 - from constants
 
 // ✅ Hàm render toàn bộ grid theo trang hiện tại
 function renderGridPage() {
@@ -83,6 +85,10 @@ async function loadFavorites() {
   const root = getRootFolder();
   const key = getSourceKey();
   if (!root || !key) return showToast("❌ Thiếu root hoặc sourceKey");
+
+  // ✅ Setup manga settings cho favorites page
+  setupMangaSettingsButton();
+  applyMangaSettings();
 
   showOverlay();
 

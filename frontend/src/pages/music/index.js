@@ -18,6 +18,7 @@ import {
   withLoading,
   goHome
 } from "/src/core/ui.js";
+import { PAGINATION } from "/src/constants.js";
 import { filterMusic } from "/src/core/ui.js";
 import { buildThumbnailUrl } from "/src/core/ui.js";
 import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
@@ -85,7 +86,7 @@ function getInitialPathFromURL() {
 // }
 
 let musicPage = 0;
-const perPage = 20;
+const perPage = PAGINATION.MUSIC_PER_PAGE; // 20 - from constants
 let fullList = [];
 let currentPath = "";
 

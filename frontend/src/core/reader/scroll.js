@@ -1,6 +1,22 @@
-import { toggleReaderUI, updateReaderPageInfo } from "./utils.js";
 
-const imagesPerPage = 200;
+// ===== IMPORTS =====
+import { toggleReaderUI, updateReaderPageInfo } from "./utils.js";
+import { getReaderSettings } from "/src/components/readerSettingsModal.js";
+import { READER } from "../../constants.js";
+
+// ===== CONFIGURATION =====
+const imagesPerPage = READER.IMAGES_PER_PAGE;
+const readerSettings = getReaderSettings();
+const isLazyLoad = readerSettings.lazyLoad; // ✅ Lấy từ localStorage thay vì constants
+
+/**
+ * 📖 Scroll Mode Reader
+ * @param {Array} images
+ * @param {HTMLElement} container
+ * @param {function} onPageChange
+ * @param {number} startPageIndex
+ * @returns {{ setCurrentPage: function }}
+ */
 
 /**
  * 📖 Scroll Mode Reader
@@ -16,33 +32,38 @@ export function renderScrollReader(
   onPageChange = () => {},
   startPageIndex = 0
 ) {
+  // ===== STATE =====
   const totalPages = Math.ceil(images.length / imagesPerPage);
   const pages = [];
   for (let i = 0; i < totalPages; i++) {
     pages.push(images.slice(i * imagesPerPage, (i + 1) * imagesPerPage));
   }
+  let currentPageIndex = startPageIndex;
+  let active = true;
 
+  // ===== DOM ELEMENTS =====
   const wrapper = document.createElement("div");
   wrapper.className = "reader scroll-mode";
   container.appendChild(wrapper);
 
-  let currentPageIndex = startPageIndex;
-  let active = true;
+  // ===== EVENT HANDLERS =====
   const handleScroll = () => {
     if (active) syncScrollState();
   };
   const handleWrapperClick = () => toggleReaderUI();
-  renderScrollPage(pages[currentPageIndex]);
 
+  // ===== INITIAL RENDER =====
+  renderScrollPage(pages[currentPageIndex]);
   setupScrollLazyLoad(wrapper);
   syncScrollState();
 
-  wrapper.addEventListener("click", handleWrapperClick);
-  window.addEventListener("scroll", handleScroll);
-
+  // ===== DOM SELECTORS =====
   const pageInfo = document.getElementById("page-info");
   const prevPageBtn = document.getElementById("prev-page-btn");
   const nextPageBtn = document.getElementById("next-page-btn");
+
+
+  // ===== PAGE INFO & NAVIGATION BUTTONS SETUP =====
   if (pageInfo) {
     pageInfo.style.cursor = "pointer";
     pageInfo.onclick = null; // 🧹 xoá sự kiện cũ trước khi gán mới
@@ -65,43 +86,56 @@ export function renderScrollReader(
     updateNavButtons();
   }
 
+  // ===== EVENT BINDING =====
+  wrapper.addEventListener("click", handleWrapperClick);
+  window.addEventListener("scroll", handleScroll);
+
+  // ===== PRIVATE FUNCTIONS =====
+  // -- Render images for current scroll page --
   function renderScrollPage(imageList) {
     wrapper.innerHTML = "";
-
-    let index = 0;
-
-    function loadNext() {
-      if (!active || index >= imageList.length) return;
-
-      const img = document.createElement("img");
-      img.className = "scroll-img loading";
-      img.loading = "lazy";
-      img.onload = () => {
-        if (active) {
-          img.classList.remove("loading");
-          index++;
-          loadNext();
-        }
-      };
-      img.src = imageList[index];
-      wrapper.appendChild(img);
+    if (isLazyLoad) {
+      let index = 0;
+      function loadNext() {
+        if (!active || index >= imageList.length) return;
+        const img = document.createElement("img");
+        img.className = "scroll-img loading";
+        img.loading = "lazy";
+        img.onload = () => {
+          if (active) {
+            img.classList.remove("loading");
+            index++;
+            loadNext();
+          }
+        };
+        img.src = imageList[index];
+        wrapper.appendChild(img);
+      }
+      loadNext();
+    } else {
+      imageList.forEach((src) => {
+        const img = document.createElement("img");
+        img.className = "scroll-img loading";
+        img.loading = "lazy";
+        img.onload = () => img.classList.remove("loading");
+        img.src = src;
+        wrapper.appendChild(img);
+      });
     }
-
-    loadNext();
   }
 
+  // -- Setup scroll event for lazy load --
   function setupScrollLazyLoad(wrapper) {
     window.removeEventListener("scroll", handleScroll);
     window.addEventListener("scroll", handleScroll);
   }
 
+  // -- Sync scroll state and update image count info --
   function syncScrollState() {
     const imgs = wrapper.querySelectorAll(".scroll-img");
     const screenCenter = window.innerHeight / 2;
-
     let minDistance = Infinity;
     let nearestIndex = 0;
-
     for (let i = 0; i < imgs.length; i++) {
       const rect = imgs[i].getBoundingClientRect();
       const center = rect.top + rect.height / 2;
@@ -111,19 +145,16 @@ export function renderScrollReader(
         nearestIndex = i;
       }
     }
-
     const globalIndex = currentPageIndex * imagesPerPage + nearestIndex;
     const totalImages = images.length;
     const countInfo = document.getElementById("image-count-info");
     if (countInfo) {
-      countInfo.textContent = `Ảnh ${globalIndex + 1} / ${totalImages} (Hiện: ${
-        imgs.length
-      })`;
+      countInfo.textContent = `Ảnh ${globalIndex + 1} / ${totalImages} (Hiện: ${imgs.length})`;
     }
-
     onPageChange(globalIndex);
   }
 
+  // -- Chuyển trang scroll --
   function switchScrollPage(index) {
     currentPageIndex = index;
     renderScrollPage(pages[currentPageIndex]);
@@ -133,18 +164,21 @@ export function renderScrollReader(
     scrollTo(wrapper);
   }
 
+  // -- Cập nhật trạng thái nút điều hướng --
   function updateNavButtons() {
     if (!prevPageBtn || !nextPageBtn) return;
     prevPageBtn.disabled = currentPageIndex === 0;
     nextPageBtn.disabled = currentPageIndex >= totalPages - 1;
   }
 
+  // -- Scroll tới element --
   function scrollTo(elem) {
     const rect = elem.getBoundingClientRect();
     const top = rect.top + window.scrollY;
     window.scrollTo({ top, behavior: "instant" });
   }
 
+  // -- Hiển thị modal chọn trang --
   function showPageModal() {
     const modal = document.createElement("div");
     modal.className = "scroll-page-modal";
@@ -160,7 +194,6 @@ export function renderScrollReader(
       alignItems: "center",
       zIndex: 9999,
     });
-
     const box = document.createElement("div");
     Object.assign(box.style, {
       background: "white",
@@ -173,7 +206,6 @@ export function renderScrollReader(
       gap: "10px",
       maxWidth: "400px",
     });
-
     for (let i = 0; i < totalPages; i++) {
       const btn = document.createElement("button");
       btn.textContent = `${i + 1}`;
@@ -183,11 +215,9 @@ export function renderScrollReader(
       };
       box.appendChild(btn);
     }
-
     const nav = document.createElement("div");
     nav.style.textAlign = "center";
     nav.style.marginTop = "12px";
-
     const prev = document.createElement("button");
     const next = document.createElement("button");
     prev.textContent = "⬅ Prev";
@@ -199,22 +229,19 @@ export function renderScrollReader(
       if (currentPageIndex < totalPages - 1)
         switchScrollPage(currentPageIndex + 1);
     };
-
     nav.appendChild(prev);
     nav.appendChild(next);
-
     const wrapperDiv = document.createElement("div");
     wrapperDiv.appendChild(box);
     wrapperDiv.appendChild(nav);
     modal.appendChild(wrapperDiv);
-
     modal.onclick = (e) => {
       if (e.target === modal) modal.remove();
     };
-
     document.body.appendChild(modal);
   }
 
+  // -- Đặt trang hiện tại --
   function setCurrentPage(index) {
     const targetPage = Math.floor(index / imagesPerPage);
     currentPageIndex = targetPage; // 🛠️ cập nhật page chính xác
@@ -222,11 +249,13 @@ export function renderScrollReader(
     updateReaderPageInfo(currentPageIndex + 1, totalPages); // 🧠 cập nhật lại Trang X/Y
   }
 
+  // -- Hủy bỏ event và cleanup --
   function destroy() {
     active = false;
     window.removeEventListener("scroll", handleScroll);
     wrapper.removeEventListener("click", handleWrapperClick);
   }
 
+  // ===== RETURN API =====
   return { setCurrentPage, destroy };
 }
