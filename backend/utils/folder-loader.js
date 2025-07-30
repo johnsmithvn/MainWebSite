@@ -142,17 +142,20 @@ if ([".mp4", ".mkv", ".avi", ".webm", ".ts", ".wmv"].includes(ext)) {
  */
 function loadFolderFromDB(dbkey, root, folderPath = "", limit = 0, offset = 0) {
   const db = getDB(dbkey);
+  const baseDepth = folderPath ? folderPath.split("/").filter(Boolean).length : 0;
   const pathFilter = folderPath ? `${folderPath}/%` : "%";
   const items = db
     .prepare(
-      `SELECT name, path, thumbnail, isFavorite FROM folders WHERE root = ? AND path LIKE ? ORDER BY name COLLATE NOCASE ASC`
+      `SELECT name, path, thumbnail, isFavorite 
+       FROM folders 
+       WHERE root = ? 
+         AND path LIKE ? 
+         AND (LENGTH(path) - LENGTH(REPLACE(path, '/', ''))) = ? 
+       ORDER BY name COLLATE NOCASE ASC`
     )
-    .all(root, pathFilter);
+    .all(root, pathFilter, baseDepth + 1);
 
-  const baseDepth = folderPath ? folderPath.split("/").filter(Boolean).length : 0;
-  const folders = items
-    .filter((it) => it.path.split("/").filter(Boolean).length === baseDepth + 1)
-    .map((it) => ({
+  const folders = items.map((it) => ({
       name: it.name,
       path: it.path,
       thumbnail: it.thumbnail,
