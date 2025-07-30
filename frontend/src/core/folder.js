@@ -10,6 +10,7 @@ import {
 import { preloadThumbnails } from "./preload.js";
 import { renderFolderCard } from "../components/folderCard.js";
 import { PAGINATION } from "../constants.js";
+import { getReaderSettings } from "../components/readerSettingsModal.js";
 export const state = {
   currentPath: "",
   allFolders: [],
@@ -42,10 +43,14 @@ export function loadFolder(path = "", page = 0) {
     return;
   }
 
+  const { useDb } = getReaderSettings();
+
   fetch(
     `/api/manga/folder-cache?mode=path&key=${encodeURIComponent(
       sourceKey
-    )}&root=${encodeURIComponent(rootFolder)}&path=${encodeURIComponent(path)}`
+    )}&root=${encodeURIComponent(rootFolder)}&path=${encodeURIComponent(
+      path
+    )}&useDb=${useDb ? "1" : "0"}`
   )
     .then((res) => res.json())
     .then((data) => {
