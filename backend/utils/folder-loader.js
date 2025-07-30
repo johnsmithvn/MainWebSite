@@ -4,6 +4,7 @@ const path = require("path");
 const { getRootPath } = require("./config");
 const naturalCompare = require("string-natural-compare");
 const { findFirstImageRecursively } = require("./imageUtils");
+const { getDB } = require("./db");
 
 /**
  * 📂 Đọc folder thật từ ổ đĩa
@@ -109,7 +110,7 @@ function loadMovieFolderFromDisk(
 
     if (entry.isFile()) {
       const ext = path.extname(entry.name).toLowerCase();
-if ([".mp4", ".mkv", ".avi", ".webm", ".ts", ".wmv"].includes(ext)) {
+      if ([".mp4", ".mkv", ".avi", ".webm", ".ts", ".wmv"].includes(ext)) {
         folders.push({
           name: entry.name,
           path: path.posix.join(folderPath, entry.name),
@@ -129,7 +130,72 @@ if ([".mp4", ".mkv", ".avi", ".webm", ".ts", ".wmv"].includes(ext)) {
   };
 }
 
+/**
+ * 📂 Đọc folder từ DB (manga) - tránh truy cập ổ đĩa cho danh sách subfolder
+ * Chỉ lấy danh sách folder từ DB, còn ảnh vẫn đọc trực tiếp từ ổ đĩa
+ * @param {string} dbkey
+ * @param {string} root
+ * @param {string} folderPath
+ * @param {number} limit
+ * @param {number} offset
+ * @returns {{ folders: Array, images: Array, total: number, totalImages: number }}
+ */
+function loadFolderFromDB(dbkey, root, folderPath = "", limit = 0, offset = 0) {
+  const db = getDB(dbkey);
+  const pathFilter = folderPath ? `${folderPath}/%` : "%";
+  const items = db
+    .prepare(
+      `SELECT name, path, thumbnail, isFavorite FROM folders WHERE root = ? AND path LIKE ? ORDER BY name COLLATE NOCASE ASC`
+    )
+    .all(root, pathFilter);
+
+  const baseDepth = folderPath
+    ? folderPath.split("/").filter(Boolean).length
+    : 0;
+  const folders = items
+    .filter((it) => it.path.split("/").filter(Boolean).length === baseDepth + 1)
+    .map((it) => ({
+      name: it.name,
+      path: it.path,
+      thumbnail: it.thumbnail,
+      isFavorite: !!it.isFavorite,
+    }));
+
+  // Đọc ảnh trực tiếp từ ổ đĩa cho folder hiện tại
+  const rootDir = path.join(getRootPath(dbkey), root);
+  const basePath = path.join(rootDir, folderPath);
+  const images = [];
+  if (fs.existsSync(basePath)) {
+    try {
+      const entries = fs.readdirSync(basePath, { withFileTypes: true });
+      entries.sort((a, b) => naturalCompare(a.name, b.name));
+      for (const entry of entries) {
+        if (entry.isFile()) {
+          const ext = path.extname(entry.name).toLowerCase();
+          if ([".jpg", ".jpeg", ".png", ".webp", ".avif"].includes(ext)) {
+            const rel = path
+              .relative(rootDir, path.join(basePath, entry.name))
+              .replace(/\\/g, "/");
+            const safePath = rel.split("/").map(encodeURIComponent).join("/");
+            images.push(`/manga/${root}/${safePath}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error reading directory ${basePath}:`, error.message);
+    }
+  }
+
+  return {
+    folders,
+    images: limit > 0 ? images.slice(offset, offset + limit) : images,
+    total: folders.length,
+    totalImages: images.length,
+  };
+}
+
 module.exports = {
   loadFolderFromDisk,
   loadMovieFolderFromDisk, // export thêm hàm mới
+  loadFolderFromDB,
 };

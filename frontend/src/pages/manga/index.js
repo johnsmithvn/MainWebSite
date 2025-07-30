@@ -21,7 +21,7 @@ import {
 } from "/src/core/storage.js";
 import { setupGlobalClickToCloseUI } from "/src/core/events.js";
 import { isSecureKey, getToken, showLoginModal } from "/src/core/security.js";
-
+import { setupMangaSettingsButton } from "/src/core/mangaSettings.js";
 window.loadFolder = loadFolder;
 window.toggleDarkMode = toggleDarkMode;
 window.toggleSearchBar = toggleSearchBar;
@@ -62,6 +62,7 @@ async function initializeMangaHome() {
   requireRootFolder();
   setupSidebar();
   setupGlobalClickToCloseUI();
+  setupMangaSettingsButton();
 
   const urlParams = new URLSearchParams(window.location.search);
   const initialPath = urlParams.get("path") || "";

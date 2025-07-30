@@ -7,7 +7,8 @@
 export function getReaderSettings() {
   const defaultSettings = {
     mode: "vertical", // "vertical" hoặc "horizontal"
-    lazyLoad: false   // true: lazy load, false: load tất cả
+    lazyLoad: false,  // true: lazy load, false: load tất cả
+    useDb: true       // true: load folder từ DB, false: đọc trực tiếp ổ đĩa
   };
 
   try {
@@ -71,8 +72,8 @@ export function showReaderSettingsModal() {
 
           <div class="setting-group">
             <label class="setting-label">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 id="lazyLoadCheckbox"
                 ${currentSettings.lazyLoad ? "checked" : ""}
               />
@@ -81,6 +82,21 @@ export function showReaderSettingsModal() {
             <div class="setting-description">
               ✅ Bật: Tiết kiệm RAM, tải từng ảnh<br>
               ❌ Tắt: Tải tất cả ảnh (mượt hơn)
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label">
+              <input
+                type="checkbox"
+                id="useDbCheckbox"
+                ${currentSettings.useDb ? "checked" : ""}
+              />
+              <span class="checkbox-text">🗄️ Load folder từ DB</span>
+            </label>
+            <div class="setting-description">
+              ✅ Bật: Duyệt folder nhanh (đã scan DB)<br>
+              ❌ Tắt: Đọc trực tiếp từ ổ đĩa
             </div>
           </div>
         </div>
@@ -97,6 +113,7 @@ export function showReaderSettingsModal() {
     // Lấy elements
     const scrollCheckbox = modal.querySelector("#scrollModeCheckbox");
     const lazyLoadCheckbox = modal.querySelector("#lazyLoadCheckbox");
+    const useDbCheckbox = modal.querySelector("#useDbCheckbox");
     const saveBtn = modal.querySelector("#saveBtn");
     const cancelBtn = modal.querySelector("#cancelBtn");
     const closeBtn = modal.querySelector(".modal-close");
@@ -109,7 +126,8 @@ export function showReaderSettingsModal() {
     const handleSave = () => {
       const newSettings = {
         mode: scrollCheckbox.checked ? "vertical" : "horizontal",
-        lazyLoad: lazyLoadCheckbox.checked
+        lazyLoad: lazyLoadCheckbox.checked,
+        useDb: useDbCheckbox.checked
       };
 
       saveReaderSettings(newSettings);
