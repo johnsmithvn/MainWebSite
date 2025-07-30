@@ -61,15 +61,15 @@ router.get("/folder-cache", async (req, res) => {
       return res.json(rows);
     }
     if (mode === "path") {
-      // Lấy folder hoặc reader theo path
-      const { loadFolderFromDisk } = require("../../utils/folder-loader");
+      // Lấy folder hoặc reader theo path từ DB + ổ đĩa
+      const { loadFolderFromDB } = require("../../utils/folder-loader");
       let realPath = folderPath;
       let isSelf = false;
       if (folderPath.endsWith("/__self__")) {
         realPath = folderPath.replace(/\/__self__$/, "");
         isSelf = true;
       }
-      const result = loadFolderFromDisk(dbkey, root, realPath, limitNum, offsetNum);
+      const result = loadFolderFromDB(dbkey, root, realPath, limitNum, offsetNum);
       if (isSelf) result.folders = [];
       const isReader = result.images.length > 0 && result.folders.length === 0;
       return res.json({
