@@ -110,7 +110,7 @@ function loadMovieFolderFromDisk(
 
     if (entry.isFile()) {
       const ext = path.extname(entry.name).toLowerCase();
-if ([".mp4", ".mkv", ".avi", ".webm", ".ts", ".wmv"].includes(ext)) {
+      if ([".mp4", ".mkv", ".avi", ".webm", ".ts", ".wmv"].includes(ext)) {
         folders.push({
           name: entry.name,
           path: path.posix.join(folderPath, entry.name),
@@ -126,7 +126,7 @@ if ([".mp4", ".mkv", ".avi", ".webm", ".ts", ".wmv"].includes(ext)) {
     folders,
     images: [],
     total: folders.length,
-  totalImages: 0,
+    totalImages: 0,
   };
 }
 
@@ -149,7 +149,9 @@ function loadFolderFromDB(dbkey, root, folderPath = "", limit = 0, offset = 0) {
     )
     .all(root, pathFilter);
 
-  const baseDepth = folderPath ? folderPath.split("/").filter(Boolean).length : 0;
+  const baseDepth = folderPath
+    ? folderPath.split("/").filter(Boolean).length
+    : 0;
   const folders = items
     .filter((it) => it.path.split("/").filter(Boolean).length === baseDepth + 1)
     .map((it) => ({
@@ -164,19 +166,23 @@ function loadFolderFromDB(dbkey, root, folderPath = "", limit = 0, offset = 0) {
   const basePath = path.join(rootDir, folderPath);
   const images = [];
   if (fs.existsSync(basePath)) {
-    const entries = fs.readdirSync(basePath, { withFileTypes: true });
-    entries.sort((a, b) => naturalCompare(a.name, b.name));
-    for (const entry of entries) {
-      if (entry.isFile()) {
-        const ext = path.extname(entry.name).toLowerCase();
-        if ([".jpg", ".jpeg", ".png", ".webp", ".avif"].includes(ext)) {
-          const rel = path
-            .relative(rootDir, path.join(basePath, entry.name))
-            .replace(/\\/g, "/");
-          const safePath = rel.split("/").map(encodeURIComponent).join("/");
-          images.push(`/manga/${root}/${safePath}`);
+    try {
+      const entries = fs.readdirSync(basePath, { withFileTypes: true });
+      entries.sort((a, b) => naturalCompare(a.name, b.name));
+      for (const entry of entries) {
+        if (entry.isFile()) {
+          const ext = path.extname(entry.name).toLowerCase();
+          if ([".jpg", ".jpeg", ".png", ".webp", ".avif"].includes(ext)) {
+            const rel = path
+              .relative(rootDir, path.join(basePath, entry.name))
+              .replace(/\\/g, "/");
+            const safePath = rel.split("/").map(encodeURIComponent).join("/");
+            images.push(`/manga/${root}/${safePath}`);
+          }
         }
       }
+    } catch (error) {
+      console.error(`Error reading directory ${basePath}:`, error.message);
     }
   }
 
