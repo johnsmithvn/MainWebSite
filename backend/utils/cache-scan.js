@@ -31,7 +31,13 @@ const {
     // ⚠️ Bỏ qua nếu cả folder và subfolder đều không có ảnh
     if (!hasImageRecursively(fullPath)) return stats;
 
-    const entries = fs.readdirSync(fullPath, { withFileTypes: true });
+    let entries = [];
+    try {
+      entries = fs.readdirSync(fullPath, { withFileTypes: true });
+    } catch (err) {
+      console.warn(`❌ Không thể đọc thư mục: ${fullPath}`, err.message);
+      return stats;
+    }
     const skipNames = [
       ".git",
       "node_modules",
@@ -46,7 +52,12 @@ const {
         .filter((e) => e.isDirectory() && !skipNames.includes(e.name))
         .filter((e) => {
           const p = path.join(fullPath, e.name);
-          return fs.readdirSync(p).length === 0;
+          try {
+            return fs.readdirSync(p).length === 0;
+          } catch (err) {
+            console.warn(`❌ Không thể đọc thư mục con: ${p}`, err.message);
+            return false;
+          }
         })
         .map((e) => e.name)
         .join(",");
@@ -76,9 +87,15 @@ const {
           .prepare(`SELECT * FROM folders WHERE root = ? AND path = ?`)
           .get(root, relativePath);
 
-        const childEntries = fs.readdirSync(fullChildPath, {
-          withFileTypes: true,
-        });
+        let childEntries = [];
+        try {
+          childEntries = fs.readdirSync(fullChildPath, {
+            withFileTypes: true,
+          });
+        } catch (err) {
+          console.warn(`❌ Không thể đọc thư mục con: ${fullChildPath}`, err.message);
+          continue;
+        }
 
         const imageCount = childEntries.filter(
           (e) =>

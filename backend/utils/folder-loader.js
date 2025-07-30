@@ -31,8 +31,14 @@ function loadFolderFromDisk(
     return { folders: [], images: [], total: 0, totalImages: 0 };
   }
 
-  const entries = fs.readdirSync(basePath, { withFileTypes: true });
-  entries.sort((a, b) => naturalCompare(a.name, b.name));
+  let entries = [];
+  try {
+    entries = fs.readdirSync(basePath, { withFileTypes: true });
+    entries.sort((a, b) => naturalCompare(a.name, b.name));
+  } catch (err) {
+    console.warn(`❌ Không thể đọc thư mục: ${basePath}`, err.message);
+    return { folders: [], images: [], total: 0, totalImages: 0 };
+  }
 
   const folders = [];
   const images = [];
@@ -41,8 +47,13 @@ function loadFolderFromDisk(
     const fullPath = path.join(basePath, entry.name);
 
     if (entry.isDirectory()) {
-      const thumb = findFirstImageRecursively(root, rootPath, fullPath); // ✅ Dùng đúng biến đã có
-      if (!thumb) continue; // 🔥 Bỏ qua folder không có ảnh
+      let thumb = null;
+      try {
+        thumb = findFirstImageRecursively(root, rootPath, fullPath);
+      } catch (err) {
+        console.warn(`❌ Không thể tìm ảnh trong folder: ${fullPath}`, err.message);
+      }
+      if (!thumb) continue;
 
       folders.push({
         name: entry.name,
@@ -93,8 +104,14 @@ function loadMovieFolderFromDisk(
     return { folders: [], images: [], total: 0, totalImages: 0 };
   }
 
-  const entries = fs.readdirSync(basePath, { withFileTypes: true });
-  entries.sort((a, b) => naturalCompare(a.name, b.name));
+  let entries = [];
+  try {
+    entries = fs.readdirSync(basePath, { withFileTypes: true });
+    entries.sort((a, b) => naturalCompare(a.name, b.name));
+  } catch (err) {
+    console.warn(`❌ Không thể đọc thư mục: ${basePath}`, err.message);
+    return { folders: [], images: [], total: 0, totalImages: 0 };
+  }
 
   const folders = [];
   // KHÔNG lấy images nữa, chỉ trả folder & file video
