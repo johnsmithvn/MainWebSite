@@ -14,6 +14,7 @@ import { apiService } from '../../utils/api';
 import { READER } from '../../constants';
 import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
+import './MangaReader.css';
 
 const MangaReader = () => {
   const navigate = useNavigate();
@@ -512,12 +513,11 @@ const MangaReader = () => {
       minHeight: '300px',
       objectFit: 'contain'
     };
-    
+
     const horizontalStyle = {
       ...baseStyle,
-      maxWidth: '90vw',
-      maxHeight: '80vh',
-      width: 'auto',
+      width: '100%',
+      maxWidth: '100%',
       height: 'auto',
       objectFit: 'contain'
     };

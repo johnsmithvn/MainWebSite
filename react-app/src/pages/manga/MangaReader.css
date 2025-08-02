@@ -1,0 +1,36 @@
+/* 📁 src/pages/manga/MangaReader.css */
+/* 🎨 Styles specific to the manga reader */
+
+.reader-image {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  object-fit: contain;
+  transition: all 0.3s ease;
+}
+
+.reader-image.vertical-image {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  object-fit: contain;
+}
+
+.reader-image.horizontal-image {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  object-fit: contain;
+}
+
+.reader-image.loading {
+  opacity: 0.7;
+  filter: blur(2px);
+}
+
+.reader-image.error {
+  border: 2px solid #ef4444;
+  background-color: #fef2f2;
+}
