@@ -57,10 +57,12 @@ export const useUIStore = create((set) => ({
   sidebarOpen: true, // Default to open on desktop
   searchOpen: false,
   loading: false,
+  animationsEnabled: true,
   
   toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   toggleSearch: () => set((state) => ({ searchOpen: !state.searchOpen })),
+  toggleAnimations: () => set((state) => ({ animationsEnabled: !state.animationsEnabled })),
   setLoading: (loading) => set({ loading }),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),
@@ -223,6 +225,13 @@ export const useMangaStore = create(
         readerSettings: { ...state.readerSettings, ...settings }
       })),
       
+      clearMangaCache: () => set({ 
+        mangaList: [], 
+        allFolders: [], 
+        currentPath: '',
+        error: null 
+      }),
+      
       toggleFavorite: async (item) => {
         try {
           const { sourceKey } = useAuthStore.getState();
@@ -282,6 +291,12 @@ export const useMovieStore = create(
       updatePlayerSettings: (settings) => set((state) => ({
         playerSettings: { ...state.playerSettings, ...settings }
       })),
+      
+      clearMovieCache: () => set({ 
+        allMovies: [], 
+        currentPath: '',
+        error: null 
+      }),
       
       // Fetch favorites from API
       fetchFavorites: async () => {
@@ -401,6 +416,15 @@ export const useMusicStore = create(
       
       // Favorites and recent
       setFavorites: (favorites) => set({ favorites }),
+      
+      clearMusicCache: () => set({ 
+        currentTrack: null,
+        currentPlaylist: [],
+        currentIndex: 0,
+        isPlaying: false,
+        playlists: [],
+        error: null 
+      }),
       
       // Fetch favorites from API
       fetchFavorites: async () => {

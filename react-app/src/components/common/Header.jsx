@@ -18,12 +18,14 @@ import {
 } from 'react-icons/fi';
 import { useUIStore, useAuthStore } from '../../store';
 import SearchModal from './SearchModal';
+import SettingsModal from './SettingsModal';
 import Button from './Button';
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   
   const { 
     darkMode, 
@@ -134,7 +136,7 @@ const Header = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/settings')}
+                onClick={() => setSettingsModalOpen(true)}
               >
                 <FiSettings className="h-4 w-4" />
               </Button>
@@ -190,6 +192,12 @@ const Header = () => {
       <SearchModal 
         isOpen={searchModalOpen} 
         onClose={() => setSearchModalOpen(false)} 
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal 
+        isOpen={settingsModalOpen} 
+        onClose={() => setSettingsModalOpen(false)} 
       />
     </>
   );

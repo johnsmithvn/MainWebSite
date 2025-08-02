@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { BookOpen, PanelLeft, Settings } from 'lucide-react';
+import { BookOpen, PanelLeft } from 'lucide-react';
 import { useMangaStore, useAuthStore } from '../../store';
 import { apiService } from '../../utils/api';
-import ReaderSettings from '../../components/manga/ReaderSettings';
 import '../../styles/components/manga-reader.css';
 
 const MangaReader = () => {
@@ -17,7 +16,6 @@ const MangaReader = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showControls, setShowControls] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
   const [error, setError] = useState(null);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
@@ -400,56 +398,9 @@ const MangaReader = () => {
             {readerSettings.readingMode === 'vertical' ? <PanelLeft size={20} /> : <BookOpen size={20} />}
           </button>
 
-          <button onClick={() => {
-            console.log('Settings button clicked, showSettings:', showSettings);
-            setShowSettings(true);
-          }} className="nav-btn">
-            <Settings size={20} />
-          </button>
-
           {/* Preload status indicator */}
           <div className="preload-status">
             📥 {preloadedImages.size}/{currentImages.length}
-          </div>
-        </div>
-      )}
-
-      {/* Settings Modal */}
-      {showSettings && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999
-        }}>
-          <div style={{
-            background: '#1a1a1a',
-            color: 'white',
-            padding: '20px',
-            borderRadius: '10px',
-            border: '1px solid #333'
-          }}>
-            <h3>Settings Modal Test</h3>
-            <p>Preload Count: {readerSettings.preloadCount}</p>
-            <button 
-              onClick={() => setShowSettings(false)}
-              style={{ 
-                background: '#007bff', 
-                color: 'white', 
-                padding: '10px 20px',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer'
-              }}
-            >
-              Close
-            </button>
           </div>
         </div>
       )}

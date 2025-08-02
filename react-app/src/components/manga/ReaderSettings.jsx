@@ -7,8 +7,6 @@ const ReaderSettings = ({ isOpen, onClose }) => {
   const { readerSettings, updateReaderSettings } = useMangaStore();
   const [tempSettings, setTempSettings] = useState(readerSettings);
 
-  console.log('ReaderSettings rendered:', { isOpen, readerSettings });
-
   const handleSave = () => {
     updateReaderSettings(tempSettings);
     onClose();

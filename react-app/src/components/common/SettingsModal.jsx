@@ -1,0 +1,436 @@
+// 📁 src/components/common/SettingsModal.jsx
+// ⚙️ Settings modal component
+
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
+import { 
+  X, 
+  Settings, 
+  Moon, 
+  Sun, 
+  Monitor,
+  Volume2,
+  Eye,
+  Globe,
+  Palette,
+  Database,
+  Download,
+  RotateCcw,
+  Save
+} from 'lucide-react';
+import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '../../store';
+
+const SettingsModal = ({ isOpen, onClose }) => {
+  const location = useLocation();
+  const { 
+    darkMode, 
+    toggleDarkMode,
+    animationsEnabled,
+    toggleAnimations
+  } = useUIStore();
+  
+  const { sourceKey } = useAuthStore();
+  const { 
+    clearMangaCache,
+    readerSettings,
+    updateReaderSettings 
+  } = useMangaStore();
+  const { clearMovieCache } = useMovieStore();
+  const { clearMusicCache } = useMusicStore();
+
+  const [activeTab, setActiveTab] = useState('appearance');
+
+  // Auto select tab based on current route
+  useEffect(() => {
+    if (isOpen) {
+      if (location.pathname.includes('/manga/reader')) {
+        setActiveTab('reader');
+      } else if (location.pathname.includes('/movie') || location.pathname.includes('/music')) {
+        setActiveTab('player');
+      } else {
+        setActiveTab('appearance');
+      }
+    }
+  }, [isOpen, location.pathname]);
+
+  const settingsTabs = [
+    { id: 'appearance', label: 'Giao diện', icon: Palette },
+    { id: 'reader', label: 'Đọc truyện', icon: Eye },
+    { id: 'player', label: 'Phát media', icon: Volume2 },
+    { id: 'system', label: 'Hệ thống', icon: Database },
+  ];
+
+  const handleClearCache = async (type) => {
+    try {
+      switch (type) {
+        case 'manga':
+          await clearMangaCache();
+          break;
+        case 'movie':
+          await clearMovieCache();
+          break;
+        case 'music':
+          await clearMusicCache();
+          break;
+        case 'all':
+          await Promise.all([clearMangaCache(), clearMovieCache(), clearMusicCache()]);
+          break;
+      }
+      // Show success message
+      console.log(`Cleared ${type} cache successfully`);
+    } catch (error) {
+      console.error(`Error clearing ${type} cache:`, error);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center space-x-3">
+            <Settings className="w-6 h-6 text-blue-600" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Cài đặt
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="flex">
+          {/* Sidebar */}
+          <div className="w-64 bg-gray-50 dark:bg-gray-900 p-4 border-r border-gray-200 dark:border-gray-700">
+            <nav className="space-y-2">
+              {settingsTabs.map((tab) => {
+                const IconComponent = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+                      activeTab === tab.id
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <IconComponent className="w-5 h-5 mr-3" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 p-6 overflow-y-auto max-h-[60vh]">
+            {activeTab === 'appearance' && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Giao diện
+                </h3>
+                
+                {/* Theme Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Chế độ hiển thị
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => !darkMode && toggleDarkMode()}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        !darkMode 
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                          : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                      }`}
+                    >
+                      <Sun className="w-8 h-8 mx-auto mb-2 text-yellow-500" />
+                      <p className="font-medium text-gray-900 dark:text-white">Sáng</p>
+                    </button>
+                    
+                    <button
+                      onClick={() => darkMode && toggleDarkMode()}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        darkMode 
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                          : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                      }`}
+                    >
+                      <Moon className="w-8 h-8 mx-auto mb-2 text-blue-500" />
+                      <p className="font-medium text-gray-900 dark:text-white">Tối</p>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Animations */}
+                <div>
+                  <label className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Hiệu ứng chuyển động
+                    </span>
+                    <button
+                      onClick={toggleAnimations}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        animationsEnabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          animationsEnabled ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'system' && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Hệ thống
+                </h3>
+                
+                {/* Source Key Info */}
+                {sourceKey && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Globe className="w-5 h-5 text-blue-600" />
+                      <span className="font-medium text-blue-700 dark:text-blue-300">
+                        Source hiện tại: {sourceKey}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Clear Cache */}
+                <div>
+                  <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
+                    Xóa bộ nhớ đệm
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => handleClearCache('manga')}
+                      className="flex items-center justify-center px-4 py-3 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg transition-colors"
+                    >
+                      <Database className="w-4 h-4 mr-2" />
+                      Xóa cache Manga
+                    </button>
+                    <button
+                      onClick={() => handleClearCache('movie')}
+                      className="flex items-center justify-center px-4 py-3 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg transition-colors"
+                    >
+                      <Database className="w-4 h-4 mr-2" />
+                      Xóa cache Movie
+                    </button>
+                    <button
+                      onClick={() => handleClearCache('music')}
+                      className="flex items-center justify-center px-4 py-3 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg transition-colors"
+                    >
+                      <Database className="w-4 h-4 mr-2" />
+                      Xóa cache Music
+                    </button>
+                    <button
+                      onClick={() => handleClearCache('all')}
+                      className="flex items-center justify-center px-4 py-3 bg-red-100 hover:bg-red-200 dark:bg-red-800/30 dark:hover:bg-red-800/50 text-red-800 dark:text-red-200 rounded-lg transition-colors font-medium"
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Xóa tất cả cache
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reader Settings Tab */}
+            {activeTab === 'reader' && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Cài đặt đọc truyện
+                </h3>
+                
+                {/* Preload Count */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Số trang preload: {readerSettings.preloadCount}
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    value={readerSettings.preloadCount}
+                    onChange={(e) => updateReaderSettings({ preloadCount: parseInt(e.target.value) })}
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <span>1</span>
+                    <span>20</span>
+                  </div>
+                </div>
+
+                {/* Reading Mode */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Chế độ đọc
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => updateReaderSettings({ readingMode: 'single' })}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        readerSettings.readingMode === 'single'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="font-medium">Trang đơn</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Hiển thị 1 trang</div>
+                      </div>
+                    </button>
+                    
+                    <button
+                      onClick={() => updateReaderSettings({ readingMode: 'double' })}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        readerSettings.readingMode === 'double'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="font-medium">Trang đôi</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Hiển thị 2 trang</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Reading Direction */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Hướng đọc
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => updateReaderSettings({ readingDirection: 'ltr' })}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        readerSettings.readingDirection === 'ltr'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="font-medium">Trái → Phải</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Left to Right</div>
+                      </div>
+                    </button>
+                    
+                    <button
+                      onClick={() => updateReaderSettings({ readingDirection: 'rtl' })}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        readerSettings.readingDirection === 'rtl'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="font-medium">Phải → Trái</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Right to Left</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Zoom Mode */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Chế độ zoom
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <button
+                      onClick={() => updateReaderSettings({ zoomMode: 'fit-width' })}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        readerSettings.zoomMode === 'fit-width'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="font-medium text-sm">Vừa chiều rộng</div>
+                      </div>
+                    </button>
+                    
+                    <button
+                      onClick={() => updateReaderSettings({ zoomMode: 'fit-height' })}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        readerSettings.zoomMode === 'fit-height'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="font-medium text-sm">Vừa chiều cao</div>
+                      </div>
+                    </button>
+                    
+                    <button
+                      onClick={() => updateReaderSettings({ zoomMode: 'original' })}
+                      className={`p-3 rounded-lg border-2 transition-all ${
+                        readerSettings.zoomMode === 'original'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="font-medium text-sm">Kích thước gốc</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'player' && (
+              <div className="text-center py-12">
+                <Volume2 className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-500 dark:text-gray-400">
+                  Cài đặt phát media sẽ được thêm vào sau
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            Đóng
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            Lưu cài đặt
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+export default SettingsModal;
