@@ -52,13 +52,7 @@ const MangaHome = () => {
   const handleFolderClick = (folder) => {
     console.log('🔍 Clicked folder:', folder);
     
-    // Validate folder data trước khi navigate
-    if (!folder.path || folder.path === '()' || folder.path === '' || folder.name === '()') {
-      console.warn('⚠️ Invalid folder data, skipping navigation:', folder);
-      return;
-    }
-    
-    // Logic theo frontend cũ (folderCard.js line 67-74):
+    // Logic theo frontend cũ - không validation path
     // if (folder.isSelfReader && folder.images) -> go to reader
     // else -> loadFolder(folder.path)
     

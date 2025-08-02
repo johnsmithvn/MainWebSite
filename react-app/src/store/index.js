@@ -146,19 +146,21 @@ export const useMangaStore = create(
             // Add subfolders - just concat data.folders (like frontend line 94)
             // DON'T create additional selfReader entries for subfolders
             if (data.folders && data.folders.length > 0) {
+              console.log('📂 Total folders from API:', data.folders.length);
+              
               for (const folder of data.folders) {
-                // Skip invalid folder data
-                if (!folder.path || folder.path === '()' || folder.path === '' || 
-                    !folder.name || folder.name === '()') {
-                  console.warn('⚠️ Skipping invalid folder:', {
-                    name: folder.name,
-                    path: folder.path,
-                    fullObject: folder
-                  });
-                  continue;
-                }
+                // Debug the folder object first
+                console.log('🔍 Processing folder:', {
+                  name: folder.name,
+                  path: folder.path,
+                  hasName: !!folder.name,
+                  hasPath: !!folder.path,
+                  nameLength: folder.name?.length,
+                  pathLength: folder.path?.length
+                });
                 
-                // Just add the folder as-is, no additional processing
+                // Just add all folders - no filtering
+                console.log('✅ Adding folder:', folder.name);
                 folders.push({
                   ...folder,
                   thumbnail: cleanImageUrl(folder.thumbnail),
@@ -167,6 +169,8 @@ export const useMangaStore = create(
                   hasImages: false // Don't assume they have images
                 });
               }
+              
+              console.log(`📊 Folder processing complete: ${folders.length} folders added`);
             }
           } else if (data.type === 'reader') {
             // Handle reader type - theo frontend line 122-126: redirect to reader.html
