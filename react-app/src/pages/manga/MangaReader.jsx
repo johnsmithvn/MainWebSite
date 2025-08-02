@@ -19,9 +19,8 @@ const MangaReader = () => {
   const [error, setError] = useState(null);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [slideDirection, setSlideDirection] = useState('');
   const [preloadedImages, setPreloadedImages] = useState(new Set());
+  const [imageCache, setImageCache] = useState(new Map()); // Cache for blob URLs
   const readerRef = useRef(null);
 
   // the required distance between touchStart and touchEnd to be detected as a swipe
@@ -36,6 +35,18 @@ const MangaReader = () => {
     }
   }, [folderId, searchParams, sourceKey, rootFolder]);
 
+  // Debug reader settings changes
+  useEffect(() => {
+    console.log('🔧 Reader settings updated:', readerSettings);
+  }, [readerSettings]);
+
+  // Cleanup blob URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      imageCache.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, []);
+
   // Preload images function
   const preloadImage = (src) => {
     return new Promise((resolve, reject) => {
@@ -44,45 +55,78 @@ const MangaReader = () => {
         return;
       }
       
-      const img = new Image();
-      img.onload = () => {
-        setPreloadedImages(prev => new Set([...prev, src]));
-        resolve(src);
-      };
-      img.onerror = reject;
-      img.src = src;
+      console.log(`📥 Preloading: ${src.substring(src.lastIndexOf('/') + 1)}`);
+      
+      // Try fetch first for better caching
+      fetch(src)
+        .then(response => response.blob())
+        .then(blob => {
+          const img = new Image();
+          const objectUrl = URL.createObjectURL(blob);
+          
+          img.onload = () => {
+            setPreloadedImages(prev => {
+              const newSet = new Set(prev);
+              newSet.add(src);
+              return newSet;
+            });
+            
+            setImageCache(prev => {
+              const newMap = new Map(prev);
+              newMap.set(src, objectUrl);
+              return newMap;
+            });
+            
+            console.log(`✅ Cached: ${src.substring(src.lastIndexOf('/') + 1)}`);
+            resolve(src);
+          };
+          
+          img.onerror = reject;
+          img.src = objectUrl;
+        })
+        .catch(error => {
+          console.error(`❌ Failed to preload: ${src}`, error);
+          reject(error);
+        });
     });
   };
 
-  // Preload images around current page
+  // Optimized preload function - only preload what's needed
   const preloadImagesAroundCurrentPage = async () => {
     if (!currentImages.length) return;
     
     const { preloadCount } = readerSettings;
-    const start = Math.max(0, currentPage - preloadCount);
-    const end = Math.min(currentImages.length - 1, currentPage + preloadCount);
+    const start = Math.max(0, currentPage - Math.floor(preloadCount / 2));
+    const end = Math.min(currentImages.length - 1, currentPage + Math.ceil(preloadCount / 2));
     
-    console.log(`🖼️ Preloading images from ${start} to ${end} (current: ${currentPage})`);
-    
-    const preloadPromises = [];
+    const imagesToPreload = [];
     for (let i = start; i <= end; i++) {
       if (currentImages[i] && !preloadedImages.has(currentImages[i])) {
-        preloadPromises.push(preloadImage(currentImages[i]));
+        imagesToPreload.push(currentImages[i]);
       }
     }
     
+    if (imagesToPreload.length === 0) return;
+    
+    console.log(`🖼️ Preloading ${imagesToPreload.length} images around page ${currentPage} (range: ${start}-${end})`);
+    
     try {
-      await Promise.allSettled(preloadPromises);
-      console.log(`✅ Preloaded ${preloadPromises.length} images`);
+      await Promise.allSettled(imagesToPreload.map(src => preloadImage(src)));
+      console.log(`✅ Preload complete. Total cached: ${preloadedImages.size}/${currentImages.length}`);
     } catch (error) {
       console.error('❌ Error preloading images:', error);
     }
   };
 
-  // Effect to preload images when currentPage or currentImages change
+  // Effect to preload images when currentPage or currentImages change with throttling
   useEffect(() => {
     if (currentImages.length > 0) {
-      preloadImagesAroundCurrentPage();
+      // Debounce preload to avoid too frequent calls
+      const timeoutId = setTimeout(() => {
+        preloadImagesAroundCurrentPage();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [currentPage, currentImages, readerSettings.preloadCount]);
 
@@ -131,52 +175,14 @@ const MangaReader = () => {
   };
 
   const goToPrevPage = () => {
-    if (currentPage > 0 && !isTransitioning) {
-      setIsTransitioning(true);
-      setSlideDirection('slide-right');
-      
-      // Preload images around the new page immediately
-      const newPage = currentPage - 1;
-      const { preloadCount } = readerSettings;
-      const start = Math.max(0, newPage - preloadCount);
-      const end = Math.min(currentImages.length - 1, newPage + preloadCount);
-      
-      for (let i = start; i <= end; i++) {
-        if (currentImages[i] && !preloadedImages.has(currentImages[i])) {
-          preloadImage(currentImages[i]);
-        }
-      }
-      
-      setTimeout(() => {
-        setCurrentPage(newPage);
-        setSlideDirection('');
-        setIsTransitioning(false);
-      }, 300);
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
     }
   };
 
   const goToNextPage = () => {
-    if (currentPage < currentImages.length - 1 && !isTransitioning) {
-      setIsTransitioning(true);
-      setSlideDirection('slide-left');
-      
-      // Preload images around the new page immediately
-      const newPage = currentPage + 1;
-      const { preloadCount } = readerSettings;
-      const start = Math.max(0, newPage - preloadCount);
-      const end = Math.min(currentImages.length - 1, newPage + preloadCount);
-      
-      for (let i = start; i <= end; i++) {
-        if (currentImages[i] && !preloadedImages.has(currentImages[i])) {
-          preloadImage(currentImages[i]);
-        }
-      }
-      
-      setTimeout(() => {
-        setCurrentPage(newPage);
-        setSlideDirection('');
-        setIsTransitioning(false);
-      }, 300);
+    if (currentPage < currentImages.length - 1) {
+      setCurrentPage(currentPage + 1);
     }
   };
 
@@ -299,7 +305,7 @@ const MangaReader = () => {
 
       <div 
         ref={readerRef}
-        className={`reader ${readerSettings.readingMode === 'vertical' ? 'scroll-mode' : ''}`}
+        className="reader"
       >
         {readerSettings.readingMode === 'vertical' ? (
           // Vertical scroll mode - render all images
@@ -330,41 +336,25 @@ const MangaReader = () => {
             <div className="nav-zone left" onClick={goToPrevPage} />
             
             {/* Current Image */}
-            <div className={`image-container ${slideDirection}`}>
+            <div className="image-container">
               <img
-                src={currentImages[currentPage]}
+                src={imageCache.get(currentImages[currentPage]) || currentImages[currentPage]}
                 alt={`Page ${currentPage + 1}`}
                 className="reader-image-fullsize"
                 onClick={handleImageClick}
-                onLoad={(e) => e.target.classList.remove('loading')}
+                onLoad={(e) => {
+                  e.target.classList.remove('loading');
+                  const isPreloaded = preloadedImages.has(currentImages[currentPage]);
+                  const usingCache = imageCache.has(currentImages[currentPage]);
+                  const srcType = e.target.src.startsWith('blob:') ? 'BLOB_CACHE' : 'DIRECT_LOAD';
+                  console.log(`🖼️ Page ${currentPage + 1}: ${isPreloaded ? '✅ Preloaded' : '❌ Not preloaded'} | ${usingCache ? '🗄️ Using cache' : '🌐 Direct load'} | Source: ${srcType}`);
+                }}
                 onError={(e) => {
                   e.target.style.background = '#333';
                   e.target.alt = 'Lỗi tải ảnh';
                 }}
               />
             </div>
-
-            {/* Next Image Preview (for slide-left animation) */}
-            {slideDirection === 'slide-left' && currentPage < currentImages.length - 1 && (
-              <div className="image-container next-image">
-                <img
-                  src={currentImages[currentPage + 1]}
-                  alt={`Page ${currentPage + 2}`}
-                  className="reader-image-fullsize"
-                />
-              </div>
-            )}
-
-            {/* Previous Image Preview (for slide-right animation) */}
-            {slideDirection === 'slide-right' && currentPage > 0 && (
-              <div className="image-container prev-image">
-                <img
-                  src={currentImages[currentPage - 1]}
-                  alt={`Page ${currentPage}`}
-                  className="reader-image-fullsize"
-                />
-              </div>
-            )}
             
             <div className="nav-zone right" onClick={goToNextPage} />
           </div>

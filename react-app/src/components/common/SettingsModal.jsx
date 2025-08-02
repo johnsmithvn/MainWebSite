@@ -271,7 +271,11 @@ const SettingsModal = ({ isOpen, onClose }) => {
                     min="1"
                     max="20"
                     value={readerSettings.preloadCount}
-                    onChange={(e) => updateReaderSettings({ preloadCount: parseInt(e.target.value) })}
+                    onChange={(e) => {
+                      const newCount = parseInt(e.target.value);
+                      console.log('🔧 Updating preload count to:', newCount);
+                      updateReaderSettings({ preloadCount: newCount });
+                    }}
                     className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
                   />
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
