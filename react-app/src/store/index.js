@@ -78,6 +78,7 @@ export const useMangaStore = create(
       loading: false,
       error: null,
       searchTerm: '',
+      shouldNavigateToReader: null, // Flag for reader navigation
       readerSettings: {
         mode: 'vertical',
         darkMode: false,
@@ -92,6 +93,7 @@ export const useMangaStore = create(
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
       setSearchTerm: (searchTerm) => set({ searchTerm }),
+      clearNavigationFlag: () => set({ shouldNavigateToReader: null }),
       
       // Fetch manga folders from API
       fetchMangaFolders: async (path = '') => {
@@ -163,6 +165,18 @@ export const useMangaStore = create(
                 });
               }
             }
+          } else if (data.type === 'reader') {
+            // Handle reader type - theo frontend line 122-126: redirect to reader.html
+            console.log('🔄 API returned reader type, navigating to reader...');
+            // Trong React, sử dụng navigate() thay vì window.location.href
+            // Note: không thể dùng navigate() trực tiếp trong store, cần return flag
+            set({ 
+              mangaList: [], // Clear list để trigger navigation
+              currentPath: path,
+              loading: false,
+              shouldNavigateToReader: path // Flag để component detect và navigate
+            });
+            return; // Early return để không process folders
           }
           
           console.log('📁 Processed folders:', folders); // Debug processed folders

@@ -16,9 +16,11 @@ const MangaHome = () => {
     error,
     favorites,
     searchTerm, 
+    shouldNavigateToReader,
     setSearchTerm,
     fetchMangaFolders,
-    fetchFavorites 
+    fetchFavorites,
+    clearNavigationFlag
   } = useMangaStore();
   
   const { sourceKey, rootFolder } = useAuthStore();
@@ -37,6 +39,15 @@ const MangaHome = () => {
     // Debug: Log manga list when it changes
     console.log('Manga list updated:', mangaList);
   }, [mangaList]);
+
+  // Effect để handle navigation to reader khi API trả về type: 'reader'
+  useEffect(() => {
+    if (shouldNavigateToReader) {
+      console.log('🚀 Navigating to reader for path:', shouldNavigateToReader);
+      navigate(`/manga/reader?path=${encodeURIComponent(shouldNavigateToReader)}`);
+      clearNavigationFlag(); // Clear flag sau khi navigate
+    }
+  }, [shouldNavigateToReader, navigate, clearNavigationFlag]);
 
   const handleFolderClick = (folder) => {
     console.log('🔍 Clicked folder:', folder);
