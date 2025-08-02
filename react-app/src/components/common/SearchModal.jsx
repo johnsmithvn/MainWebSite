@@ -6,9 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiSearch, FiX, FiBook, FiFilm, FiMusic } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import Modal from 'react-modal';
-import { useDebounceValue } from '@/hooks';
-import { apiService } from '@/utils/api';
-import { useAuthStore } from '@/store';
+import { useDebounceValue } from '../../hooks';
+import { apiService } from '../../utils/api';
+import { useAuthStore } from '../../store';
 import Button from './Button';
 
 const SearchModal = ({ isOpen, onClose }) => {

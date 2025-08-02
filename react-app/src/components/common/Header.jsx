@@ -16,7 +16,7 @@ import {
   FiSettings,
   FiLogOut
 } from 'react-icons/fi';
-import { useUIStore, useAuthStore } from '@/store';
+import { useUIStore, useAuthStore } from '../../store';
 import SearchModal from './SearchModal';
 import Button from './Button';
 
@@ -57,7 +57,7 @@ const Header = () => {
                 variant="ghost"
                 size="sm"
                 onClick={toggleSidebar}
-                className="lg:hidden"
+                className=""
               >
                 <FiMenu className="h-5 w-5" />
               </Button>

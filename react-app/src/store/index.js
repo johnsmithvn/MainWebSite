@@ -3,8 +3,8 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { STORAGE_KEYS } from '@/constants';
-import { apiService } from '@/utils/api';
+import { STORAGE_KEYS } from '../constants';
+import { apiService } from '../utils/api';
 
 // Auth store
 export const useAuthStore = create(
@@ -54,7 +54,7 @@ export const useAuthStore = create(
 // UI store
 export const useUIStore = create((set) => ({
   darkMode: false,
-  sidebarOpen: false,
+  sidebarOpen: true, // Default to open on desktop
   searchOpen: false,
   loading: false,
   
@@ -84,6 +84,7 @@ export const useMangaStore = create(
         darkMode: false,
         zoomLevel: 100,
         autoNext: false,
+        preloadCount: 10, // Number of images to preload before and after current page
       },
       
       setCurrentPath: (path) => set({ currentPath: path }),

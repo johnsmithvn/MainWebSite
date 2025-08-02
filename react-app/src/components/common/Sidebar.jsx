@@ -16,8 +16,8 @@ import {
   FiTrash2,
   FiHeart
 } from 'react-icons/fi';
-import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
-import { apiService } from '@/utils/api';
+import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '../../store';
+import { apiService } from '../../utils/api';
 import toast from 'react-hot-toast';
 import Button from './Button';
 

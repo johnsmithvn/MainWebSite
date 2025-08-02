@@ -8,10 +8,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import LoadingOverlay from './LoadingOverlay';
-import { useUIStore } from '@/store';
+import { useUIStore } from '../../store';
 
 const Layout = () => {
-  const { sidebarOpen, loading } = useUIStore();
+  const { sidebarOpen, loading, setSidebarOpen } = useUIStore();
+  
+  console.log('Layout rendered, sidebarOpen:', sidebarOpen);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-900 transition-colors duration-200">
@@ -20,23 +22,31 @@ const Layout = () => {
       <div className="flex">
         <AnimatePresence>
           {sidebarOpen && (
-            <motion.div
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] w-70 bg-white dark:bg-dark-800 shadow-lg lg:relative lg:top-0 lg:h-screen lg:shadow-none"
-            >
-              <Sidebar />
-            </motion.div>
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/20 z-20"
+                onClick={() => setSidebarOpen(false)}
+              />
+              
+              {/* Sidebar */}
+              <motion.div
+                initial={{ x: -280 }}
+                animate={{ x: 0 }}
+                exit={{ x: -280 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] w-72 bg-white dark:bg-dark-800 shadow-lg"
+              >
+                <Sidebar />
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
 
-        <main 
-          className={`flex-1 transition-all duration-200 ${
-            sidebarOpen ? 'lg:ml-0' : ''
-          }`}
-        >
+        <main className="flex-1 transition-all duration-200">
           <div className="container mx-auto px-4 py-6">
             <Outlet />
           </div>
