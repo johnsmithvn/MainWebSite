@@ -496,46 +496,27 @@ const MangaReader = () => {
   const renderImage = useCallback((src, index, isLazyLoad = false) => {
     const imageKey = `${src}-${index}`;
     
-    // Style for vertical mode vs horizontal mode
-    const baseStyle = {
+    // Style for zoom only - let CSS handle sizing
+    const zoomStyle = {
       transform: `scale(${zoom / 100})`,
-      transformOrigin: 'top center',
-      display: 'block',
-      backgroundColor: '#f0f0f0',
-    };
-    
-    const verticalStyle = {
-      ...baseStyle,
-      width: '100%',
-      maxWidth: '100%',
-      height: 'auto',
-      minHeight: '300px',
-      objectFit: 'contain'
-    };
-    
-    const horizontalStyle = {
-      ...baseStyle,
-      maxWidth: '90vw',
-      maxHeight: '80vh',
-      width: 'auto',
-      height: 'auto',
-      objectFit: 'contain'
+      transformOrigin: 'center center',
     };
     
     const imageProps = {
-      className: `reader-image ${isVerticalMode ? 'vertical-image' : 'horizontal-image'} mx-auto`,
+      className: `reader-image ${isVerticalMode ? 'reader-image--vertical' : 'reader-image--horizontal'}`,
       alt: `Page ${currentPage * imagesPerPage + index + 1}`,
       draggable: false,
-      style: isVerticalMode ? verticalStyle : horizontalStyle
+      style: zoomStyle // Only apply zoom transform
     };
 
-    console.log('Rendering image:', src, 'Mode:', isVerticalMode ? 'vertical' : 'horizontal');
+    console.log('Rendering image with classes:', imageProps.className); // DEBUG
 
     if (isLazyLoad && readerSettings.lazyLoad) {
       return (
         <img
           key={imageKey}
           {...imageProps}
+          className={`${imageProps.className} ${!loadedImages.has(src) ? 'reader-image--loading' : ''}`}
           data-src={src}
           src={loadedImages.has(src) ? src : '/default/loading.gif'}
           loading="lazy"
@@ -548,14 +529,13 @@ const MangaReader = () => {
           {...imageProps}
           src={src}
           onLoad={(e) => {
-            console.log('Image loaded successfully:', src);
-            e.target.classList.remove('loading');
+            e.target.classList.remove('reader-image--loading');
             e.target.style.backgroundColor = 'transparent';
             setLoadedImages(prev => new Set([...prev, src]));
           }}
           onError={(e) => {
             console.error('Image failed to load:', src);
-            e.target.classList.add('error');
+            e.target.classList.add('reader-image--error');
             // Đơn giản: chỉ fallback, không thử decode
             e.target.src = '/default/default-cover.jpg'; 
             e.target.style.backgroundColor = '#ffebee';
@@ -628,7 +608,7 @@ const MangaReader = () => {
   return (
     <div
       ref={readerRef}
-      className={`relative min-h-screen transition-colors duration-200 ${
+      className={`manga-reader ${
         readerSettings.backgroundColor === 'black' ? 'bg-black' : 
         readerSettings.backgroundColor === 'white' ? 'bg-white' : 'bg-gray-100'
       }`}
@@ -637,9 +617,8 @@ const MangaReader = () => {
       style={{ outline: 'none' }}
     >
       {/* Top Controls */}
-      <div className={`fixed top-0 left-0 right-0 z-50 bg-black bg-opacity-75 
-                     transition-transform duration-300 ${
-                       showControls ? 'translate-y-0' : '-translate-y-full'
+      <div className={`manga-reader__controls manga-reader__controls--top ${
+                       showControls ? '' : 'manga-reader__controls--hidden'
                      }`}>
         <div className="flex items-center justify-between p-4 text-white">
           <div className="flex items-center gap-4">
@@ -696,7 +675,7 @@ const MangaReader = () => {
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="fixed top-16 right-4 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-80 max-h-[80vh] overflow-y-auto">
+        <div className="manga-reader__settings">
           <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
             Cài đặt đọc truyện
           </h3>
@@ -869,11 +848,11 @@ const MangaReader = () => {
       {/* Main Reader Content */}
       <div 
         ref={imagesContainerRef}
-        className={`min-h-screen pt-16 pb-16 ${
+        className={`manga-reader__container ${
+          isVerticalMode ? 'manga-reader__container--vertical' : 'manga-reader__container--horizontal'
+        } ${
           readerSettings.backgroundColor === 'white' ? 'bg-white' : 
           readerSettings.backgroundColor === 'gray' ? 'bg-gray-500' : 'bg-black'
-        } ${
-          isVerticalMode ? 'flex flex-col items-center' : 'flex items-center justify-center'
         }`}
         style={{ minHeight: '100vh' }}
       >
@@ -908,9 +887,8 @@ const MangaReader = () => {
       </div>
 
       {/* Bottom Controls */}
-      <div className={`fixed bottom-0 left-0 right-0 z-50 bg-black bg-opacity-75 
-                     transition-transform duration-300 ${
-                       showControls ? 'translate-y-0' : 'translate-y-full'
+      <div className={`manga-reader__controls manga-reader__controls--bottom ${
+                       showControls ? '' : 'manga-reader__controls--hidden'
                      }`}>
         <div className="flex items-center justify-between p-4 text-white">
           <div className="flex items-center gap-2">
@@ -967,24 +945,24 @@ const MangaReader = () => {
         </div>
       </div>
 
-      {/* Click Navigation Zones (for touch/mouse navigation) */}
-      {!showSettings && (
-        <div className="fixed inset-0 z-10 flex">
+      {/* Click Navigation Zones (for touch/mouse navigation) - TEMPORARILY DISABLED FOR DEBUG */}
+      {false && !showSettings && (
+        <div className="manga-reader__nav-zones">
           {/* Left click area */}
           <div 
-            className="w-1/3 h-full cursor-pointer"
+            className="manga-reader__nav-zone manga-reader__nav-zone--left"
             onClick={() => handleClickZone('left')}
             title="Trang trước / Ảnh trước"
           />
           {/* Center area - toggle controls */}
           <div 
-            className="w-1/3 h-full cursor-pointer"
+            className="manga-reader__nav-zone manga-reader__nav-zone--center"
             onClick={() => handleClickZone('center')}
             title="Hiện/ẩn điều khiển"
           />
           {/* Right click area */}
           <div 
-            className="w-1/3 h-full cursor-pointer"
+            className="manga-reader__nav-zone manga-reader__nav-zone--right"
             onClick={() => handleClickZone('right')}
             title="Trang tiếp / Ảnh tiếp"
           />
