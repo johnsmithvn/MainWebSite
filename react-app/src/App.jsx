@@ -38,6 +38,10 @@ function App() {
 
   return (
     <Routes>
+      {/* Manga Reader routes outside of the main Layout */}
+      <Route path="/manga/reader/:folderId" element={<MangaReader />} />
+      <Route path="/manga/reader" element={<MangaReader />} />
+
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
         
@@ -45,7 +49,6 @@ function App() {
         <Route path="manga">
           <Route path="select" element={<MangaSelect />} />
           <Route index element={<MangaHome />} />
-          <Route path="reader" element={<MangaReader />} />
           <Route path="favorites" element={<MangaFavorites />} />
         </Route>
         
