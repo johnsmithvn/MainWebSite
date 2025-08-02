@@ -6,6 +6,7 @@ import { API } from '@/constants';
 
 // Create axios instance
 const api = axios.create({
+  baseURL: '', // Use relative URLs to leverage Vite proxy
   timeout: API.TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
@@ -52,9 +53,9 @@ export const apiService = {
   manga: {
     getFolders: (params) => api.get(`${API.ENDPOINTS.MANGA}/folder-cache`, { params }),
     getFavorites: (params) => api.get(`${API.ENDPOINTS.MANGA}/favorite`, { params }),
-    toggleFavorite: (path, key) => api.post(`${API.ENDPOINTS.MANGA}/favorite`, { path, key }),
+    toggleFavorite: (dbkey, path, value) => api.post(`${API.ENDPOINTS.MANGA}/favorite`, { dbkey, path, value }),
     resetCache: (params) => api.delete(`${API.ENDPOINTS.MANGA}/reset-cache`, { params }),
-    scan: (params) => api.post(`${API.ENDPOINTS.MANGA}/scan`, params),
+    scan: (root, key) => api.post(`${API.ENDPOINTS.MANGA}/scan`, { root, key }),
     getRootThumbnail: (params) => api.get(`${API.ENDPOINTS.MANGA}/root-thumbnail`, { params }),
   },
 

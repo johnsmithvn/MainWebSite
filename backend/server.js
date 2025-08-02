@@ -3,6 +3,7 @@
 
 const express = require("express");
 const compression = require("compression");
+const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
@@ -20,6 +21,14 @@ const securityMiddleware = require("./middleware/security");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ✅ CORS Configuration
+app.use(cors({
+  origin: ['http://localhost:3001', 'http://127.0.0.1:3001'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 
 // ✅ Middleware cơ bản (giữ nguyên logic cũ)
 app.use(express.json());

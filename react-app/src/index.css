@@ -135,6 +135,40 @@ body {
   animation: scaleIn 0.2s ease-out;
 }
 
+/* Manga Reader specific styles */
+.reader-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  transition: all 0.3s ease;
+}
+
+.reader-image.vertical-image {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  object-fit: contain;
+}
+
+.reader-image.horizontal-image {
+  max-width: 90vw !important;
+  max-height: 80vh !important;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain;
+}
+
+.reader-image.loading {
+  opacity: 0.7;
+  filter: blur(2px);
+}
+
+.reader-image.error {
+  border: 2px solid #ef4444;
+  background-color: #fef2f2;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

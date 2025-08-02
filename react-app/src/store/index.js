@@ -4,13 +4,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { STORAGE_KEYS } from '@/constants';
+import { apiService } from '@/utils/api';
 
 // Auth store
 export const useAuthStore = create(
   persist(
     (set, get) => ({
-      sourceKey: '',
-      rootFolder: '',
+      sourceKey: 'ROOT_FANTASY', // Default for testing
+      rootFolder: 'Naruto', // Default for testing  
       token: '',
       isAuthenticated: false,
       secureKeys: [],
@@ -96,28 +97,105 @@ export const useMangaStore = create(
       fetchMangaFolders: async (path = '') => {
         set({ loading: true, error: null });
         try {
-          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/manga/scan?path=${encodeURIComponent(path)}`);
-          if (!response.ok) throw new Error('Failed to fetch manga folders');
-          const data = await response.json();
+          const { sourceKey, rootFolder } = useAuthStore.getState();
+          const params = {
+            mode: 'path',
+            key: sourceKey,
+            root: rootFolder,
+            path: path,
+            useDb: '1'
+          };
+          const response = await apiService.manga.getFolders(params);
+          const data = response.data;
+          
+          console.log('🔍 API Response:', data); // Debug API response
+          
+          // Helper function để xử lý URL encoding - đơn giản hóa
+          const cleanImageUrl = (url) => {
+            if (!url || typeof url !== 'string') return url;
+            
+            // Nếu URL đã có protocol thì return luôn
+            if (url.startsWith('http') || url.startsWith('/default/')) return url;
+            
+            // Trả về URL gốc để let server xử lý decoding
+            return url;
+          };
+          
+          // Process the response similar to original folder.js
+          let folders = [];
+          if (data.type === 'folder') {
+            // ONLY create selfReader when current folder has images (like frontend line 81-92)
+            if (data.images && data.images.length > 0) {
+              const parts = path.split('/');
+              const folderName = parts[parts.length - 1] || 'Xem ảnh';
+              folders.push({
+                name: folderName,
+                path: path + '/__self__',
+                thumbnail: cleanImageUrl(data.images[0]),
+                isSelfReader: true,
+                images: data.images.map(cleanImageUrl),
+                hasImages: true,
+              });
+            }
+            
+            // Add subfolders - just concat data.folders (like frontend line 94)
+            // DON'T create additional selfReader entries for subfolders
+            if (data.folders && data.folders.length > 0) {
+              for (const folder of data.folders) {
+                // Skip invalid folder data
+                if (!folder.path || folder.path === '()' || folder.path === '' || 
+                    !folder.name || folder.name === '()') {
+                  console.warn('⚠️ Skipping invalid folder:', {
+                    name: folder.name,
+                    path: folder.path,
+                    fullObject: folder
+                  });
+                  continue;
+                }
+                
+                // Just add the folder as-is, no additional processing
+                folders.push({
+                  ...folder,
+                  thumbnail: cleanImageUrl(folder.thumbnail),
+                  // These folders are NOT selfReaders, they're normal folders
+                  isSelfReader: false,
+                  hasImages: false // Don't assume they have images
+                });
+              }
+            }
+          }
+          
+          console.log('📁 Processed folders:', folders); // Debug processed folders
+          
+          // Debug empty folders
+          if (folders.length === 0) {
+            console.warn('⚠️ No folders found for path:', path);
+            console.log('API data type:', data.type);
+            console.log('Has images:', data.images?.length || 0);
+            console.log('Has folders:', data.folders?.length || 0);
+          }
+          
           set({ 
-            mangaList: data.folders || [],
+            mangaList: folders,
             currentPath: path,
             loading: false 
           });
         } catch (error) {
-          set({ error: error.message, loading: false });
+          console.error('Fetch manga folders error:', error);
+          set({ error: error.response?.data?.message || error.message, loading: false });
         }
       },
       
       // Fetch favorites from API
       fetchFavorites: async () => {
         try {
-          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/manga/favorite`);
-          if (!response.ok) throw new Error('Failed to fetch favorites');
-          const data = await response.json();
-          set({ favorites: data.favorites || [] });
+          const { sourceKey, rootFolder } = useAuthStore.getState();
+          const params = { key: sourceKey, root: rootFolder };
+          const response = await apiService.manga.getFavorites(params);
+          set({ favorites: response.data || [] });
         } catch (error) {
-          set({ error: error.message });
+          console.error('Fetch favorites error:', error);
+          set({ error: error.response?.data?.message || error.message });
         }
       },
       
@@ -130,13 +208,26 @@ export const useMangaStore = create(
         readerSettings: { ...state.readerSettings, ...settings }
       })),
       
-      toggleFavorite: (item) => set((state) => {
-        const isFavorited = state.favorites.some(f => f.path === item.path);
-        const favorites = isFavorited
-          ? state.favorites.filter(f => f.path !== item.path)
-          : [...state.favorites, item];
-        return { favorites };
-      }),
+      toggleFavorite: async (item) => {
+        try {
+          const { sourceKey } = useAuthStore.getState();
+          const isFavorited = get().favorites.some(f => f.path === item.path);
+          
+          // Call API to toggle favorite
+          await apiService.manga.toggleFavorite(sourceKey, item.path, !isFavorited);
+          
+          // Update local state
+          set((state) => {
+            const favorites = isFavorited
+              ? state.favorites.filter(f => f.path !== item.path)
+              : [...state.favorites, item];
+            return { favorites };
+          });
+        } catch (error) {
+          console.error('Toggle favorite error:', error);
+          set({ error: error.response?.data?.message || error.message });
+        }
+      },
     }),
     {
       name: 'manga-storage',

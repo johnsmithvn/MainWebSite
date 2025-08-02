@@ -3,10 +3,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, Heart, BookOpen, Grid, List, Filter, Loader, ArrowLeft } from 'lucide-react';
-import { useMangaStore, useUIStore } from '../../store';
+import { useNavigate } from 'react-router-dom';
+import { useMangaStore, useUIStore, useAuthStore } from '../../store';
 import Button from '../../components/common/Button';
 
 const MangaHome = () => {
+  const navigate = useNavigate();
   const { 
     mangaList, 
     currentPath, 
@@ -19,6 +21,8 @@ const MangaHome = () => {
     fetchFavorites 
   } = useMangaStore();
   
+  const { sourceKey, rootFolder } = useAuthStore();
+  
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('name');
   const [showFilters, setShowFilters] = useState(false);
@@ -29,16 +33,34 @@ const MangaHome = () => {
     fetchFavorites();
   }, [fetchMangaFolders, fetchFavorites]);
 
+  useEffect(() => {
+    // Debug: Log manga list when it changes
+    console.log('Manga list updated:', mangaList);
+  }, [mangaList]);
+
   const handleFolderClick = (folder) => {
-    if (folder.isDirectory) {
-      // Navigate to subfolder
-      const newPath = currentPath ? `${currentPath}/${folder.name}` : folder.name;
-      fetchMangaFolders(newPath);
-    } else {
-      // Open manga reader
-      // TODO: Navigate to reader
-      console.log('Open manga:', folder);
+    console.log('🔍 Clicked folder:', folder);
+    
+    // Validate folder data trước khi navigate
+    if (!folder.path || folder.path === '()' || folder.path === '' || folder.name === '()') {
+      console.warn('⚠️ Invalid folder data, skipping navigation:', folder);
+      return;
     }
+    
+    // Logic theo frontend cũ (folderCard.js line 67-74):
+    // if (folder.isSelfReader && folder.images) -> go to reader
+    // else -> loadFolder(folder.path)
+    
+    if (folder.isSelfReader && folder.images) {
+      // Đây là selfReader entry với images -> đi đến reader
+      console.log('📖 Opening reader for selfReader with images:', folder.path);
+      navigate(`/manga/reader?path=${encodeURIComponent(folder.path)}`);
+      return;
+    }
+    
+    // Ngược lại -> navigate đến subfolder (loadFolder equivalent)
+    console.log('📁 Loading subfolder:', folder.path);
+    fetchMangaFolders(folder.path);
   };
 
   const handleBackClick = () => {
@@ -227,7 +249,7 @@ const MangaHome = () => {
         } gap-4`}>
           {sortedManga.map((item, index) => (
             <div
-              key={item.name || index}
+              key={`${item.path || item.name || index}`}
               onClick={() => handleFolderClick(item)}
               className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg 
                         transition-all duration-200 cursor-pointer group
@@ -245,6 +267,8 @@ const MangaHome = () => {
                         alt={item.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         onError={(e) => {
+                          console.error('Thumbnail failed to load:', e.target.src);
+                          // Đơn giản: chỉ fallback không thử decode nữa
                           e.target.style.display = 'none';
                           e.target.nextSibling.style.display = 'block';
                         }}
@@ -253,8 +277,8 @@ const MangaHome = () => {
                     <div className="text-6xl hidden">📖</div>
                   </div>
                   <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1 
-                               line-clamp-2" title={item.name}>
-                    {item.name}
+                               line-clamp-2" title={item.name || item.path || 'Unknown'}>
+                    {item.name && item.name !== '()' ? item.name : (item.path || 'Unknown Item')}
                   </h3>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                     {item.isDirectory ? 'Folder' : 'File'}
@@ -273,6 +297,8 @@ const MangaHome = () => {
                           alt={item.name}
                           className="w-full h-full object-cover"
                           onError={(e) => {
+                            console.error('List thumbnail failed to load:', e.target.src);
+                            // Đơn giản: chỉ fallback không thử decode nữa
                             e.target.style.display = 'none';
                             e.target.nextSibling.style.display = 'block';
                           }}
@@ -281,8 +307,8 @@ const MangaHome = () => {
                       <div className="text-4xl hidden">📖</div>
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-1" title={item.name}>
-                        {item.name}
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-1" title={item.name || item.path || 'Unknown'}>
+                        {item.name && item.name !== '()' ? item.name : (item.path || 'Unknown Item')}
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                         {item.isDirectory ? 'Folder' : 'File'}
