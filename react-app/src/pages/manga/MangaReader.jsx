@@ -293,7 +293,7 @@ const MangaReader = () => {
   }
 
   return (
-    <div className="manga-reader">
+    <div className={`manga-reader ${readerSettings.readingMode === 'vertical' ? 'scroll-mode-active' : ''}`}>
       {/* Simple Header */}
       {showControls && (
         <div className="simple-header">
@@ -305,7 +305,7 @@ const MangaReader = () => {
 
       <div 
         ref={readerRef}
-        className="reader"
+        className={`reader ${readerSettings.readingMode === 'vertical' ? 'scroll-mode' : ''}`}
       >
         {readerSettings.readingMode === 'vertical' ? (
           // Vertical scroll mode - render all images

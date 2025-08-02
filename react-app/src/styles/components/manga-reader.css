@@ -4,6 +4,10 @@
   height: 100vh;
   background-color: #000;
   position: relative;
+  /* overflow is handled by the child or a modifier class */
+}
+
+.manga-reader:not(.scroll-mode-active) {
   overflow: hidden;
 }
 
