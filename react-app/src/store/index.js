@@ -54,7 +54,7 @@ export const useAuthStore = create(
 // UI store
 export const useUIStore = create((set) => ({
   darkMode: false,
-  sidebarOpen: true, // Default to open on desktop
+  sidebarOpen: false, // Default to closed
   searchOpen: false,
   loading: false,
   animationsEnabled: true,
