@@ -4,6 +4,8 @@
   height: 100vh;
   background-color: #000;
   position: relative;
+  /* Allow browser zoom to affect the entire reader */
+  transform-origin: center center;
   /* overflow is handled by the child or a modifier class */
 }
 
@@ -18,6 +20,8 @@
   background-color: #000;
   position: relative;
   overflow: hidden;
+  /* Ensure container responds to browser zoom */
+  transform-origin: center center;
 }
 
 /* ========== VERTICAL SCROLL MODE ========== */
@@ -31,17 +35,28 @@
   flex-direction: column;
   align-items: center;
   width: 100%;
+  /* Add zoom wrapper for scroll mode */
+  position: relative;
+}
+
+.scroll-container .zoom-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* ========== SCROLL IMAGES ========== */
 .scroll-img {
-  width: 100%;
   max-width: 100%;
+  width: auto;
   height: auto;
   display: block;
-  margin: 0;
+  margin: 0 auto;
   border: none;
   background: transparent;
+  /* Allow browser zoom to affect the image */
+  transform-origin: center center;
 }
 
 .scroll-img.loading {
@@ -203,6 +218,23 @@
   .navigation-zone {
     width: 30%;
   }
+  
+  /* Ensure zoom works properly on mobile */
+  .manga-reader {
+    touch-action: manipulation;
+  }
+  
+  .zoom-wrapper {
+    touch-action: pinch-zoom;
+  }
+  
+  .reader-image-fullsize {
+    touch-action: pinch-zoom;
+  }
+  
+  .scroll-img {
+    touch-action: pinch-zoom;
+  }
 }
 
 /* ========== SIMPLE HEADER/FOOTER UI ========== */
@@ -281,11 +313,15 @@
 }
 
 .reader-image-fullsize {
-  width: 100%;
-  height: 100vh;
+  max-width: 100%;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
   object-fit: contain;
   display: block;
   cursor: pointer;
+  /* Allow browser zoom to affect the image */
+  transform-origin: center center;
 }
 
 .horizontal-reader-container {
@@ -306,6 +342,19 @@
   align-items: center;
   justify-content: center;
   transition: transform 0.3s ease-out;
+  /* Create a zoom-responsive container */
+  overflow: hidden;
+}
+
+.zoom-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  /* This wrapper will respond to browser zoom */
+  transform-origin: center center;
 }
 
 .image-container.slide-left {
@@ -382,5 +431,31 @@
 
 .nav-zone.right {
   right: 0;
+}
+
+/* ========== ZOOM ENHANCEMENT ========== */
+.zoom-wrapper {
+  /* Ensure zoom transitions are smooth */
+  transition: transform 0.1s ease-out;
+}
+
+/* Allow pinch zoom and browser zoom */
+.reader-image-fullsize,
+.scroll-img {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  
+  /* Enable hardware acceleration for smoother zoom */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Prevent zoom conflicts with navigation */
+.nav-zone {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 

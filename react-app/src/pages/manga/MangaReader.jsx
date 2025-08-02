@@ -308,22 +308,24 @@ const MangaReader = () => {
         className={`reader ${readerSettings.readingMode === 'vertical' ? 'scroll-mode' : ''}`}
       >
         {readerSettings.readingMode === 'vertical' ? (
-          // Vertical scroll mode - render all images
+          // Vertical scroll mode - render all images with zoom wrapper
           <div className="scroll-container">
-            {currentImages.map((imageSrc, index) => (
-              <img
-                key={index}
-                src={imageSrc}
-                alt={`Page ${index + 1}`}
-                className="scroll-img"
-                onClick={handleImageClick}
-                onLoad={(e) => e.target.classList.remove('loading')}
-                onError={(e) => {
-                  e.target.style.background = '#333';
-                  e.target.alt = 'Lỗi tải ảnh';
-                }}
-              />
-            ))}
+            <div className="zoom-wrapper">
+              {currentImages.map((imageSrc, index) => (
+                <img
+                  key={index}
+                  src={imageSrc}
+                  alt={`Page ${index + 1}`}
+                  className="scroll-img"
+                  onClick={handleImageClick}
+                  onLoad={(e) => e.target.classList.remove('loading')}
+                  onError={(e) => {
+                    e.target.style.background = '#333';
+                    e.target.alt = 'Lỗi tải ảnh';
+                  }}
+                />
+              ))}
+            </div>
           </div>
         ) : (
           // Horizontal mode - single image with max-height
@@ -335,25 +337,27 @@ const MangaReader = () => {
           >
             <div className="nav-zone left" onClick={goToPrevPage} />
             
-            {/* Current Image */}
+            {/* Current Image with zoom wrapper */}
             <div className="image-container">
-              <img
-                src={imageCache.get(currentImages[currentPage]) || currentImages[currentPage]}
-                alt={`Page ${currentPage + 1}`}
-                className="reader-image-fullsize"
-                onClick={handleImageClick}
-                onLoad={(e) => {
-                  e.target.classList.remove('loading');
-                  const isPreloaded = preloadedImages.has(currentImages[currentPage]);
-                  const usingCache = imageCache.has(currentImages[currentPage]);
-                  const srcType = e.target.src.startsWith('blob:') ? 'BLOB_CACHE' : 'DIRECT_LOAD';
-                  console.log(`🖼️ Page ${currentPage + 1}: ${isPreloaded ? '✅ Preloaded' : '❌ Not preloaded'} | ${usingCache ? '🗄️ Using cache' : '🌐 Direct load'} | Source: ${srcType}`);
-                }}
-                onError={(e) => {
-                  e.target.style.background = '#333';
-                  e.target.alt = 'Lỗi tải ảnh';
-                }}
-              />
+              <div className="zoom-wrapper">
+                <img
+                  src={imageCache.get(currentImages[currentPage]) || currentImages[currentPage]}
+                  alt={`Page ${currentPage + 1}`}
+                  className="reader-image-fullsize"
+                  onClick={handleImageClick}
+                  onLoad={(e) => {
+                    e.target.classList.remove('loading');
+                    const isPreloaded = preloadedImages.has(currentImages[currentPage]);
+                    const usingCache = imageCache.has(currentImages[currentPage]);
+                    const srcType = e.target.src.startsWith('blob:') ? 'BLOB_CACHE' : 'DIRECT_LOAD';
+                    console.log(`🖼️ Page ${currentPage + 1}: ${isPreloaded ? '✅ Preloaded' : '❌ Not preloaded'} | ${usingCache ? '🗄️ Using cache' : '🌐 Direct load'} | Source: ${srcType}`);
+                  }}
+                  onError={(e) => {
+                    e.target.style.background = '#333';
+                    e.target.alt = 'Lỗi tải ảnh';
+                  }}
+                />
+              </div>
             </div>
             
             <div className="nav-zone right" onClick={goToNextPage} />
