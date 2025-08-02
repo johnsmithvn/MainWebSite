@@ -57,12 +57,12 @@ const MoviePlayer = () => {
 
   // === COMPUTED VALUES ===
   const isFavorited = favorites.some(fav => fav.path === path);
-  const videoUrl = buildVideoUrl(path);
+  const videoUrl = buildVideoUrl(path, sourceKey);
   
   /**
    * 🔗 Build video URL from path
    */
-  function buildVideoUrl(videoPath) {
+  function buildVideoUrl(videoPath, key) {
     if (!videoPath) return null;
     
     // Nếu đã là URL đầy đủ
@@ -70,9 +70,13 @@ const MoviePlayer = () => {
       return videoPath;
     }
     
-    // Build URL cho video static serving
-    const cleanPath = videoPath.replace(/\\/g, '/');
-    return `/video/${cleanPath}`;
+    // Build URL for video streaming from backend
+    const params = new URLSearchParams({ file: videoPath });
+    if (key) {
+      params.append('key', key);
+    }
+    // The backend route is /api/movie/video
+    return `/api/movie/video?${params.toString()}`;
   }
 
   /**

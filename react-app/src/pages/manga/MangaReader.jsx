@@ -37,7 +37,7 @@ const MangaReader = () => {
   const [images, setImages] = useState([]); // Danh sách URL ảnh
   const [currentPage, setCurrentPage] = useState(startPage);
   const [currentImageIndex, setCurrentImageIndex] = useState(0); // Index trong images array
-  const [zoom, setZoom] = useState(readerSettings.zoom || 100);
+    const [zoom, setZoom] = useState(readerSettings.zoomLevel || 100);
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -45,6 +45,8 @@ const MangaReader = () => {
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(0);
   const [loadedImages, setLoadedImages] = useState(new Set()); // Track loaded images for lazy loading
+  const [siblingChapters, setSiblingChapters] = useState({ prev: null, next: null });
+
 
   // === REFS ===
   const readerRef = useRef(null);
@@ -54,7 +56,7 @@ const MangaReader = () => {
 
   // === COMPUTED VALUES ===
   const imagesPerPage = READER.IMAGES_PER_PAGE || 200;
-  const isVerticalMode = readerSettings.readingMode === 'vertical';
+    const isVerticalMode = readerSettings.readingMode === 'vertical';
   const isFavorited = favorites.some(fav => fav.path === path);
   
   // Tính số trang dựa trên số ảnh và images per page
@@ -259,6 +261,10 @@ const MangaReader = () => {
       // Theo logic frontend gốc: nếu type === "reader" và có images array
       if (response.data && response.data.type === 'reader' && Array.isArray(response.data.images)) {
         imageList = response.data.images.map(buildImageUrl);
+        setSiblingChapters({
+          prev: response.data.prev,
+          next: response.data.next,
+        });
         console.log('Loaded images from reader API:', imageList.length, 'images');
         console.log('Sample image URLs:', imageList.slice(0, 3)); // Debug: show first 3 URLs
       } else if (response.data && response.data.images && response.data.images.length > 0) {
@@ -387,6 +393,13 @@ const MangaReader = () => {
     }
   }, [currentImageIndex, currentPage, previousPage, images, imagesPerPage]);
 
+  const navigateToChapter = (direction) => {
+    const chapterPath = siblingChapters[direction];
+    if (chapterPath) {
+      navigate(`/manga/reader?path=${encodeURIComponent(chapterPath)}`);
+    }
+  };
+
   /**
    * 🔄 Toggle fullscreen mode
    */
@@ -500,9 +513,10 @@ const MangaReader = () => {
     // Style for vertical mode vs horizontal mode
     const baseStyle = {
       transform: `scale(${zoom / 100})`,
-      transformOrigin: 'top center',
+      transformOrigin: 'center top',
       display: 'block',
       backgroundColor: '#f0f0f0',
+      maxWidth: `${readerSettings.zoomLevel}%`,
     };
     
     const verticalStyle = {
@@ -896,6 +910,18 @@ const MangaReader = () => {
                 </Button>
               </div>
             )}
+             {currentPage >= calculatedTotalPages - 1 && siblingChapters.next && (
+              <div className="text-center py-8">
+                <Button
+                  variant="primary"
+                  onClick={() => navigateToChapter('next')}
+                  icon={SkipForward}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Chương tiếp theo
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           // Horizontal mode - single image display
@@ -914,6 +940,16 @@ const MangaReader = () => {
                      }`}>
         <div className="flex items-center justify-between p-4 text-white">
           <div className="flex items-center gap-2">
+             <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigateToChapter('prev')}
+              disabled={!siblingChapters.prev}
+              icon={SkipBack}
+              className="text-white hover:bg-white hover:bg-opacity-20 disabled:opacity-50"
+            >
+              Chương trước
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -962,6 +998,16 @@ const MangaReader = () => {
               className="text-white hover:bg-white hover:bg-opacity-20 disabled:opacity-50"
             >
               Tiếp
+            </Button>
+             <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigateToChapter('next')}
+              disabled={!siblingChapters.next}
+              icon={SkipForward}
+              className="text-white hover:bg-white hover:bg-opacity-20 disabled:opacity-50"
+            >
+              Chương sau
             </Button>
           </div>
         </div>

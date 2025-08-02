@@ -80,10 +80,12 @@ export const useMangaStore = create(
       searchTerm: '',
       shouldNavigateToReader: null, // Flag for reader navigation
       readerSettings: {
-        mode: 'vertical',
+        readingMode: 'vertical',
         darkMode: false,
-        zoom: 1,
+        zoomLevel: 100,
         autoNext: false,
+        lazyLoad: true,
+        backgroundColor: 'black',
       },
       
       setCurrentPath: (path) => set({ currentPath: path }),

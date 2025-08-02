@@ -60,12 +60,12 @@ const MusicPlayer = () => {
 
   // === COMPUTED VALUES ===
   const isFavorited = favorites.some(fav => fav.path === path);
-  const audioUrl = buildAudioUrl(path);
+  const audioUrl = buildAudioUrl(path, sourceKey);
   
   /**
    * 🔗 Build audio URL from path
    */
-  function buildAudioUrl(audioPath) {
+  function buildAudioUrl(audioPath, key) {
     if (!audioPath) return null;
     
     // Nếu đã là URL đầy đủ
@@ -73,9 +73,13 @@ const MusicPlayer = () => {
       return audioPath;
     }
     
-    // Build URL cho audio static serving
-    const cleanPath = audioPath.replace(/\\/g, '/');
-    return `/audio/${cleanPath}`;
+    // Build URL for audio streaming from backend
+    const params = new URLSearchParams({ file: audioPath });
+    if (key) {
+      params.append('key', key);
+    }
+    // The backend route is /api/music/audio
+    return `/api/music/audio?${params.toString()}`;
   }
 
   /**
