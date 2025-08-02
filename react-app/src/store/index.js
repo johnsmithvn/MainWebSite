@@ -282,13 +282,37 @@ export const useMovieStore = create(
         playerSettings: { ...state.playerSettings, ...settings }
       })),
       
-      toggleFavorite: (item) => set((state) => {
-        const isFavorited = state.favorites.some(f => f.path === item.path);
-        const favorites = isFavorited
-          ? state.favorites.filter(f => f.path !== item.path)
-          : [...state.favorites, item];
-        return { favorites };
-      }),
+      // Fetch favorites from API
+      fetchFavorites: async () => {
+        try {
+          const { sourceKey } = useAuthStore.getState();
+          const params = { key: sourceKey };
+          const response = await apiService.movie.getFavorites(params);
+          set({ favorites: response.data || [] });
+        } catch (error) {
+          console.error('Fetch movie favorites error:', error);
+        }
+      },
+      
+      toggleFavorite: async (item) => {
+        try {
+          const { sourceKey } = useAuthStore.getState();
+          const isFavorited = get().favorites.some(f => f.path === item.path);
+          
+          // Call API to toggle favorite
+          await apiService.movie.toggleFavorite(item.path, sourceKey);
+          
+          // Update local state
+          set((state) => {
+            const favorites = isFavorited
+              ? state.favorites.filter(f => f.path !== item.path)
+              : [...state.favorites, item];
+            return { favorites };
+          });
+        } catch (error) {
+          console.error('Toggle movie favorite error:', error);
+        }
+      },
     }),
     {
       name: 'movie-storage',
@@ -377,13 +401,48 @@ export const useMusicStore = create(
       // Favorites and recent
       setFavorites: (favorites) => set({ favorites }),
       
-      toggleFavorite: (item) => set((state) => {
-        const isFavorited = state.favorites.some(f => f.path === item.path);
-        const favorites = isFavorited
-          ? state.favorites.filter(f => f.path !== item.path)
-          : [...state.favorites, item];
-        return { favorites };
-      }),
+      // Fetch favorites from API
+      fetchFavorites: async () => {
+        try {
+          const { sourceKey } = useAuthStore.getState();
+          const params = { key: sourceKey };
+          // Note: Music favorites API might not exist yet, so handle gracefully
+          try {
+            const response = await apiService.music.getFavorites?.(params);
+            set({ favorites: response.data || [] });
+          } catch {
+            // Music favorites API not implemented yet, keep local storage
+            console.warn('Music favorites API not implemented');
+          }
+        } catch (error) {
+          console.error('Fetch music favorites error:', error);
+        }
+      },
+      
+      toggleFavorite: async (item) => {
+        try {
+          const { sourceKey } = useAuthStore.getState();
+          const isFavorited = get().favorites.some(f => f.path === item.path);
+          
+          // Try to call API if it exists
+          try {
+            await apiService.music.toggleFavorite?.(item.path, sourceKey);
+          } catch {
+            // Music favorites API not implemented yet, just log
+            console.warn('Music toggle favorite API not implemented');
+          }
+          
+          // Update local state regardless
+          set((state) => {
+            const favorites = isFavorited
+              ? state.favorites.filter(f => f.path !== item.path)
+              : [...state.favorites, item];
+            return { favorites };
+          });
+        } catch (error) {
+          console.error('Toggle music favorite error:', error);
+        }
+      },
       
       addToRecentPlayed: (item) => set((state) => {
         const recent = state.recentPlayed.filter(r => r.path !== item.path);

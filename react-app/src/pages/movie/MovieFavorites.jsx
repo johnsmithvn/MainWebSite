@@ -1,69 +1,99 @@
 // 📁 src/pages/movie/MovieFavorites.jsx
-// ❤️ Trang movie yêu thích
+// ❤️ Trang movie yêu thích với tích hợp API backend
 
-import React, { useState } from 'react';
-import { Heart, Search, Grid, List, Trash2, Play, Download, Star } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Heart, Search, Grid, List, Trash2, Play, Download, Star, RefreshCw, Clock } from 'lucide-react';
 import { useMovieStore, useUIStore } from '@/store';
 import Button from '@/components/common/Button';
 
 const MovieFavorites = () => {
-  const { favorites, movieList, removeFavorite, searchTerm, setSearchTerm } = useMovieStore();
+  const { 
+    favorites, 
+    removeFavorite, 
+    fetchFavorites, 
+    toggleFavorite,
+    loading: movieLoading 
+  } = useMovieStore();
+  
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('dateAdded');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // Sample favorite movies
-  const sampleFavoriteMovies = [
-    {
-      id: 1,
-      title: "Avatar: The Way of Water",
-      duration: "3h 12m",
-      year: 2022,
-      genre: ["Action", "Adventure", "Sci-Fi"],
-      rating: 8.1,
-      thumbnail: "/default/video-thumb.png",
-      description: "Jake Sully lives with his newfound family formed on the planet of Pandora.",
-      views: 45000,
-      favoriteDate: new Date('2024-01-15'),
-      lastWatched: new Date('2024-01-20')
-    },
-    {
-      id: 2,
-      title: "Top Gun: Maverick",
-      duration: "2h 10m",
-      year: 2022,
-      genre: ["Action", "Drama"],
-      rating: 8.3,
-      thumbnail: "/default/video-thumb.png",
-      description: "After thirty years, Maverick is still pushing the envelope as a top naval aviator.",
-      views: 38000,
-      favoriteDate: new Date('2024-01-10'),
-      lastWatched: new Date('2024-01-25')
-    }
-  ];
+  // Load favorites when component mounts
+  useEffect(() => {
+    const loadFavorites = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        await fetchFavorites();
+      } catch (err) {
+        setError('Failed to load favorite movies. Please try again.');
+        console.error('Error loading movie favorites:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const filteredFavorites = sampleFavoriteMovies.filter(movie =>
-    movie.title.toLowerCase().includes(searchTerm.toLowerCase())
+    loadFavorites();
+  }, [fetchFavorites]);
+
+  // Filter and sort favorites
+  const filteredFavorites = favorites.filter(movie =>
+    movie.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    movie.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const sortedFavorites = [...filteredFavorites].sort((a, b) => {
     switch (sortBy) {
       case 'name':
-        return a.title.localeCompare(b.title);
+        return (a.title || a.name || '').localeCompare(b.title || b.name || '');
       case 'dateAdded':
-        return new Date(b.favoriteDate) - new Date(a.favoriteDate);
+        return new Date(b.favoriteDate || b.lastUpdated || 0) - new Date(a.favoriteDate || a.lastUpdated || 0);
       case 'lastWatched':
         return new Date(b.lastWatched || 0) - new Date(a.lastWatched || 0);
       case 'rating':
-        return b.rating - a.rating;
+        return (b.rating || 0) - (a.rating || 0);
       default:
         return 0;
     }
   });
 
-  const handleRemoveFavorite = (movieId) => {
+  // Handle remove favorite with API call
+  const handleRemoveFavorite = async (movieId) => {
     if (window.confirm('Remove this movie from favorites?')) {
-      removeFavorite(movieId);
+      try {
+        await toggleFavorite(movieId); // This will remove if already favorite
+        // Refresh the favorites list
+        await fetchFavorites();
+      } catch (err) {
+        console.error('Error removing favorite:', err);
+        setError('Failed to remove from favorites. Please try again.');
+      }
     }
+  };
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await fetchFavorites();
+    } catch (err) {
+      setError('Failed to refresh favorites. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Format duration for display
+  const formatDuration = (duration) => {
+    if (!duration) return 'Unknown';
+    if (typeof duration === 'string') return duration;
+    const hours = Math.floor(duration / 3600);
+    const minutes = Math.floor((duration % 3600) / 60);
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
 
   return (
@@ -77,10 +107,19 @@ const MovieFavorites = () => {
               Favorite Movies
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              {sampleFavoriteMovies.length} movies in your favorites
+              {favorites.length} movies in your favorites
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              icon={RefreshCw}
+              disabled={loading}
+            >
+              {loading ? 'Loading...' : 'Refresh'}
+            </Button>
             <Button
               variant={viewMode === 'grid' ? 'primary' : 'outline'}
               size="sm"
@@ -126,8 +165,31 @@ const MovieFavorites = () => {
         </div>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading favorites...</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+          <p className="text-red-800 dark:text-red-200">{error}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            className="mt-2"
+          >
+            Try Again
+          </Button>
+        </div>
+      )}
+
       {/* Empty State */}
-      {sampleFavoriteMovies.length === 0 ? (
+      {!loading && favorites.length === 0 ? (
         <div className="text-center py-12">
           <Heart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
@@ -154,149 +216,130 @@ const MovieFavorites = () => {
         /* Favorites Grid/List */
         <div className={`grid ${
           viewMode === 'grid' 
-            ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' 
+            ? 'grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' 
             : 'grid-cols-1'
-        } gap-6`}>
+        } gap-4`}>
           {sortedFavorites.map((movie) => (
             <div
               key={movie.id}
-              className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl 
+              className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg 
                         transition-all duration-200 group border border-gray-200 dark:border-gray-700
-                        ${viewMode === 'list' ? 'flex items-center p-4' : 'overflow-hidden'}`}
+                        ${viewMode === 'list' ? 'flex items-center p-4' : 'p-3'}`}
             >
               {viewMode === 'grid' ? (
                 <>
                   <div className="relative">
-                    <div className="aspect-[16/9] bg-gray-200 dark:bg-gray-700 overflow-hidden cursor-pointer">
+                    <div className="aspect-[16/9] bg-gray-200 dark:bg-gray-700 rounded-md mb-3 
+                                  overflow-hidden cursor-pointer">
                       <img
-                        src={movie.thumbnail}
-                        alt={movie.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        src={movie.thumbnail || '/default/video-thumb.png'}
+                        alt={movie.title || movie.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 
-                                    transition-all duration-300 flex items-center justify-center">
-                        <Play className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                      <div className="absolute top-2 left-2">
-                        <span className="bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
-                          {movie.duration}
-                        </span>
-                      </div>
-                      <div className="absolute top-2 right-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveFavorite(movie.id);
-                          }}
-                          className="p-1 bg-red-500 text-white rounded-full
-                                   hover:bg-red-600 transition-colors"
-                        >
-                          <Heart className="w-4 h-4 fill-current" />
-                        </button>
+                      {/* Play overlay */}
+                      <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 
+                                    transition-opacity flex items-center justify-center">
+                        <Play className="w-12 h-12 text-white fill-white" />
                       </div>
                     </div>
+                    <button
+                      onClick={() => handleRemoveFavorite(movie.id)}
+                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full
+                               opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                    >
+                      <Heart className="w-4 h-4 fill-current" />
+                    </button>
                   </div>
                   
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-2 
-                                 line-clamp-1 cursor-pointer hover:text-blue-500">
-                      {movie.title}
-                    </h3>
-                    
-                    <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
-                      <span>{movie.year}</span>
-                      <div className="flex items-center">
-                        <Star className="w-3 h-3 text-yellow-500 mr-1" />
-                        <span>{movie.rating}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {movie.genre.slice(0, 2).map((genre) => (
-                        <span
-                          key={genre}
-                          className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 
-                                   px-2 py-1 rounded"
-                        >
-                          {genre}
-                        </span>
-                      ))}
-                    </div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1 
+                               line-clamp-2 cursor-pointer hover:text-blue-500">
+                    {movie.title || movie.name}
+                  </h3>
+                  
+                  <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    <span className="flex items-center">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {formatDuration(movie.duration)}
+                    </span>
+                    {movie.rating && (
+                      <span className="flex items-center">
+                        <Star className="w-3 h-3 mr-1 text-yellow-500" />
+                        {movie.rating.toFixed(1)}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-col gap-1 mb-3">
+                    <span className="text-xs text-gray-500">
+                      Added: {new Date(movie.favoriteDate || movie.lastUpdated).toLocaleDateString()}
+                    </span>
+                    {movie.lastWatched && (
+                      <span className="text-xs text-green-600 dark:text-green-400">
+                        Last watched: {new Date(movie.lastWatched).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
 
-                    <div className="text-xs text-gray-500 mb-3">
-                      <p>Added: {movie.favoriteDate.toLocaleDateString()}</p>
-                      {movie.lastWatched && (
-                        <p className="text-green-600 dark:text-green-400">
-                          Last watched: {movie.lastWatched.toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex gap-1">
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        className="flex-1"
-                        onClick={() => {/* Navigate to player */}}
-                      >
-                        <Play className="w-3 h-3 mr-1" />
-                        Watch
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        onClick={() => handleRemoveFavorite(movie.id)}
-                        className="text-red-500 hover:text-red-600"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      className="flex-1"
+                      onClick={() => {/* Navigate to player */}}
+                    >
+                      <Play className="w-3 h-3 mr-1" />
+                      Watch
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      onClick={() => handleRemoveFavorite(movie.id)}
+                      className="text-red-500 hover:text-red-600"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="w-32 h-18 bg-gray-200 dark:bg-gray-700 rounded-md mr-4 
+                  <div className="w-24 h-16 bg-gray-200 dark:bg-gray-700 rounded-md mr-4 
                                 flex-shrink-0 overflow-hidden cursor-pointer relative">
                     <img
-                      src={movie.thumbnail}
-                      alt={movie.title}
+                      src={movie.thumbnail || '/default/video-thumb.png'}
+                      alt={movie.title || movie.name}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute bottom-1 left-1">
-                      <span className="bg-black bg-opacity-75 text-white text-xs px-1 py-0.5 rounded">
-                        {movie.duration}
-                      </span>
+                    <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 hover:opacity-100 
+                                  transition-opacity flex items-center justify-center">
+                      <Play className="w-6 h-6 text-white fill-white" />
                     </div>
                   </div>
                   
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 dark:text-white mb-1 cursor-pointer hover:text-blue-500">
-                      {movie.title}
+                      {movie.title || movie.name}
                     </h3>
                     <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      <span>{movie.year}</span>
-                      <div className="flex items-center">
-                        <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                        <span>{movie.rating}</span>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {movie.genre.map((genre) => (
-                        <span
-                          key={genre}
-                          className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 
-                                   px-2 py-1 rounded"
-                        >
-                          {genre}
+                      <span className="flex items-center">
+                        <Clock className="w-4 h-4 mr-1" />
+                        {formatDuration(movie.duration)}
+                      </span>
+                      {movie.rating && (
+                        <span className="flex items-center">
+                          <Star className="w-4 h-4 mr-1 text-yellow-500" />
+                          {movie.rating.toFixed(1)}
                         </span>
-                      ))}
+                      )}
+                      <span>{movie.views || 0} views</span>
                     </div>
-                    <div className="text-xs text-gray-500">
-                      <p>Added: {movie.favoriteDate.toLocaleDateString()}</p>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-gray-500">
+                        Added: {new Date(movie.favoriteDate || movie.lastUpdated).toLocaleDateString()}
+                      </span>
                       {movie.lastWatched && (
-                        <p className="text-green-600 dark:text-green-400">
-                          Last watched: {movie.lastWatched.toLocaleDateString()}
-                        </p>
+                        <span className="text-xs text-green-600 dark:text-green-400">
+                          Last watched: {new Date(movie.lastWatched).toLocaleDateString()}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -327,7 +370,7 @@ const MovieFavorites = () => {
       )}
 
       {/* Bulk Actions */}
-      {sampleFavoriteMovies.length > 0 && (
+      {favorites.length > 0 && (
         <div className="fixed bottom-6 right-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center gap-2">
@@ -336,7 +379,7 @@ const MovieFavorites = () => {
                 size="sm"
                 onClick={() => {
                   if (window.confirm('Remove all movies from favorites?')) {
-                    // Clear all favorites logic
+                    favorites.forEach(movie => handleRemoveFavorite(movie.id));
                   }
                 }}
                 className="text-red-500 hover:text-red-600"
