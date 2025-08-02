@@ -17,7 +17,14 @@ const MangaReader = () => {
   const [loading, setLoading] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [error, setError] = useState(null);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [slideDirection, setSlideDirection] = useState('');
   const readerRef = useRef(null);
+
+  // the required distance between touchStart and touchEnd to be detected as a swipe
+  const minSwipeDistance = 50;
 
   useEffect(() => {
     const path = searchParams.get('path');
@@ -68,14 +75,26 @@ const MangaReader = () => {
   };
 
   const goToPrevPage = () => {
-    if (currentPage > 0) {
-      setCurrentPage(currentPage - 1);
+    if (currentPage > 0 && !isTransitioning) {
+      setIsTransitioning(true);
+      setSlideDirection('slide-right');
+      setTimeout(() => {
+        setCurrentPage(currentPage - 1);
+        setSlideDirection('');
+        setIsTransitioning(false);
+      }, 300);
     }
   };
 
   const goToNextPage = () => {
-    if (currentPage < currentImages.length - 1) {
-      setCurrentPage(currentPage + 1);
+    if (currentPage < currentImages.length - 1 && !isTransitioning) {
+      setIsTransitioning(true);
+      setSlideDirection('slide-left');
+      setTimeout(() => {
+        setCurrentPage(currentPage + 1);
+        setSlideDirection('');
+        setIsTransitioning(false);
+      }, 300);
     }
   };
 
@@ -88,6 +107,26 @@ const MangaReader = () => {
       ...readerSettings,
       readingMode: readerSettings.readingMode === 'vertical' ? 'horizontal' : 'vertical',
     });
+  };
+
+  const onTouchStart = (e) => {
+    setTouchEnd(null); // otherwise the swipe is fired even with a single touch
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    if (isLeftSwipe) {
+      goToNextPage();
+    }
+    if (isRightSwipe) {
+      goToPrevPage();
+    }
   };
 
   if (loading) {
@@ -200,17 +239,53 @@ const MangaReader = () => {
           </div>
         ) : (
           // Horizontal mode - single image with max-height
-          <img
-            src={currentImages[currentPage]}
-            alt={`Page ${currentPage + 1}`}
-            className="reader-image-fullsize"
-            onClick={handleImageClick}
-            onLoad={(e) => e.target.classList.remove('loading')}
-            onError={(e) => {
-              e.target.style.background = '#333';
-              e.target.alt = 'Lỗi tải ảnh';
-            }}
-          />
+          <div 
+            className="horizontal-reader-container"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            <div className="nav-zone left" onClick={goToPrevPage} />
+            
+            {/* Current Image */}
+            <div className={`image-container ${slideDirection}`}>
+              <img
+                src={currentImages[currentPage]}
+                alt={`Page ${currentPage + 1}`}
+                className="reader-image-fullsize"
+                onClick={handleImageClick}
+                onLoad={(e) => e.target.classList.remove('loading')}
+                onError={(e) => {
+                  e.target.style.background = '#333';
+                  e.target.alt = 'Lỗi tải ảnh';
+                }}
+              />
+            </div>
+
+            {/* Next Image Preview (for slide-left animation) */}
+            {slideDirection === 'slide-left' && currentPage < currentImages.length - 1 && (
+              <div className="image-container next-image">
+                <img
+                  src={currentImages[currentPage + 1]}
+                  alt={`Page ${currentPage + 2}`}
+                  className="reader-image-fullsize"
+                />
+              </div>
+            )}
+
+            {/* Previous Image Preview (for slide-right animation) */}
+            {slideDirection === 'slide-right' && currentPage > 0 && (
+              <div className="image-container prev-image">
+                <img
+                  src={currentImages[currentPage - 1]}
+                  alt={`Page ${currentPage}`}
+                  className="reader-image-fullsize"
+                />
+              </div>
+            )}
+            
+            <div className="nav-zone right" onClick={goToNextPage} />
+          </div>
         )}
       </div>
 
