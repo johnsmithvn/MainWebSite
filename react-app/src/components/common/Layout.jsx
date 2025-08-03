@@ -13,8 +13,6 @@ import { useUIStore } from '../../store';
 const Layout = () => {
   const { sidebarOpen, loading, setSidebarOpen } = useUIStore();
   
-  console.log('Layout rendered, sidebarOpen:', sidebarOpen);
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-900 transition-colors duration-200">
       <Header />

@@ -223,14 +223,14 @@ const TopViewSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64 mx-2" />
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64" />
                 </div>
               ))
             ) : (
               // Actual items - sorted by view count
               items?.map((item, index) => (
                 <div key={item.path || index} className="embla__slide">
-                  <div className="mx-2 relative">
+                  <div className="relative">
                     {/* Ranking badge */}
                     {index < 3 && (
                       <div className="absolute top-2 left-2 z-10">

@@ -3,7 +3,7 @@
 .embla {
   position: relative;
   overflow: hidden;
-  margin: 0 -0.5rem;
+  width: 100%;
 }
 
 .embla__viewport {
@@ -14,13 +14,13 @@
 .embla__container {
   display: flex;
   align-items: flex-start;
-  margin-left: calc(var(--slide-spacing, 1rem) * -1);
+  gap: var(--slide-spacing, 0.75rem);
+  padding: 0 var(--slide-spacing, 0.75rem);
 }
 
 .embla__slide {
   flex: 0 0 auto;
   min-width: 0;
-  padding-left: var(--slide-spacing, 1rem);
   position: relative;
 }
 
@@ -183,7 +183,7 @@
 /* View count badge styles */
 .view-count-badge {
   position: absolute;
-  top: 0.5rem;
+  bottom: 0.5rem;
   left: 0.5rem;
   background-color: rgba(0, 0, 0, 0.75);
   color: white;

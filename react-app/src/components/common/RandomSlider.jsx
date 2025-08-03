@@ -56,6 +56,16 @@ const RandomSlider = ({
     staleTime: 5 * 60 * 1000 // 5 minutes
   });
 
+  // Debug logging for timestamp
+  useEffect(() => {
+    console.log('🎲 RandomSlider timestamp update:', { 
+      type, 
+      lastUpdated, 
+      hasItems: !!items?.length,
+      itemCount: items?.length 
+    });
+  }, [type, lastUpdated, items?.length]);
+
   // Navigation functions
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
@@ -167,6 +177,14 @@ const RandomSlider = ({
     if (!timestamp) return '';
     
     try {
+      const now = new Date();
+      const diffInMinutes = Math.floor((now - timestamp) / (1000 * 60));
+      
+      // Nếu dưới 1 phút thì hiển thị "vừa xong"
+      if (diffInMinutes < 1) {
+        return 'vừa xong';
+      }
+      
       return formatDistanceToNow(timestamp, {
         addSuffix: true,
         locale: vi
@@ -261,29 +279,27 @@ const RandomSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64 mx-2" />
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64" />
                 </div>
               ))
             ) : (
               // Actual items
               items?.map((item, index) => (
                 <div key={item.path || index} className="embla__slide">
-                  <div className="mx-2">
-                    <MangaCard
-                      manga={item}
-                      isFavorite={item.isFavorite || false}
-                      variant="compact"
-                      showViews={showViews}
-                      onClick={() => {
-                        // Handle navigation logic here
-                        console.log('Card clicked:', item);
-                      }}
-                      onToggleFavorite={(isFavorite) => 
-                        handleToggleFavorite(item.path, isFavorite)
-                      }
-                      className="w-48"
-                    />
-                  </div>
+                  <MangaCard
+                    manga={item}
+                    isFavorite={item.isFavorite || false}
+                    variant="compact"
+                    showViews={showViews}
+                    onClick={() => {
+                      // Handle navigation logic here
+                      console.log('Card clicked:', item);
+                    }}
+                    onToggleFavorite={(isFavorite) => 
+                      handleToggleFavorite(item.path, isFavorite)
+                    }
+                    className="w-48"
+                  />
                 </div>
               ))
             )}

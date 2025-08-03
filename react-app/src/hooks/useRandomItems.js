@@ -22,13 +22,39 @@ export const useRandomItems = (type, options = {}) => {
     force = false
   } = options;
 
-  const { sourceKey, rootFolder } = useAuthStore();
+  const { sourceKey, rootFolder, initializeRootFolder } = useAuthStore();
   const queryClient = useQueryClient();
   const [lastUpdated, setLastUpdated] = useState(null);
+
+  // Initialize rootFolder if not set
+  useEffect(() => {
+    if (sourceKey && !rootFolder) {
+      console.log('🔄 Initializing rootFolder for sourceKey:', sourceKey);
+      initializeRootFolder();
+    }
+  }, [sourceKey, rootFolder, initializeRootFolder]);
 
   // Generate cache key based on type, sourceKey, and rootFolder
   const cacheKey = `randomView::${sourceKey}::${rootFolder}::${type}`;
   const queryKey = ['randomItems', type, sourceKey, rootFolder];
+
+  // Check for existing cache timestamp on mount only - run once per unique cache key
+  useEffect(() => {
+    if (sourceKey && rootFolder) {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { timestamp } = JSON.parse(cached);
+          if (timestamp && !lastUpdated) {
+            setLastUpdated(new Date(timestamp));
+            console.log('⏰ Restored timestamp from cache on mount:', new Date(timestamp));
+          }
+        }
+      } catch (error) {
+        console.warn('Error checking cache timestamp:', error);
+      }
+    }
+  }, [cacheKey]); // Only depend on cacheKey to prevent multiple runs
 
   // Get data from localStorage cache
   const getCachedData = useCallback(() => {
@@ -38,8 +64,9 @@ export const useRandomItems = (type, options = {}) => {
         const { timestamp, data } = JSON.parse(cached);
         const isExpired = (Date.now() - timestamp) > staleTime;
         
-        if (!isExpired) {
-          setLastUpdated(new Date(timestamp));
+        console.log('🗂️ Cache check:', { cacheKey, hasData: !!data, isExpired, timestamp: new Date(timestamp) });
+        
+        if (!isExpired && data) {
           return data;
         }
       }
@@ -56,6 +83,7 @@ export const useRandomItems = (type, options = {}) => {
       const cacheData = { timestamp, data };
       localStorage.setItem(cacheKey, JSON.stringify(cacheData));
       setLastUpdated(new Date(timestamp));
+      console.log('💾 Cache saved:', { cacheKey, itemCount: data.length, timestamp: new Date(timestamp) });
     } catch (error) {
       console.warn('Error saving cache:', error);
     }
@@ -67,15 +95,23 @@ export const useRandomItems = (type, options = {}) => {
       throw new Error(`Missing required parameters for ${type}`);
     }
 
+    console.log('🔍 fetchRandomItems:', { sourceKey, rootFolder, type, cacheKey });
+
     // Check cache first unless force refresh
     if (!force) {
       const cached = getCachedData();
       if (cached) {
+        console.log('📦 Using cached random data:', cached.length, 'items');
         return cached;
       }
+      // If no cache found, log that we're fetching fresh data
+      console.log('🆕 No cache found, fetching fresh data from API');
+    } else {
+      console.log('🔄 Force refresh - skipping cache check');
     }
 
     const endpoint = getEndpoint(type, sourceKey, rootFolder, count);
+    console.log('🌐 Fetching from endpoint:', endpoint);
     const response = await api.get(endpoint);
     
     // Handle different response formats
@@ -95,6 +131,8 @@ export const useRandomItems = (type, options = {}) => {
     }
     
     if (items && Array.isArray(items)) {
+      console.log('✅ Random items fetched:', items.length, 'items');
+      console.log('📊 Sample item:', items[0]);
       setCachedData(items);
       return items;
     }
@@ -115,9 +153,21 @@ export const useRandomItems = (type, options = {}) => {
     staleTime,
     cacheTime,
     retry: 1,
+    refetchOnMount: true, // Always check on mount
+    refetchOnWindowFocus: false, // Don't refetch on window focus
     onError: (error) => {
       console.error(`Error fetching random ${type}:`, error);
       toast.error(`Không thể tải ${type} ngẫu nhiên`);
+    },
+    onSuccess: (data) => {
+      // Ensure lastUpdated is set when data is successfully fetched
+      if (data && data.length > 0) {
+        // If we don't have a timestamp yet, set it now
+        if (!lastUpdated) {
+          setLastUpdated(new Date());
+          console.log('⏰ Set timestamp on data success:', new Date());
+        }
+      }
     }
   });
 
@@ -128,6 +178,10 @@ export const useRandomItems = (type, options = {}) => {
       localStorage.removeItem(cacheKey);
       queryClient.removeQueries(queryKey);
       
+      // Update timestamp immediately
+      const now = new Date();
+      setLastUpdated(now);
+      
       // Refetch with force flag
       await refetch();
       toast.success(`Đã làm mới ${type} ngẫu nhiên`);
@@ -137,15 +191,38 @@ export const useRandomItems = (type, options = {}) => {
     }
   }, [cacheKey, queryKey, queryClient, refetch, type]);
 
-  // Load cached data on mount
+  // Load cached data on mount only - run once per unique cache key
   useEffect(() => {
-    if (!data) {
-      const cached = getCachedData();
-      if (cached) {
-        queryClient.setQueryData(queryKey, cached);
+    // Only run once when component mounts and we have the required keys
+    if (sourceKey && rootFolder) {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { timestamp, data } = JSON.parse(cached);
+          const isExpired = (Date.now() - timestamp) > staleTime;
+          
+          if (!isExpired && data && data.length > 0) {
+            console.log('🔄 Loading cached data on mount:', data.length, 'items');
+            queryClient.setQueryData(queryKey, data);
+            // Only set timestamp if we don't have one yet
+            if (!lastUpdated) {
+              setLastUpdated(new Date(timestamp));
+            }
+          } else {
+            console.log('⚠️ Cache expired or empty, will fetch fresh data');
+            // Clear expired cache
+            if (isExpired) {
+              localStorage.removeItem(cacheKey);
+            }
+          }
+        } else {
+          console.log('📭 No cache found, will fetch fresh data');
+        }
+      } catch (error) {
+        console.warn('Error loading cached data on mount:', error);
       }
     }
-  }, [data, getCachedData, queryClient, queryKey]);
+  }, [cacheKey]); // Only depend on cacheKey to prevent multiple executions
 
   return {
     data: data || [],

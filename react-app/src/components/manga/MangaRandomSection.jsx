@@ -20,7 +20,7 @@ const MangaRandomSection = () => {
       <RandomSlider
         type="manga"
         title="📚 Manga ngẫu nhiên"
-        showViews={false}
+        showViews={true}
         autoplay={true}
         showRefresh={true}
         showTimestamp={true}
