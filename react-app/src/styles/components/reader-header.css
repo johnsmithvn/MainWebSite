@@ -7,15 +7,10 @@
   left: 0;
   right: 0;
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
-}
-
-.dark .reader-header {
-  background: rgba(31, 41, 55, 0.95);
-  border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .reader-header-content {
@@ -25,6 +20,7 @@
   padding: 0 16px;
   height: 60px;
   max-width: 100%;
+  color: white;
 }
 
 /* Left section */
@@ -52,7 +48,7 @@
   padding: 8px 16px;
   border-radius: 6px;
   transition: all 0.2s ease;
-  color: inherit;
+  color: white;
   font-weight: 600;
   font-size: 16px;
   max-width: 100%;
@@ -60,10 +56,6 @@
 }
 
 .folder-name-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.dark .folder-name-btn:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
@@ -93,19 +85,15 @@
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: inherit;
+  color: white;
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 16px;
 }
 
 .reader-header-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
-  transform: scale(1.05);
-}
-
-.dark .reader-header-btn:hover {
   background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
 }
 
 .reader-header-btn:active {
@@ -118,11 +106,11 @@
 }
 
 .favorite-btn.active {
-  color: #ef4444;
+  color: #ff6b6b;
 }
 
 .favorite-btn.active:hover {
-  color: #dc2626;
+  color: #ff5252;
 }
 
 /* Responsive design */

@@ -443,6 +443,15 @@ const MangaReader = () => {
         )}
       </div>
 
+      {/* Reading Mode Toggle - Floating above footer */}
+      {showControls && (
+        <div className="reading-mode-toggle">
+          <button onClick={toggleReadingMode} className="mode-toggle-btn">
+            {readerSettings.readingMode === 'vertical' ? <PanelLeft size={20} /> : <BookOpen size={20} />}
+          </button>
+        </div>
+      )}
+
       {/* Simple Footer */}
       {showControls && (
         <div className="simple-footer">
@@ -465,15 +474,6 @@ const MangaReader = () => {
           >
             Next →
           </button>
-
-          <button onClick={toggleReadingMode} className="nav-btn">
-            {readerSettings.readingMode === 'vertical' ? <PanelLeft size={20} /> : <BookOpen size={20} />}
-          </button>
-
-          {/* Preload status indicator */}
-          <div className="preload-status">
-            📥 {preloadedImages.size}/{currentImages.length}
-          </div>
         </div>
       )}
     </div>

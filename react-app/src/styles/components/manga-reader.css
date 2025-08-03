@@ -316,6 +316,37 @@
   font-weight: 500;
 }
 
+/* ========== READING MODE TOGGLE ========== */
+.reading-mode-toggle {
+  position: fixed;
+  bottom: 80px; /* Above the footer (footer height + padding) */
+  left: 20px;
+  z-index: 999; /* Below footer but above content */
+}
+
+.mode-toggle-btn {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+}
+
+.mode-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
 .preload-status {
   color: rgba(255, 255, 255, 0.7);
   font-size: 12px;
