@@ -5,6 +5,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { STORAGE_KEYS } from '../constants';
 import { apiService } from '../utils/api';
+import { getMangaCache, setMangaCache } from '@/utils/mangaCache';
 
 // Auth store
 export const useAuthStore = create(
@@ -106,36 +107,44 @@ export const useMangaStore = create(
       // Fetch manga folders from API
       fetchMangaFolders: async (path = '') => {
         set({ loading: true, error: null });
+        const { sourceKey, rootFolder } = useAuthStore.getState();
+        const { mangaSettings } = get();
+
+        // 1. Try to get data from cache first
+        const cachedData = getMangaCache(sourceKey, rootFolder, path);
+        if (cachedData) {
+          console.log('📦 Using cached data for path:', path);
+          set({ 
+            mangaList: cachedData.mangaList,
+            currentPath: path,
+            loading: false 
+          });
+          // If cache is fresh, we can skip the API call
+          return;
+        }
+
+        // 2. If no cache, fetch from API
         try {
-          const { sourceKey, rootFolder } = useAuthStore.getState();
-          const { mangaSettings } = get();
           const params = {
             mode: 'path',
             key: sourceKey,
             root: rootFolder,
             path: path,
-            useDb: mangaSettings.useDb ? '1' : '0' // Use setting từ store
+            useDb: mangaSettings.useDb ? '1' : '0'
           };
           const response = await apiService.manga.getFolders(params);
           const data = response.data;
           
-          console.log('🔍 API Response:', data); // Debug API response
+          console.log('🔍 API Response:', data);
           
-          // Helper function để xử lý URL encoding - đơn giản hóa
           const cleanImageUrl = (url) => {
             if (!url || typeof url !== 'string') return url;
-            
-            // Nếu URL đã có protocol thì return luôn
             if (url.startsWith('http') || url.startsWith('/default/')) return url;
-            
-            // Trả về URL gốc để let server xử lý decoding
             return url;
           };
           
-          // Process the response similar to original folder.js
           let folders = [];
           if (data.type === 'folder') {
-            // ONLY create selfReader when current folder has images (like frontend line 81-92)
             if (data.images && data.images.length > 0) {
               const parts = path.split('/');
               const folderName = parts[parts.length - 1] || 'Xem ảnh';
@@ -149,64 +158,40 @@ export const useMangaStore = create(
               });
             }
             
-            // Add subfolders - just concat data.folders (like frontend line 94)
-            // DON'T create additional selfReader entries for subfolders
             if (data.folders && data.folders.length > 0) {
-              console.log('📂 Total folders from API:', data.folders.length);
-              
               for (const folder of data.folders) {
-                // Debug the folder object first
-                console.log('🔍 Processing folder:', {
-                  name: folder.name,
-                  path: folder.path,
-                  hasName: !!folder.name,
-                  hasPath: !!folder.path,
-                  nameLength: folder.name?.length,
-                  pathLength: folder.path?.length
-                });
-                
-                // Just add all folders - no filtering
-                console.log('✅ Adding folder:', folder.name);
                 folders.push({
                   ...folder,
                   thumbnail: cleanImageUrl(folder.thumbnail),
-                  // These folders are NOT selfReaders, they're normal folders
                   isSelfReader: false,
-                  hasImages: false // Don't assume they have images
+                  hasImages: false
                 });
               }
-              
-              console.log(`📊 Folder processing complete: ${folders.length} folders added`);
             }
           } else if (data.type === 'reader') {
-            // Handle reader type - theo frontend line 122-126: redirect to reader.html
-            console.log('🔄 API returned reader type, navigating to reader...');
-            // Trong React, sử dụng navigate() thay vì window.location.href
-            // Note: không thể dùng navigate() trực tiếp trong store, cần return flag
             set({ 
-              mangaList: [], // Clear list để trigger navigation
+              mangaList: [],
               currentPath: path,
               loading: false,
-              shouldNavigateToReader: path // Flag để component detect và navigate
+              shouldNavigateToReader: path
             });
-            return; // Early return để không process folders
+            return;
           }
           
-          console.log('📁 Processed folders:', folders); // Debug processed folders
+          console.log('📁 Processed folders:', folders);
           
-          // Debug empty folders
           if (folders.length === 0) {
             console.warn('⚠️ No folders found for path:', path);
-            console.log('API data type:', data.type);
-            console.log('Has images:', data.images?.length || 0);
-            console.log('Has folders:', data.folders?.length || 0);
           }
           
+          // 3. Set state and save to cache
           set({ 
             mangaList: folders,
             currentPath: path,
             loading: false 
           });
+          setMangaCache(sourceKey, rootFolder, path, { mangaList: folders });
+
         } catch (error) {
           console.error('Fetch manga folders error:', error);
           set({ error: error.response?.data?.message || error.message, loading: false });
