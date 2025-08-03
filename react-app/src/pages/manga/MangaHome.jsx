@@ -6,6 +6,7 @@ import { Search, Heart, BookOpen, Grid, List, Filter, Loader, ArrowLeft, Setting
 import { useNavigate } from 'react-router-dom';
 import { useMangaStore, useUIStore, useAuthStore } from '../../store';
 import Button from '../../components/common/Button';
+import MangaRandomSection from '../../components/manga/MangaRandomSection';
 
 const MangaHome = () => {
   const navigate = useNavigate();
@@ -118,6 +119,9 @@ const MangaHome = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+      {/* Random Sections - Chỉ hiển thị khi ở root path */}
+      {!currentPath && <MangaRandomSection />}
+      
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">

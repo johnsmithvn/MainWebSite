@@ -5,6 +5,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebounce } from 'use-debounce';
 import { SEARCH } from '@/constants';
 
+// Export specialized hooks
+export { default as useRandomItems } from './useRandomItems';
+
 // useLocalStorage hook
 export const useLocalStorage = (key, initialValue) => {
   const [storedValue, setStoredValue] = useState(() => {

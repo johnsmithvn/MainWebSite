@@ -7,26 +7,50 @@ import { STORAGE_KEYS } from '../constants';
 import { apiService } from '../utils/api';
 import { getMangaCache, setMangaCache } from '@/utils/mangaCache';
 
+// Helper function to get root folder from source key
+const getRootFolderFromKey = (sourceKey) => {
+  const keyToRootMap = {
+    'ROOT_DOW': 'dow',
+    'ROOT_FANTASY': 'fantasy', 
+    'ROOT_MANGAH': 'mangah',
+    'V_ANIME': 'anime',
+    'V_ANIMEH': 'animeh',
+    'V_JAVA': 'java',
+    'V_MOVIE': 'movie',
+    'M_MUSIC': 'music'
+  };
+  
+  return keyToRootMap[sourceKey] || sourceKey.toLowerCase().replace(/^(root_|v_|m_)/, '');
+};
+
 // Auth store
 export const useAuthStore = create(
   persist(
     (set, get) => ({
       sourceKey: 'ROOT_FANTASY', // Default for testing
-      rootFolder: 'Naruto', // Default for testing  
+      rootFolder: '', // Will be auto-calculated from sourceKey
       token: '',
       isAuthenticated: false,
       secureKeys: [],
       
-      setSourceKey: (sourceKey) => set({ sourceKey }),
+      setSourceKey: (sourceKey) => {
+        const rootFolder = getRootFolderFromKey(sourceKey);
+        set({ sourceKey, rootFolder });
+      },
+      
       setRootFolder: (rootFolder) => set({ rootFolder }),
       setToken: (token) => set({ token, isAuthenticated: !!token }),
       setSecureKeys: (secureKeys) => set({ secureKeys }),
       
-      login: (sourceKey, token) => set({ 
-        sourceKey, 
-        token, 
-        isAuthenticated: true 
-      }),
+      login: (sourceKey, token) => {
+        const rootFolder = getRootFolderFromKey(sourceKey);
+        set({ 
+          sourceKey, 
+          rootFolder,
+          token, 
+          isAuthenticated: true 
+        });
+      },
       
       logout: () => set({ 
         sourceKey: '', 
@@ -39,6 +63,15 @@ export const useAuthStore = create(
         const { secureKeys } = get();
         return secureKeys.includes(key);
       },
+      
+      // Initialize rootFolder if not set
+      initializeRootFolder: () => {
+        const { sourceKey, rootFolder } = get();
+        if (sourceKey && !rootFolder) {
+          const calculatedRoot = getRootFolderFromKey(sourceKey);
+          set({ rootFolder: calculatedRoot });
+        }
+      },
     }),
     {
       name: 'auth-storage',
@@ -48,6 +81,17 @@ export const useAuthStore = create(
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Auto-calculate rootFolder if missing after rehydration
+        if (state?.sourceKey && !state?.rootFolder) {
+          const rootFolder = getRootFolderFromKey(state.sourceKey);
+          state.rootFolder = rootFolder;
+        }
+        // Set default rootFolder for ROOT_FANTASY if not set
+        if (state?.sourceKey === 'ROOT_FANTASY' && !state?.rootFolder) {
+          state.rootFolder = 'fantasy';
+        }
+      },
     }
   )
 );

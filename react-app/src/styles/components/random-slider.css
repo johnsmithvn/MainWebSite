@@ -1,0 +1,201 @@
+/* 📁 src/styles/components/random-slider.css */
+/* 🎯 Random Slider Component Styles */
+
+.random-slider {
+  margin-bottom: 2rem;
+}
+
+.random-swiper {
+  overflow: visible;
+  padding-bottom: 1rem;
+}
+
+.random-slide {
+  width: 160px !important;
+  min-width: 160px;
+  max-width: 200px;
+}
+
+@media (min-width: 768px) {
+  .random-slide {
+    width: 180px !important;
+    min-width: 180px;
+    max-width: 220px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .random-slide {
+    width: 200px !important;
+    min-width: 200px;
+    max-width: 240px;
+  }
+}
+
+/* Custom Swiper Button Styles */
+.random-slider .swiper-button-prev,
+.random-slider .swiper-button-next {
+  width: 2rem;
+  height: 2rem;
+  margin-top: 0;
+  color: #6b7280;
+  background: transparent;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.dark .random-slider .swiper-button-prev,
+.dark .random-slider .swiper-button-next {
+  color: #d1d5db;
+}
+
+.random-slider .swiper-button-prev:hover,
+.random-slider .swiper-button-next:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.dark .random-slider .swiper-button-prev:hover,
+.dark .random-slider .swiper-button-next:hover {
+  background-color: #374151;
+  color: #ffffff;
+}
+
+.random-slider .swiper-button-prev::after,
+.random-slider .swiper-button-next::after {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.random-slider .swiper-button-prev {
+  left: -10px;
+}
+
+.random-slider .swiper-button-next {
+  right: -10px;
+}
+
+/* Custom Pagination Styles */
+.random-slider .swiper-pagination {
+  bottom: 0;
+}
+
+.random-slider .swiper-pagination-bullet {
+  background-color: #d1d5db;
+  opacity: 0.5;
+  width: 8px;
+  height: 8px;
+}
+
+.dark .random-slider .swiper-pagination-bullet {
+  background-color: #6b7280;
+}
+
+.random-slider .swiper-pagination-bullet-active {
+  background-color: #3b82f6;
+  opacity: 1;
+}
+
+/* Coverflow Effect Styles */
+.random-slider .swiper-slide-shadow-left,
+.random-slider .swiper-slide-shadow-right {
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.2),
+    transparent
+  );
+}
+
+/* Loading States */
+.random-slider-loading {
+  margin-bottom: 2rem;
+}
+
+.random-slider-error {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+}
+
+.dark .random-slider-error {
+  background-color: #1f2937;
+}
+
+/* Hover Effects */
+.random-slider:hover .swiper-button-prev,
+.random-slider:hover .swiper-button-next {
+  opacity: 1;
+}
+
+.random-slider .swiper-button-prev,
+.random-slider .swiper-button-next {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .random-slider .swiper-button-prev,
+  .random-slider .swiper-button-next {
+    display: none !important;
+  }
+  
+  .random-slide {
+    width: 140px !important;
+    min-width: 140px;
+  }
+}
+
+/* Auto-scroll indicator */
+.random-slider[data-autoplay="true"] .swiper-pagination-bullet-active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: #2563eb;
+  border-radius: 9999px;
+  animation: progress 3s linear infinite;
+}
+
+@keyframes progress {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Focus and accessibility */
+.random-slider .swiper-button-prev:focus,
+.random-slider .swiper-button-next:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #3b82f6, 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+/* Animation for slide transitions */
+.random-slider .swiper-slide-active .manga-card {
+  transform: scale(1.02);
+  transition: transform 0.3s ease;
+}
+
+/* Smooth scrolling for touch devices */
+.random-slider .swiper-wrapper {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for horizontal scroll */
+.random-slider .swiper-scrollbar {
+  background-color: #e5e7eb;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.dark .random-slider .swiper-scrollbar {
+  background-color: #374151;
+}
+
+.random-slider .swiper-scrollbar-drag {
+  background-color: #3b82f6;
+  border-radius: 2px;
+}
