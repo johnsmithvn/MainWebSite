@@ -3,13 +3,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, Heart, BookOpen, Grid, List, Filter, Loader, ArrowLeft, Settings } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMangaStore, useUIStore, useAuthStore } from '../../store';
 import Button from '../../components/common/Button';
 import MangaRandomSection from '../../components/manga/MangaRandomSection';
 
 const MangaHome = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { 
     mangaList, 
     currentPath, 
@@ -31,10 +32,17 @@ const MangaHome = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    // Fetch manga folders và favorites khi component mount
-    fetchMangaFolders();
+    // Xử lý URL path parameter giống frontend cũ
+    const urlPath = searchParams.get('path');
+    console.log('🔍 DEBUG MangaHome URL path param:', urlPath);
+    
+    if (urlPath) {
+      fetchMangaFolders(urlPath);
+    } else {
+      fetchMangaFolders();
+    }
     fetchFavorites();
-  }, [fetchMangaFolders, fetchFavorites]);
+  }, [searchParams, fetchMangaFolders, fetchFavorites]);
 
   useEffect(() => {
     // Debug: Log manga list when it changes

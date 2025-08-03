@@ -1,0 +1,189 @@
+/* 📁 src/styles/components/reader-header.css */
+/* 📚 Reader header styles */
+
+.reader-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.dark .reader-header {
+  background: rgba(31, 41, 55, 0.95);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.reader-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 60px;
+  max-width: 100%;
+}
+
+/* Left section */
+.reader-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Center section */
+.reader-header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 16px;
+  min-width: 0; /* Allow shrinking */
+}
+
+.folder-name-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  color: inherit;
+  font-weight: 600;
+  font-size: 16px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.folder-name-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dark .folder-name-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.folder-name-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+}
+
+/* Right section */
+.reader-header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Header buttons */
+.reader-header-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+}
+
+.reader-header-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  transform: scale(1.05);
+}
+
+.dark .reader-header-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.reader-header-btn:active {
+  transform: scale(0.95);
+}
+
+/* Specific button styles */
+.home-btn {
+  font-size: 20px;
+}
+
+.favorite-btn.active {
+  color: #ef4444;
+}
+
+.favorite-btn.active:hover {
+  color: #dc2626;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .reader-header-content {
+    padding: 0 12px;
+    height: 56px;
+  }
+  
+  .reader-header-right {
+    gap: 2px;
+  }
+  
+  .reader-header-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .folder-name-text {
+    max-width: 200px;
+    font-size: 14px;
+  }
+  
+  .folder-name-btn {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .reader-header-content {
+    padding: 0 8px;
+    height: 52px;
+  }
+  
+  .reader-header-right {
+    gap: 0;
+  }
+  
+  .reader-header-btn {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .folder-name-text {
+    max-width: 150px;
+    font-size: 13px;
+  }
+  
+  .reader-header-center {
+    margin: 0 8px;
+  }
+}
+
+/* Animation classes */
+.reader-header.hide {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.reader-header.show {
+  transform: translateY(0);
+  opacity: 1;
+}

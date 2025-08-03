@@ -3,7 +3,10 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { BookOpen, PanelLeft } from 'lucide-react';
 import { useMangaStore, useAuthStore } from '../../store';
 import { apiService } from '../../utils/api';
+import ReaderHeader from '../../components/manga/ReaderHeader';
+import toast from 'react-hot-toast';
 import '../../styles/components/manga-reader.css';
+import '../../styles/components/reader-header.css';
 
 const MangaReader = () => {
   const { folderId } = useParams();
@@ -21,6 +24,8 @@ const MangaReader = () => {
   const [touchEnd, setTouchEnd] = useState(null);
   const [preloadedImages, setPreloadedImages] = useState(new Set());
   const [imageCache, setImageCache] = useState(new Map()); // Cache for blob URLs
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [currentPath, setCurrentPath] = useState('');
   const readerRef = useRef(null);
 
   // the required distance between touchStart and touchEnd to be detected as a swipe
@@ -28,6 +33,9 @@ const MangaReader = () => {
 
   useEffect(() => {
     const path = searchParams.get('path');
+    console.log('🔍 DEBUG MangaReader - folderId from useParams:', folderId);
+    console.log('🔍 DEBUG MangaReader - path from searchParams:', path);
+    
     if (path) {
       loadFolderData(path);
     } else if (folderId) {
@@ -140,6 +148,9 @@ const MangaReader = () => {
         return;
       }
 
+      // Store current path for favorite and navigation
+      setCurrentPath(path);
+
       // Call API to get images
       const response = await apiService.manga.getFolders({
         mode: 'path',
@@ -159,6 +170,9 @@ const MangaReader = () => {
         if (response.data.images.length > 0) {
           preloadImage(response.data.images[0]);
         }
+
+        // Check favorite state
+        await checkFavoriteState(path);
       } else {
         setError('No images found in this folder');
       }
@@ -214,6 +228,69 @@ const MangaReader = () => {
     }
     if (isRightSwipe) {
       goToPrevPage();
+    }
+  };
+
+  // Check favorite state
+  const checkFavoriteState = async (path) => {
+    if (!sourceKey || !rootFolder) return;
+    
+    try {
+      const response = await apiService.manga.getFavorites({
+        key: sourceKey,
+        root: rootFolder
+      });
+      
+      if (response.data && Array.isArray(response.data)) {
+        const cleanPath = path.replace(/\/__self__$/, '');
+        const isInFavorites = response.data.some(f => f.path === cleanPath);
+        setIsFavorite(isInFavorites);
+      }
+    } catch (error) {
+      console.warn('❌ Failed to check favorite:', error);
+    }
+  };
+
+  // Toggle favorite
+  const handleToggleFavorite = async () => {
+    if (!sourceKey || !currentPath) return;
+    
+    const newFavoriteState = !isFavorite;
+    setIsFavorite(newFavoriteState);
+    
+    try {
+      await apiService.manga.toggleFavorite({
+        dbkey: sourceKey,
+        path: currentPath.replace(/\/__self__$/, ''),
+        value: newFavoriteState
+      });
+      
+      toast.success(newFavoriteState ? '✅ Đã thêm vào yêu thích' : '✅ Đã bỏ khỏi yêu thích');
+    } catch (error) {
+      console.error('❌ Error toggling favorite:', error);
+      setIsFavorite(!newFavoriteState); // Revert on error
+      toast.error('❌ Lỗi khi toggle yêu thích');
+    }
+  };
+
+  // Set thumbnail
+  const handleSetThumbnail = async () => {
+    if (!currentImages[currentPage] || !sourceKey || !rootFolder) return;
+    
+    try {
+      const currentImage = currentImages[currentPage];
+      const thumbnailPath = currentImage.replace(`/manga/${encodeURIComponent(rootFolder)}/`, '');
+      
+      await apiService.manga.setRootThumbnail({
+        key: sourceKey,
+        root: rootFolder,
+        thumbnail: thumbnailPath
+      });
+      
+      toast.success('✅ Đã đặt làm thumbnail');
+    } catch (error) {
+      console.error('❌ Error setting thumbnail:', error);
+      toast.error('❌ Lỗi khi đặt thumbnail');
     }
   };
 
@@ -294,13 +371,14 @@ const MangaReader = () => {
 
   return (
     <div className={`manga-reader ${readerSettings.readingMode === 'vertical' ? 'scroll-mode-active' : ''}`}>
-      {/* Simple Header */}
+      {/* Reader Header */}
       {showControls && (
-        <div className="simple-header">
-          <div className="manga-title">
-            {searchParams.get('path')?.split('/').pop() || 'Manga Reader'}
-          </div>
-        </div>
+        <ReaderHeader
+          currentPath={currentPath}
+          isFavorite={isFavorite}
+          onToggleFavorite={handleToggleFavorite}
+          onSetThumbnail={handleSetThumbnail}
+        />
       )}
 
       <div 

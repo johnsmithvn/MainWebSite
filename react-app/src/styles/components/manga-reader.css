@@ -24,6 +24,19 @@
   transform-origin: center center;
 }
 
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .reader {
+    padding-top: 56px;
+  }
+}
+
+@media (max-width: 480px) {
+  .reader {
+    padding-top: 52px;
+  }
+}
+
 /* ========== VERTICAL SCROLL MODE ========== */
 .reader.scroll-mode {
   overflow-y: auto;

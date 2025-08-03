@@ -53,10 +53,11 @@ export const apiService = {
   manga: {
     getFolders: (params) => api.get(`${API.ENDPOINTS.MANGA}/folder-cache`, { params }),
     getFavorites: (params) => api.get(`${API.ENDPOINTS.MANGA}/favorite`, { params }),
-    toggleFavorite: (dbkey, path, value) => api.post(`${API.ENDPOINTS.MANGA}/favorite`, { dbkey, path, value }),
+    toggleFavorite: (data) => api.post(`${API.ENDPOINTS.MANGA}/favorite`, data),
     resetCache: (params) => api.delete(`${API.ENDPOINTS.MANGA}/reset-cache`, { params }),
     scan: (root, key) => api.post(`${API.ENDPOINTS.MANGA}/scan`, { root, key }),
     getRootThumbnail: (params) => api.get(`${API.ENDPOINTS.MANGA}/root-thumbnail`, { params }),
+    setRootThumbnail: (data) => api.post(`${API.ENDPOINTS.MANGA}/root-thumbnail`, data),
   },
 
   // Movie APIs
