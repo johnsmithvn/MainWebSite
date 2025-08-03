@@ -17,7 +17,6 @@ const MangaCard = ({
   variant = 'default' // 'default', 'slider', 'grid'
 }) => {
   const navigate = useNavigate();
-  const { setShouldNavigateToReader } = useMangaStore();
 
   const handleCardClick = (e) => {
     e.stopPropagation();
@@ -28,7 +27,7 @@ const MangaCard = ({
     }
     
     if (manga.isSelfReader) {
-      setShouldNavigateToReader(true);
+      // Direct navigation để đảm bảo browser history hoạt động đúng
       navigate(`/manga/reader/${encodeURIComponent(manga.path)}`);
     } else {
       navigate(`/manga?path=${encodeURIComponent(manga.path)}`);

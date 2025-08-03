@@ -291,10 +291,6 @@ const RandomSlider = ({
                     isFavorite={item.isFavorite || false}
                     variant="compact"
                     showViews={showViews}
-                    onClick={() => {
-                      // Handle navigation logic here
-                      console.log('Card clicked:', item);
-                    }}
                     onToggleFavorite={(isFavorite) => 
                       handleToggleFavorite(item.path, isFavorite)
                     }

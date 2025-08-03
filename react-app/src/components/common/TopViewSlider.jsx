@@ -250,10 +250,6 @@ const TopViewSlider = ({
                       isFavorite={item.isFavorite || false}
                       variant="compact"
                       showViews={true} // Always show views for top view slider
-                      onClick={() => {
-                        // Handle navigation logic here
-                        console.log('Top view card clicked:', item);
-                      }}
                       onToggleFavorite={(isFavorite) => 
                         handleToggleFavorite(item.path, isFavorite)
                       }
