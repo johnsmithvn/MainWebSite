@@ -2,7 +2,7 @@
 // 🏠 Trang chủ manga - hiển thị danh sách manga
 
 import React, { useState, useEffect } from 'react';
-import { Search, Heart, BookOpen, Grid, List, Filter, Loader, ArrowLeft } from 'lucide-react';
+import { Search, Heart, BookOpen, Grid, List, Filter, Loader, ArrowLeft, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMangaStore, useUIStore, useAuthStore } from '../../store';
 import Button from '../../components/common/Button';

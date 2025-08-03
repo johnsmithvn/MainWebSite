@@ -88,6 +88,11 @@ export const useMangaStore = create(
         autoNext: false,
         preloadCount: 10, // Number of images to preload before and after current page
       },
+      mangaSettings: {
+        useDb: true, // true: load folder từ DB, false: load từ disk
+        gridLoadFromDb: true, // Setting cho folder grid loading  
+        lazyLoad: false // Setting cho lazy loading images
+      },
       
       setCurrentPath: (path) => set({ currentPath: path }),
       setAllFolders: (folders) => set({ allFolders: folders }),
@@ -103,12 +108,13 @@ export const useMangaStore = create(
         set({ loading: true, error: null });
         try {
           const { sourceKey, rootFolder } = useAuthStore.getState();
+          const { mangaSettings } = get();
           const params = {
             mode: 'path',
             key: sourceKey,
             root: rootFolder,
             path: path,
-            useDb: '1'
+            useDb: mangaSettings.useDb ? '1' : '0' // Use setting từ store
           };
           const response = await apiService.manga.getFolders(params);
           const data = response.data;
@@ -229,6 +235,10 @@ export const useMangaStore = create(
         readerSettings: { ...state.readerSettings, ...settings }
       })),
       
+      updateMangaSettings: (settings) => set((state) => ({
+        mangaSettings: { ...state.mangaSettings, ...settings }
+      })),
+      
       clearMangaCache: () => set({ 
         mangaList: [], 
         allFolders: [], 
@@ -263,6 +273,7 @@ export const useMangaStore = create(
         recentViewed: state.recentViewed,
         favorites: state.favorites,
         readerSettings: state.readerSettings,
+        mangaSettings: state.mangaSettings,
       }),
     }
   )

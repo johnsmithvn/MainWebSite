@@ -31,6 +31,15 @@ export const READER = {
 };
 
 /**
+ * 📚 Manga Settings
+ */
+export const MANGA = {
+  DEFAULT_USE_DB: true, // true: load từ DB, false: load từ disk
+  GRID_LOAD_FROM_DB: true, // Setting cho folder grid loading
+  READER_LOAD_FROM_DB: true // Setting cho reader image loading
+};
+
+/**
  * 💾 Cache Settings
  */
 export const CACHE = {

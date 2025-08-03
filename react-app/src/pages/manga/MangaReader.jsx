@@ -9,7 +9,7 @@ const MangaReader = () => {
   const { folderId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { readerSettings, updateReaderSettings } = useMangaStore();
+  const { readerSettings, updateReaderSettings, mangaSettings } = useMangaStore();
   const { sourceKey, rootFolder } = useAuthStore();
   
   const [currentImages, setCurrentImages] = useState([]);
@@ -146,7 +146,7 @@ const MangaReader = () => {
         path: path,
         key: sourceKey,
         root: rootFolder,
-        useDb: '1'
+        useDb: mangaSettings.useDb ? '1' : '0' // Use setting từ store
       });
 
       console.log('🎯 API Response:', response.data);

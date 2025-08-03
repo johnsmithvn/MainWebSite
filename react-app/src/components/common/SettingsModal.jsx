@@ -34,7 +34,9 @@ const SettingsModal = ({ isOpen, onClose }) => {
   const { 
     clearMangaCache,
     readerSettings,
-    updateReaderSettings 
+    updateReaderSettings,
+    mangaSettings,
+    updateMangaSettings
   } = useMangaStore();
   const { clearMovieCache } = useMovieStore();
   const { clearMusicCache } = useMusicStore();
@@ -56,7 +58,11 @@ const SettingsModal = ({ isOpen, onClose }) => {
 
   const settingsTabs = [
     { id: 'appearance', label: 'Giao diện', icon: Palette },
-    { id: 'reader', label: 'Đọc truyện', icon: Eye },
+    { 
+      id: 'reader', 
+      label: (sourceKey && sourceKey.startsWith('V_')) ? 'Manga' : 'Đọc truyện', 
+      icon: Eye 
+    },
     { id: 'player', label: 'Phát media', icon: Volume2 },
     { id: 'system', label: 'Hệ thống', icon: Database },
   ];
@@ -258,7 +264,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
             {activeTab === 'reader' && (
               <div className="space-y-6">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  Cài đặt đọc truyện
+                  {(sourceKey && sourceKey.startsWith('V_')) ? 'Cài đặt Manga' : 'Cài đặt đọc truyện'}
                 </h3>
                 
                 {/* Preload Count */}
@@ -400,6 +406,53 @@ const SettingsModal = ({ isOpen, onClose }) => {
                         <div className="font-medium text-sm">Kích thước gốc</div>
                       </div>
                     </button>
+                  </div>
+                </div>
+
+                {/* Manga Load Settings */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    🗄️ Manga Settings
+                  </label>
+                  
+                  <div className="space-y-4">
+                    {/* Use Database */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">Load từ Database</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          Bật: Duyệt folder nhanh từ DB đã scan | Tắt: Đọc trực tiếp từ ổ đĩa
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={mangaSettings.useDb}
+                          onChange={(e) => updateMangaSettings({ useDb: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+
+                    {/* Lazy Load */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">Lazy Load Images</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          Bật: Tiết kiệm RAM, tải từng ảnh | Tắt: Tải tất cả ảnh (mượt hơn)
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={mangaSettings.lazyLoad}
+                          onChange={(e) => updateMangaSettings({ lazyLoad: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
