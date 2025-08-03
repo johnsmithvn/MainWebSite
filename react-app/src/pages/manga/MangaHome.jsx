@@ -127,8 +127,8 @@ const MangaHome = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      {/* Random Sections - Chỉ hiển thị khi ở root path */}
-      {!currentPath && <MangaRandomSection />}
+      {/* Random Sections - Hiển thị ở tất cả các level */}
+      <MangaRandomSection />
       
       {/* Header */}
       <div className="mb-8">
