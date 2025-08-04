@@ -56,16 +56,6 @@ const RandomSlider = ({
     staleTime: 5 * 60 * 1000 // 5 minutes
   });
 
-  // Debug logging for timestamp
-  useEffect(() => {
-    console.log('🎲 RandomSlider timestamp update:', { 
-      type, 
-      lastUpdated, 
-      hasItems: !!items?.length,
-      itemCount: items?.length 
-    });
-  }, [type, lastUpdated, items?.length]);
-
   // Navigation functions
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();

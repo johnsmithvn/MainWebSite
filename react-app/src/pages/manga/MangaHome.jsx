@@ -52,8 +52,7 @@ const MangaHome = () => {
   // Effect để handle navigation to reader khi API trả về type: 'reader'
   useEffect(() => {
     if (shouldNavigateToReader) {
-      console.log('🚀 Navigating to reader for path:', shouldNavigateToReader);
-      navigate(`/manga/reader?path=${encodeURIComponent(shouldNavigateToReader)}`);
+      navigate(`/manga/reader?path=${encodeURIComponent(shouldNavigateToReader)}`, { replace: true });
       clearNavigationFlag(); // Clear flag sau khi navigate
     }
   }, [shouldNavigateToReader, navigate, clearNavigationFlag]);

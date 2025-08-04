@@ -26,9 +26,14 @@ const MangaCard = ({
       return;
     }
     
-    if (manga.isSelfReader) {
-      // Direct navigation để đảm bảo browser history hoạt động đúng
-      navigate(`/manga/reader/${encodeURIComponent(manga.path)}`);
+    // Smart detection for reader items
+    // Check isSelfReader OR if item has images (indicates it's a reader item)
+    const isReaderItem = manga.isSelfReader || 
+                        (manga.hasImages && manga.images?.length > 0) ||
+                        (manga.images && Array.isArray(manga.images) && manga.images.length > 0);
+    
+    if (isReaderItem) {
+      navigate(`/manga/reader?path=${encodeURIComponent(manga.path)}`);
     } else {
       navigate(`/manga?path=${encodeURIComponent(manga.path)}`);
     }
