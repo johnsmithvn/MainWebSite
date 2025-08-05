@@ -121,7 +121,6 @@ export const useMangaStore = create(
       allFolders: [],
       mangaList: [], // Initialize with empty array
       favorites: [],
-      recentViewed: [],
       loading: false,
       error: null,
       searchTerm: '',
@@ -257,11 +256,6 @@ export const useMangaStore = create(
         }
       },
       
-      addToRecentViewed: (item) => set((state) => {
-        const recent = state.recentViewed.filter(r => r.path !== item.path);
-        return { recentViewed: [item, ...recent].slice(0, 20) };
-      }),
-      
       updateReaderSettings: (settings) => set((state) => ({
         readerSettings: { ...state.readerSettings, ...settings }
       })),
@@ -380,7 +374,6 @@ export const useMovieStore = create(
       currentPath: '',
       allMovies: [],
       favorites: [],
-      recentViewed: [],
       playerSettings: {
         volume: 1,
         autoplay: false,
@@ -391,11 +384,6 @@ export const useMovieStore = create(
       setCurrentPath: (path) => set({ currentPath: path }),
       setAllMovies: (movies) => set({ allMovies: movies }),
       setFavorites: (favorites) => set({ favorites }),
-      
-      addToRecentViewed: (item) => set((state) => {
-        const recent = state.recentViewed.filter(r => r.path !== item.path);
-        return { recentViewed: [item, ...recent].slice(0, 20) };
-      }),
       
       updatePlayerSettings: (settings) => set((state) => ({
         playerSettings: { ...state.playerSettings, ...settings }

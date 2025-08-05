@@ -10,7 +10,6 @@ import {
   FiFilm, 
   FiMusic, 
   FiStar, 
-  FiClock, 
   FiSettings,
   FiRefreshCw,
   FiTrash2,
@@ -24,9 +23,6 @@ import Button from './Button';
 const Sidebar = () => {
   const location = useLocation();
   const { sourceKey, rootFolder } = useAuthStore();
-  const { recentViewed: mangaRecent } = useMangaStore();
-  const { recentViewed: movieRecent } = useMovieStore();
-  const { recentPlayed: musicRecent } = useMusicStore();
 
   const menuItems = [
     {
@@ -44,14 +40,6 @@ const Sidebar = () => {
         { path: '/manga/favorites', icon: FiHeart, label: 'Manga yêu thích' },
         { path: '/movie/favorites', icon: FiHeart, label: 'Movie yêu thích' },
         { path: '/music/favorites', icon: FiHeart, label: 'Music yêu thích' },
-      ]
-    },
-    {
-      title: 'Gần đây',
-      items: [
-        { path: '/manga/recent', icon: FiClock, label: 'Manga gần đây', count: mangaRecent.length },
-        { path: '/movie/recent', icon: FiClock, label: 'Movie gần đây', count: movieRecent.length },
-        { path: '/music/recent', icon: FiClock, label: 'Music gần đây', count: musicRecent.length },
       ]
     }
   ];

@@ -10,6 +10,7 @@ import {
   Share, Download, Subtitles, Loader, RefreshCw
 } from 'lucide-react';
 import { useMovieStore, useUIStore, useAuthStore } from '@/store';
+import { useRecentManager } from '@/hooks/useRecentManager';
 import { apiService } from '@/utils/api';
 import Button from '@/components/common/Button';
 import toast from 'react-hot-toast';
@@ -24,12 +25,12 @@ const MoviePlayer = () => {
     currentMovie, 
     playerSettings, 
     updatePlayerSettings,
-    addToRecentViewed,
     toggleFavorite,
     favorites
   } = useMovieStore();
   const { darkMode } = useUIStore();
   const { sourceKey } = useAuthStore();
+  const { addRecentItem } = useRecentManager('movie');
 
   // === REFS ===
   const videoRef = useRef(null);
@@ -297,16 +298,16 @@ const MoviePlayer = () => {
    */
   useEffect(() => {
     if (path && currentTime > 30) { // Save after 30 seconds
-      addToRecentViewed({
+      addRecentItem({
         path,
-        title: movieInfo.title,
+        name: movieInfo.title, // Use 'name' instead of 'title' for consistency
         currentTime,
         duration,
         thumbnail: null,
         timestamp: Date.now()
       });
     }
-  }, [path, currentTime, duration, movieInfo.title, addToRecentViewed]);
+  }, [path, currentTime, duration, movieInfo.title, addRecentItem]);
 
   // === CONTROL FUNCTIONS ===
 
