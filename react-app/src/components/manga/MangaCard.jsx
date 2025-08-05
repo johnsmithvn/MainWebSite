@@ -68,7 +68,7 @@ const MangaCard = ({
   const handleFavoriteClick = (e) => {
     e.stopPropagation();
     if (onToggleFavorite) {
-      onToggleFavorite(manga.id || manga.path, !isFavorite);
+      onToggleFavorite();
     }
   };
 

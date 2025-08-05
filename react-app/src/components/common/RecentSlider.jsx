@@ -170,9 +170,9 @@ const RecentSlider = ({
   };
 
   // Handle favorite toggle
-  const handleToggleFavorite = async (itemId, isFavorite) => {
+  const handleToggleFavorite = async (item) => {
     try {
-      await toggleFavorite(itemId, isFavorite);
+      await toggleFavorite(item);
     } catch (error) {
       console.error('Error toggling favorite:', error);
     }
@@ -352,8 +352,8 @@ const RecentSlider = ({
                       isFavorite={item.isFavorite || false}
                       variant="compact"
                       showViews={false} // Recent items don't need view count
-                      onToggleFavorite={(isFavorite) => 
-                        handleToggleFavorite(item.path, isFavorite)
+                      onToggleFavorite={() => 
+                        handleToggleFavorite(item)
                       }
                       className="w-48"
                     />

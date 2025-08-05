@@ -428,7 +428,8 @@ const MusicPlayer = () => {
    */
   const handleToggleFavorite = useCallback(async () => {
     try {
-      await apiService.music.toggleFavorite(path);
+      const { sourceKey } = useAuthStore.getState();
+      await apiService.music.toggleFavorite(sourceKey, path, !isFavorited);
       toggleFavorite(path);
       toast.success(isFavorited ? 'Đã xóa khỏi yêu thích' : 'Đã thêm vào yêu thích');
     } catch (error) {

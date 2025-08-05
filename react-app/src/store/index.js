@@ -6,6 +6,7 @@ import { persist } from 'zustand/middleware';
 import { STORAGE_KEYS } from '../constants';
 import { apiService } from '../utils/api';
 import { getMangaCache, setMangaCache } from '@/utils/mangaCache';
+import { updateFavoriteInAllCaches } from '@/utils/favoriteCache';
 
 // Helper function to get root folder from source key
 const getRootFolderFromKey = (sourceKey) => {
@@ -338,9 +339,10 @@ export const useMangaStore = create(
         try {
           const { sourceKey } = useAuthStore.getState();
           const isFavorited = get().favorites.some(f => f.path === item.path);
+          const newFavoriteState = !isFavorited;
           
           // Call API to toggle favorite
-          await apiService.manga.toggleFavorite(sourceKey, item.path, !isFavorited);
+          await apiService.manga.toggleFavorite(sourceKey, item.path, newFavoriteState);
           
           // Update local state
           set((state) => {
@@ -349,6 +351,10 @@ export const useMangaStore = create(
               : [...state.favorites, item];
             return { favorites };
           });
+
+          // Update all cache entries
+          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState);
+          
         } catch (error) {
           console.error('Toggle favorite error:', error);
           set({ error: error.response?.data?.message || error.message });
@@ -411,9 +417,10 @@ export const useMovieStore = create(
         try {
           const { sourceKey } = useAuthStore.getState();
           const isFavorited = get().favorites.some(f => f.path === item.path);
+          const newFavoriteState = !isFavorited;
           
           // Call API to toggle favorite
-          await apiService.movie.toggleFavorite(item.path, sourceKey);
+          await apiService.movie.toggleFavorite(sourceKey, item.path, newFavoriteState);
           
           // Update local state
           set((state) => {
@@ -422,6 +429,10 @@ export const useMovieStore = create(
               : [...state.favorites, item];
             return { favorites };
           });
+
+          // Update all cache entries
+          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState);
+          
         } catch (error) {
           console.error('Toggle movie favorite error:', error);
         }
@@ -545,10 +556,11 @@ export const useMusicStore = create(
         try {
           const { sourceKey } = useAuthStore.getState();
           const isFavorited = get().favorites.some(f => f.path === item.path);
+          const newFavoriteState = !isFavorited;
           
           // Try to call API if it exists
           try {
-            await apiService.music.toggleFavorite?.(item.path, sourceKey);
+            await apiService.music.toggleFavorite(sourceKey, item.path, newFavoriteState);
           } catch {
             // Music favorites API not implemented yet, just log
             console.warn('Music toggle favorite API not implemented');
@@ -561,6 +573,10 @@ export const useMusicStore = create(
               : [...state.favorites, item];
             return { favorites };
           });
+
+          // Update all cache entries
+          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState);
+          
         } catch (error) {
           console.error('Toggle music favorite error:', error);
         }

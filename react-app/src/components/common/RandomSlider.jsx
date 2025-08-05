@@ -154,9 +154,9 @@ const RandomSlider = ({
   };
 
   // Handle favorite toggle
-  const handleToggleFavorite = async (itemId, isFavorite) => {
+  const handleToggleFavorite = async (item) => {
     try {
-      await toggleFavorite(itemId, isFavorite);
+      await toggleFavorite(item);
     } catch (error) {
       console.error('Error toggling favorite:', error);
     }
@@ -281,8 +281,8 @@ const RandomSlider = ({
                     isFavorite={item.isFavorite || false}
                     variant="compact"
                     showViews={showViews}
-                    onToggleFavorite={(isFavorite) => 
-                      handleToggleFavorite(item.path, isFavorite)
+                    onToggleFavorite={() => 
+                      handleToggleFavorite(item)
                     }
                     className="w-48"
                   />

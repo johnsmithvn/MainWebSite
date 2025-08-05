@@ -85,9 +85,9 @@ const MangaHome = () => {
     fetchMangaFolders(newPath);
   };
 
-  const handleToggleFavorite = async (itemPath, isFavorite) => {
+  const handleToggleFavorite = async (item) => {
     try {
-      await toggleFavorite(itemPath, isFavorite);
+      await toggleFavorite(item);
       // Refresh favorites list to update UI
       fetchFavorites();
     } catch (error) {
@@ -276,8 +276,8 @@ const MangaHome = () => {
               key={`${item.path || item.name || index}`}
               manga={item}
               isFavorite={favorites.includes(item.path)}
-              onToggleFavorite={(isFavorite) => 
-                handleToggleFavorite(item.path, isFavorite)
+              onToggleFavorite={() => 
+                handleToggleFavorite(item)
               }
               onClick={handleFolderClick}
               showViews={false}

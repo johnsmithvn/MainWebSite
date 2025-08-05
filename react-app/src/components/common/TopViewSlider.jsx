@@ -142,9 +142,9 @@ const TopViewSlider = ({
   };
 
   // Handle favorite toggle
-  const handleToggleFavorite = async (itemId, isFavorite) => {
+  const handleToggleFavorite = async (item) => {
     try {
-      await toggleFavorite(itemId, isFavorite);
+      await toggleFavorite(item);
     } catch (error) {
       console.error('Error toggling favorite:', error);
     }
@@ -250,8 +250,8 @@ const TopViewSlider = ({
                       isFavorite={item.isFavorite || false}
                       variant="compact"
                       showViews={true} // Always show views for top view slider
-                      onToggleFavorite={(isFavorite) => 
-                        handleToggleFavorite(item.path, isFavorite)
+                      onToggleFavorite={() => 
+                        handleToggleFavorite(item)
                       }
                       className="w-48"
                     />

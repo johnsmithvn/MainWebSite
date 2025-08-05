@@ -432,7 +432,8 @@ const MoviePlayer = () => {
    */
   const handleToggleFavorite = useCallback(async () => {
     try {
-      await apiService.movie.toggleFavorite(path);
+      const { sourceKey } = useAuthStore.getState();
+      await apiService.movie.toggleFavorite(sourceKey, path, !isFavorited);
       toggleFavorite(path);
       toast.success(isFavorited ? 'Đã xóa khỏi yêu thích' : 'Đã thêm vào yêu thích');
     } catch (error) {
