@@ -4,6 +4,7 @@
 import React from 'react';
 import RandomSlider from '@/components/common/RandomSlider';
 import TopViewSlider from '@/components/common/TopViewSlider';
+import RecentSlider from '@/components/common/RecentSlider';
 import { useAuthStore } from '@/store';
 
 const MangaRandomSection = () => {
@@ -33,6 +34,17 @@ const MangaRandomSection = () => {
         title="🔥 Manga xem nhiều"
         autoplay={false}
         className="manga-top-view"
+      />
+
+      {/* Recent Viewed */}
+      <RecentSlider
+        type="manga"
+        title="🕒 Vừa đọc"
+        autoplay={false}
+        showRefresh={false}
+        showTimestamp={true}
+        maxItems={15}
+        className="manga-recent-view"
       />
     </div>
   );

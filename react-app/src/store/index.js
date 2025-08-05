@@ -136,7 +136,9 @@ export const useMangaStore = create(
       mangaSettings: {
         useDb: true, // true: load folder từ DB, false: load từ disk
         gridLoadFromDb: true, // Setting cho folder grid loading  
-        lazyLoad: false // Setting cho lazy loading images
+        lazyLoad: false, // Setting cho lazy loading images
+        recentHistoryCount: 20, // Số lượng lịch sử lưu trữ (mặc định 20)
+        enableRecentTracking: true // Bật/tắt theo dõi lịch sử xem
       },
       
       setCurrentPath: (path) => set({ currentPath: path }),
@@ -267,6 +269,69 @@ export const useMangaStore = create(
       updateMangaSettings: (settings) => set((state) => ({
         mangaSettings: { ...state.mangaSettings, ...settings }
       })),
+      
+      // Clear recent history from localStorage
+      clearRecentHistory: (type = 'manga') => {
+        const { sourceKey, rootFolder } = useAuthStore.getState();
+        try {
+          let cacheKey;
+          switch (type) {
+            case 'manga':
+              cacheKey = `recentViewed::${rootFolder}::${rootFolder}`;
+              break;
+            case 'movie':
+              cacheKey = `recentViewedVideo::${sourceKey}`;
+              break;
+            case 'music':
+              cacheKey = `recentViewedMusic::${sourceKey}`;
+              break;
+            default:
+              cacheKey = `recentViewed::${type}::${sourceKey}`;
+          }
+          
+          localStorage.removeItem(cacheKey);
+          console.log('🗑️ Cleared recent history:', { type, cacheKey });
+        } catch (error) {
+          console.warn('Error clearing recent history:', error);
+        }
+      },
+      
+      // Clear all cache (recent, random, topview)
+      clearAllCache: () => {
+        const { sourceKey, rootFolder } = useAuthStore.getState();
+        try {
+          // Recent history cache keys
+          const recentKeys = [
+            `recentViewed::${rootFolder}::${rootFolder}`,
+            `recentViewedVideo::${sourceKey}`,
+            `recentViewedMusic::${sourceKey}`
+          ];
+          
+          // Random cache keys
+          const randomKeys = [
+            `randomView::${sourceKey}::${rootFolder}::manga`,
+            `randomView::${sourceKey}::${rootFolder}::movie`,
+            `randomView::${sourceKey}::${rootFolder}::music`
+          ];
+          
+          // Top view cache keys
+          const topViewKeys = [
+            `topView::${sourceKey}::${rootFolder}::manga`,
+            `topView::${sourceKey}::${rootFolder}::movie`,
+            `topView::${sourceKey}::${rootFolder}::music`
+          ];
+          
+          const allKeys = [...recentKeys, ...randomKeys, ...topViewKeys];
+          
+          allKeys.forEach(key => {
+            localStorage.removeItem(key);
+          });
+          
+          console.log('🗑️ Cleared all cache:', allKeys.length, 'keys');
+        } catch (error) {
+          console.warn('Error clearing all cache:', error);
+        }
+      },
       
       clearMangaCache: () => set({ 
         mangaList: [], 

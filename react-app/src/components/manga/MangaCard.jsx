@@ -5,6 +5,7 @@ import { FiEye, FiHeart } from 'react-icons/fi';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { useMangaStore } from '@/store';
+import { useRecentManager } from '@/hooks/useRecentManager';
 import { formatViewCount } from '@/utils/formatters';
 
 const MangaCard = ({ 
@@ -17,6 +18,7 @@ const MangaCard = ({
   variant = 'default' // 'default', 'slider', 'grid'
 }) => {
   const navigate = useNavigate();
+  const { addRecentItem } = useRecentManager('manga');
 
   const handleCardClick = (e) => {
     e.stopPropagation();
@@ -26,15 +28,39 @@ const MangaCard = ({
       return;
     }
     
-    // Smart detection for reader items
-    // Check isSelfReader OR if item has images (indicates it's a reader item)
-    const isReaderItem = manga.isSelfReader || 
-                        (manga.hasImages && manga.images?.length > 0) ||
-                        (manga.images && Array.isArray(manga.images) && manga.images.length > 0);
+    // Enhanced reader detection logic with debugging
+    const hasIsSelfReader = manga.isSelfReader;
+    const hasImages = manga.hasImages && manga.images?.length > 0;
+    const hasImagesArray = manga.images && Array.isArray(manga.images) && manga.images.length > 0;
+    const endsWithSelf = manga.path?.endsWith('/__self__');
+    
+    const isReaderItem = hasIsSelfReader || hasImages || hasImagesArray || endsWithSelf;
+    
+    console.log('📁 MangaCard navigation decision:', { 
+      isReaderItem,
+      hasIsSelfReader,
+      hasImages,
+      hasImagesArray,
+      endsWithSelf,
+      mangaPath: manga.path,
+      mangaName: manga.name,
+      imagesCount: manga.images?.length
+    });
     
     if (isReaderItem) {
+      console.log('📖 Navigating directly to reader:', manga.path);
       navigate(`/manga/reader?path=${encodeURIComponent(manga.path)}`);
+      
+      // Only add to recent when going to reader
+      setTimeout(() => {
+        try {
+          addRecentItem(manga);
+        } catch (error) {
+          console.warn('Error adding to recent:', error);
+        }
+      }, 0);
     } else {
+      console.log('📁 Navigating to folder:', manga.path);
       navigate(`/manga?path=${encodeURIComponent(manga.path)}`);
     }
   };

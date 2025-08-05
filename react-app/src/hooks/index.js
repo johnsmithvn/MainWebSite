@@ -7,6 +7,8 @@ import { SEARCH } from '@/constants';
 
 // Export specialized hooks
 export { default as useRandomItems } from './useRandomItems';
+export { default as useRecentItems } from './useRecentItems';
+export { default as useRecentManager } from './useRecentManager';
 
 // useLocalStorage hook
 export const useLocalStorage = (key, initialValue) => {

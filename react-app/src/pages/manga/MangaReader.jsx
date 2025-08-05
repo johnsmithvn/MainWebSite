@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { BookOpen, PanelLeft } from 'lucide-react';
 import { useMangaStore, useAuthStore } from '../../store';
+import { useRecentManager } from '../../hooks/useRecentManager';
 import { apiService } from '../../utils/api';
 import ReaderHeader from '../../components/manga/ReaderHeader';
 import toast from 'react-hot-toast';
@@ -14,6 +15,7 @@ const MangaReader = () => {
   const [searchParams] = useSearchParams();
   const { readerSettings, updateReaderSettings, mangaSettings } = useMangaStore();
   const { sourceKey, rootFolder } = useAuthStore();
+  const { addRecentItem } = useRecentManager('manga');
   
   const [currentImages, setCurrentImages] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
@@ -165,6 +167,23 @@ const MangaReader = () => {
       if (response.data && response.data.type === 'reader' && Array.isArray(response.data.images)) {
         setCurrentImages(response.data.images);
         console.log('✅ Loaded images:', response.data.images.length);
+        
+        // Add to recent history when successfully loading reader
+        try {
+          const parts = path.split('/');
+          const folderName = parts[parts.length - 1] === '__self__' 
+            ? parts[parts.length - 2] || 'Xem ảnh'
+            : parts[parts.length - 1] || 'Xem ảnh';
+            
+          addRecentItem({
+            name: folderName,
+            path: path,
+            thumbnail: response.data.images[0] || null,
+            isFavorite: false // Will be updated later from checkFavoriteState
+          });
+        } catch (error) {
+          console.warn('Error adding to recent:', error);
+        }
         
         // Preload the first image immediately
         if (response.data.images.length > 0) {

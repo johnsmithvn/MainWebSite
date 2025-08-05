@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import Button from '@/components/common/Button';
+import { useModal } from '@/components/common/Modal';
 
 const Settings = () => {
   const { 
@@ -21,12 +22,31 @@ const Settings = () => {
   } = useUIStore();
   
   const { isAuthenticated, currentUser, logout } = useAuthStore();
-  const { clearMangaCache } = useMangaStore();
+  const { 
+    clearMangaCache, 
+    readerSettings, 
+    mangaSettings, 
+    updateReaderSettings, 
+    updateMangaSettings,
+    clearRecentHistory,
+    clearAllCache
+  } = useMangaStore();
   const { clearMovieCache } = useMovieStore();
   const { clearMusicCache } = useMusicStore();
 
   const [activeTab, setActiveTab] = useState('appearance');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  
+  // Modal hook
+  const { 
+    modalState, 
+    closeModal, 
+    confirmModal, 
+    alertModal, 
+    successModal, 
+    errorModal,
+    Modal: ModalComponent
+  } = useModal();
 
   const settingsTabs = [
     { id: 'appearance', label: 'Appearance', icon: Palette },
@@ -78,12 +98,52 @@ const Settings = () => {
         if (settings.language) {
           setLanguage(settings.language);
         }
-        alert('Settings imported successfully!');
+        successModal({
+          title: 'Thành công!',
+          message: 'Cài đặt đã được import thành công!'
+        });
       } catch (error) {
-        alert('Failed to import settings. Invalid file format.');
+        errorModal({
+          title: 'Lỗi import',
+          message: 'Không thể import cài đặt. File không đúng định dạng.'
+        });
       }
     };
     reader.readAsText(file);
+  };
+
+  // Clear recent history with modal confirmation
+  const handleClearRecentHistory = () => {
+    confirmModal({
+      title: '🗑️ Xóa lịch sử xem',
+      message: 'Bạn có chắc chắn muốn xóa toàn bộ lịch sử xem manga? Hành động này không thể hoàn tác.',
+      confirmText: 'Xóa lịch sử',
+      cancelText: 'Hủy',
+      onConfirm: () => {
+        clearRecentHistory('manga');
+        successModal({
+          title: 'Đã xóa!',
+          message: 'Lịch sử xem đã được xóa thành công.'
+        });
+      }
+    });
+  };
+
+  // Clear all cache with modal confirmation
+  const handleClearAllCache = () => {
+    confirmModal({
+      title: '⚠️ Xóa toàn bộ cache',
+      message: 'Bạn có chắc chắn muốn xóa toàn bộ cache (lịch sử, random, top view)? Điều này sẽ làm mất tất cả dữ liệu đã lưu.',
+      confirmText: 'Xóa tất cả',
+      cancelText: 'Hủy',
+      onConfirm: () => {
+        clearAllCache();
+        successModal({
+          title: 'Đã xóa!',
+          message: 'Toàn bộ cache đã được xóa thành công.'
+        });
+      }
+    });
   };
 
   const handleResetApp = () => {
@@ -259,6 +319,113 @@ const Settings = () => {
                   <Button variant="outline" onClick={clearMusicCache}>
                     Clear
                   </Button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Recent History</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Clear viewing history cache</p>
+                  </div>
+                  <Button variant="outline" onClick={handleClearRecentHistory} className="text-red-600 hover:text-red-700">
+                    Clear History
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">All Cache</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Clear all cached data (recent, random, topview)</p>
+                  </div>
+                  <Button variant="outline" onClick={handleClearAllCache} className="text-red-600 hover:text-red-700">
+                    Clear All
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Manga Settings */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">📚 Manga Settings</h4>
+              <div className="space-y-4">
+                {/* Recent History Count */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Số trang preload: {readerSettings.preloadCount}
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    value={readerSettings.preloadCount}
+                    onChange={(e) => updateReaderSettings({ preloadCount: parseInt(e.target.value) })}
+                    className="w-full max-w-xs"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Số ảnh được tải trước để đọc mượt hơn</p>
+                </div>
+
+                {/* Recent History Count */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Số lượng lịch sử lưu: {mangaSettings.recentHistoryCount}
+                  </label>
+                  <input
+                    type="range"
+                    min="5"
+                    max="50"
+                    value={mangaSettings.recentHistoryCount}
+                    onChange={(e) => updateMangaSettings({ recentHistoryCount: parseInt(e.target.value) })}
+                    className="w-full max-w-xs"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Số manga được lưu trong lịch sử xem</p>
+                </div>
+
+                {/* Enable Recent Tracking */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Theo dõi lịch sử xem</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Tự động lưu manga vừa xem</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={mangaSettings.enableRecentTracking}
+                      onChange={(e) => updateMangaSettings({ enableRecentTracking: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                {/* Use Database */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Sử dụng Database</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Load folder từ DB thay vì disk</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={mangaSettings.useDb}
+                      onChange={(e) => updateMangaSettings({ useDb: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                {/* Lazy Load */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Lazy Loading</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Tải ảnh khi cần thiết</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={mangaSettings.lazyLoad}
+                      onChange={(e) => updateMangaSettings({ lazyLoad: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </label>
                 </div>
               </div>
             </div>
@@ -509,6 +676,9 @@ const Settings = () => {
           </div>
         </div>
       </div>
+      
+      {/* Modal Component */}
+      <ModalComponent />
     </div>
   );
 };

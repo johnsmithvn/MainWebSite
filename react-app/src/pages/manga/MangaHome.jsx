@@ -6,6 +6,7 @@ import { Search, Heart, BookOpen, Grid, List, Filter, Loader, ArrowLeft, Setting
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMangaStore, useUIStore, useAuthStore } from '../../store';
 import Button from '../../components/common/Button';
+import MangaCard from '../../components/manga/MangaCard';
 import MangaRandomSection from '../../components/manga/MangaRandomSection';
 
 const MangaHome = () => {
@@ -22,6 +23,7 @@ const MangaHome = () => {
     setSearchTerm,
     fetchMangaFolders,
     fetchFavorites,
+    toggleFavorite,
     clearNavigationFlag
   } = useMangaStore();
   
@@ -81,6 +83,16 @@ const MangaHome = () => {
     pathParts.pop();
     const newPath = pathParts.join('/');
     fetchMangaFolders(newPath);
+  };
+
+  const handleToggleFavorite = async (itemPath, isFavorite) => {
+    try {
+      await toggleFavorite(itemPath, isFavorite);
+      // Refresh favorites list to update UI
+      fetchFavorites();
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
   };
 
   const filteredManga = mangaList?.filter(manga =>
@@ -257,88 +269,67 @@ const MangaHome = () => {
             Try adjusting your search or check the folder path
           </p>
         </div>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {sortedManga.map((item, index) => (
+            <MangaCard
+              key={`${item.path || item.name || index}`}
+              manga={item}
+              isFavorite={favorites.includes(item.path)}
+              onToggleFavorite={(isFavorite) => 
+                handleToggleFavorite(item.path, isFavorite)
+              }
+              onClick={handleFolderClick}
+              showViews={false}
+              variant="grid"
+              className="w-full"
+            />
+          ))}
+        </div>
       ) : (
-        <div className={`grid ${
-          viewMode === 'grid' 
-            ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-6' 
-            : 'grid-cols-1'
-        } gap-4`}>
+        <div className="grid grid-cols-1 gap-4">
           {sortedManga.map((item, index) => (
             <div
               key={`${item.path || item.name || index}`}
               onClick={() => handleFolderClick(item)}
-              className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg 
-                        transition-all duration-200 cursor-pointer group
-                        ${viewMode === 'list' ? 'flex items-center p-4' : 'p-3'}`}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg 
+                        transition-all duration-200 cursor-pointer group flex items-center p-4"
             >
-              {viewMode === 'grid' ? (
-                <>
-                  <div className="aspect-[3/4] bg-gray-200 dark:bg-gray-700 rounded-md mb-3 
-                                overflow-hidden flex items-center justify-center">
-                    {item.isDirectory ? (
-                      <div className="text-6xl">📁</div>
-                    ) : (
-                      <img
-                        src={item.thumbnail || '/default/default-cover.jpg'}
-                        alt={item.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        onError={(e) => {
-                          console.error('Thumbnail failed to load:', e.target.src);
-                          // Đơn giản: chỉ fallback không thử decode nữa
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'block';
-                        }}
-                      />
-                    )}
-                    <div className="text-6xl hidden">📖</div>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1 
-                               line-clamp-2" title={item.name || item.path || 'Unknown'}>
+              <div className="flex items-center gap-4 w-full">
+                <div className="w-16 h-20 bg-gray-200 dark:bg-gray-700 rounded-md 
+                              flex-shrink-0 overflow-hidden flex items-center justify-center">
+                  {item.isDirectory ? (
+                    <div className="text-4xl">📁</div>
+                  ) : (
+                    <img
+                      src={item.thumbnail || '/default/default-cover.jpg'}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('List thumbnail failed to load:', e.target.src);
+                        // Đơn giản: chỉ fallback không thử decode nữa
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                  )}
+                  <div className="text-4xl hidden">📖</div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1" title={item.name || item.path || 'Unknown'}>
                     {item.name && item.name !== '()' ? item.name : (item.path || 'Unknown Item')}
                   </h3>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     {item.isDirectory ? 'Folder' : 'File'}
+                    {item.size && ` • ${(item.size / 1024 / 1024).toFixed(1)} MB`}
                   </p>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-4 w-full">
-                    <div className="w-16 h-20 bg-gray-200 dark:bg-gray-700 rounded-md 
-                                  flex-shrink-0 overflow-hidden flex items-center justify-center">
-                      {item.isDirectory ? (
-                        <div className="text-4xl">📁</div>
-                      ) : (
-                        <img
-                          src={item.thumbnail || '/default/default-cover.jpg'}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            console.error('List thumbnail failed to load:', e.target.src);
-                            // Đơn giản: chỉ fallback không thử decode nữa
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'block';
-                          }}
-                        />
-                      )}
-                      <div className="text-4xl hidden">📖</div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-1" title={item.name || item.path || 'Unknown'}>
-                        {item.name && item.name !== '()' ? item.name : (item.path || 'Unknown Item')}
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        {item.isDirectory ? 'Folder' : 'File'}
-                        {item.size && ` • ${(item.size / 1024 / 1024).toFixed(1)} MB`}
-                      </p>
-                      {item.lastModified && (
-                        <p className="text-xs text-gray-500">
-                          Modified: {new Date(item.lastModified).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
+                  {item.lastModified && (
+                    <p className="text-xs text-gray-500">
+                      Modified: {new Date(item.lastModified).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           ))}
         </div>
