@@ -20,6 +20,9 @@ const MangaCard = ({
   const navigate = useNavigate();
   const { addRecentItem } = useRecentManager('manga');
 
+  // Normalize isFavorite - handle both boolean and 0/1 values
+  const isCurrentlyFavorite = Boolean(isFavorite || manga?.isFavorite);
+
   const handleCardClick = (e) => {
     e.stopPropagation();
     
@@ -87,22 +90,27 @@ const MangaCard = ({
           wrapperClassName="manga-card-image-wrapper"
           placeholderSrc="/default/default-cover.jpg"
         />
+        
+        {/* View count badge - always visible when showViews is true */}
+        {showViews && (manga.count > 0 || manga.viewCount > 0) && (
+          <div className="view-count-badge">
+            <FiEye />
+            <span>{formatViewCount(manga.count || manga.viewCount || 0)}</span>
+          </div>
+        )}
+        
+        {/* Favorite button - always visible when active, or on hover */}
+        <button
+          className={`manga-card-favorite ${isCurrentlyFavorite ? 'active' : ''}`}
+          onClick={handleFavoriteClick}
+          title={isCurrentlyFavorite ? 'Bỏ yêu thích' : 'Thêm yêu thích'}
+        >
+          <FiHeart />
+        </button>
+        
+        {/* Overlay for general hover effects */}
         <div className="manga-card-overlay">
-          {/* View count with enhanced styling - only show when explicitly enabled */}
-          {showViews && (manga.count > 0 || manga.viewCount > 0) && (
-            <div className="view-count-badge">
-              <FiEye />
-              <span>{formatViewCount(manga.count || manga.viewCount || 0)}</span>
-            </div>
-          )}
-          
-          <button
-            className={`manga-card-favorite ${isFavorite ? 'active' : ''}`}
-            onClick={handleFavoriteClick}
-            title={isFavorite ? 'Bỏ yêu thích' : 'Thêm yêu thích'}
-          >
-            <FiHeart />
-          </button>
+          {/* Overlay can be used for other hover effects if needed */}
         </div>
       </div>
       <div className="manga-card-title" title={displayName}>

@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/utils/api';
-import { useAuthStore } from '@/store';
+import { useAuthStore, useMangaStore } from '@/store';
 import toast from 'react-hot-toast';
 
 /**
@@ -23,6 +23,7 @@ export const useRandomItems = (type, options = {}) => {
   } = options;
 
   const { sourceKey, rootFolder, initializeRootFolder } = useAuthStore();
+  const { favoritesRefreshTrigger } = useMangaStore();
   const queryClient = useQueryClient();
   const [lastUpdated, setLastUpdated] = useState(null);
 
@@ -37,6 +38,14 @@ export const useRandomItems = (type, options = {}) => {
   // Generate cache key based on type, sourceKey, and rootFolder
   const cacheKey = `randomView::${sourceKey}::${rootFolder}::${type}`;
   const queryKey = ['randomItems', type, sourceKey, rootFolder];
+
+  // Invalidate cache when favorites change
+  useEffect(() => {
+    if (favoritesRefreshTrigger > 0) {
+      // Only invalidate, don't refetch immediately
+      queryClient.invalidateQueries({ queryKey, exact: true });
+    }
+  }, [favoritesRefreshTrigger, queryClient, queryKey]);
 
   // Check for existing cache timestamp on mount only - run once per unique cache key
   useEffect(() => {

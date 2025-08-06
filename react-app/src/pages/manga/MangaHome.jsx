@@ -20,6 +20,7 @@ const MangaHome = () => {
     favorites,
     searchTerm, 
     shouldNavigateToReader,
+    favoritesRefreshTrigger, // Add this to listen for favorite changes
     setSearchTerm,
     fetchMangaFolders,
     fetchFavorites,
@@ -32,6 +33,7 @@ const MangaHome = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('name');
   const [showFilters, setShowFilters] = useState(false);
+  const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0); // For forcing re-renders
 
   useEffect(() => {
     // Xử lý URL path parameter giống frontend cũ
@@ -58,6 +60,14 @@ const MangaHome = () => {
       clearNavigationFlag(); // Clear flag sau khi navigate
     }
   }, [shouldNavigateToReader, navigate, clearNavigationFlag]);
+
+  // Force refresh khi favorites thay đổi
+  useEffect(() => {
+    if (favoritesRefreshTrigger > 0 && mangaList && mangaList.length > 0) {
+      console.log('🔄 MangaHome GridView: Favorites changed, updating display');
+      setLocalRefreshTrigger(prev => prev + 1);
+    }
+  }, [favoritesRefreshTrigger, mangaList]);
 
   const handleFolderClick = (folder) => {
     console.log('🔍 Clicked folder:', folder);
@@ -87,11 +97,20 @@ const MangaHome = () => {
 
   const handleToggleFavorite = async (item) => {
     try {
+      console.log('❤️ MangaHome GridView toggleFavorite:', { path: item.path, currentFavorite: item.isFavorite });
+      
+      // Gọi toggleFavorite từ store (đã có updateFavoriteInAllCaches)
       await toggleFavorite(item);
+      
+      // Force refresh local component để hiển thị thay đổi ngay lập tức
+      setLocalRefreshTrigger(prev => prev + 1);
+      
       // Refresh favorites list to update UI
       fetchFavorites();
+      
+      console.log('✅ MangaHome GridView favorite toggle completed');
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      console.error('❌ Error toggling favorite in MangaHome GridView:', error);
     }
   };
 
@@ -273,9 +292,9 @@ const MangaHome = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {sortedManga.map((item, index) => (
             <MangaCard
-              key={`${item.path || item.name || index}`}
+              key={`${item.path || item.name || index}-${localRefreshTrigger}`}
               manga={item}
-              isFavorite={favorites.includes(item.path)}
+              isFavorite={Boolean(item.isFavorite) || favorites.some(f => f.path === item.path)}
               onToggleFavorite={() => 
                 handleToggleFavorite(item)
               }

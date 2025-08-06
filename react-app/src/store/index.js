@@ -126,6 +126,7 @@ export const useMangaStore = create(
       error: null,
       searchTerm: '',
       shouldNavigateToReader: null, // Flag for reader navigation
+      favoritesRefreshTrigger: 0, // Add trigger for forcing slider refresh
       readerSettings: {
         readingMode: 'vertical',
         darkMode: false,
@@ -337,9 +338,11 @@ export const useMangaStore = create(
       
       toggleFavorite: async (item) => {
         try {
-          const { sourceKey } = useAuthStore.getState();
+          const { sourceKey, rootFolder } = useAuthStore.getState();
           const isFavorited = get().favorites.some(f => f.path === item.path);
           const newFavoriteState = !isFavorited;
+          
+          console.log('🔄 MangaStore toggleFavorite:', { sourceKey, rootFolder, path: item.path, newFavoriteState });
           
           // Call API to toggle favorite
           await apiService.manga.toggleFavorite(sourceKey, item.path, newFavoriteState);
@@ -349,11 +352,25 @@ export const useMangaStore = create(
             const favorites = isFavorited
               ? state.favorites.filter(f => f.path !== item.path)
               : [...state.favorites, item];
-            return { favorites };
+            
+            // Also update the item in mangaList if it exists
+            const updatedMangaList = state.mangaList.map(manga => 
+              manga.path === item.path 
+                ? { ...manga, isFavorite: newFavoriteState }
+                : manga
+            );
+            
+            return { 
+              favorites,
+              mangaList: updatedMangaList,
+              favoritesRefreshTrigger: state.favoritesRefreshTrigger + 1 // Trigger refresh
+            };
           });
 
-          // Update all cache entries
-          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState);
+          // Update all cache entries - đảm bảo cập nhật cache cho RandomSlider
+          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState, rootFolder);
+          
+          console.log('✅ MangaStore toggleFavorite completed');
           
         } catch (error) {
           console.error('Toggle favorite error:', error);
@@ -415,9 +432,11 @@ export const useMovieStore = create(
       
       toggleFavorite: async (item) => {
         try {
-          const { sourceKey } = useAuthStore.getState();
+          const { sourceKey, rootFolder } = useAuthStore.getState();
           const isFavorited = get().favorites.some(f => f.path === item.path);
           const newFavoriteState = !isFavorited;
+          
+          console.log('🎬 MovieStore toggleFavorite:', { sourceKey, path: item.path, newFavoriteState });
           
           // Call API to toggle favorite
           await apiService.movie.toggleFavorite(sourceKey, item.path, newFavoriteState);
@@ -431,7 +450,9 @@ export const useMovieStore = create(
           });
 
           // Update all cache entries
-          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState);
+          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState, rootFolder);
+          
+          console.log('✅ MovieStore toggleFavorite completed');
           
         } catch (error) {
           console.error('Toggle movie favorite error:', error);
@@ -554,9 +575,11 @@ export const useMusicStore = create(
       
       toggleFavorite: async (item) => {
         try {
-          const { sourceKey } = useAuthStore.getState();
+          const { sourceKey, rootFolder } = useAuthStore.getState();
           const isFavorited = get().favorites.some(f => f.path === item.path);
           const newFavoriteState = !isFavorited;
+          
+          console.log('🎵 MusicStore toggleFavorite:', { sourceKey, path: item.path, newFavoriteState });
           
           // Try to call API if it exists
           try {
@@ -575,7 +598,9 @@ export const useMusicStore = create(
           });
 
           // Update all cache entries
-          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState);
+          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState, rootFolder);
+          
+          console.log('✅ MusicStore toggleFavorite completed');
           
         } catch (error) {
           console.error('Toggle music favorite error:', error);

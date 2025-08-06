@@ -49,10 +49,13 @@ const RecentSlider = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState([]);
 
-  const { toggleFavorite, clearRecentHistory, mangaSettings } = useMangaStore();
+  const { toggleFavorite, clearRecentHistory, mangaSettings, favoritesRefreshTrigger } = useMangaStore();
   
   // Modal hook for confirmations
   const { confirmModal, Modal: ModalComponent } = useModal();
+  
+  // Local refresh trigger for forcing re-renders
+  const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
   
   // Don't render if recent tracking is disabled
   if (!mangaSettings.enableRecentTracking) {
@@ -64,6 +67,14 @@ const RecentSlider = ({
     enabled: isVisible,
     maxItems
   });
+
+  // Force refresh khi favorites thay đổi
+  useEffect(() => {
+    if (favoritesRefreshTrigger > 0 && items && items.length > 0) {
+      console.log('🔄 RecentSlider: Favorites changed, updating display');
+      setLocalRefreshTrigger(prev => prev + 1);
+    }
+  }, [favoritesRefreshTrigger, items]);
 
   // Clear recent history function with modal confirmation
   const handleClearHistory = useCallback(() => {
@@ -170,11 +181,20 @@ const RecentSlider = ({
   };
 
   // Handle favorite toggle
+  // Handle favorite toggle với immediate UI update
   const handleToggleFavorite = async (item) => {
     try {
+      console.log('❤️ RecentSlider toggleFavorite:', { path: item.path, currentFavorite: item.isFavorite });
+      
+      // Gọi toggleFavorite từ store (đã có updateFavoriteInAllCaches)
       await toggleFavorite(item);
+      
+      // Force refresh local component để hiển thị thay đổi ngay lập tức
+      setLocalRefreshTrigger(prev => prev + 1);
+      
+      console.log('✅ RecentSlider favorite toggle completed');
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      console.error('❌ Error toggling favorite in RecentSlider:', error);
     }
   };
 
@@ -334,9 +354,9 @@ const RecentSlider = ({
                 </div>
               ))
             ) : (
-              // Actual items
+              // Actual items - force key update để trigger re-render
               items?.map((item, index) => (
-                <div key={item.path || index} className="embla__slide">
+                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide">
                   <div className="relative">
                     {/* Last viewed badge */}
                     {item.lastViewed && (
@@ -349,7 +369,7 @@ const RecentSlider = ({
                     
                     <MangaCard
                       manga={item}
-                      isFavorite={item.isFavorite || false}
+                      isFavorite={Boolean(item.isFavorite)}
                       variant="compact"
                       showViews={false} // Recent items don't need view count
                       onToggleFavorite={() => 

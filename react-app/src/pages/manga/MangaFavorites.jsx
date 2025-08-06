@@ -207,9 +207,9 @@ const MangaFavorites = () => {
             ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-6' 
             : 'grid-cols-1'
         } gap-4`}>
-          {sortedFavorites.map((manga) => (
+          {sortedFavorites.map((manga, index) => (
             <div
-              key={manga.id}
+              key={manga.id || manga.path || index}
               className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg 
                         transition-all duration-200 group border border-gray-200 dark:border-gray-700
                         ${viewMode === 'list' ? 'flex items-center p-4' : 'p-3'}`}

@@ -47,7 +47,7 @@ const RandomSlider = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState([]);
 
-  const { toggleFavorite } = useMangaStore();
+  const { toggleFavorite, favoritesRefreshTrigger } = useMangaStore();
   
   // Random items hook
   const { data: items, loading, error, refresh, lastUpdated } = useRandomItems(type, {
@@ -55,6 +55,18 @@ const RandomSlider = ({
     count: 30,
     staleTime: 5 * 60 * 1000 // 5 minutes
   });
+
+  // Force refresh khi favorites thay đổi - chỉ làm mới cache, không refetch API
+  useEffect(() => {
+    if (favoritesRefreshTrigger > 0 && items && items.length > 0) {
+      console.log('🔄 RandomSlider: Favorites changed, updating display');
+      // Force component re-render by updating a local state
+      setLocalRefreshTrigger(prev => prev + 1);
+    }
+  }, [favoritesRefreshTrigger, items]);
+
+  // Local refresh trigger for forcing re-renders
+  const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
 
   // Navigation functions
   const scrollPrev = useCallback(() => {
@@ -153,12 +165,20 @@ const RandomSlider = ({
     }
   };
 
-  // Handle favorite toggle
+  // Handle favorite toggle với immediate UI update
   const handleToggleFavorite = async (item) => {
     try {
+      console.log('❤️ RandomSlider toggleFavorite:', { path: item.path, currentFavorite: item.isFavorite });
+      
+      // Gọi toggleFavorite từ store (đã có updateFavoriteInAllCaches)
       await toggleFavorite(item);
+      
+      // Force refresh local component để hiển thị thay đổi ngay lập tức
+      setLocalRefreshTrigger(prev => prev + 1);
+      
+      console.log('✅ RandomSlider favorite toggle completed');
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      console.error('❌ Error toggling favorite in RandomSlider:', error);
     }
   };
 
@@ -273,12 +293,12 @@ const RandomSlider = ({
                 </div>
               ))
             ) : (
-              // Actual items
+              // Actual items - force key update để trigger re-render
               items?.map((item, index) => (
-                <div key={item.path || index} className="embla__slide">
+                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide">
                   <MangaCard
                     manga={item}
-                    isFavorite={item.isFavorite || false}
+                    isFavorite={Boolean(item.isFavorite)}
                     variant="compact"
                     showViews={showViews}
                     onToggleFavorite={() => 

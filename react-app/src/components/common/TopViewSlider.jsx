@@ -42,14 +42,25 @@ const TopViewSlider = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState([]);
 
-  const { toggleFavorite } = useMangaStore();
+  const { toggleFavorite, favoritesRefreshTrigger } = useMangaStore();
   const { sourceKey, rootFolder } = useAuthStore();
+
+  // Local refresh trigger for forcing re-renders
+  const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
 
   // Top view items hook
   const { data: items, isLoading: loading, error } = useTopViewItems(type, {
     enabled: isVisible,
     staleTime: 10 * 60 * 1000 // 10 minutes
   });
+
+  // Force refresh khi favorites thay đổi
+  useEffect(() => {
+    if (favoritesRefreshTrigger > 0 && items && items.length > 0) {
+      console.log('🔄 TopViewSlider: Favorites changed, updating display');
+      setLocalRefreshTrigger(prev => prev + 1);
+    }
+  }, [favoritesRefreshTrigger, items]);
 
   // Navigation functions
   const scrollPrev = useCallback(() => {
@@ -142,11 +153,20 @@ const TopViewSlider = ({
   };
 
   // Handle favorite toggle
+  // Handle favorite toggle với immediate UI update
   const handleToggleFavorite = async (item) => {
     try {
+      console.log('❤️ TopViewSlider toggleFavorite:', { path: item.path, currentFavorite: item.isFavorite });
+      
+      // Gọi toggleFavorite từ store (đã có updateFavoriteInAllCaches)
       await toggleFavorite(item);
+      
+      // Force refresh local component để hiển thị thay đổi ngay lập tức
+      setLocalRefreshTrigger(prev => prev + 1);
+      
+      console.log('✅ TopViewSlider favorite toggle completed');
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      console.error('❌ Error toggling favorite in TopViewSlider:', error);
     }
   };
 
@@ -229,7 +249,7 @@ const TopViewSlider = ({
             ) : (
               // Actual items - sorted by view count
               items?.map((item, index) => (
-                <div key={item.path || index} className="embla__slide">
+                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide">
                   <div className="relative">
                     {/* Ranking badge */}
                     {index < 3 && (
@@ -247,7 +267,7 @@ const TopViewSlider = ({
                     
                     <MangaCard
                       manga={item}
-                      isFavorite={item.isFavorite || false}
+                      isFavorite={Boolean(item.isFavorite)}
                       variant="compact"
                       showViews={true} // Always show views for top view slider
                       onToggleFavorite={() => 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { BookOpen, PanelLeft } from 'lucide-react';
 import { useMangaStore, useAuthStore } from '../../store';
@@ -29,36 +29,93 @@ const MangaReader = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentPath, setCurrentPath] = useState('');
   const readerRef = useRef(null);
+  const viewCountIncreased = useRef(new Set()); // Track paths that already had view count increased
+  const viewCountProcessing = useRef(new Set()); // Track paths currently being processed
+  const loadedPaths = useRef(new Set()); // Track paths that have been loaded
 
   // the required distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 50;
 
-  useEffect(() => {
-    const path = searchParams.get('path');
-    console.log('🔍 DEBUG MangaReader - folderId from useParams:', folderId);
-    console.log('🔍 DEBUG MangaReader - path from searchParams:', path);
+  // Memoize current path to avoid unnecessary effect reruns
+  const currentMangaPath = useMemo(() => {
+    return searchParams.get('path') || folderId;
+  }, [searchParams, folderId]);
+
+  // Memoize stable auth keys to prevent effect reruns
+  const stableAuthKeys = useMemo(() => ({
+    sourceKey,
+    rootFolder
+  }), [sourceKey, rootFolder]);
+
+  // Create stable increaseView function with useCallback
+  const increaseViewCount = useCallback(async (path, sKey, rFolder) => {
+    const cleanPath = path.replace(/\/__self__$/, '');
+    const viewKey = `${sKey}::${rFolder}::${cleanPath}`;
     
-    if (path) {
-      loadFolderData(path);
-    } else if (folderId) {
-      loadFolderData(folderId);
+    // Check if already processed or currently processing
+    if (viewCountIncreased.current.has(viewKey) || viewCountProcessing.current.has(viewKey)) {
+      console.log('🔄 View count already processed/processing for:', cleanPath);
+      return;
     }
-  }, [folderId, searchParams, sourceKey, rootFolder]);
-
-  // Debug reader settings changes
-  useEffect(() => {
-    console.log('🔧 Reader settings updated:', readerSettings);
-  }, [readerSettings]);
-
-  // Cleanup blob URLs when component unmounts
-  useEffect(() => {
-    return () => {
-      imageCache.forEach(url => URL.revokeObjectURL(url));
-    };
+    
+    console.log('🎯 Processing view count for:', { sourceKey: sKey, rootFolder: rFolder, cleanPath });
+    
+    // Mark as processing immediately to prevent race conditions
+    viewCountProcessing.current.add(viewKey);
+    
+    try {
+      await apiService.system.increaseView({
+        path: cleanPath,
+        dbkey: sKey,
+        rootKey: rFolder
+      });
+      
+      // Move from processing to completed
+      viewCountProcessing.current.delete(viewKey);
+      viewCountIncreased.current.add(viewKey);
+      console.log('📈 View count increased successfully for:', cleanPath);
+    } catch (error) {
+      console.warn('❌ Failed to increase view count:', error);
+      // Remove from processing set on error so it can be retried
+      viewCountProcessing.current.delete(viewKey);
+    }
   }, []);
 
+  // Check favorite state
+  const checkFavoriteState = useCallback(async (path) => {
+    if (!stableAuthKeys.sourceKey || !stableAuthKeys.rootFolder) return;
+    
+    const favoriteKey = `${stableAuthKeys.sourceKey}::${stableAuthKeys.rootFolder}::favorite-check`;
+    
+    // Prevent duplicate favorite checks
+    if (loadedPaths.current.has(favoriteKey)) {
+      console.log('🔄 Favorite state already checked');
+      return;
+    }
+    
+    // Mark as checking
+    loadedPaths.current.add(favoriteKey);
+    
+    try {
+      const response = await apiService.manga.getFavorites({
+        key: stableAuthKeys.sourceKey,
+        root: stableAuthKeys.rootFolder
+      });
+      
+      if (response.data && Array.isArray(response.data)) {
+        const cleanPath = path.replace(/\/__self__$/, '');
+        const isInFavorites = response.data.some(f => f.path === cleanPath);
+        setIsFavorite(isInFavorites);
+      }
+    } catch (error) {
+      console.warn('❌ Failed to check favorite:', error);
+      // Remove from loaded set on error so it can be retried
+      loadedPaths.current.delete(favoriteKey);
+    }
+  }, [stableAuthKeys.sourceKey, stableAuthKeys.rootFolder]);
+
   // Preload images function
-  const preloadImage = (src) => {
+  const preloadImage = useCallback((src) => {
     return new Promise((resolve, reject) => {
       if (preloadedImages.has(src)) {
         resolve(src);
@@ -99,54 +156,30 @@ const MangaReader = () => {
           reject(error);
         });
     });
-  };
+  }, [preloadedImages]);
 
-  // Optimized preload function - only preload what's needed
-  const preloadImagesAroundCurrentPage = async () => {
-    if (!currentImages.length) return;
+  const loadFolderData = useCallback(async (path) => {
+    const loadKey = `${stableAuthKeys.sourceKey}::${stableAuthKeys.rootFolder}::${path}`;
     
-    const { preloadCount } = readerSettings;
-    const start = Math.max(0, currentPage - Math.floor(preloadCount / 2));
-    const end = Math.min(currentImages.length - 1, currentPage + Math.ceil(preloadCount / 2));
-    
-    const imagesToPreload = [];
-    for (let i = start; i <= end; i++) {
-      if (currentImages[i] && !preloadedImages.has(currentImages[i])) {
-        imagesToPreload.push(currentImages[i]);
-      }
+    // Prevent duplicate loads with more robust checking
+    if (loadedPaths.current.has(loadKey)) {
+      console.log('🔄 Folder data already loaded for:', path);
+      return;
     }
     
-    if (imagesToPreload.length === 0) return;
+    console.log('🎯 Loading folder data for:', { path, sourceKey: stableAuthKeys.sourceKey, rootFolder: stableAuthKeys.rootFolder });
     
-    console.log(`🖼️ Preloading ${imagesToPreload.length} images around page ${currentPage} (range: ${start}-${end})`);
+    // Mark as loading immediately to prevent race conditions
+    loadedPaths.current.add(loadKey);
     
-    try {
-      await Promise.allSettled(imagesToPreload.map(src => preloadImage(src)));
-      console.log(`✅ Preload complete. Total cached: ${preloadedImages.size}/${currentImages.length}`);
-    } catch (error) {
-      console.error('❌ Error preloading images:', error);
-    }
-  };
-
-  // Effect to preload images when currentPage or currentImages change with throttling
-  useEffect(() => {
-    if (currentImages.length > 0) {
-      // Debounce preload to avoid too frequent calls
-      const timeoutId = setTimeout(() => {
-        preloadImagesAroundCurrentPage();
-      }, 100);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [currentPage, currentImages, readerSettings.preloadCount]);
-
-  const loadFolderData = async (path) => {
     try {
       setLoading(true);
       setError(null);
       
-      if (!sourceKey || !rootFolder) {
+      if (!stableAuthKeys.sourceKey || !stableAuthKeys.rootFolder) {
         setError('Missing authentication data');
+        // Remove from loaded set on error
+        loadedPaths.current.delete(loadKey);
         return;
       }
 
@@ -157,8 +190,8 @@ const MangaReader = () => {
       const response = await apiService.manga.getFolders({
         mode: 'path',
         path: path,
-        key: sourceKey,
-        root: rootFolder,
+        key: stableAuthKeys.sourceKey,
+        root: stableAuthKeys.rootFolder,
         useDb: mangaSettings.useDb ? '1' : '0' // Use setting từ store
       });
 
@@ -194,14 +227,108 @@ const MangaReader = () => {
         await checkFavoriteState(path);
       } else {
         setError('No images found in this folder');
+        // Remove from loaded set on error
+        loadedPaths.current.delete(loadKey);
       }
     } catch (error) {
       console.error('Error loading folder:', error);
       setError('Failed to load manga images');
+      // Remove from loaded set on error so it can be retried
+      loadedPaths.current.delete(loadKey);
     } finally {
       setLoading(false);
     }
-  };
+  }, [stableAuthKeys.sourceKey, stableAuthKeys.rootFolder, mangaSettings.useDb]); // Remove function dependencies
+
+  useEffect(() => {
+    // Only load if we have a valid path and auth keys
+    if (currentMangaPath && stableAuthKeys.sourceKey && stableAuthKeys.rootFolder) {
+      console.log('🔍 Loading folder data for path:', currentMangaPath);
+      loadFolderData(currentMangaPath);
+    }
+    
+    // Cleanup function to reset state when path changes
+    return () => {
+      // Clear favorite check tracking when changing paths
+      const favoriteKey = `${stableAuthKeys.sourceKey}::${stableAuthKeys.rootFolder}::favorite-check`;
+      loadedPaths.current.delete(favoriteKey);
+    };
+  }, [currentMangaPath, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder]); // Remove loadFolderData dependency
+
+  // Separate effect to increase view count immediately when path changes
+  useEffect(() => {
+    if (currentMangaPath && stableAuthKeys.sourceKey && stableAuthKeys.rootFolder) {
+      // Use setTimeout to debounce in case of rapid successive calls
+      const timeoutId = setTimeout(() => {
+        increaseViewCount(currentMangaPath, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder);
+      }, 100); // Small delay to debounce
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [currentMangaPath, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder]); // Remove increaseViewCount dependency
+
+  // Debug reader settings changes
+  useEffect(() => {
+    console.log('🔧 Reader settings updated:', readerSettings);
+  }, [readerSettings]);
+
+  // Cleanup blob URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      imageCache.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, []);
+
+  // Cleanup view tracking on unmount (optional - helps with memory in long sessions)
+  useEffect(() => {
+    return () => {
+      // Clear all tracking sets on unmount
+      viewCountProcessing.current.clear();
+      loadedPaths.current.clear();
+      viewCountIncreased.current.clear();
+      
+      console.log('🧹 Cleaned up all tracking sets on unmount');
+    };
+  }, []);
+
+  // Optimized preload function - only preload what's needed
+  const preloadImagesAroundCurrentPage = useCallback(async () => {
+    if (!currentImages.length) return;
+    
+    const { preloadCount } = readerSettings;
+    const start = Math.max(0, currentPage - Math.floor(preloadCount / 2));
+    const end = Math.min(currentImages.length - 1, currentPage + Math.ceil(preloadCount / 2));
+    
+    const imagesToPreload = [];
+    for (let i = start; i <= end; i++) {
+      if (currentImages[i] && !preloadedImages.has(currentImages[i])) {
+        imagesToPreload.push(currentImages[i]);
+      }
+    }
+    
+    if (imagesToPreload.length === 0) return;
+    
+    console.log(`🖼️ Preloading ${imagesToPreload.length} images around page ${currentPage} (range: ${start}-${end})`);
+    
+    try {
+      await Promise.allSettled(imagesToPreload.map(src => preloadImage(src)));
+      console.log(`✅ Preload complete. Total cached: ${preloadedImages.size}/${currentImages.length}`);
+    } catch (error) {
+      console.error('❌ Error preloading images:', error);
+    }
+  }, [currentImages, currentPage, readerSettings.preloadCount, preloadedImages]); // Remove preloadImage dependency
+
+  // Effect to preload images when currentPage or currentImages change with throttling
+  useEffect(() => {
+    if (currentImages.length > 0) {
+      // Debounce preload to avoid too frequent calls
+      const timeoutId = setTimeout(() => {
+        preloadImagesAroundCurrentPage();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [currentImages.length, currentPage, readerSettings.preloadCount]); // Use primitive values instead of functions
 
   const toggleControls = () => {
     setShowControls(!showControls);
@@ -250,26 +377,6 @@ const MangaReader = () => {
     }
   };
 
-  // Check favorite state
-  const checkFavoriteState = async (path) => {
-    if (!sourceKey || !rootFolder) return;
-    
-    try {
-      const response = await apiService.manga.getFavorites({
-        key: sourceKey,
-        root: rootFolder
-      });
-      
-      if (response.data && Array.isArray(response.data)) {
-        const cleanPath = path.replace(/\/__self__$/, '');
-        const isInFavorites = response.data.some(f => f.path === cleanPath);
-        setIsFavorite(isInFavorites);
-      }
-    } catch (error) {
-      console.warn('❌ Failed to check favorite:', error);
-    }
-  };
-
   // Toggle favorite
   const handleToggleFavorite = async () => {
     if (!sourceKey || !currentPath) return;
@@ -278,11 +385,11 @@ const MangaReader = () => {
     setIsFavorite(newFavoriteState);
     
     try {
-      await apiService.manga.toggleFavorite({
-        dbkey: sourceKey,
-        path: currentPath.replace(/\/__self__$/, ''),
-        value: newFavoriteState
-      });
+      await apiService.manga.toggleFavorite(
+        sourceKey,
+        currentPath.replace(/\/__self__$/, ''),
+        newFavoriteState
+      );
       
       toast.success(newFavoriteState ? '✅ Đã thêm vào yêu thích' : '✅ Đã bỏ khỏi yêu thích');
     } catch (error) {
