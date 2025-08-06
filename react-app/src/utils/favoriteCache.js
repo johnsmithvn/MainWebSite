@@ -62,29 +62,41 @@ export const updateFavoriteInAllCaches = (sourceKey, itemPath, isFavorite, rootF
     `recentViewedMusic::${sourceKey}` // music pattern
   ];
 
+  console.log('🕒 Checking recent cache patterns:', recentPatterns);
+
   recentPatterns.forEach(cacheKey => {
     try {
       const cached = localStorage.getItem(cacheKey);
-      if (!cached) return;
+      if (!cached) {
+        console.log(`📭 No cache found for key: ${cacheKey}`);
+        return;
+      }
 
       const cachedData = JSON.parse(cached);
       let updated = false;
+
+      console.log(`📦 Checking recent cache: ${cacheKey}`, cachedData);
 
       if (Array.isArray(cachedData)) {
         for (const item of cachedData) {
           if (item.path === itemPath) {
             item.isFavorite = Boolean(isFavorite);
             updated = true;
+            console.log(`🎯 Updated recent item: ${itemPath} -> ${isFavorite} in ${cacheKey}`);
           }
         }
+      } else {
+        console.log(`⚠️ Recent cache data is not array for ${cacheKey}:`, typeof cachedData);
       }
 
       if (updated) {
         localStorage.setItem(cacheKey, JSON.stringify(cachedData));
-        console.log(`✅ Updated ${cacheKey} cache`);
+        console.log(`✅ Updated recent cache: ${cacheKey}`);
+      } else {
+        console.log(`❌ No items updated in recent cache: ${cacheKey}`);
       }
     } catch (error) {
-      console.warn(`❌ Error updating ${cacheKey} cache:`, error);
+      console.warn(`❌ Error updating recent cache ${cacheKey}:`, error);
     }
   });
 

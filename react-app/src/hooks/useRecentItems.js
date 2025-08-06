@@ -18,7 +18,7 @@ export const useRecentItems = (type, options = {}) => {
   } = options;
 
   const { sourceKey, rootFolder } = useAuthStore();
-  const { mangaSettings } = useMangaStore();
+  const { mangaSettings, favoritesRefreshTrigger } = useMangaStore(); // Add favoritesRefreshTrigger
   const queryClient = useQueryClient();
   const [lastUpdated, setLastUpdated] = useState(null);
   
@@ -82,6 +82,15 @@ export const useRecentItems = (type, options = {}) => {
     refetchOnWindowFocus: false,
     refetchOnMount: true
   });
+
+  // Invalidate cache when favorites change - ONLY run when trigger actually changes  
+  useEffect(() => {
+    if (favoritesRefreshTrigger > 0) {
+      console.log(`🔄 RecentItems: Favorites changed (trigger: ${favoritesRefreshTrigger}), invalidating recent ${type} cache`);
+      // Invalidate query to force refetch from localStorage (which should have updated data)
+      queryClient.invalidateQueries(queryKey);
+    }
+  }, [favoritesRefreshTrigger]); // REMOVE queryClient, queryKey, type để tránh loop
 
   // Load cached data on mount - only run when key values change, not callback functions
   useEffect(() => {

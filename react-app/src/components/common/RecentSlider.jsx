@@ -71,10 +71,15 @@ const RecentSlider = ({
   // Force refresh khi favorites thay đổi
   useEffect(() => {
     if (favoritesRefreshTrigger > 0 && items && items.length > 0) {
-      console.log('🔄 RecentSlider: Favorites changed, updating display');
+      console.log('🔄 RecentSlider: Favorites changed, refreshing data and display');
+      
+      // Refresh data from cache first
+      refresh();
+      
+      // Then update display
       setLocalRefreshTrigger(prev => prev + 1);
     }
-  }, [favoritesRefreshTrigger, items]);
+  }, [favoritesRefreshTrigger, items, refresh]);
 
   // Clear recent history function with modal confirmation
   const handleClearHistory = useCallback(() => {
@@ -186,8 +191,16 @@ const RecentSlider = ({
     try {
       console.log('❤️ RecentSlider toggleFavorite:', { path: item.path, currentFavorite: item.isFavorite });
       
+      // Debug cache trước khi toggle
+      console.log('🔍 Before toggle - Cache state:');
+      
       // Gọi toggleFavorite từ store (đã có updateFavoriteInAllCaches)
       await toggleFavorite(item);
+      
+      // Debug cache sau khi toggle
+      
+      // Force refresh data from cache để có favorite state mới nhất
+      await refresh();
       
       // Force refresh local component để hiển thị thay đổi ngay lập tức
       setLocalRefreshTrigger(prev => prev + 1);
