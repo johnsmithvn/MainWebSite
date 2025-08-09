@@ -2,103 +2,121 @@
 // 🎵 Music player với playlist, audio controls và tính năng nâng cao
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { 
-  Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
-  Repeat, Shuffle, Heart, Share, MoreHorizontal, Home,
-  ChevronLeft, List, Clock, Music, Download, Sliders,
-  Loader, RefreshCw, Headphones, Speaker, Mic, Radio
-} from 'lucide-react';
-import { useMusicStore, useUIStore, useAuthStore } from '@/store';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  FiPlay,
+  FiPause,
+  FiSkipBack,
+  FiSkipForward,
+  FiVolume2,
+  FiVolumeX,
+  FiShuffle,
+  FiRepeat,
+  FiList,
+  FiHeart,
+  FiMoreHorizontal,
+  FiHome,
+  FiDownload,
+  FiShare2,
+  FiMaximize2,
+  FiMinimize2
+} from 'react-icons/fi';
+import { useAuthStore, useMusicStore, useUIStore } from '@/store';
+import { useRecentMusicManager } from '@/hooks/useMusicData';
 import { apiService } from '@/utils/api';
+import LoadingOverlay from '@/components/common/LoadingOverlay';
 import Button from '@/components/common/Button';
-import toast from 'react-hot-toast';
 
 const MusicPlayer = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const path = searchParams.get('path'); // Đường dẫn đến audio file
+  const path = searchParams.get('file'); // Đường dẫn đến audio file
   const playlistPath = searchParams.get('playlist'); // Path của playlist
 
   const { 
     currentTrack, 
-    playlist, 
+    currentPlaylist, 
+    currentIndex,
+    isPlaying,
+    volume,
+    shuffle,
+    repeat,
     playerSettings, 
     updatePlayerSettings,
-    addToRecentPlayed,
     toggleFavorite,
     favorites,
     setCurrentTrack,
-    setPlaylist
+    setPlaylists,
+    playTrack,
+    pauseTrack,
+    resumeTrack,
+    nextTrack,
+    prevTrack,
+    setVolume
   } = useMusicStore();
-  const { darkMode } = useUIStore();
+  
+  const { darkMode, showToast } = useUIStore();
   const { sourceKey } = useAuthStore();
+  const { addRecentMusic } = useRecentMusicManager();
 
   // === REFS ===
   const audioRef = useRef(null);
   const progressBarRef = useRef(null);
-  const canvasRef = useRef(null);
-  const analyzerRef = useRef(null);
 
   // === STATE MANAGEMENT ===
-  const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
-  const [volume, setVolume] = useState(playerSettings.volume || 0.7);
   const [isMuted, setIsMuted] = useState(false);
-  const [isShuffled, setIsShuffled] = useState(playerSettings.shuffle || false);
-  const [repeatMode, setRepeatMode] = useState(playerSettings.repeat || 'off'); // off, one, all
   const [showPlaylist, setShowPlaylist] = useState(false);
-  const [showLyrics, setShowLyrics] = useState(false);
-  const [showEqualizer, setShowEqualizer] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const [audioContext, setAudioContext] = useState(null);
-  const [visualizer, setVisualizer] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // === COMPUTED VALUES ===
   const isFavorited = favorites.some(fav => fav.path === path);
-  const audioUrl = buildAudioUrl(path);
   
   /**
    * 🔗 Build audio URL from path
    */
   function buildAudioUrl(audioPath) {
-    if (!audioPath) return null;
-    
-    // Nếu đã là URL đầy đủ
-    if (audioPath.startsWith('http') || audioPath.startsWith('/default/')) {
-      return audioPath;
-    }
-    
-    // Build URL cho audio static serving
-    const cleanPath = audioPath.replace(/\\/g, '/');
-    return `/audio/${cleanPath}`;
+    if (!audioPath || !sourceKey) return '';
+    return `/api/music/audio?key=${encodeURIComponent(sourceKey)}&file=${encodeURIComponent(audioPath)}`;
   }
 
   /**
    * 📊 Get track info from path
    */
   const getTrackInfo = useCallback(() => {
-    if (!path) return { title: 'Unknown Track', artist: 'Unknown Artist', album: '' };
+    if (!path) return { name: 'Unknown Track', artist: 'Unknown Artist', album: 'Unknown Album' };
     
     const pathParts = path.split('/');
     const fileName = pathParts[pathParts.length - 1];
-    const albumName = pathParts[pathParts.length - 2] || '';
-    const artistName = pathParts[pathParts.length - 3] || '';
+    const folderName = pathParts[pathParts.length - 2] || 'Unknown Album';
     
-    // Remove file extension
-    const title = fileName.replace(/\.[^/.]+$/, '');
+    // Try to parse filename for metadata
+    const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+    const parts = nameWithoutExt.split(' - ');
     
-    return {
-      title,
-      artist: artistName || 'Unknown Artist',
-      album: albumName,
-      fullPath: path
-    };
-  }, [path]);
+    if (parts.length >= 2) {
+      return {
+        name: parts[1],
+        artist: parts[0],
+        album: folderName,
+        path: path,
+        thumbnail: `/api/music/thumbnail?key=${encodeURIComponent(sourceKey)}&file=${encodeURIComponent(path)}`
+      };
+    } else {
+      return {
+        name: nameWithoutExt,
+        artist: 'Unknown Artist',
+        album: folderName,
+        path: path,
+        thumbnail: '/default/music-thumb.png'
+      };
+    }
+  }, [path, sourceKey]);
 
   const trackInfo = getTrackInfo();
 
@@ -108,660 +126,528 @@ const MusicPlayer = () => {
    * 🎯 Initialize audio and load metadata
    */
   useEffect(() => {
-    if (!path) {
+    if (!path && !playlistPath) {
       navigate('/music');
       return;
     }
 
+    const initializePlayer = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        if (playlistPath) {
+          // Load playlist
+          await loadPlaylistSongs(playlistPath);
+        } else if (path) {
+          // Load single file and folder
+          await loadFolderSongs();
+        }
+      } catch (err) {
+        console.error('Failed to initialize player:', err);
+        setError('Failed to load music');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializePlayer();
+  }, [path, playlistPath, sourceKey, navigate]);
+
+  // Audio event handlers
+  useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    // Audio event handlers
-    const handleLoadStart = () => {
-      setIsLoading(true);
-      setError(null);
+    const updateTime = () => setCurrentTime(audio.currentTime);
+    const updateDuration = () => setDuration(audio.duration);
+    const updateBuffered = () => {
+      if (audio.buffered.length > 0) {
+        setBuffered(audio.buffered.end(audio.buffered.length - 1));
+      }
     };
 
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
+      updateBuffered();
     };
 
-    const handleCanPlay = () => {
-      setIsLoading(false);
-      if (playerSettings.autoPlay) {
+    const handleEnded = () => {
+      if (repeat === 'one') {
+        audio.currentTime = 0;
         audio.play();
+      } else {
+        nextTrack();
       }
     };
-
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-      
-      // Update progress
-      if (audio.buffered.length > 0) {
-        const bufferedEnd = audio.buffered.end(audio.buffered.length - 1);
-        setBuffered((bufferedEnd / audio.duration) * 100);
-      }
-    };
-
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => handleTrackEnd();
 
     const handleError = (e) => {
       console.error('Audio error:', e);
-      setError('Không thể tải nhạc. Vui lòng thử lại.');
-      setIsLoading(false);
+      setError('Failed to play audio');
     };
 
-    const handleVolumeChange = () => {
-      setVolume(audio.volume);
-      setIsMuted(audio.muted);
-    };
-
-    // Add event listeners
-    audio.addEventListener('loadstart', handleLoadStart);
+    audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('canplay', handleCanPlay);
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('play', handlePlay);
-    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('progress', updateBuffered);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('error', handleError);
-    audio.addEventListener('volumechange', handleVolumeChange);
 
-    // Cleanup
     return () => {
-      audio.removeEventListener('loadstart', handleLoadStart);
+      audio.removeEventListener('timeupdate', updateTime);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('canplay', handleCanPlay);
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('play', handlePlay);
-      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('progress', updateBuffered);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
-      audio.removeEventListener('volumechange', handleVolumeChange);
     };
-  }, [path, playerSettings.autoPlay, navigate]);
+  }, [repeat, nextTrack]);
+
+  // Auto-play when track changes
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && currentTrack && playerSettings.autoPlay) {
+      audio.src = buildAudioUrl(currentTrack.path);
+      audio.load();
+      if (isPlaying) {
+        audio.play().catch(console.error);
+      }
+    }
+  }, [currentTrack, playerSettings.autoPlay, isPlaying]);
+
+  // Volume control
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.volume = isMuted ? 0 : volume;
+    }
+  }, [volume, isMuted]);
 
   /**
    * ⌨️ Keyboard shortcuts
    */
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Chỉ xử lý khi không có input nào được focus
-      if (document.activeElement.tagName === 'INPUT' || 
-          document.activeElement.tagName === 'TEXTAREA') {
-        return;
-      }
+    const handleKeyPress = (e) => {
+      // Don't handle shortcuts when typing
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-      switch (e.key) {
-        case ' ':
-        case 'k':
+      switch (e.code) {
+        case 'Space':
           e.preventDefault();
           togglePlayPause();
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          seekBy(-10);
+          seekRelative(-10);
           break;
         case 'ArrowRight':
           e.preventDefault();
-          seekBy(10);
+          seekRelative(10);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          adjustVolume(0.1);
+          setVolume(Math.min(1, volume + 0.1));
           break;
         case 'ArrowDown':
           e.preventDefault();
-          adjustVolume(-0.1);
+          setVolume(Math.max(0, volume - 0.1));
           break;
-        case 'm':
+        case 'KeyM':
           e.preventDefault();
           toggleMute();
           break;
-        case 'n':
-          e.preventDefault();
-          nextTrack();
-          break;
-        case 'p':
-          e.preventDefault();
-          previousTrack();
-          break;
-        case 's':
-          e.preventDefault();
-          toggleShuffle();
-          break;
-        case 'r':
-          e.preventDefault();
-          toggleRepeat();
-          break;
-        case 'l':
+        case 'KeyL':
           e.preventDefault();
           setShowPlaylist(!showPlaylist);
+          break;
+        case 'KeyF':
+          e.preventDefault();
+          toggleFullscreen();
           break;
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [showPlaylist]);
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [showPlaylist, volume, isPlaying]);
 
-  /**
-   * 💾 Save player settings
-   */
-  useEffect(() => {
-    updatePlayerSettings({
-      volume,
-      shuffle: isShuffled,
-      repeat: repeatMode
-    });
-  }, [volume, isShuffled, repeatMode, updatePlayerSettings]);
+  // === AUDIO FUNCTIONS ===
 
-  /**
-   * 📝 Add to recent played
-   */
-  useEffect(() => {
-    if (path && currentTime > 30) { // Save after 30 seconds
-      addToRecentPlayed({
-        path,
-        title: trackInfo.title,
-        artist: trackInfo.artist,
-        currentTime,
-        duration,
-        timestamp: Date.now()
+  const loadFolderSongs = async () => {
+    try {
+      const pathParts = path.split('/');
+      pathParts.pop(); // Remove filename
+      const folderPath = pathParts.join('/');
+
+      const response = await apiService.music.getFolders({
+        key: sourceKey,
+        path: folderPath
       });
+
+      const audioFiles = response.data.folders.filter(item => 
+        item.type === 'audio' || item.type === 'file'
+      );
+
+      const playlist = audioFiles.map(file => ({
+        ...file,
+        name: file.name || file.path.split('/').pop(),
+        thumbnail: file.thumbnail || '/default/music-thumb.png'
+      }));
+
+      const currentIndex = playlist.findIndex(track => track.path === path);
+      
+      playTrack(trackInfo, playlist, Math.max(0, currentIndex));
+      
+      // Add to recent
+      addRecentMusic(trackInfo);
+    } catch (error) {
+      console.error('Failed to load folder songs:', error);
+      throw error;
     }
-  }, [path, currentTime, duration, trackInfo.title, trackInfo.artist, addToRecentPlayed]);
+  };
 
-  // === CONTROL FUNCTIONS ===
+  const loadPlaylistSongs = async (id) => {
+    try {
+      const response = await apiService.music.getPlaylist(id, { key: sourceKey });
+      const tracks = response.data.tracks || [];
+      
+      const playlist = tracks.map(track => ({
+        ...track,
+        thumbnail: track.thumbnail || '/default/music-thumb.png'
+      }));
 
-  /**
-   * ⏯️ Toggle play/pause
-   */
-  const togglePlayPause = useCallback(() => {
-    if (!audioRef.current) return;
+      if (playlist.length > 0) {
+        playTrack(playlist[0], playlist, 0);
+        addRecentMusic(playlist[0]);
+      }
+    } catch (error) {
+      console.error('Failed to load playlist:', error);
+      throw error;
+    }
+  };
+
+  const togglePlayPause = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
 
     if (isPlaying) {
-      audioRef.current.pause();
+      audio.pause();
+      pauseTrack();
     } else {
-      audioRef.current.play();
+      audio.play().catch(console.error);
+      resumeTrack();
     }
-  }, [isPlaying]);
+  };
 
-  /**
-   * ⏭️ Next track
-   */
-  const nextTrack = useCallback(() => {
-    if (playlist.length === 0) return;
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
 
-    let nextIndex;
-    if (isShuffled) {
-      nextIndex = Math.floor(Math.random() * playlist.length);
-    } else {
-      nextIndex = currentTrackIndex + 1;
-      if (nextIndex >= playlist.length) {
-        nextIndex = repeatMode === 'all' ? 0 : currentTrackIndex;
-      }
+  const seekTo = (time) => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.currentTime = time;
+      setCurrentTime(time);
     }
-    
-    if (nextIndex !== currentTrackIndex) {
-      setCurrentTrackIndex(nextIndex);
-      const nextTrack = playlist[nextIndex];
-      navigate(`/music/player?path=${encodeURIComponent(nextTrack.path)}`);
+  };
+
+  const seekRelative = (seconds) => {
+    const audio = audioRef.current;
+    if (audio) {
+      const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
+      seekTo(newTime);
     }
-  }, [playlist, currentTrackIndex, isShuffled, repeatMode, navigate]);
+  };
 
-  /**
-   * ⏮️ Previous track
-   */
-  const previousTrack = useCallback(() => {
-    if (playlist.length === 0) return;
+  const handleProgressClick = (e) => {
+    const progressBar = progressBarRef.current;
+    if (!progressBar || !duration) return;
 
-    // If we're more than 3 seconds in, restart current track
-    if (currentTime > 3) {
-      audioRef.current.currentTime = 0;
-      return;
-    }
-
-    let prevIndex;
-    if (isShuffled) {
-      prevIndex = Math.floor(Math.random() * playlist.length);
-    } else {
-      prevIndex = currentTrackIndex - 1;
-      if (prevIndex < 0) {
-        prevIndex = repeatMode === 'all' ? playlist.length - 1 : 0;
-      }
-    }
+    const rect = progressBar.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = clickX / rect.width;
+    const newTime = percentage * duration;
     
-    setCurrentTrackIndex(prevIndex);
-    const prevTrack = playlist[prevIndex];
-    navigate(`/music/player?path=${encodeURIComponent(prevTrack.path)}`);
-  }, [playlist, currentTrackIndex, currentTime, isShuffled, repeatMode, navigate]);
+    seekTo(newTime);
+  };
 
-  /**
-   * 🔄 Handle track end
-   */
-  const handleTrackEnd = useCallback(() => {
-    if (repeatMode === 'one') {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play();
-    } else {
-      nextTrack();
-    }
-  }, [repeatMode, nextTrack]);
-
-  /**
-   * ⏭️ Seek by seconds
-   */
-  const seekBy = useCallback((seconds) => {
-    if (!audioRef.current) return;
-    
-    const newTime = Math.max(0, Math.min(duration, currentTime + seconds));
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
-  }, [currentTime, duration]);
-
-  /**
-   * 🔧 Handle progress bar click
-   */
-  const handleProgressClick = useCallback((e) => {
-    if (!audioRef.current || !duration) return;
-    
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pos = (e.clientX - rect.left) / rect.width;
-    const newTime = pos * duration;
-    
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
-  }, [duration]);
-
-  /**
-   * 🔊 Adjust volume
-   */
-  const adjustVolume = useCallback((delta) => {
-    if (!audioRef.current) return;
-    
-    const newVolume = Math.max(0, Math.min(1, volume + delta));
-    setVolume(newVolume);
-    audioRef.current.volume = newVolume;
-    
-    if (newVolume === 0) {
-      setIsMuted(true);
-      audioRef.current.muted = true;
-    } else if (isMuted) {
-      setIsMuted(false);
-      audioRef.current.muted = false;
-    }
-  }, [volume, isMuted]);
-
-  /**
-   * 🔇 Toggle mute
-   */
-  const toggleMute = useCallback(() => {
-    if (!audioRef.current) return;
-    
-    const newMuted = !isMuted;
-    setIsMuted(newMuted);
-    audioRef.current.muted = newMuted;
-  }, [isMuted]);
-
-  /**
-   * 🔀 Toggle shuffle
-   */
-  const toggleShuffle = useCallback(() => {
-    setIsShuffled(!isShuffled);
-  }, [isShuffled]);
-
-  /**
-   * 🔁 Toggle repeat mode
-   */
-  const toggleRepeat = useCallback(() => {
-    const modes = ['off', 'one', 'all'];
-    const currentIndex = modes.indexOf(repeatMode);
-    const nextIndex = (currentIndex + 1) % modes.length;
-    setRepeatMode(modes[nextIndex]);
-  }, [repeatMode]);
-
-  /**
-   * ❤️ Toggle favorite
-   */
-  const handleToggleFavorite = useCallback(async () => {
+  const toggleFavoriteTrack = async () => {
     try {
-      const { sourceKey } = useAuthStore.getState();
-      await apiService.music.toggleFavorite(sourceKey, path, !isFavorited);
-      toggleFavorite(path);
-      toast.success(isFavorited ? 'Đã xóa khỏi yêu thích' : 'Đã thêm vào yêu thích');
+      await toggleFavorite(trackInfo);
+      showToast(
+        isFavorited ? 'Removed from favorites' : 'Added to favorites',
+        'success'
+      );
     } catch (error) {
-      console.error('Toggle favorite error:', error);
-      toast.error('Có lỗi xảy ra');
+      showToast('Failed to update favorites', 'error');
     }
-  }, [path, isFavorited, toggleFavorite]);
+  };
 
-  /**
-   * 🔄 Retry loading
-   */
-  const retryLoad = useCallback(() => {
-    if (!audioRef.current) return;
-    
-    setError(null);
-    setIsLoading(true);
-    audioRef.current.load();
-  }, []);
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
 
-  /**
-   * ⏰ Format time duration
-   */
-  const formatTime = useCallback((time) => {
-    if (!time || !isFinite(time)) return '0:00';
-    
+  const formatTime = (time) => {
+    if (isNaN(time)) return '0:00';
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }, []);
+  };
 
-  // === RENDER FUNCTIONS ===
+  if (isLoading) {
+    return <LoadingOverlay message="Loading music player..." />;
+  }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 to-blue-900 flex items-center justify-center">
-        <div className="text-center text-white">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl mb-4">Có lỗi xảy ra</h2>
-          <p className="text-gray-300 mb-6">{error}</p>
-          <div className="space-x-4">
-            <Button onClick={retryLoad} variant="primary">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Thử lại
-            </Button>
-            <Button onClick={() => navigate('/music')} variant="secondary">
-              Quay lại
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 to-blue-900 flex items-center justify-center">
-        <div className="text-center text-white">
-          <Loader className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <h2 className="text-xl mb-2">Đang tải nhạc...</h2>
-          <p className="text-sm text-gray-400">{trackInfo.title}</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Failed to load music
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+          <Button onClick={() => navigate('/music')} variant="primary">
+            Back to Music
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-      {/* Audio Element */}
-      <audio
+    <div className={`min-h-screen ${darkMode ? 'dark' : ''} bg-gradient-to-br from-gray-900 to-black text-white ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
+      {/* Audio element */}
+      <audio 
         ref={audioRef}
-        src={audioUrl}
-        preload="auto"
+        src={buildAudioUrl(currentTrack?.path || path)}
+        preload="metadata"
       />
 
-      {/* Header */}
-      <header className="flex items-center justify-between p-4 text-white">
-        <div className="flex items-center space-x-4">
-          <Button
-            onClick={() => navigate('/music')}
-            variant="ghost"
-            size="sm"
-            className="text-white hover:bg-white/20"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-lg font-semibold">Đang phát</h1>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Button
-            onClick={() => setShowPlaylist(!showPlaylist)}
-            variant="ghost"
-            size="sm"
-            className="text-white hover:bg-white/20"
-          >
-            <List className="w-5 h-5" />
-          </Button>
-        </div>
-      </header>
-
-      {/* Main Player */}
-      <div className="flex flex-col items-center px-8 py-12">
-        {/* Album Art */}
-        <div className="w-80 h-80 rounded-2xl bg-white/10 backdrop-blur-lg mb-8 overflow-hidden shadow-2xl">
-          <img
-            src="/default/music-thumb.png"
-            alt="Album Art"
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.target.src = '/default/music-thumb.png';
-            }}
-          />
-        </div>
-
-        {/* Track Info */}
-        <div className="text-center text-white mb-8">
-          <h2 className="text-2xl font-bold mb-2">{trackInfo.title}</h2>
-          <p className="text-lg text-gray-300 mb-1">{trackInfo.artist}</p>
-          <p className="text-gray-400">{trackInfo.album}</p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="w-full max-w-md mb-8">
-          <div 
-            ref={progressBarRef}
-            className="relative h-2 bg-white/20 rounded-full cursor-pointer group"
-            onClick={handleProgressClick}
-          >
-            {/* Buffered Progress */}
-            <div 
-              className="absolute inset-y-0 left-0 bg-white/40 rounded-full"
-              style={{ width: `${buffered}%` }}
-            />
-            {/* Current Progress */}
-            <div 
-              className="absolute inset-y-0 left-0 bg-white rounded-full"
-              style={{ width: `${(currentTime / duration) * 100}%` }}
-            />
-            {/* Progress Handle */}
-            <div 
-              className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full 
-                        opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-              style={{ left: `${(currentTime / duration) * 100}%`, marginLeft: '-8px' }}
-            />
+      {/* Main player layout */}
+      <div className="flex flex-col h-screen">
+        {/* Top bar */}
+        <div className="flex items-center justify-between p-4 bg-black/20 backdrop-blur-sm">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/music')}
+              icon={FiHome}
+              className="text-white hover:bg-white/10"
+            >
+              Back
+            </Button>
+            <h1 className="text-lg font-semibold">Music Player</h1>
           </div>
           
-          {/* Time Display */}
-          <div className="flex justify-between text-sm text-gray-300 mt-2">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
-        </div>
-
-        {/* Control Buttons */}
-        <div className="flex items-center justify-center space-x-6 mb-8">
-          {/* Shuffle */}
-          <Button
-            onClick={toggleShuffle}
-            variant="ghost"
-            size="sm"
-            className={`text-white hover:bg-white/20 ${isShuffled ? 'text-green-400' : ''}`}
-          >
-            <Shuffle className="w-5 h-5" />
-          </Button>
-
-          {/* Previous */}
-          <Button
-            onClick={previousTrack}
-            variant="ghost"
-            size="lg"
-            className="text-white hover:bg-white/20"
-          >
-            <SkipBack className="w-6 h-6" />
-          </Button>
-
-          {/* Play/Pause */}
-          <Button
-            onClick={togglePlayPause}
-            variant="ghost"
-            size="xl"
-            className="w-16 h-16 rounded-full bg-white text-purple-900 hover:bg-gray-100"
-          >
-            {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
-          </Button>
-
-          {/* Next */}
-          <Button
-            onClick={nextTrack}
-            variant="ghost"
-            size="lg"
-            className="text-white hover:bg-white/20"
-          >
-            <SkipForward className="w-6 h-6" />
-          </Button>
-
-          {/* Repeat */}
-          <Button
-            onClick={toggleRepeat}
-            variant="ghost"
-            size="sm"
-            className={`text-white hover:bg-white/20 ${repeatMode !== 'off' ? 'text-green-400' : ''}`}
-          >
-            <Repeat className="w-5 h-5" />
-            {repeatMode === 'one' && <span className="text-xs absolute -top-1 -right-1">1</span>}
-          </Button>
-        </div>
-
-        {/* Secondary Controls */}
-        <div className="flex items-center justify-center space-x-4 text-white">
-          {/* Favorite */}
-          <Button
-            onClick={handleToggleFavorite}
-            variant="ghost"
-            size="sm"
-            className={`${isFavorited ? 'text-red-500' : 'text-white'} hover:bg-white/20`}
-          >
-            <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
-          </Button>
-
-          {/* Volume Control */}
           <div className="flex items-center space-x-2">
             <Button
-              onClick={toggleMute}
               variant="ghost"
               size="sm"
-              className="text-white hover:bg-white/20"
+              onClick={() => setShowPlaylist(!showPlaylist)}
+              icon={FiList}
+              className="text-white hover:bg-white/10"
             >
-              {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              Playlist
             </Button>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={volume}
-              onChange={(e) => adjustVolume(parseFloat(e.target.value) - volume)}
-              className="w-24 h-1 bg-white/20 rounded-full appearance-none cursor-pointer
-                       [&::-webkit-slider-thumb]:appearance-none 
-                       [&::-webkit-slider-thumb]:w-3 
-                       [&::-webkit-slider-thumb]:h-3 
-                       [&::-webkit-slider-thumb]:bg-white 
-                       [&::-webkit-slider-thumb]:rounded-full"
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleFullscreen}
+              icon={isFullscreen ? FiMinimize2 : FiMaximize2}
+              className="text-white hover:bg-white/10"
             />
           </div>
-
-          {/* Equalizer */}
-          <Button
-            onClick={() => setShowEqualizer(!showEqualizer)}
-            variant="ghost"
-            size="sm"
-            className="text-white hover:bg-white/20"
-          >
-            <Sliders className="w-5 h-5" />
-          </Button>
         </div>
-      </div>
 
-      {/* Playlist Sidebar */}
-      {showPlaylist && (
-        <div className="fixed top-0 right-0 w-80 h-full bg-black/90 backdrop-blur-lg text-white p-4 overflow-y-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Danh sách phát</h3>
-            <Button
-              onClick={() => setShowPlaylist(false)}
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/20"
-            >
-              ✕
-            </Button>
-          </div>
-          
-          <div className="space-y-2">
-            {playlist.map((track, index) => (
-              <div
-                key={track.path}
-                className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                  index === currentTrackIndex 
-                    ? 'bg-white/20 border border-white/30' 
-                    : 'hover:bg-white/10'
-                }`}
-                onClick={() => {
-                  setCurrentTrackIndex(index);
-                  navigate(`/music/player?path=${encodeURIComponent(track.path)}`);
+        {/* Main content */}
+        <div className="flex-1 flex">
+          {/* Player section */}
+          <div className={`flex-1 flex flex-col items-center justify-center p-8 ${showPlaylist ? 'lg:w-2/3' : 'w-full'}`}>
+            {/* Album art */}
+            <div className="w-80 h-80 mb-8 relative">
+              <img
+                src={currentTrack?.thumbnail || trackInfo.thumbnail}
+                alt={currentTrack?.name || trackInfo.name}
+                className="w-full h-full object-cover rounded-2xl shadow-2xl"
+                onError={(e) => {
+                  e.target.src = '/default/music-thumb.png';
                 }}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
-                    <Music className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{track.title || 'Unknown Track'}</p>
-                    <p className="text-sm text-gray-400 truncate">{track.artist || 'Unknown Artist'}</p>
-                  </div>
-                  {index === currentTrackIndex && isPlaying && (
-                    <div className="w-4 h-4 flex items-center justify-center">
-                      <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
-                    </div>
-                  )}
+              />
+              
+              {/* Visualizer overlay */}
+              {isPlaying && (
+                <div className="absolute inset-0 bg-black/30 rounded-2xl flex items-center justify-center">
+                  <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin" />
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+              )}
+            </div>
 
-      {/* Equalizer Panel */}
-      {showEqualizer && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-lg rounded-lg p-4 text-white">
-          <h3 className="text-lg font-semibold mb-4">Equalizer</h3>
-          <div className="flex space-x-2">
-            {['60Hz', '170Hz', '310Hz', '600Hz', '1kHz', '3kHz', '6kHz', '12kHz', '14kHz', '16kHz'].map((freq) => (
-              <div key={freq} className="flex flex-col items-center">
+            {/* Track info */}
+            <div className="text-center mb-8 max-w-md">
+              <h2 className="text-3xl font-bold mb-2 truncate">
+                {currentTrack?.name || trackInfo.name}
+              </h2>
+              <p className="text-xl text-gray-300 mb-1 truncate">
+                {currentTrack?.artist || trackInfo.artist}
+              </p>
+              <p className="text-lg text-gray-400 truncate">
+                {currentTrack?.album || trackInfo.album}
+              </p>
+            </div>
+
+            {/* Progress bar */}
+            <div className="w-full max-w-md mb-6">
+              <div className="flex items-center justify-between text-sm text-gray-400 mb-2">
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration)}</span>
+              </div>
+              <div
+                ref={progressBarRef}
+                className="h-2 bg-gray-700 rounded-full cursor-pointer relative overflow-hidden"
+                onClick={handleProgressClick}
+              >
+                {/* Buffered progress */}
+                <div
+                  className="absolute top-0 left-0 h-full bg-gray-600 rounded-full"
+                  style={{ width: `${(buffered / duration) * 100 || 0}%` }}
+                />
+                {/* Current progress */}
+                <div
+                  className="absolute top-0 left-0 h-full bg-blue-500 rounded-full"
+                  style={{ width: `${(currentTime / duration) * 100 || 0}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center space-x-6 mb-6">
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={toggleFavoriteTrack}
+                icon={FiHeart}
+                className={`text-2xl ${isFavorited ? 'text-red-500' : 'text-white'} hover:bg-white/10`}
+              />
+              
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={prevTrack}
+                icon={FiSkipBack}
+                className="text-2xl text-white hover:bg-white/10"
+              />
+              
+              <Button
+                variant="primary"
+                size="xl"
+                onClick={togglePlayPause}
+                icon={isPlaying ? FiPause : FiPlay}
+                className="text-3xl bg-blue-600 hover:bg-blue-700 rounded-full p-4"
+              />
+              
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={nextTrack}
+                icon={FiSkipForward}
+                className="text-2xl text-white hover:bg-white/10"
+              />
+              
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={() => setShowPlaylist(!showPlaylist)}
+                icon={FiMoreHorizontal}
+                className="text-2xl text-white hover:bg-white/10"
+              />
+            </div>
+
+            {/* Volume and additional controls */}
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => useMusicStore.getState().toggleShuffle()}
+                icon={FiShuffle}
+                className={`${shuffle ? 'text-blue-500' : 'text-white'} hover:bg-white/10`}
+              />
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleMute}
+                  icon={isMuted ? FiVolumeX : FiVolume2}
+                  className="text-white hover:bg-white/10"
+                />
                 <input
                   type="range"
-                  min="-12"
-                  max="12"
-                  defaultValue="0"
-                  className="w-6 h-24 appearance-none bg-white/20 rounded-full 
-                           [&::-webkit-slider-thumb]:appearance-none 
-                           [&::-webkit-slider-thumb]:w-6 
-                           [&::-webkit-slider-thumb]:h-3 
-                           [&::-webkit-slider-thumb]:bg-white 
-                           [&::-webkit-slider-thumb]:rounded-full"
-                  style={{ writingMode: 'bt-lr' }}
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={isMuted ? 0 : volume}
+                  onChange={(e) => setVolume(parseFloat(e.target.value))}
+                  className="w-20 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                 />
-                <span className="text-xs mt-2">{freq}</span>
               </div>
-            ))}
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => useMusicStore.getState().setRepeat(repeat === 'none' ? 'all' : repeat === 'all' ? 'one' : 'none')}
+                icon={FiRepeat}
+                className={`${repeat !== 'none' ? 'text-blue-500' : 'text-white'} hover:bg-white/10`}
+              />
+            </div>
           </div>
+
+          {/* Playlist sidebar */}
+          <AnimatePresence>
+            {showPlaylist && (
+              <motion.div
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                className="w-1/3 min-w-80 bg-black/40 backdrop-blur-sm border-l border-gray-700 p-6 overflow-y-auto"
+              >
+                <h3 className="text-xl font-bold mb-4">Playlist ({currentPlaylist.length})</h3>
+                <div className="space-y-2">
+                  {currentPlaylist.map((track, index) => (
+                    <div
+                      key={track.path || index}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        index === currentIndex 
+                          ? 'bg-blue-600/50 border border-blue-500' 
+                          : 'bg-white/5 hover:bg-white/10'
+                      }`}
+                      onClick={() => playTrack(track, currentPlaylist, index)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <img
+                          src={track.thumbnail}
+                          alt={track.name}
+                          className="w-12 h-12 object-cover rounded"
+                          onError={(e) => {
+                            e.target.src = '/default/music-thumb.png';
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate">{track.name}</p>
+                          <p className="text-sm text-gray-400 truncate">{track.artist || 'Unknown Artist'}</p>
+                        </div>
+                        {index === currentIndex && isPlaying && (
+                          <div className="text-blue-500">
+                            <FiPlay className="w-4 h-4" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/utils/api';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
+import { processThumbnails } from '@/utils/thumbnailUtils';
 import toast from 'react-hot-toast';
 
 /**
@@ -115,13 +116,16 @@ export const useRandomItems = (type, options = {}) => {
         console.log('🗂️ Cache check:', { cacheKey, hasData: !!data, isExpired, timestamp: new Date(timestamp) });
         
         if (!isExpired && data) {
+          // Process thumbnails first
+          let processedData = processThumbnails(data, type);
+          
           // Merge with current favorite state from stores
           const favoriteStore = type === 'manga' ? mangaStore : 
                                type === 'movie' ? movieStore : 
                                type === 'music' ? musicStore : null;
           
-          if (favoriteStore && Array.isArray(data)) {
-            const mergedData = data.map(item => {
+          if (favoriteStore && Array.isArray(processedData)) {
+            const mergedData = processedData.map(item => {
               const isFavorited = favoriteStore.favorites.some(f => f.path === item.path);
               return { ...item, isFavorite: isFavorited };
             });
@@ -129,7 +133,7 @@ export const useRandomItems = (type, options = {}) => {
             return mergedData;
           }
           
-          return data;
+          return processedData;
         }
       }
     } catch (error) {
@@ -200,6 +204,9 @@ export const useRandomItems = (type, options = {}) => {
     if (items && Array.isArray(items)) {
       console.log('✅ Random items fetched:', items.length, 'items');
       console.log('📊 Sample item:', items[0]);
+      
+      // Process thumbnails first based on content type
+      items = processThumbnails(items, type);
       
       // Merge with current favorite state from stores
       const favoriteStore = type === 'manga' ? mangaStore : 
@@ -288,7 +295,9 @@ export const useRandomItems = (type, options = {}) => {
           
           if (!isExpired && data && data.length > 0) {
             console.log('🔄 Loading cached data on mount:', data.length, 'items');
-            queryClient.setQueryData(queryKey, data);
+            // Process thumbnails before setting in query cache
+            const processedData = processThumbnails(data, type);
+            queryClient.setQueryData(queryKey, processedData);
             // Only set timestamp if we don't have one yet
             if (!lastUpdated) {
               setLastUpdated(new Date(timestamp));

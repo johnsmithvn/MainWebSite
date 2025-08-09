@@ -1,372 +1,422 @@
 // 📁 src/pages/music/MusicHome.jsx
-// 🎵 Trang chủ music
+// 🎵 Trang chủ music với tích hợp API backend
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Heart, Play, Grid, List, Filter, Clock, Music } from 'lucide-react';
-import { useMusicStore, useUIStore, useAuthStore } from '@/store';
-import Button from '@/components/common/Button';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { 
+  FiMusic, 
+  FiHeart, 
+  FiClock, 
+  FiSearch, 
+  FiGrid, 
+  FiList, 
+  FiFilter,
+  FiRefreshCw,
+  FiArrowLeft,
+  FiHome,
+  FiPlay,
+  FiFolder
+} from 'react-icons/fi';
+import { useAuthStore, useUIStore, useMusicStore } from '@/store';
+import { PAGINATION } from '@/constants';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
+import Button from '@/components/common/Button';
+import MusicCard from '@/components/music/MusicCard';
+import Breadcrumb from '@/components/common/Breadcrumb';
+import Pagination from '@/components/common/Pagination';
+import MusicRandomSection from '@/components/music/MusicRandomSection';
 
 const MusicHome = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { sourceKey } = useAuthStore();
-  const { isLoading, toggleLoading } = useUIStore();
-  const { musicList, favorites, currentSource, searchTerm, setSearchTerm } = useMusicStore();
+  const { loading: globalLoading } = useUIStore();
   
+  const { 
+    musicList, 
+    currentPath, 
+    loading, 
+    error,
+    searchTerm,
+    setSearchTerm,
+    fetchMusicFolders,
+    clearMusicCache 
+  } = useMusicStore();
+  
+  const [viewMode, setViewMode] = useState('grid');
+  const [sortBy, setSortBy] = useState('name');
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+
   // Redirect to home if no sourceKey selected
   useEffect(() => {
-    if (!sourceKey || !sourceKey.startsWith('M_')) {
+    if (!sourceKey) {
       navigate('/');
       return;
     }
   }, [sourceKey, navigate]);
-  const [viewMode, setViewMode] = useState('grid');
-  const [sortBy, setSortBy] = useState('name');
-  const [filterBy, setFilterBy] = useState('all');
-  const [showFilters, setShowFilters] = useState(false);
 
-  // Sample music data
-  const sampleMusic = [
-    {
-      id: 1,
-      title: "Bohemian Rhapsody",
-      artist: "Queen",
-      album: "A Night at the Opera",
-      duration: "5:55",
-      year: 1975,
-      genre: "Rock",
-      thumbnail: "/default/music-thumb.png",
-      plays: 15420,
-      format: "mp3"
-    },
-    {
-      id: 2,
-      title: "Hotel California",
-      artist: "Eagles",
-      album: "Hotel California", 
-      duration: "6:30",
-      year: 1976,
-      genre: "Rock",
-      thumbnail: "/default/music-thumb.png",
-      plays: 12350,
-      format: "flac"
-    },
-    {
-      id: 3,
-      title: "Billie Jean",
-      artist: "Michael Jackson",
-      album: "Thriller",
-      duration: "4:54",
-      year: 1982,
-      genre: "Pop",
-      thumbnail: "/default/music-thumb.png",
-      plays: 18900,
-      format: "mp3"
-    },
-    {
-      id: 4,
-      title: "Stairway to Heaven",
-      artist: "Led Zeppelin",
-      album: "Led Zeppelin IV",
-      duration: "8:02",
-      year: 1971,
-      genre: "Rock",
-      thumbnail: "/default/music-thumb.png",
-      plays: 14200,
-      format: "mp3"
-    }
-  ];
-
+  // Clear cache and refetch when sourceKey changes
   useEffect(() => {
-    // Simulate loading
-    toggleLoading();
-    setTimeout(() => {
-      toggleLoading();
-    }, 1000);
-  }, [currentSource]);
+    if (sourceKey) {
+      console.log('🎵 SourceKey changed, clearing cache and fetching:', sourceKey);
+      clearMusicCache();
+      const initialPath = searchParams.get('path') || '';
+      fetchMusicFolders(initialPath);
+    }
+  }, [sourceKey, clearMusicCache, fetchMusicFolders, searchParams]);
 
-  const filteredMusic = sampleMusic.filter(track => {
-    const matchesSearch = track.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         track.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         track.album.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterBy === 'all' || 
-                         (filterBy === 'favorites' && favorites.includes(track.id)) ||
-                         track.genre.toLowerCase() === filterBy.toLowerCase();
-    return matchesSearch && matchesFilter;
-  });
+  // Pagination
+  const musicPerPage = PAGINATION.MUSIC_PER_PAGE;
+  const totalPages = Math.ceil(musicList.length / musicPerPage);
+  const currentMusic = musicList.slice(
+    currentPage * musicPerPage,
+    (currentPage + 1) * musicPerPage
+  );
+
+  // Load initial path from URL (only when URL changes, not when currentPath changes)
+  useEffect(() => {
+    const urlPath = searchParams.get('path') || '';
+    if (urlPath !== currentPath && musicList.length === 0) {
+      console.log('🎵 Loading music from URL path:', urlPath);
+      fetchMusicFolders(urlPath);
+    }
+  }, [searchParams, fetchMusicFolders, currentPath, musicList.length, sourceKey]);
+
+  // Reset page when path changes
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [currentPath, musicList]);
+
+  // Handle back navigation
+  const handleBackClick = () => {
+    const pathParts = currentPath.split('/').filter(Boolean);
+    pathParts.pop(); // Remove last part
+    const parentPath = pathParts.join('/');
+    
+    // Update URL without triggering re-fetch since we're using fetchMusicFolders
+    setSearchParams(parentPath ? { path: parentPath } : {});
+    fetchMusicFolders(parentPath);
+  };
+
+  // Generate breadcrumb items
+  const breadcrumbItems = () => {
+    const items = [
+      { label: '🎵 Music', path: '' }
+    ];
+    
+    if (currentPath) {
+      const pathParts = currentPath.split('/').filter(Boolean);
+      let accumPath = '';
+      
+      pathParts.forEach((part, index) => {
+        accumPath += (accumPath ? '/' : '') + part;
+        items.push({
+          label: part,
+          path: accumPath,
+          isLast: index === pathParts.length - 1
+        });
+      });
+    }
+    
+    return items;
+  };
+
+  // Handle refresh
+  const handleRefresh = () => {
+    console.log('🔄 Refreshing music folder:', currentPath);
+    fetchMusicFolders(currentPath);
+  };
+
+  // Filter and sort music
+  const filteredMusic = musicList.filter(music => 
+    !searchTerm || 
+    music.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    music.artist?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    music.album?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const sortedMusic = [...filteredMusic].sort((a, b) => {
     switch (sortBy) {
       case 'name':
-        return a.title.localeCompare(b.title);
+        return (a.name || '').localeCompare(b.name || '');
       case 'artist':
-        return a.artist.localeCompare(b.artist);
-      case 'year':
-        return b.year - a.year;
-      case 'plays':
-        return b.plays - a.plays;
-      case 'duration':
-        return a.duration.localeCompare(b.duration);
+        return (a.artist || '').localeCompare(b.artist || '');
+      case 'album':
+        return (a.album || '').localeCompare(b.album || '');
+      case 'type':
+        // Folders first, then audio files
+        if (a.type === 'folder' && b.type !== 'folder') return -1;
+        if (a.type !== 'folder' && b.type === 'folder') return 1;
+        return (a.name || '').localeCompare(b.name || '');
+      case 'views':
+        return (b.viewCount || 0) - (a.viewCount || 0);
       default:
         return 0;
     }
   });
 
-  if (isLoading) {
+  // Handle navigation
+  const handleGoBack = () => {
+    if (currentPath) {
+      handleBackClick();
+    } else {
+      navigate('/');
+    }
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  if (loading || globalLoading) {
     return <LoadingOverlay message="Loading music library..." />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              🎵 Music Library
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Source: {currentSource?.name || 'M_MUSIC'}
-            </p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Random sections at top level only */}
+      {!currentPath && (
+        <div className="mb-8">
+          <MusicRandomSection />
+        </div>
+      )}
+
+      <div className="p-6">
+        {/* Header with breadcrumb and controls */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              {/* Back button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGoBack}
+                icon={currentPath ? FiArrowLeft : FiHome}
+                className="flex-shrink-0"
+              >
+                {currentPath ? 'Back' : 'Home'}
+              </Button>
+
+              {/* Breadcrumb */}
+              <Breadcrumb
+                items={breadcrumbItems()}
+                onNavigate={(path) => {
+                  setSearchParams(path ? { path } : {});
+                  fetchMusicFolders(path);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center space-x-3">
+              {/* View mode toggle */}
+              <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                <Button
+                  variant={viewMode === 'grid' ? 'primary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  icon={FiGrid}
+                  className="rounded-md"
+                />
+                <Button
+                  variant={viewMode === 'list' ? 'primary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  icon={FiList}
+                  className="rounded-md"
+                />
+              </div>
+
+              {/* Filters toggle */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                icon={FiFilter}
+              >
+                Filters
+              </Button>
+
+              {/* Refresh */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                icon={FiRefreshCw}
+                disabled={loading}
+              >
+                Refresh
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              icon={Filter}
+
+          {/* Search */}
+          <div className="relative max-w-md">
+            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search music, artists, albums..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                       bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                       focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Filters panel */}
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
             >
-              Filters
-            </Button>
-            <Button
-              variant={viewMode === 'grid' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-              icon={Grid}
-            />
-            <Button
-              variant={viewMode === 'list' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-              icon={List}
-            />
+              <div className="flex flex-wrap gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Sort by:
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
+                             bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="name">Name</option>
+                    <option value="artist">Artist</option>
+                    <option value="album">Album</option>
+                    <option value="type">Type</option>
+                    <option value="views">Most Played</option>
+                  </select>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+
+        {/* Statistics cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center">
+              <FiMusic className="w-8 h-8 text-blue-500 mr-3" />
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{musicList.length}</p>
+                <p className="text-gray-600 dark:text-gray-400">Total Items</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center">
+              <FiFolder className="w-8 h-8 text-green-500 mr-3" />
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {musicList.filter(item => item.type === 'folder').length}
+                </p>
+                <p className="text-gray-600 dark:text-gray-400">Folders</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center">
+              <FiPlay className="w-8 h-8 text-purple-500 mr-3" />
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {musicList.filter(item => item.type === 'audio' || item.type === 'file').length}
+                </p>
+                <p className="text-gray-600 dark:text-gray-400">Audio Files</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center">
+              <FiSearch className="w-8 h-8 text-orange-500 mr-3" />
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{filteredMusic.length}</p>
+                <p className="text-gray-600 dark:text-gray-400">Search Results</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Search bar */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Search songs, artists, albums..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
-        {/* Filters */}
-        {showFilters && (
-          <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex flex-wrap gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Sort by:
-                </label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
-                           bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="name">Song Name</option>
-                  <option value="artist">Artist</option>
-                  <option value="year">Year</option>
-                  <option value="plays">Most Played</option>
-                  <option value="duration">Duration</option>
-                </select>
+        {/* Error state */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <div className="text-red-600 dark:text-red-400">
+                <strong>Error:</strong> {error}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Filter by:
-                </label>
-                <select
-                  value={filterBy}
-                  onChange={(e) => setFilterBy(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
-                           bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="all">All Music</option>
-                  <option value="favorites">Favorites</option>
-                  <option value="rock">Rock</option>
-                  <option value="pop">Pop</option>
-                  <option value="jazz">Jazz</option>
-                  <option value="classical">Classical</option>
-                </select>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                className="ml-auto text-red-600 border-red-300 hover:bg-red-50"
+              >
+                Retry
+              </Button>
             </div>
           </div>
         )}
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center">
-            <Music className="w-8 h-8 text-blue-500 mr-3" />
-            <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{sampleMusic.length}</p>
-              <p className="text-gray-600 dark:text-gray-400">Total Songs</p>
-            </div>
+        {/* Music list */}
+        {sortedMusic.length === 0 ? (
+          <div className="text-center py-12">
+            <FiMusic className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              {searchTerm ? 'No music found' : 'No music in this folder'}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              {searchTerm 
+                ? 'Try adjusting your search terms' 
+                : 'This folder appears to be empty or not yet scanned'
+              }
+            </p>
+            {!searchTerm && (
+              <Button
+                variant="primary"
+                onClick={handleRefresh}
+                className="mt-4"
+                icon={FiRefreshCw}
+              >
+                Refresh Folder
+              </Button>
+            )}
           </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center">
-            <Heart className="w-8 h-8 text-red-500 mr-3" />
-            <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{favorites.length}</p>
-              <p className="text-gray-600 dark:text-gray-400">Favorites</p>
+        ) : (
+          <>
+            <div className={`grid gap-4 ${
+              viewMode === 'grid' 
+                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6' 
+                : 'grid-cols-1'
+            }`}>
+              {currentMusic.map((music, index) => (
+                <MusicCard
+                  key={music.path || index}
+                  item={music}
+                  showViews={true}
+                  variant={viewMode === 'list' ? 'compact' : 'default'}
+                />
+              ))}
             </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center">
-            <Clock className="w-8 h-8 text-green-500 mr-3" />
-            <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {Math.floor(sampleMusic.reduce((total, track) => {
-                  const [min, sec] = track.duration.split(':').map(Number);
-                  return total + (min * 60 + sec);
-                }, 0) / 60)}m
-              </p>
-              <p className="text-gray-600 dark:text-gray-400">Total Duration</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center">
-            <Search className="w-8 h-8 text-purple-500 mr-3" />
-            <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{filteredMusic.length}</p>
-              <p className="text-gray-600 dark:text-gray-400">Search Results</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Music Grid/List */}
-      {sortedMusic.length === 0 ? (
-        <div className="text-center py-12">
-          <Music className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            No music found
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Try adjusting your search or filters
-          </p>
-        </div>
-      ) : (
-        <div className={`grid ${
-          viewMode === 'grid' 
-            ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' 
-            : 'grid-cols-1'
-        } gap-4`}>
-          {sortedMusic.map((track) => (
-            <div
-              key={track.id}
-              className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg 
-                        transition-all duration-200 cursor-pointer group border border-gray-200 dark:border-gray-700
-                        ${viewMode === 'list' ? 'flex items-center p-4' : 'p-4'}`}
-            >
-              {viewMode === 'grid' ? (
-                <>
-                  <div className="relative aspect-square bg-gray-200 dark:bg-gray-700 rounded-md mb-3 
-                                overflow-hidden">
-                    <img
-                      src={track.thumbnail}
-                      alt={track.album}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 
-                                  transition-all duration-300 flex items-center justify-center">
-                      <Play className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                    <div className="absolute top-2 right-2">
-                      <Heart className={`w-4 h-4 ${
-                        favorites.includes(track.id) 
-                          ? 'text-red-500 fill-current' 
-                          : 'text-white opacity-70'
-                      }`} />
-                    </div>
-                  </div>
-                  
-                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1 
-                               line-clamp-1">
-                    {track.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 line-clamp-1">
-                    {track.artist}
-                  </p>
-                  <p className="text-xs text-gray-500 mb-2 line-clamp-1">
-                    {track.album}
-                  </p>
-                  
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{track.duration}</span>
-                    <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                      {track.format.toUpperCase()}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-md mr-4 
-                                flex-shrink-0 overflow-hidden relative group">
-                    <img
-                      src={track.thumbnail}
-                      alt={track.album}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 
-                                  transition-all duration-300 flex items-center justify-center">
-                      <Play className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                      {track.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                      {track.artist} • {track.album}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                      <span>{track.year}</span>
-                      <span>{track.genre}</span>
-                      <span>{track.plays.toLocaleString()} plays</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-sm text-gray-500">
-                    <span>{track.duration}</span>
-                    <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-xs">
-                      {track.format.toUpperCase()}
-                    </span>
-                    <Heart className={`w-4 h-4 ${
-                      favorites.includes(track.id) 
-                        ? 'text-red-500 fill-current' 
-                        : 'text-gray-400'
-                    }`} />
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-8">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  showInfo={true}
+                  totalItems={filteredMusic.length}
+                  itemsPerPage={musicPerPage}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

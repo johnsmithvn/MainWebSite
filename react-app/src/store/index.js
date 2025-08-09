@@ -677,6 +677,16 @@ export const useMovieStore = create(
 export const useMusicStore = create(
   persist(
     (set, get) => ({
+      // Music browser state (similar to movie store)
+      currentPath: '',
+      musicList: [], // Current folder's music/folders
+      allMusic: [], // For backward compatibility
+      favorites: [],
+      loading: false,
+      error: null,
+      searchTerm: '',
+      
+      // Player state
       currentTrack: null,
       currentPlaylist: [],
       currentIndex: 0,
@@ -685,10 +695,118 @@ export const useMusicStore = create(
       shuffle: false,
       repeat: 'none', // 'none', 'one', 'all'
       playlists: [],
-      favorites: [],
       recentPlayed: [],
+      favoritesRefreshTrigger: 0, // Add trigger for forcing slider refresh
+      playerSettings: {
+        volume: 1,
+        autoplay: false,
+        loop: false,
+        quality: 'auto',
+      },
       
-      // Player controls
+      // Music browser methods (similar to movie store)
+      setCurrentPath: (path) => set({ currentPath: path }),
+      setMusicList: (musicList) => set({ musicList, allMusic: musicList }), // Keep both for compatibility
+      setAllMusic: (music) => set({ allMusic: music, musicList: music }),
+      setFavorites: (favorites) => set({ favorites }),
+      setLoading: (loading) => set({ loading }),
+      setError: (error) => set({ error }),
+      setSearchTerm: (searchTerm) => set({ searchTerm }),
+      setCurrentMusic: (music) => set({ currentMusic: music }),
+      
+      updatePlayerSettings: (settings) => set((state) => ({
+        playerSettings: { ...state.playerSettings, ...settings }
+      })),
+      
+      clearMusicCache: () => set({ 
+        allMusic: [], 
+        musicList: [],
+        currentPath: '',
+        error: null 
+      }),
+      
+      // Fetch music folders from API (similar to old loadMusicFolder)
+      fetchMusicFolders: async (path = '') => {
+        set({ loading: true, error: null });
+        const { sourceKey } = useAuthStore.getState();
+        
+        console.log('🎵 fetchMusicFolders called with:', { path, sourceKey });
+        
+        if (!sourceKey) {
+          console.error('❌ No sourceKey found');
+          set({ error: 'No source key selected', loading: false });
+          return;
+        }
+        
+        try {
+          const params = { key: sourceKey };
+          if (path) params.path = path;
+          
+          console.log('🎵 API request params:', params);
+          
+          const response = await apiService.music.getFolders(params);
+          const data = response.data;
+          
+          console.log('🎵 Music API Response:', data);
+          
+          const folders = data.folders || [];
+          
+          // Process folders to match expected format (similar to old frontend buildThumbnailUrl)
+          const processedFolders = folders.map(folder => {
+            let thumbnailUrl = folder.thumbnail;
+            
+            if (thumbnailUrl && thumbnailUrl !== 'null') {
+              // Handle already complete URLs
+              if (thumbnailUrl.startsWith('/audio/') || 
+                  thumbnailUrl.startsWith('http') || 
+                  thumbnailUrl.startsWith('/default/')) {
+                thumbnailUrl = thumbnailUrl;
+              } else {
+                // Get folder prefix (remove filename if it's a music file)
+                let folderPrefix;
+                if (folder.type === 'folder') {
+                  folderPrefix = folder.path || '';
+                } else {
+                  folderPrefix = folder.path?.split('/').slice(0, -1).join('/') || '';
+                }
+                
+                // Remove folder prefix from thumbnail if it's already included
+                if (folderPrefix && thumbnailUrl.startsWith(folderPrefix + '/')) {
+                  thumbnailUrl = thumbnailUrl.slice(folderPrefix.length + 1);
+                }
+                
+                // Encode path components to handle special characters (like old frontend)
+                const safeFolderPrefix = folderPrefix ? 
+                  folderPrefix.split('/').map(encodeURIComponent).join('/') + '/' : '';
+                const safeThumbnail = thumbnailUrl.split('/').map(encodeURIComponent).join('/');
+                
+                // Build thumbnail URL using /audio/ prefix (like old frontend)
+                thumbnailUrl = `/audio/${safeFolderPrefix}${safeThumbnail.replace(/\\/g, '/')}`;
+              }
+            } else {
+              // Use default thumbnails
+              thumbnailUrl = (folder.type === 'audio' || folder.type === 'file') 
+                ? '/default/music-thumb.png' 
+                : '/default/folder-thumb.png';
+            }
+            
+            return {
+              ...folder,
+              thumbnail: thumbnailUrl,
+              isFavorite: !!folder.isFavorite
+            };
+          });
+          
+          set({ 
+            musicList: processedFolders,
+            currentPath: path,
+            loading: false 
+          });
+        } catch (error) {
+          console.error('Fetch music folders error:', error);
+          set({ error: error.response?.data?.message || error.message, loading: false });
+        }
+      },
       playTrack: (track, playlist = [], index = 0) => set({
         currentTrack: track,
         currentPlaylist: playlist,
@@ -746,33 +864,71 @@ export const useMusicStore = create(
         playlists: state.playlists.filter(p => p.id !== id)
       })),
       
-      // Favorites and recent
-      setFavorites: (favorites) => set({ favorites }),
-      
-      clearMusicCache: () => set({ 
-        currentTrack: null,
-        currentPlaylist: [],
-        currentIndex: 0,
-        isPlaying: false,
-        playlists: [],
-        error: null 
-      }),
-      
       // Fetch favorites from API
       fetchFavorites: async () => {
         try {
           const { sourceKey } = useAuthStore.getState();
           const params = { key: sourceKey };
+          
           // Note: Music favorites API might not exist yet, so handle gracefully
           try {
             const response = await apiService.music.getFavorites?.(params);
-            set({ favorites: response.data || [] });
+            
+            // Process favorites similar to the old code with encoding (using /audio/ prefix)
+            const allFavorites = response.data || [];
+            const favorites = allFavorites.map(item => {
+              let thumbnailUrl = item.thumbnail;
+              
+              if (thumbnailUrl && thumbnailUrl !== 'null') {
+                // Handle already complete URLs
+                if (thumbnailUrl.startsWith('/audio/') || 
+                    thumbnailUrl.startsWith('http') || 
+                    thumbnailUrl.startsWith('/default/')) {
+                  thumbnailUrl = thumbnailUrl;
+                } else {
+                  // Get folder prefix (remove filename if it's a music file)
+                  let folderPrefix;
+                  if (item.type === 'folder') {
+                    folderPrefix = item.path || '';
+                  } else {
+                    folderPrefix = item.path?.split('/').slice(0, -1).join('/') || '';
+                  }
+                  
+                  // Remove folder prefix from thumbnail if it's already included
+                  if (folderPrefix && thumbnailUrl.startsWith(folderPrefix + '/')) {
+                    thumbnailUrl = thumbnailUrl.slice(folderPrefix.length + 1);
+                  }
+                  
+                  // Encode path components to handle special characters
+                  const safeFolderPrefix = folderPrefix ? 
+                    folderPrefix.split('/').map(encodeURIComponent).join('/') + '/' : '';
+                  const safeThumbnail = thumbnailUrl.split('/').map(encodeURIComponent).join('/');
+                  
+                  // Build thumbnail URL using /audio/ prefix
+                  thumbnailUrl = `/audio/${safeFolderPrefix}${safeThumbnail.replace(/\\/g, '/')}`;
+                }
+              } else {
+                // Use default thumbnails
+                thumbnailUrl = (item.type === 'audio' || item.type === 'file') 
+                  ? '/default/music-thumb.png' 
+                  : '/default/folder-thumb.png';
+              }
+              
+              return {
+                ...item,
+                thumbnail: thumbnailUrl
+              };
+            });
+            
+            set({ favorites });
           } catch {
             // Music favorites API not implemented yet, keep local storage
             console.warn('Music favorites API not implemented');
+            set({ favorites: [] });
           }
         } catch (error) {
           console.error('Fetch music favorites error:', error);
+          set({ error: error.response?.data?.message || error.message });
         }
       },
       
@@ -797,7 +953,12 @@ export const useMusicStore = create(
             const favorites = isFavorited
               ? state.favorites.filter(f => f.path !== item.path)
               : [...state.favorites, item];
-            return { favorites };
+            
+            // Increment favoritesRefreshTrigger to trigger slider refresh
+            return { 
+              favorites,
+              favoritesRefreshTrigger: state.favoritesRefreshTrigger + 1
+            };
           });
 
           // Update all cache entries
@@ -809,6 +970,38 @@ export const useMusicStore = create(
           console.error('Toggle music favorite error:', error);
         }
       },
+      
+      removeFavorite: async (item) => {
+        try {
+          const { sourceKey } = useAuthStore.getState();
+          
+          // Call API to remove favorite
+          await apiService.music.toggleFavorite(sourceKey, item.path, false);
+          
+          // Update local state
+          set((state) => ({
+            favorites: state.favorites.filter(f => f.path !== item.path)
+          }));
+          
+        } catch (error) {
+          console.error('Remove music favorite error:', error);
+          set({ error: error.response?.data?.message || error.message });
+        }
+      },
+      
+      // Clear recent history for music
+      clearRecentHistory: () => {
+        const { sourceKey } = useAuthStore.getState();
+        try {
+          const cacheKey = `recentViewedMusic::${sourceKey}`;
+          localStorage.removeItem(cacheKey);
+          console.log('🎵 Music recent history cleared');
+        } catch (error) {
+          console.error('Error clearing music recent history:', error);
+        }
+      },
+      
+      // Player controls
       
       addToRecentPlayed: (item) => set((state) => {
         const recent = state.recentPlayed.filter(r => r.path !== item.path);
@@ -824,6 +1017,8 @@ export const useMusicStore = create(
         playlists: state.playlists,
         favorites: state.favorites,
         recentPlayed: state.recentPlayed,
+        playerSettings: state.playerSettings,
+        currentPath: state.currentPath,
       }),
     }
   )

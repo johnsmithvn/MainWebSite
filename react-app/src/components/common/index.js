@@ -13,3 +13,5 @@ export { default as RecentSlider } from './RecentSlider';
 export { default as SettingsModal } from './SettingsModal';
 export { default as LoginModal } from './LoginModal';
 export { default as Toast } from './Toast';
+export { default as Breadcrumb } from './Breadcrumb';
+export { default as Pagination } from './Pagination';

@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
+import { processThumbnails } from '@/utils/thumbnailUtils';
 
 /**
  * Hook để quản lý recent viewed items với localStorage cache
@@ -73,6 +74,9 @@ export const useRecentItems = (type, options = {}) => {
         let sortedData = cachedData
           .sort((a, b) => (b.lastViewed || 0) - (a.lastViewed || 0))
           .slice(0, effectiveMaxItems);
+
+        // Process thumbnails first
+        sortedData = processThumbnails(sortedData, type);
 
         // Merge with current favorite state from stores
         const favoriteStore = type === 'manga' ? useMangaStore.getState() : 
@@ -154,7 +158,9 @@ export const useRecentItems = (type, options = {}) => {
           const data = JSON.parse(cached);
           if (data.length > 0) {
             console.log('🔄 Loading cached recent data on mount:', data.length, 'items');
-            queryClient.setQueryData(queryKey, data);
+            // Process thumbnails before setting in query cache
+            const processedData = processThumbnails(data, type);
+            queryClient.setQueryData(queryKey, processedData);
             setLastUpdated(new Date());
           }
         }

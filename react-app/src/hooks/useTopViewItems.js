@@ -4,6 +4,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import { apiService } from '@/utils/api';
+import { processThumbnails } from '@/utils/thumbnailUtils';
 import { useEffect } from 'react';
 
 export const useTopViewItems = (type = 'manga', options = {}) => {
@@ -105,6 +106,9 @@ export const useTopViewItems = (type = 'manga', options = {}) => {
       } else if (data && data.success && Array.isArray(data.data)) {
         items = data.data;
       }
+      
+      // Process thumbnails first based on content type
+      items = processThumbnails(items, type);
       
       // Merge with current favorite state from stores
       const favoriteStore = type === 'manga' ? mangaStore : 
