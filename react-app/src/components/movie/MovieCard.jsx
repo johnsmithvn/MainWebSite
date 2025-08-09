@@ -22,12 +22,10 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
       console.log('🎬 Navigating to folder:', newUrl);
       navigate(newUrl);
     } else if (item.type === 'video' || item.type === 'file') {
-      // Add to recent and navigate to player
+      // Add to recent and navigate to player with stable URL using state
       addRecentMovie(item);
-      const encodedFile = encodeURIComponent(item.path);
-      const newUrl = `/movie/player?file=${encodedFile}`;
-      console.log('🎬 Navigating to player:', newUrl);
-      navigate(newUrl);
+      console.log('🎬 Navigating to player with state');
+      navigate('/movie/player', { state: { file: item.path } });
     }
   };
 

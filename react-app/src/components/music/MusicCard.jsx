@@ -45,13 +45,14 @@ const MusicCard = ({
     const encodedPath = encodeURIComponent(item.path);
     
     if (isPlaylist) {
-      // Navigate to playlist player
-      navigate(`/music/player?playlist=${encodedPath}&key=${sourceKey}`);
+      // Open player with playlist context, keep URL stable
+      navigate('/music/player', { state: { playlist: item.path, key: sourceKey } });
     } else if (isAudio) {
-      // Navigate to audio player
-      navigate(`/music/player?file=${encodedPath}&key=${sourceKey}`);
+      // Open player with both file and its parent folder as playlist context
+      const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
+      navigate('/music/player', { state: { file: item.path, playlist: folderPath, key: sourceKey } });
     } else if (isFolder) {
-      // Navigate to folder
+      // Navigate to folder browser
       navigate(`/music?path=${encodedPath}`);
     }
   };

@@ -2,7 +2,7 @@
 // 🎬 Movie player page with full functionality from old frontend
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuthStore, useMovieStore, useUIStore } from '@/store';
 import { useRecentManager } from '@/hooks';
@@ -18,13 +18,17 @@ import MovieRandomSection from '@/components/movie/MovieRandomSection';
 const MoviePlayer = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const videoRef = useRef(null);
   const gestureTargetRef = useRef(null);
   
-  // Get file and key from URL params
-  const file = searchParams.get('file');
+  // Get file and key from URL params or navigation state
+  const fileParam = searchParams.get('file');
   const keyParam = searchParams.get('key');
-  
+  const { file: stateFile, key: stateKey } = location.state || {};
+  const initialFile = stateFile || fileParam || '';
+  const initialKey = stateKey || keyParam || '';
+
   const { sourceKey, setSourceKey, token, isSecureKey } = useAuthStore();
   const { toggleFavorite, favorites, fetchFavorites, favoritesRefreshTrigger } = useMovieStore();
   const { 
@@ -38,7 +42,7 @@ const MoviePlayer = () => {
   const { addRecentItem } = useRecentManager('movie');
 
   // Local state
-  const [currentFile, setCurrentFile] = useState(file || '');
+  const [currentFile, setCurrentFile] = useState(initialFile);
   const [videoName, setVideoName] = useState('');
   const [folderName, setFolderName] = useState('');
   const [folderPath, setFolderPath] = useState('');
@@ -64,6 +68,7 @@ const MoviePlayer = () => {
 
   // Track last initialized combination to avoid duplicate init (StrictMode / key sync)
   const lastInitRef = useRef({ file: null, key: null });
+  const viewCountStateRef = useRef({ path: '', counted: false });
 
   // Close sidebar on player load to avoid conflicts with video controls
   useEffect(() => {
@@ -76,19 +81,21 @@ const MoviePlayer = () => {
     console.log('🎬 MoviePlayer sidebar state changed:', sidebarOpen);
   }, [sidebarOpen]);
 
-  // Sync current file from URL when query param changes
+  // Sync current file from URL/state when either changes
   useEffect(() => {
-    if (file !== currentFile) {
-      setCurrentFile(file || '');
+    const nextFile = stateFile || fileParam || '';
+    if (nextFile !== currentFile) {
+      setCurrentFile(nextFile);
     }
-  }, [file, currentFile]);
+  }, [stateFile, fileParam, currentFile]);
 
-  // Set sourceKey from URL if provided
+  // Set sourceKey from state/URL if provided
   useEffect(() => {
-    if (keyParam && keyParam !== sourceKey) {
-      setSourceKey(keyParam);
+    const nextKey = stateKey || keyParam;
+    if (nextKey && nextKey !== sourceKey) {
+      setSourceKey(nextKey);
     }
-  }, [keyParam, sourceKey, setSourceKey]);
+  }, [stateKey, keyParam, sourceKey, setSourceKey]);
 
   // Authentication check
   useEffect(() => {
@@ -155,6 +162,8 @@ const MoviePlayer = () => {
         if (typeof videoRef.current.load === 'function') {
           videoRef.current.load();
         }
+        // Reset view count state for this file
+        viewCountStateRef.current = { path: currentFile, counted: false };
       }
 
       // Load sibling videos
@@ -162,9 +171,6 @@ const MoviePlayer = () => {
       
       // Check if current video is favorited
       await checkFavoriteStatus();
-      
-      // Increase view count
-      increaseViewCount();
       
       // Save to recent
       saveToRecent(videoFileName, currentFile);
@@ -270,18 +276,42 @@ const MoviePlayer = () => {
     }
   };
 
-  // Increase view count
-  const increaseViewCount = async () => {
-    try {
-      await fetch('/api/increase-view/movie', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: sourceKey, path: currentFile })
-      });
-    } catch (err) {
-      console.error('Failed to increase view:', err);
-    }
-  };
+  // Increase view count once per file after threshold seconds of playback
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Reset when file changes
+    viewCountStateRef.current = { path: currentFile, counted: false };
+
+    const THRESHOLD_SECONDS = 3;
+    const handleTimeUpdate = async () => {
+      if (!currentFile || !sourceKey) return;
+      const state = viewCountStateRef.current;
+      if (state.path !== currentFile) {
+        viewCountStateRef.current = { path: currentFile, counted: false };
+        return;
+      }
+      if (!state.counted && video.currentTime >= THRESHOLD_SECONDS) {
+        try {
+          await fetch('/api/increase-view/movie', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: sourceKey, path: currentFile })
+          });
+        } catch (err) {
+          console.warn('Failed to increase movie view count:', err);
+        } finally {
+          viewCountStateRef.current.counted = true;
+        }
+      }
+    };
+
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [currentFile, sourceKey]);
 
   // Save to recent viewed
   const saveToRecent = (fileName, filePath) => {
@@ -327,7 +357,7 @@ const MoviePlayer = () => {
   const handlePrevVideo = () => {
     if (currentIndex > 0) {
       const prevVideo = videoList[currentIndex - 1];
-      navigate(`/movie/player?file=${encodeURIComponent(prevVideo.path)}&key=${sourceKey}`);
+      navigate('/movie/player', { state: { file: prevVideo.path, key: sourceKey } });
     }
   };
 
@@ -335,14 +365,14 @@ const MoviePlayer = () => {
   const handleNextVideo = () => {
     if (currentIndex < videoList.length - 1) {
       const nextVideo = videoList[currentIndex + 1];
-      navigate(`/movie/player?file=${encodeURIComponent(nextVideo.path)}&key=${sourceKey}`);
+      navigate('/movie/player', { state: { file: nextVideo.path, key: sourceKey } });
     }
   };
 
   // Navigate to specific episode
   const handleEpisodeClick = (video) => {
     if (video.path !== currentFile) {
-      navigate(`/movie/player?file=${encodeURIComponent(video.path)}&key=${sourceKey}`);
+      navigate('/movie/player', { state: { file: video.path, key: sourceKey } });
     }
   };
 
@@ -367,7 +397,7 @@ const MoviePlayer = () => {
       
       const randomVideo = videosOnly[Math.floor(Math.random() * videosOnly.length)];
       if (randomVideo?.path) {
-        navigate(`/movie/player?file=${encodeURIComponent(randomVideo.path)}&key=${sourceKey}`);
+        navigate('/movie/player', { state: { file: randomVideo.path, key: sourceKey } });
       }
     } catch (err) {
       console.error('Error random jump:', err);

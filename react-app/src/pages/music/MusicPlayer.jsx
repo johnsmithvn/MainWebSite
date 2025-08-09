@@ -2,7 +2,7 @@
 // 🎵 Spotify-style Music Player với design đẹp và hiện đại (single-file implementation)
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   FiPlay,
@@ -30,8 +30,10 @@ import LoadingOverlay from '@/components/common/LoadingOverlay';
 const MusicPlayer = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const path = searchParams.get('file');
   const playlistPath = searchParams.get('playlist');
+  const { file: stateFile, playlist: statePlaylist, key: stateKey } = location.state || {};
 
   const {
     currentTrack,
@@ -55,12 +57,14 @@ const MusicPlayer = () => {
   const { showToast } = useUIStore();
   const { sourceKey, setSourceKey } = useAuthStore();
 
-  // Ensure sourceKey is set to M_MUSIC for music player
+  // Prefer key from navigation state if provided, else default to M_MUSIC
   useEffect(() => {
-    if (!sourceKey || sourceKey === 'ROOT_FANTASY') {
+    if (stateKey && sourceKey !== stateKey) {
+      setSourceKey(stateKey);
+    } else if (!sourceKey || sourceKey === 'ROOT_FANTASY') {
       setSourceKey('M_MUSIC');
     }
-  }, [sourceKey, setSourceKey]);
+  }, [stateKey, sourceKey, setSourceKey]);
 
   const { addRecentMusic } = useRecentMusicManager();
 
@@ -76,6 +80,50 @@ const MusicPlayer = () => {
   // Removed viewedTracksRef to allow counting on every playback start
   const latestTrackRef = useRef(null);
 
+  // Helper: bump viewCount locally for UI sync
+  const bumpViewCount = useCallback((songPath) => {
+    if (!songPath) return;
+    try {
+      // Update Zustand state without restarting playback
+      useMusicStore.setState((state) => {
+        const idx = state.currentPlaylist.findIndex((t) => t.path === songPath);
+        if (idx === -1) return {};
+        const oldItem = state.currentPlaylist[idx] || {};
+        const newCount = Number(oldItem.viewCount ?? oldItem.views ?? 0) + 1;
+        const updatedItem = { ...oldItem, viewCount: newCount };
+        const newPlaylist = [...state.currentPlaylist];
+        newPlaylist[idx] = updatedItem;
+        const isCurrent = state.currentTrack?.path === songPath;
+        return {
+          currentPlaylist: newPlaylist,
+          currentTrack: isCurrent ? updatedItem : state.currentTrack,
+        };
+      });
+    } catch {}
+  }, []);
+
+  // Row click handler to avoid re-triggering the same track (prevents view loop)
+  const handleRowClick = useCallback((e, track, index) => {
+    e?.preventDefault?.();
+    // If clicking the same track that's already selected
+    if (currentTrack?.path === track.path && currentIndex === index) {
+      // If paused, just resume without resetting src
+      if (!isPlaying) {
+        try {
+          const audio = audioRef.current;
+          if (audio) {
+            const p = audio.play();
+            if (p) p.catch(() => {});
+          }
+          resumeTrack();
+        } catch {}
+      }
+      return; // Do nothing if already playing this track
+    }
+    // Different track -> start it normally
+    playTrack(track, currentPlaylist, index);
+  }, [currentTrack?.path, currentIndex, isPlaying, playTrack, currentPlaylist, resumeTrack]);
+
   // Keep a ref of the latest track for event handlers
   useEffect(() => {
     latestTrackRef.current = currentTrack || null;
@@ -86,17 +134,28 @@ const MusicPlayer = () => {
     const audio = audioRef.current;
     if (!audio) return;
 
+    const lastIncRef = { path: '', ts: 0 };
+
     const handlePlay = async () => {
       const track = latestTrackRef.current;
       const trackPath = track?.path;
       if (!trackPath || !sourceKey) return;
 
+      // Debounce duplicate play events for the same track within 1s
+      const now = Date.now();
+      if (lastIncRef.path === trackPath && now - lastIncRef.ts < 1000) return;
+      lastIncRef.path = trackPath;
+      lastIncRef.ts = now;
+
       try {
-        await fetch('/api/increase-view/music', {
+        const res = await fetch('/api/increase-view/music', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key: sourceKey, path: trackPath })
         });
+        if (res.ok) {
+          bumpViewCount(trackPath);
+        }
       } catch (err) {
         console.warn('Failed to increase music view count:', err);
       }
@@ -106,7 +165,11 @@ const MusicPlayer = () => {
     return () => {
       audio.removeEventListener('play', handlePlay);
     };
-  }, [sourceKey]);
+  }, [sourceKey, bumpViewCount]);
+
+  // Compute effective inputs (navigation state has priority, fallback to query params)
+  const effectivePath = stateFile || path || null;
+  const effectivePlaylist = statePlaylist || playlistPath || null;
 
   // ========= Helpers =========
   function buildAudioUrl(audioPath) {
@@ -115,17 +178,17 @@ const MusicPlayer = () => {
   }
 
   const getTrackInfo = useCallback(() => {
-    if (!path) return null;
-    const fileName = path.split('/').pop();
+    if (!effectivePath) return null;
+    const fileName = effectivePath.split('/').pop();
     const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
     return {
       name: nameWithoutExt,
-      path,
+      path: effectivePath,
       artist: 'Unknown Artist',
       album: 'Unknown Album',
       thumbnail: null,
     };
-  }, [path]);
+  }, [effectivePath]);
 
   const formatTime = (time) => {
     if (!time || isNaN(time)) return '0:00';
@@ -273,19 +336,19 @@ const MusicPlayer = () => {
     }
   };
 
-  // Load whenever URL params change
+  // Load whenever inputs change
   useEffect(() => {
     // If playlist is provided, load that folder and optionally select specific file
-    if (playlistPath) {
-      loadFolderSongs(playlistPath, path || null);
+    if (effectivePlaylist) {
+      loadFolderSongs(effectivePlaylist, effectivePath || null);
       return;
     }
     // Else, if only file is provided, derive folder and load
-    if (path) {
-      loadFolderSongs(null, path);
+    if (effectivePath) {
+      loadFolderSongs(null, effectivePath);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playlistPath, path, sourceKey]);
+  }, [effectivePlaylist, effectivePath, sourceKey]);
 
   // Initial load (handled by the URL-change effect above)
   // useEffect(() => {
@@ -341,10 +404,13 @@ const MusicPlayer = () => {
     if (!audio || !currentTrack || !sourceKey) return;
     const audioUrl = buildAudioUrl(currentTrack.path);
     if (!audioUrl) return;
-    audio.src = audioUrl;
-    audio.load();
+    // Only update src if changed
+    if (audio.src !== window.location.origin + audioUrl) {
+      audio.src = audioUrl;
+      audio.load();
+    }
     const handleCanPlay = () => {
-      if (isPlaying) {
+      if (isPlaying && audio.paused) {
         audio.play().catch((err) => {
           setError('Failed to play audio: ' + err.message);
           showToast('Không thể phát nhạc: ' + err.message, 'error');
@@ -374,9 +440,9 @@ const MusicPlayer = () => {
   // ======== Derived UI Data ========
   const isFav = (t) => favorites.some((f) => f.path === t.path);
   const folderTitle = (() => {
-    if (playlistPath) return playlistPath.split('/').pop();
-    if (path) {
-      const parts = path.split('/');
+    if (effectivePlaylist) return effectivePlaylist.split('/').pop();
+    if (effectivePath) {
+      const parts = effectivePath.split('/');
       parts.pop();
       return parts.pop() || 'Now Playing';
     }
@@ -451,10 +517,12 @@ const MusicPlayer = () => {
 
       {/* Tracklist */}
       <div className="px-2 sm:px-6 pb-32">
-        <div className="grid grid-cols-[40px_1fr_1fr_60px] gap-3 px-4 py-2 text-sm text-white/60 border-b border-white/10">
+        <div className="grid grid-cols-[40px_1fr_60px] md:grid-cols-[40px_1fr_1fr_90px_60px] lg:grid-cols-[40px_1fr_1fr_1fr_90px_60px] gap-3 px-4 py-2 text-sm text-white/60 border-b border-white/10">
           <div className="text-center">#</div>
           <div>Title</div>
-          <div className="hidden sm:block">Album</div>
+          <div className="hidden lg:block">Album</div>
+          <div className="hidden md:block">Folder</div>
+          <div className="hidden md:flex justify-end pr-2">Views</div>
           <div className="flex justify-end pr-2"><FiClock className="w-4 h-4" /></div>
         </div>
 
@@ -462,8 +530,8 @@ const MusicPlayer = () => {
           {currentPlaylist.map((track, index) => (
             <div
               key={track.path || index}
-              onClick={() => playTrack(track, currentPlaylist, index)}
-              className={`grid grid-cols-[40px_1fr_1fr_60px] gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${
+              onClick={(e) => handleRowClick(e, track, index)}
+              className={`grid grid-cols-[40px_1fr_60px] md:grid-cols-[40px_1fr_1fr_90px_60px] lg:grid-cols-[40px_1fr_1fr_1fr_90px_60px] gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${
                 index === currentIndex ? 'bg-white/10' : ''
               }`}
             >
@@ -483,24 +551,36 @@ const MusicPlayer = () => {
                   className="w-10 h-10 rounded object-cover flex-none"
                 />
                 <div className="min-w-0">
-                  <div className={`truncate ${index === currentIndex ? 'text-green-400' : 'text-white'}`}>{track.name}</div>
+                  <div className={`${index === currentIndex ? 'text-green-400' : 'text-white'} truncate`}>{track.name}</div>
                   <div className="text-xs text-white/60 truncate">{track.artist || 'Unknown Artist'}</div>
                 </div>
               </div>
 
-              <div className="hidden sm:block text-sm text-white/70 truncate">{track.album || '—'}</div>
+              <div className="hidden lg:block text-sm text-white/70 truncate">{track.album || '—'}</div>
 
-              <div className="flex items-center justify-end gap-3 pr-2 text-white/70">
+              <div className="hidden md:block text-sm text-white/70 truncate">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    toggleFavorite(track);
+                    const parentPath = (track.path || '').split('/').slice(0, -1).join('/');
+                    if (parentPath) {
+                      navigate(`/music?path=${encodeURIComponent(parentPath)}`);
+                    } else {
+                      navigate('/music');
+                    }
                   }}
-                  className={`hover:text-white ${isFav(track) ? 'text-green-400' : ''}`}
-                  aria-label="Favorite"
+                  className="hover:underline hover:text-white"
+                  title="Mở thư mục chứa"
                 >
-                  <FiHeart className="w-4 h-4" />
+                  {(track.path || '').split('/').slice(0, -1).pop() || '—'}
                 </button>
+              </div>
+
+              <div className="hidden md:flex items-center justify-end pr-2 text-white/70 tabular-nums">
+                {Number(track.viewCount ?? track.views ?? 0).toLocaleString()}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pr-2 text-white/70">
                 <span className="tabular-nums text-sm">{track.duration ? formatTime(track.duration) : '—'}</span>
               </div>
             </div>

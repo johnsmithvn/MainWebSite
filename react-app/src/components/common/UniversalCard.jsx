@@ -153,8 +153,8 @@ const UniversalCard = ({
     } else if (type === 'movie') {
       const isVideo = item.type === 'video' || item.type === 'file';
       if (isVideo) {
-        // Navigate to movie player
-        navigate(`/movie/player?file=${encodedPath}&key=${sourceKey}`);
+        // Navigate to movie player with state (stable URL)
+        navigate('/movie/player', { state: { file: item.path, key: sourceKey } });
       } else {
         // Navigate to movie folder
         navigate(`/movie?path=${encodedPath}`);
@@ -163,18 +163,15 @@ const UniversalCard = ({
       const isAudio = item.type === 'audio' || item.type === 'file';
       const isPlaylist = item.isPlaylist;
       if (isPlaylist) {
-        // Playlist path is the folder
-        const encodedFolder = encodedPath;
-        navigate(`/music/player?playlist=${encodedFolder}&key=${sourceKey}`);
+        // Open player with playlist context, keep URL stable
+        navigate('/music/player', { state: { playlist: item.path, key: sourceKey } });
       } else if (isAudio) {
         const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
-        const encodedFolder = encodeURIComponent(folderPath);
         // Pass both file and its parent folder so player can build playlist correctly
-        navigate(`/music/player?file=${encodedPath}&playlist=${encodedFolder}&key=${sourceKey}`);
+        navigate('/music/player', { state: { file: item.path, playlist: folderPath, key: sourceKey } });
       } else {
         // For music folders clicked from sliders -> open directly as playlist in player
-        const encodedFolder = encodedPath;
-        navigate(`/music/player?playlist=${encodedFolder}&key=${sourceKey}`);
+        navigate('/music/player', { state: { playlist: item.path, key: sourceKey } });
       }
     }
   };
