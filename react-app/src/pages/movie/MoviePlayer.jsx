@@ -62,6 +62,16 @@ const MoviePlayer = () => {
   const PIXELS_PER_SECOND = 10;
   const SWIPE_THRESHOLD = 5;
 
+  // Track last initialized combination to avoid duplicate init (StrictMode / key sync)
+  const lastInitRef = useRef({ file: null, key: null });
+
+  // Sync current file from URL when query param changes
+  useEffect(() => {
+    if (file !== currentFile) {
+      setCurrentFile(file || '');
+    }
+  }, [file, currentFile]);
+
   // Set sourceKey from URL if provided
   useEffect(() => {
     if (keyParam && keyParam !== sourceKey) {
@@ -78,19 +88,37 @@ const MoviePlayer = () => {
     }
   }, [sourceKey, token, isSecureKey, navigate, showToast]);
 
-  // Initialize video when file changes
+  // Initialize video when file/key changes
   useEffect(() => {
-    if (!currentFile || !sourceKey) {
-      setError('❌ Thiếu file hoặc sourceKey');
+    if (!currentFile) {
+      setError('❌ Thiếu file');
       return;
     }
 
+    const resolvedKey = keyParam || sourceKey;
+    if (!resolvedKey) {
+      setError('❌ Thiếu sourceKey');
+      return;
+    }
+
+    // If URL has key but store not yet synced, wait to avoid double init
+    if (keyParam && sourceKey !== keyParam) return;
+
     initializeVideo();
-  }, [currentFile, sourceKey, token]);
+  }, [currentFile, sourceKey, keyParam]);
 
   // Load video info and setup
   const initializeVideo = useCallback(async () => {
     if (!currentFile || !sourceKey) return;
+
+    // Guard against duplicate initialization with same file+key
+    if (
+      lastInitRef.current.file === currentFile &&
+      lastInitRef.current.key === sourceKey
+    ) {
+      return;
+    }
+    lastInitRef.current = { file: currentFile, key: sourceKey };
     
     setVideoLoading(true);
     setError('');
@@ -112,6 +140,10 @@ const MoviePlayer = () => {
           token ? `&token=${encodeURIComponent(token)}` : ''
         }`;
         videoRef.current.src = videoSrc;
+        // Ensure the video element reloads when the source changes
+        if (typeof videoRef.current.load === 'function') {
+          videoRef.current.load();
+        }
       }
 
       // Load sibling videos
@@ -504,6 +536,7 @@ const MoviePlayer = () => {
           {/* Video Player */}
           <div className="mb-6 relative">
             <video
+              key={currentFile}
               ref={videoRef}
               controls
               className="w-full rounded-lg shadow-lg"
