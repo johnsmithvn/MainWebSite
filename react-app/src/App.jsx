@@ -17,7 +17,6 @@ import MoviePlayer from '@/pages/movie/MoviePlayer';
 import MovieFavorites from '@/pages/movie/MovieFavorites';
 import MusicHome from '@/pages/music/MusicHome';
 import MusicPlayer from '@/pages/music/MusicPlayer';
-import MusicPlayerSpotify from '@/pages/music/MusicPlayerSpotify';
 import MusicFavorites from '@/pages/music/MusicFavorites';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
@@ -42,8 +41,7 @@ function App() {
       <Route path="/manga/reader/:folderId" element={<MangaReader />} />
       <Route path="/manga/reader" element={<MangaReader />} />
       <Route path="/movie/player" element={<MoviePlayer />} />
-      <Route path="/music/player" element={<MusicPlayerSpotify />} />
-      <Route path="/music/player-old" element={<MusicPlayer />} />
+      <Route path="/music/player" element={<MusicPlayer />} />
 
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
