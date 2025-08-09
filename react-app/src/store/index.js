@@ -8,6 +8,9 @@ import { apiService } from '../utils/api';
 import { getMangaCache, setMangaCache } from '@/utils/mangaCache';
 import { updateFavoriteInAllCaches } from '@/utils/favoriteCache';
 
+// Dedup maps for in-flight fetches
+const musicFetchInFlight = new Map();
+
 // Helper function to get root folder from source key
 const getRootFolderFromKey = (sourceKey) => {
   const keyToRootMap = {
@@ -729,86 +732,81 @@ export const useMusicStore = create(
       
       // Fetch music folders from API (similar to old loadMusicFolder)
       fetchMusicFolders: async (path = '') => {
-        set({ loading: true, error: null });
         const { sourceKey } = useAuthStore.getState();
-        
+        const fetchKey = `${sourceKey || ''}|${path || ''}`;
+
+        // If a fetch for this key is already in-flight, reuse it
+        if (musicFetchInFlight.has(fetchKey)) {
+          return musicFetchInFlight.get(fetchKey);
+        }
+
+        set({ loading: true, error: null });
+
         console.log('🎵 fetchMusicFolders called with:', { path, sourceKey });
-        
         if (!sourceKey) {
           console.error('❌ No sourceKey found');
           set({ error: 'No source key selected', loading: false });
           return;
         }
-        
-        try {
-          const params = { key: sourceKey };
-          if (path) params.path = path;
-          
-          console.log('🎵 API request params:', params);
-          
-          const response = await apiService.music.getFolders(params);
-          const data = response.data;
-          
-          console.log('🎵 Music API Response:', data);
-          
-          const folders = data.folders || [];
-          
-          // Process folders to match expected format (similar to old frontend buildThumbnailUrl)
-          const processedFolders = folders.map(folder => {
-            let thumbnailUrl = folder.thumbnail;
-            
-            if (thumbnailUrl && thumbnailUrl !== 'null') {
-              // Handle already complete URLs
-              if (thumbnailUrl.startsWith('/audio/') || 
-                  thumbnailUrl.startsWith('http') || 
-                  thumbnailUrl.startsWith('/default/')) {
-                thumbnailUrl = thumbnailUrl;
-              } else {
-                // Get folder prefix (remove filename if it's a music file)
-                let folderPrefix;
-                if (folder.type === 'folder') {
-                  folderPrefix = folder.path || '';
+
+        const doFetch = (async () => {
+          try {
+            const params = { key: sourceKey };
+            if (path) params.path = path;
+            console.log('🎵 API request params:', params);
+
+            const response = await apiService.music.getFolders(params);
+            const data = response.data;
+            console.log('🎵 Music API Response:', data);
+
+            const folders = data.folders || [];
+            const processedFolders = folders.map(folder => {
+              let thumbnailUrl = folder.thumbnail;
+              if (thumbnailUrl && thumbnailUrl !== 'null') {
+                if (thumbnailUrl.startsWith('/audio/') || 
+                    thumbnailUrl.startsWith('http') || 
+                    thumbnailUrl.startsWith('/default/')) {
+                  // keep as is
                 } else {
-                  folderPrefix = folder.path?.split('/').slice(0, -1).join('/') || '';
+                  let folderPrefix;
+                  if (folder.type === 'folder') {
+                    folderPrefix = folder.path || '';
+                  } else {
+                    folderPrefix = folder.path?.split('/').slice(0, -1).join('/') || '';
+                  }
+                  if (folderPrefix && thumbnailUrl.startsWith(folderPrefix + '/')) {
+                    thumbnailUrl = thumbnailUrl.slice(folderPrefix.length + 1);
+                  }
+                  const safeFolderPrefix = folderPrefix ? 
+                    folderPrefix.split('/').map(encodeURIComponent).join('/') + '/' : '';
+                  const safeThumbnail = thumbnailUrl.split('/').map(encodeURIComponent).join('/');
+                  thumbnailUrl = `/audio/${safeFolderPrefix}${safeThumbnail.replace(/\\/g, '/')}`;
                 }
-                
-                // Remove folder prefix from thumbnail if it's already included
-                if (folderPrefix && thumbnailUrl.startsWith(folderPrefix + '/')) {
-                  thumbnailUrl = thumbnailUrl.slice(folderPrefix.length + 1);
-                }
-                
-                // Encode path components to handle special characters (like old frontend)
-                const safeFolderPrefix = folderPrefix ? 
-                  folderPrefix.split('/').map(encodeURIComponent).join('/') + '/' : '';
-                const safeThumbnail = thumbnailUrl.split('/').map(encodeURIComponent).join('/');
-                
-                // Build thumbnail URL using /audio/ prefix (like old frontend)
-                thumbnailUrl = `/audio/${safeFolderPrefix}${safeThumbnail.replace(/\\/g, '/')}`;
+              } else {
+                thumbnailUrl = (folder.type === 'audio' || folder.type === 'file') 
+                  ? '/default/music-thumb.png' 
+                  : '/default/folder-thumb.png';
               }
-            } else {
-              // Use default thumbnails
-              thumbnailUrl = (folder.type === 'audio' || folder.type === 'file') 
-                ? '/default/music-thumb.png' 
-                : '/default/folder-thumb.png';
-            }
-            
-            return {
-              ...folder,
-              thumbnail: thumbnailUrl,
-              isFavorite: !!folder.isFavorite
-            };
-          });
-          
-          set({ 
-            musicList: processedFolders,
-            currentPath: path,
-            loading: false 
-          });
-        } catch (error) {
-          console.error('Fetch music folders error:', error);
-          set({ error: error.response?.data?.message || error.message, loading: false });
-        }
+              return { ...folder, thumbnail: thumbnailUrl, isFavorite: !!folder.isFavorite };
+            });
+
+            set({ 
+              musicList: processedFolders,
+              currentPath: path,
+              loading: false 
+            });
+          } catch (error) {
+            console.error('Fetch music folders error:', error);
+            set({ error: error.response?.data?.message || error.message, loading: false });
+          }
+        })().finally(() => {
+          musicFetchInFlight.delete(fetchKey);
+        });
+
+        musicFetchInFlight.set(fetchKey, doFetch);
+        return doFetch;
       },
+      
       playTrack: (track, playlist = [], index = 0) => set({
         currentTrack: track,
         currentPlaylist: playlist,
@@ -897,14 +895,15 @@ export const useMusicStore = create(
                   }
                   
                   // Remove folder prefix from thumbnail if it's already included
-                  if (folderPrefix && thumbnailUrl.startsWith(folderPrefix + '/')) {
-                    thumbnailUrl = thumbnailUrl.slice(folderPrefix.length + 1);
+                  let cleanThumbnail = thumbnailUrl;
+                  if (folderPrefix && cleanThumbnail.startsWith(folderPrefix + '/')) {
+                    cleanThumbnail = cleanThumbnail.slice(folderPrefix.length + 1);
                   }
                   
                   // Encode path components to handle special characters
                   const safeFolderPrefix = folderPrefix ? 
                     folderPrefix.split('/').map(encodeURIComponent).join('/') + '/' : '';
-                  const safeThumbnail = thumbnailUrl.split('/').map(encodeURIComponent).join('/');
+                  const safeThumbnail = cleanThumbnail.split('/').map(encodeURIComponent).join('/');
                   
                   // Build thumbnail URL using /audio/ prefix
                   thumbnailUrl = `/audio/${safeFolderPrefix}${safeThumbnail.replace(/\\/g, '/')}`;

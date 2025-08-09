@@ -1,7 +1,7 @@
 // 📁 src/pages/music/MusicHome.jsx
 // 🎵 Trang chủ music với tích hợp API backend
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -49,6 +49,9 @@ const MusicHome = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
 
+  // Track last fetch to avoid duplicate calls (StrictMode/multiple effects)
+  const lastFetchRef = useRef('');
+
   // Redirect to home if no sourceKey selected
   useEffect(() => {
     if (!sourceKey) {
@@ -57,15 +60,15 @@ const MusicHome = () => {
     }
   }, [sourceKey, navigate]);
 
-  // Clear cache and refetch when sourceKey changes
+  // Clear cache when sourceKey changes (do not fetch here to avoid duplicate with URL effect)
   useEffect(() => {
     if (sourceKey) {
-      console.log('🎵 SourceKey changed, clearing cache and fetching:', sourceKey);
+      console.log('🎵 SourceKey changed, clearing cache:', sourceKey);
       clearMusicCache();
-      const initialPath = searchParams.get('path') || '';
-      fetchMusicFolders(initialPath);
+      // Reset last fetch guard so URL effect can fetch once
+      lastFetchRef.current = '';
     }
-  }, [sourceKey, clearMusicCache, fetchMusicFolders, searchParams]);
+  }, [sourceKey, clearMusicCache]);
 
   // Pagination
   const musicPerPage = PAGINATION.MUSIC_PER_PAGE;
@@ -75,14 +78,21 @@ const MusicHome = () => {
     (currentPage + 1) * musicPerPage
   );
 
-  // Load initial path from URL (only when URL changes, not when currentPath changes)
+  // Load path from URL and fetch (single place to fetch)
   useEffect(() => {
     const urlPath = searchParams.get('path') || '';
-    if (urlPath !== currentPath && musicList.length === 0) {
-      console.log('🎵 Loading music from URL path:', urlPath);
+    const fetchKey = `${sourceKey || ''}|${urlPath}`;
+
+    // If already fetched this combination, skip
+    if (lastFetchRef.current === fetchKey) return;
+
+    // If path differs from current or it's first load, fetch once
+    if (sourceKey) {
+      console.log('🎵 Loading music for path:', urlPath);
+      lastFetchRef.current = fetchKey;
       fetchMusicFolders(urlPath);
     }
-  }, [searchParams, fetchMusicFolders, currentPath, musicList.length, sourceKey]);
+  }, [searchParams, fetchMusicFolders, sourceKey]);
 
   // Reset page when path changes
   useEffect(() => {
@@ -202,8 +212,8 @@ const MusicHome = () => {
               <Breadcrumb
                 items={breadcrumbItems()}
                 onNavigate={(path) => {
+                  // Only update URL; fetching is handled by URL effect to avoid duplicate API calls
                   setSearchParams(path ? { path } : {});
-                  fetchMusicFolders(path);
                 }}
               />
             </div>
