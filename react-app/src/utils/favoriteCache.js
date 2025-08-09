@@ -82,7 +82,7 @@ export const updateFavoriteInAllCaches = (sourceKey, itemPath, isFavorite, rootF
           if (item.path === itemPath) {
             item.isFavorite = Boolean(isFavorite);
             updated = true;
-            console.log(`🎯 Updated recent item: ${itemPath} -> ${isFavorite} in ${cacheKey}`);
+            console.log(`🎯 Updated recent item: ${itemPath.split('/').pop()} -> ${isFavorite} in ${cacheKey}`);
           }
         }
       } else {

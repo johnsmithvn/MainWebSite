@@ -12,7 +12,6 @@ import MangaSelect from '@/pages/manga/MangaSelect';
 import MangaHome from '@/pages/manga/MangaHome';
 import MangaReader from '@/pages/manga/MangaReader';
 import MangaFavorites from '@/pages/manga/MangaFavorites';
-import MovieSelect from '@/pages/movie/MovieSelect';
 import MovieHome from '@/pages/movie/MovieHome';
 import MoviePlayer from '@/pages/movie/MoviePlayer';
 import MovieFavorites from '@/pages/movie/MovieFavorites';
@@ -38,9 +37,11 @@ function App() {
 
   return (
     <Routes>
-      {/* Manga Reader routes outside of the main Layout */}
+      {/* Full-screen routes outside of the main Layout */}
       <Route path="/manga/reader/:folderId" element={<MangaReader />} />
       <Route path="/manga/reader" element={<MangaReader />} />
+      <Route path="/movie/player" element={<MoviePlayer />} />
+      <Route path="/music/player" element={<MusicPlayer />} />
 
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
@@ -54,16 +55,13 @@ function App() {
         
         {/* Movie routes */}
         <Route path="movie">
-          <Route path="select" element={<MovieSelect />} />
           <Route index element={<MovieHome />} />
-          <Route path="player" element={<MoviePlayer />} />
           <Route path="favorites" element={<MovieFavorites />} />
         </Route>
         
         {/* Music routes */}
         <Route path="music">
           <Route index element={<MusicHome />} />
-          <Route path="player" element={<MusicPlayer />} />
           <Route path="favorites" element={<MusicFavorites />} />
         </Route>
         

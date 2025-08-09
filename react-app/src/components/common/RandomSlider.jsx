@@ -6,10 +6,10 @@ import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 import { FiRefreshCw, FiChevronLeft, FiChevronRight, FiClock } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
-import MangaCard from '@/components/manga/MangaCard';
+import UniversalCard from '@/components/common/UniversalCard';
 import Button from '@/components/common/Button';
 import { useRandomItems } from '@/hooks/useRandomItems';
-import { useMangaStore } from '@/store';
+import { useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import '@/styles/components/embla.css';
@@ -47,7 +47,15 @@ const RandomSlider = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState([]);
 
-  const { toggleFavorite, favoritesRefreshTrigger } = useMangaStore();
+  // Use appropriate store based on type
+  const mangaStore = useMangaStore();
+  const movieStore = useMovieStore();
+  const musicStore = useMusicStore();
+  
+  const { toggleFavorite, favoritesRefreshTrigger = 0 } = 
+    type === 'movie' ? movieStore : 
+    type === 'music' ? musicStore : 
+    mangaStore;
   
   // Random items hook
   const { data: items, loading, error, refresh, lastUpdated } = useRandomItems(type, {
@@ -56,14 +64,19 @@ const RandomSlider = ({
     staleTime: 5 * 60 * 1000 // 5 minutes
   });
 
-  // Force refresh khi favorites thay đổi - chỉ làm mới cache, không refetch API
+  // Force refresh khi favorites thay đổi - throttle để tránh spam
   useEffect(() => {
     if (favoritesRefreshTrigger > 0 && items && items.length > 0) {
       console.log('🔄 RandomSlider: Favorites changed, updating display');
-      // Force component re-render by updating a local state
-      setLocalRefreshTrigger(prev => prev + 1);
+      
+      // Use timeout to debounce multiple rapid changes
+      const timeoutId = setTimeout(() => {
+        setLocalRefreshTrigger(prev => prev + 1);
+      }, 100); // 100ms debounce
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [favoritesRefreshTrigger, items]);
+  }, [favoritesRefreshTrigger]); // Remove items dependency to reduce triggers
 
   // Local refresh trigger for forcing re-renders
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
@@ -296,14 +309,15 @@ const RandomSlider = ({
               // Actual items - force key update để trigger re-render
               items?.map((item, index) => (
                 <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide">
-                  <MangaCard
-                    manga={item}
+                  <UniversalCard
+                    item={item}
+                    type={type}
                     isFavorite={Boolean(item.isFavorite)}
-                    variant="compact"
                     showViews={showViews}
-                    onToggleFavorite={() => 
-                      handleToggleFavorite(item)
-                    }
+                    onToggleFavorite={async (toggleItem) => {
+                      await handleToggleFavorite(toggleItem);
+                    }}
+                    variant="compact"
                     className="w-48"
                   />
                 </div>

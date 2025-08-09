@@ -25,7 +25,8 @@ const MangaHome = () => {
     fetchMangaFolders,
     fetchFavorites,
     toggleFavorite,
-    clearNavigationFlag
+    clearNavigationFlag,
+    clearMangaCache
   } = useMangaStore();
   
   const { sourceKey, rootFolder } = useAuthStore();
@@ -35,18 +36,36 @@ const MangaHome = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0); // For forcing re-renders
 
+  // Clear cache and refetch when sourceKey changes
+  useEffect(() => {
+    if (sourceKey && sourceKey.startsWith('ROOT_')) {
+      console.log('🏠 MangaHome: SourceKey changed to:', sourceKey, '- Clearing cache and refetching');
+      clearMangaCache();
+      const urlPath = searchParams.get('path');
+      if (urlPath) {
+        fetchMangaFolders(urlPath);
+      } else {
+        fetchMangaFolders();
+      }
+      fetchFavorites();
+    }
+  }, [sourceKey, clearMangaCache, fetchMangaFolders, fetchFavorites, searchParams]);
+
   useEffect(() => {
     // Xử lý URL path parameter giống frontend cũ
     const urlPath = searchParams.get('path');
     console.log('🔍 DEBUG MangaHome URL path param:', urlPath);
     
-    if (urlPath) {
-      fetchMangaFolders(urlPath);
-    } else {
-      fetchMangaFolders();
+    // Only fetch if sourceKey is available and we have cache cleared
+    if (sourceKey && sourceKey.startsWith('ROOT_') && mangaList.length === 0) {
+      if (urlPath) {
+        fetchMangaFolders(urlPath);
+      } else {
+        fetchMangaFolders();
+      }
+      fetchFavorites();
     }
-    fetchFavorites();
-  }, [searchParams, fetchMangaFolders, fetchFavorites]);
+  }, [searchParams, fetchMangaFolders, fetchFavorites, sourceKey, mangaList.length]);
 
   useEffect(() => {
     // Debug: Log manga list when it changes

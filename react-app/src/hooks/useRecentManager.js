@@ -3,6 +3,7 @@
 
 import { useCallback } from 'react';
 import { useAuthStore, useMangaStore } from '@/store';
+import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 
 /**
  * Hook để quản lý thêm items vào recent cache
@@ -51,6 +52,9 @@ export const useRecentManager = (type = 'manga') => {
       // Remove existing item if present
       const filtered = existingItems.filter(f => f.path !== item.path);
       
+      // Build proper thumbnail URL before saving
+      const builtThumbnailUrl = buildThumbnailUrl(item, type, sourceKey);
+      
       // Add new item at the beginning with timestamp
       const updated = [
         { 
@@ -59,7 +63,7 @@ export const useRecentManager = (type = 'manga') => {
           // Ensure we have necessary fields
           name: item.name || 'Unknown',
           path: item.path,
-          thumbnail: item.thumbnail,
+          thumbnail: builtThumbnailUrl, // Use the properly built thumbnail URL
           isFavorite: item.isFavorite || false
         },
         ...filtered

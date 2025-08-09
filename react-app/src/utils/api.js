@@ -99,7 +99,7 @@ export const apiService = {
     getSecurityKeys: () => api.get(`${API.ENDPOINTS.SYSTEM}/security-keys.js`),
     listRoots: (params) => api.get(`${API.ENDPOINTS.SYSTEM}/list-roots`, { params }),
     login: (data) => api.post(`${API.ENDPOINTS.SYSTEM}/login`, data),
-    increaseView: (params) => api.post(`${API.ENDPOINTS.SYSTEM}/increase-view`, params),
+    increaseView: (params) => api.post(`/api/increase-view/movie`, params),
   },
 };
 

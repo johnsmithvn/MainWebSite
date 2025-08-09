@@ -2,14 +2,25 @@
 // 🎵 Trang chủ music
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Heart, Play, Grid, List, Filter, Clock, Music } from 'lucide-react';
-import { useMusicStore, useUIStore } from '@/store';
+import { useMusicStore, useUIStore, useAuthStore } from '@/store';
 import Button from '@/components/common/Button';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 
 const MusicHome = () => {
+  const navigate = useNavigate();
+  const { sourceKey } = useAuthStore();
   const { isLoading, toggleLoading } = useUIStore();
   const { musicList, favorites, currentSource, searchTerm, setSearchTerm } = useMusicStore();
+  
+  // Redirect to home if no sourceKey selected
+  useEffect(() => {
+    if (!sourceKey || !sourceKey.startsWith('M_')) {
+      navigate('/');
+      return;
+    }
+  }, [sourceKey, navigate]);
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('name');
   const [filterBy, setFilterBy] = useState('all');

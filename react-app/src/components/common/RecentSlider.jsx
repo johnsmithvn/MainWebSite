@@ -6,11 +6,11 @@ import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 import { FiChevronLeft, FiChevronRight, FiClock, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
-import MangaCard from '@/components/manga/MangaCard';
+import UniversalCard from '@/components/common/UniversalCard';
 import Button from '@/components/common/Button';
 import { useModal } from '@/components/common/Modal';
 import { useRecentItems } from '@/hooks/useRecentItems';
-import { useMangaStore } from '@/store';
+import { useMangaStore, useMovieStore } from '@/store';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import '@/styles/components/embla.css';
@@ -49,7 +49,13 @@ const RecentSlider = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState([]);
 
-  const { toggleFavorite, clearRecentHistory, mangaSettings, favoritesRefreshTrigger } = useMangaStore();
+  // Use appropriate store based on type
+  const mangaStore = useMangaStore();
+  const movieStore = useMovieStore();
+  
+  // Get functions and triggers based on type
+  const { toggleFavorite, clearRecentHistory, favoritesRefreshTrigger = 0 } = type === 'movie' ? movieStore : mangaStore;
+  const { mangaSettings } = type === 'movie' ? {} : mangaStore; // Only get mangaSettings from manga store
   
   // Modal hook for confirmations
   const { confirmModal, Modal: ModalComponent } = useModal();
@@ -57,8 +63,8 @@ const RecentSlider = ({
   // Local refresh trigger for forcing re-renders
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
   
-  // Don't render if recent tracking is disabled
-  if (!mangaSettings.enableRecentTracking) {
+  // Don't render if recent tracking is disabled (only check for manga type)
+  if (type === 'manga' && (!mangaSettings || !mangaSettings.enableRecentTracking)) {
     return null;
   }
   
@@ -68,18 +74,20 @@ const RecentSlider = ({
     maxItems
   });
 
-  // Force refresh khi favorites thay đổi
+  // Force refresh khi favorites thay đổi - throttle để tránh spam
   useEffect(() => {
     if (favoritesRefreshTrigger > 0 && items && items.length > 0) {
-      console.log('🔄 RecentSlider: Favorites changed, refreshing data and display');
+      console.log('🔄 RecentSlider: Favorites changed, refreshing');
       
-      // Refresh data from cache first
-      refresh();
+      // Use timeout to debounce multiple rapid changes
+      const timeoutId = setTimeout(() => {
+        refresh();
+        setLocalRefreshTrigger(prev => prev + 1);
+      }, 100); // 100ms debounce
       
-      // Then update display
-      setLocalRefreshTrigger(prev => prev + 1);
+      return () => clearTimeout(timeoutId);
     }
-  }, [favoritesRefreshTrigger, items, refresh]);
+  }, [favoritesRefreshTrigger]); // Remove items dependency to reduce triggers
 
   // Clear recent history function with modal confirmation
   const handleClearHistory = useCallback(() => {
@@ -380,14 +388,15 @@ const RecentSlider = ({
                       </div>
                     )}
                     
-                    <MangaCard
-                      manga={item}
+                    <UniversalCard
+                      item={item}
+                      type={type}
                       isFavorite={Boolean(item.isFavorite)}
-                      variant="compact"
+                      variant="slider"
                       showViews={false} // Recent items don't need view count
-                      onToggleFavorite={() => 
-                        handleToggleFavorite(item)
-                      }
+                      onToggleFavorite={async (toggleItem) => {
+                        await handleToggleFavorite(toggleItem);
+                      }}
                       className="w-48"
                     />
                   </div>

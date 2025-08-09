@@ -20,7 +20,7 @@ import { apiService } from '../../utils/api';
 import toast from 'react-hot-toast';
 import Button from './Button';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen = false, onClose, type }) => {
   const location = useLocation();
   const { sourceKey, rootFolder } = useAuthStore();
 
@@ -141,8 +141,24 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-dark-800 border-r border-gray-200 dark:border-dark-700">
-      <div className="flex-1 p-4 space-y-6">
+    <>
+      {/* Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 z-50
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        bg-white dark:bg-dark-800 border-r border-gray-200 dark:border-dark-700
+        flex flex-col
+      `}>
+        <div className="flex-1 p-4 space-y-6 overflow-y-auto">
         {/* Menu sections */}
         {menuItems.map((section) => (
           <div key={section.title}>
@@ -234,17 +250,18 @@ const Sidebar = () => {
         )}
       </div>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200 dark:border-dark-700">
-        <Link
-          to="/settings"
-          className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white transition-colors"
-        >
-          <FiSettings className="h-4 w-4" />
-          <span>Cài đặt</span>
-        </Link>
+        {/* Footer */}
+        <div className="p-4 border-t border-gray-200 dark:border-dark-700">
+          <Link
+            to="/settings"
+            className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            <FiSettings className="h-4 w-4" />
+            <span>Cài đặt</span>
+          </Link>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

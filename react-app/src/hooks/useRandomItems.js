@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/utils/api';
-import { useAuthStore, useMangaStore } from '@/store';
+import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import toast from 'react-hot-toast';
 
 /**
@@ -24,28 +24,67 @@ export const useRandomItems = (type, options = {}) => {
 
   const { sourceKey, rootFolder, initializeRootFolder } = useAuthStore();
   const { favoritesRefreshTrigger } = useMangaStore();
+  const mangaStore = useMangaStore();
+  const movieStore = useMovieStore();
+  const musicStore = useMusicStore();
   const queryClient = useQueryClient();
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  // Initialize rootFolder if not set
+  // Initialize rootFolder only for manga type
   useEffect(() => {
-    if (sourceKey && !rootFolder) {
-      console.log('🔄 Initializing rootFolder for sourceKey:', sourceKey);
+    if (type === 'manga' && sourceKey && !rootFolder) {
+      console.log('🔄 Initializing rootFolder for manga sourceKey:', sourceKey);
       initializeRootFolder();
     }
-  }, [sourceKey, rootFolder, initializeRootFolder]);
+  }, [type, sourceKey, rootFolder, initializeRootFolder]);
+
+  // Clear cache and invalidate query when sourceKey changes
+  useEffect(() => {
+    const prevSourceKey = queryClient.getQueryData(['prevSourceKey']);
+    if (prevSourceKey && prevSourceKey !== sourceKey) {
+      console.log('🔄 SourceKey changed from', prevSourceKey, 'to', sourceKey, '- Clearing random cache');
+      
+      // Clear localStorage caches for the old sourceKey
+      const oldCachePattern = `randomView::${prevSourceKey}::`;
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith(oldCachePattern)) {
+          localStorage.removeItem(key);
+          console.log('🗑️ Removed old cache:', key);
+        }
+      });
+      
+      // Invalidate React Query cache
+      queryClient.removeQueries(['randomItems']);
+      setLastUpdated(null);
+    }
+    
+    // Store current sourceKey for next comparison
+    if (sourceKey) {
+      queryClient.setQueryData(['prevSourceKey'], sourceKey);
+    }
+  }, [sourceKey, queryClient]);
 
   // Generate cache key based on type, sourceKey, and rootFolder
   const cacheKey = `randomView::${sourceKey}::${rootFolder}::${type}`;
   const queryKey = ['randomItems', type, sourceKey, rootFolder];
 
-  // Invalidate cache when favorites change
+  // Invalidate cache when favorites change - listen to all store triggers
   useEffect(() => {
-    if (favoritesRefreshTrigger > 0) {
-      // Only invalidate, don't refetch immediately
+    // Get triggers from appropriate store
+    const triggers = {
+      manga: favoritesRefreshTrigger,
+      movie: movieStore.favoritesRefreshTrigger || 0,
+      music: musicStore.favoritesRefreshTrigger || 0
+    };
+    
+    const currentTrigger = triggers[type] || 0;
+    
+    if (currentTrigger > 0) {
+      console.log(`🔄 RandomItems: Favorites changed (trigger: ${currentTrigger}), invalidating random ${type} cache`);
+      // Invalidate query to force refetch and merge favorite state
       queryClient.invalidateQueries({ queryKey, exact: true });
     }
-  }, [favoritesRefreshTrigger, queryClient, queryKey]);
+  }, [favoritesRefreshTrigger, movieStore.favoritesRefreshTrigger, musicStore.favoritesRefreshTrigger, type, queryClient, queryKey]);
 
   // Check for existing cache timestamp on mount only - run once per unique cache key
   useEffect(() => {
@@ -76,6 +115,20 @@ export const useRandomItems = (type, options = {}) => {
         console.log('🗂️ Cache check:', { cacheKey, hasData: !!data, isExpired, timestamp: new Date(timestamp) });
         
         if (!isExpired && data) {
+          // Merge with current favorite state from stores
+          const favoriteStore = type === 'manga' ? mangaStore : 
+                               type === 'movie' ? movieStore : 
+                               type === 'music' ? musicStore : null;
+          
+          if (favoriteStore && Array.isArray(data)) {
+            const mergedData = data.map(item => {
+              const isFavorited = favoriteStore.favorites.some(f => f.path === item.path);
+              return { ...item, isFavorite: isFavorited };
+            });
+            console.log('🔄 RandomItems: Merged favorite state from cache');
+            return mergedData;
+          }
+          
           return data;
         }
       }
@@ -83,7 +136,7 @@ export const useRandomItems = (type, options = {}) => {
       console.warn('Error reading cache:', error);
     }
     return null;
-  }, [cacheKey, staleTime]);
+  }, [cacheKey, staleTime, type, mangaStore, movieStore, musicStore]);
 
   // Save data to localStorage cache
   const setCachedData = useCallback((data) => {
@@ -100,8 +153,13 @@ export const useRandomItems = (type, options = {}) => {
 
   // Fetch function
   const fetchRandomItems = async () => {
-    if (!sourceKey || (!rootFolder && type === 'manga')) {
-      throw new Error(`Missing required parameters for ${type}`);
+    if (!sourceKey) {
+      throw new Error('Missing source key');
+    }
+
+    // Chỉ manga mới cần rootFolder
+    if (type === 'manga' && !rootFolder) {
+      throw new Error('Missing root folder for manga');
     }
 
     console.log('🔍 fetchRandomItems:', { sourceKey, rootFolder, type, cacheKey });
@@ -142,6 +200,20 @@ export const useRandomItems = (type, options = {}) => {
     if (items && Array.isArray(items)) {
       console.log('✅ Random items fetched:', items.length, 'items');
       console.log('📊 Sample item:', items[0]);
+      
+      // Merge with current favorite state from stores
+      const favoriteStore = type === 'manga' ? mangaStore : 
+                           type === 'movie' ? movieStore : 
+                           type === 'music' ? musicStore : null;
+      
+      if (favoriteStore) {
+        items = items.map(item => {
+          const isFavorited = favoriteStore.favorites.some(f => f.path === item.path);
+          return { ...item, isFavorite: isFavorited };
+        });
+        console.log('🔄 RandomItems: Merged favorite state from store');
+      }
+      
       setCachedData(items);
       return items;
     }
@@ -203,7 +275,11 @@ export const useRandomItems = (type, options = {}) => {
   // Load cached data on mount only - run once per unique cache key
   useEffect(() => {
     // Only run once when component mounts and we have the required keys
-    if (sourceKey && rootFolder) {
+    // For manga: need both sourceKey and rootFolder
+    // For movie/music: only need sourceKey
+    const hasRequiredKeys = sourceKey && (type !== 'manga' || rootFolder);
+    
+    if (hasRequiredKeys) {
       try {
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
@@ -234,7 +310,7 @@ export const useRandomItems = (type, options = {}) => {
   }, [cacheKey]); // Only depend on cacheKey to prevent multiple executions
 
   return {
-    data: data || [],
+    data: mergeWithFavoriteState(data || [], type, mangaStore, movieStore, musicStore),
     loading: isLoading,
     error,
     refresh,
@@ -253,14 +329,39 @@ const getEndpoint = (type, sourceKey, rootFolder, count) => {
       return `/api/manga/folder-cache?mode=random&key=${encodeURIComponent(sourceKey)}&root=${encodeURIComponent(rootFolder)}&${baseParams}`;
     
     case 'movie':
-      return `/api/movie/video-cache?mode=random&key=${encodeURIComponent(sourceKey)}&${baseParams}`;
+      // Movie không cần rootFolder, chỉ cần sourceKey
+      return `/api/movie/video-cache?mode=random&type=file&key=${encodeURIComponent(sourceKey)}&${baseParams}`;
     
     case 'music':
-      return `/api/music/audio-cache?mode=random&key=${encodeURIComponent(sourceKey)}&${baseParams}`;
+      // Music cũng không cần rootFolder
+      return `/api/music/audio-cache?mode=random&type=file&key=${encodeURIComponent(sourceKey)}&${baseParams}`;
     
     default:
       throw new Error(`Unknown content type: ${type}`);
   }
+};
+
+/**
+ * Merge favorite state from stores with data
+ */
+const mergeWithFavoriteState = (data, type, mangaStore, movieStore, musicStore) => {
+  if (!Array.isArray(data) || data.length === 0) {
+    return data;
+  }
+  
+  // Get the appropriate store based on type
+  const favoriteStore = type === 'manga' ? mangaStore : 
+                       type === 'movie' ? movieStore : 
+                       type === 'music' ? musicStore : null;
+  
+  if (favoriteStore) {
+    return data.map(item => {
+      const isFavorited = favoriteStore.favorites.some(f => f.path === item.path);
+      return { ...item, isFavorite: isFavorited };
+    });
+  }
+  
+  return data;
 };
 
 export default useRandomItems;

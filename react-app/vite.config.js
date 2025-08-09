@@ -29,6 +29,14 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+      '/.thumbnail': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/default': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
     },
   },
   build: {

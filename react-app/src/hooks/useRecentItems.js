@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuthStore, useMangaStore } from '@/store';
+import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
 
 /**
  * Hook để quản lý recent viewed items với localStorage cache
@@ -18,7 +18,9 @@ export const useRecentItems = (type, options = {}) => {
   } = options;
 
   const { sourceKey, rootFolder } = useAuthStore();
-  const { mangaSettings, favoritesRefreshTrigger } = useMangaStore(); // Add favoritesRefreshTrigger
+  const { mangaSettings, favoritesRefreshTrigger } = useMangaStore(); 
+  const movieStore = useMovieStore();
+  const musicStore = useMusicStore();
   const queryClient = useQueryClient();
   const [lastUpdated, setLastUpdated] = useState(null);
   
@@ -27,6 +29,20 @@ export const useRecentItems = (type, options = {}) => {
 
   // Stable query key - use useMemo to prevent re-creation
   const queryKey = useMemo(() => ['recentItems', type, sourceKey, rootFolder], [type, sourceKey, rootFolder]);
+
+  // Clear cache when sourceKey changes
+  useEffect(() => {
+    const prevSourceKey = queryClient.getQueryData(['prevRecentSourceKey']);
+    if (prevSourceKey && prevSourceKey !== sourceKey) {
+      console.log('🔄 Recent: SourceKey changed from', prevSourceKey, 'to', sourceKey, '- Clearing cache');
+      queryClient.removeQueries(['recentItems']);
+      setLastUpdated(null);
+    }
+    
+    if (sourceKey) {
+      queryClient.setQueryData(['prevRecentSourceKey'], sourceKey);
+    }
+  }, [sourceKey, queryClient]);
 
   // Generate cache key based on type, sourceKey, and rootFolder
   const getCacheKey = useCallback(() => {
@@ -54,9 +70,21 @@ export const useRecentItems = (type, options = {}) => {
         const cachedData = JSON.parse(cached);
         
         // Sort by most recent first and limit items
-        const sortedData = cachedData
+        let sortedData = cachedData
           .sort((a, b) => (b.lastViewed || 0) - (a.lastViewed || 0))
           .slice(0, effectiveMaxItems);
+
+        // Merge with current favorite state from stores
+        const favoriteStore = type === 'manga' ? useMangaStore.getState() : 
+                             type === 'movie' ? movieStore : 
+                             type === 'music' ? musicStore : null;
+        
+        if (favoriteStore) {
+          sortedData = sortedData.map(item => {
+            const isFavorited = favoriteStore.favorites.some(f => f.path === item.path);
+            return { ...item, isFavorite: isFavorited };
+          });
+        }
 
         return sortedData;
       }
@@ -65,7 +93,7 @@ export const useRecentItems = (type, options = {}) => {
     }
     
     return [];
-  }, [type, sourceKey, rootFolder, getCacheKey, effectiveMaxItems]);
+  }, [type, sourceKey, rootFolder, getCacheKey, effectiveMaxItems, movieStore, musicStore]);
 
   // React Query configuration
   const {
@@ -83,14 +111,23 @@ export const useRecentItems = (type, options = {}) => {
     refetchOnMount: true
   });
 
-  // Invalidate cache when favorites change - ONLY run when trigger actually changes  
+  // Invalidate cache when favorites change - listen to all store triggers
   useEffect(() => {
-    if (favoritesRefreshTrigger > 0) {
-      console.log(`🔄 RecentItems: Favorites changed (trigger: ${favoritesRefreshTrigger}), invalidating recent ${type} cache`);
+    // Get triggers from appropriate store
+    const triggers = {
+      manga: favoritesRefreshTrigger,
+      movie: movieStore.favoritesRefreshTrigger || 0,
+      music: musicStore.favoritesRefreshTrigger || 0
+    };
+    
+    const currentTrigger = triggers[type] || 0;
+    
+    if (currentTrigger > 0) {
+      console.log(`🔄 RecentItems: Favorites changed (trigger: ${currentTrigger}), invalidating recent ${type} cache`);
       // Invalidate query to force refetch from localStorage (which should have updated data)
       queryClient.invalidateQueries(queryKey);
     }
-  }, [favoritesRefreshTrigger]); // REMOVE queryClient, queryKey, type để tránh loop
+  }, [favoritesRefreshTrigger, movieStore.favoritesRefreshTrigger, musicStore.favoritesRefreshTrigger, type, queryClient, queryKey]); // Add all triggers
 
   // Load cached data on mount - only run when key values change, not callback functions
   useEffect(() => {

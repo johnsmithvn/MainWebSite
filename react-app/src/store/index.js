@@ -102,16 +102,32 @@ export const useUIStore = create((set) => ({
   darkMode: false,
   sidebarOpen: false, // Default to closed
   searchOpen: false,
+  searchModalOpen: false,
   loading: false,
   animationsEnabled: true,
+  toast: {
+    show: false,
+    message: '',
+    type: 'info', // 'success', 'error', 'warning', 'info'
+    duration: 3000,
+  },
   
   toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   toggleSearch: () => set((state) => ({ searchOpen: !state.searchOpen })),
+  toggleSearchModal: () => set((state) => ({ searchModalOpen: !state.searchModalOpen })),
   toggleAnimations: () => set((state) => ({ animationsEnabled: !state.animationsEnabled })),
   setLoading: (loading) => set({ loading }),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),
+  
+  // Toast methods
+  showToast: (message, type = 'info', duration = 3000) => set({
+    toast: { show: true, message, type, duration }
+  }),
+  hideToast: () => set((state) => ({
+    toast: { ...state.toast, show: false }
+  })),
 }));
 
 // Manga store
@@ -395,8 +411,14 @@ export const useMovieStore = create(
   persist(
     (set, get) => ({
       currentPath: '',
-      allMovies: [],
+      movieList: [], // Current folder's movies/folders
+      allMovies: [], // For backward compatibility
       favorites: [],
+      loading: false,
+      error: null,
+      searchTerm: '',
+      currentMovie: null, // For player
+      favoritesRefreshTrigger: 0, // Add trigger for forcing slider refresh
       playerSettings: {
         volume: 1,
         autoplay: false,
@@ -405,8 +427,13 @@ export const useMovieStore = create(
       },
       
       setCurrentPath: (path) => set({ currentPath: path }),
-      setAllMovies: (movies) => set({ allMovies: movies }),
+      setMovieList: (movieList) => set({ movieList, allMovies: movieList }), // Keep both for compatibility
+      setAllMovies: (movies) => set({ allMovies: movies, movieList: movies }),
       setFavorites: (favorites) => set({ favorites }),
+      setLoading: (loading) => set({ loading }),
+      setError: (error) => set({ error }),
+      setSearchTerm: (searchTerm) => set({ searchTerm }),
+      setCurrentMovie: (movie) => set({ currentMovie: movie }),
       
       updatePlayerSettings: (settings) => set((state) => ({
         playerSettings: { ...state.playerSettings, ...settings }
@@ -414,9 +441,96 @@ export const useMovieStore = create(
       
       clearMovieCache: () => set({ 
         allMovies: [], 
+        movieList: [],
         currentPath: '',
         error: null 
       }),
+      
+      // Fetch movie folders from API (similar to old loadMovieFolder)
+      fetchMovieFolders: async (path = '') => {
+        set({ loading: true, error: null });
+        const { sourceKey } = useAuthStore.getState();
+        
+        console.log('🎬 fetchMovieFolders called with:', { path, sourceKey });
+        
+        if (!sourceKey) {
+          console.error('❌ No sourceKey found');
+          set({ error: 'No source key selected', loading: false });
+          return;
+        }
+        
+        try {
+          const params = { key: sourceKey };
+          if (path) params.path = path;
+          
+          console.log('🎬 API request params:', params);
+          
+          const response = await apiService.movie.getFolders(params);
+          const data = response.data;
+          
+          console.log('🎬 Movie API Response:', data);
+          
+          const folders = data.folders || [];
+          
+          // Process folders to match expected format
+          const processedFolders = folders.map(folder => {
+            let thumbnailUrl = folder.thumbnail;
+            
+            // Build thumbnail URL like old frontend logic with encoding
+            if (thumbnailUrl && thumbnailUrl !== 'null') {
+              // Handle already complete URLs
+              if (thumbnailUrl.startsWith('/video/') || 
+                  thumbnailUrl.startsWith('http') || 
+                  thumbnailUrl.startsWith('/default/')) {
+                thumbnailUrl = thumbnailUrl;
+              } else {
+                // Get folder prefix (remove filename if it's a video)
+                let folderPrefixParts = folder.path?.split('/').filter(Boolean) || [];
+                if (folder.type === 'video' || folder.type === 'file') {
+                  folderPrefixParts.pop();
+                }
+                const folderPrefix = folderPrefixParts.join('/');
+                
+                // Remove folder prefix from thumbnail if it's already included
+                let cleanThumbnail = thumbnailUrl;
+                if (folderPrefix && cleanThumbnail.startsWith(folderPrefix + '/')) {
+                  cleanThumbnail = cleanThumbnail.slice(folderPrefix.length + 1);
+                }
+                
+                // 🔥 Encode đường dẫn để xử lý ký tự đặc biệt như # (giống logic cũ)
+                const safeFolderPrefix = folderPrefix ? 
+                  folderPrefix.split('/').map(encodeURIComponent).join('/') + '/' : '';
+                const safeThumbnail = cleanThumbnail.split('/').map(encodeURIComponent).join('/');
+                
+                // Build full thumbnail path with encoding
+                thumbnailUrl = `/video/${safeFolderPrefix}${safeThumbnail.replace(/\\/g, '/')}`;
+              }
+            } else {
+              // Fallback to default thumbnails
+              thumbnailUrl = (folder.type === 'video' || folder.type === 'file') 
+                ? '/default/video-thumb.png' 
+                : '/default/folder-thumb.png';
+            }
+
+            return {
+              ...folder,
+              thumbnail: thumbnailUrl,
+              isFavorite: !!folder.isFavorite
+            };
+          });
+          
+          set({ 
+            movieList: processedFolders,
+            allMovies: processedFolders, // Keep for compatibility
+            currentPath: path,
+            loading: false 
+          });
+          
+        } catch (error) {
+          console.error('Fetch movie folders error:', error);
+          set({ error: error.response?.data?.message || error.message, loading: false });
+        }
+      },
       
       // Fetch favorites from API
       fetchFavorites: async () => {
@@ -424,47 +538,136 @@ export const useMovieStore = create(
           const { sourceKey } = useAuthStore.getState();
           const params = { key: sourceKey };
           const response = await apiService.movie.getFavorites(params);
-          set({ favorites: response.data || [] });
+          
+          // Process favorites similar to the old code with encoding
+          const allFavorites = response.data || [];
+          const favorites = allFavorites.map(item => {
+            let thumbnailUrl = item.thumbnail;
+            
+            if (thumbnailUrl && thumbnailUrl !== 'null') {
+              // Handle already complete URLs
+              if (thumbnailUrl.startsWith('/video/') || 
+                  thumbnailUrl.startsWith('http') || 
+                  thumbnailUrl.startsWith('/default/')) {
+                thumbnailUrl = thumbnailUrl;
+              } else {
+                // Get folder prefix (remove filename if it's a video)
+                let folderPrefixParts = item.path?.split('/').filter(Boolean) || [];
+                if (item.type === 'video' || item.type === 'file') {
+                  folderPrefixParts.pop();
+                }
+                const folderPrefix = folderPrefixParts.join('/');
+                
+                // Remove folder prefix from thumbnail if it's already included
+                let cleanThumbnail = thumbnailUrl;
+                if (folderPrefix && cleanThumbnail.startsWith(folderPrefix + '/')) {
+                  cleanThumbnail = cleanThumbnail.slice(folderPrefix.length + 1);
+                }
+                
+                // 🔥 Encode đường dẫn để xử lý ký tự đặc biệt
+                const safeFolderPrefix = folderPrefix ? 
+                  folderPrefix.split('/').map(encodeURIComponent).join('/') + '/' : '';
+                const safeThumbnail = cleanThumbnail.split('/').map(encodeURIComponent).join('/');
+                
+                thumbnailUrl = `/video/${safeFolderPrefix}${safeThumbnail.replace(/\\/g, '/')}`;
+              }
+            } else {
+              thumbnailUrl = (item.type === 'video' || item.type === 'file' ? '/default/video-thumb.png' : '/default/folder-thumb.png');
+            }
+            
+            return {
+              ...item,
+              thumbnail: thumbnailUrl
+            };
+          });
+          
+          set({ favorites });
         } catch (error) {
           console.error('Fetch movie favorites error:', error);
+          set({ error: error.response?.data?.message || error.message });
         }
       },
       
       toggleFavorite: async (item) => {
         try {
-          const { sourceKey, rootFolder } = useAuthStore.getState();
+          const { sourceKey } = useAuthStore.getState();
           const isFavorited = get().favorites.some(f => f.path === item.path);
           const newFavoriteState = !isFavorited;
           
           console.log('🎬 MovieStore toggleFavorite:', { sourceKey, path: item.path, newFavoriteState });
           
-          // Call API to toggle favorite
+          // Call API to toggle favorite (note: API expects dbkey not key)
           await apiService.movie.toggleFavorite(sourceKey, item.path, newFavoriteState);
           
           // Update local state
           set((state) => {
             const favorites = isFavorited
               ? state.favorites.filter(f => f.path !== item.path)
-              : [...state.favorites, item];
-            return { favorites };
+              : [...state.favorites, { ...item, isFavorite: true }];
+            
+            // Also update the item in movieList if it exists
+            const updatedMovieList = state.movieList.map(movie => 
+              movie.path === item.path 
+                ? { ...movie, isFavorite: newFavoriteState }
+                : movie
+            );
+            
+            return { 
+              favorites,
+              movieList: updatedMovieList,
+              allMovies: updatedMovieList, // Keep in sync
+              favoritesRefreshTrigger: state.favoritesRefreshTrigger + 1 // Trigger refresh
+            };
           });
 
-          // Update all cache entries
-          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState, rootFolder);
-          
+          // Update all cache entries - đảm bảo cập nhật cache cho RandomSlider và RecentSlider
+          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState, 'java'); // rootFolder cho movie là 'java' 
+
           console.log('✅ MovieStore toggleFavorite completed');
           
         } catch (error) {
           console.error('Toggle movie favorite error:', error);
+          set({ error: error.response?.data?.message || error.message });
+        }
+      },
+      
+      // Remove favorite
+      removeFavorite: async (item) => {
+        try {
+          const { sourceKey } = useAuthStore.getState();
+          
+          // Call API to remove favorite
+          await apiService.movie.toggleFavorite(sourceKey, item.path, false);
+          
+          // Update local state
+          set((state) => ({
+            favorites: state.favorites.filter(f => f.path !== item.path)
+          }));
+          
+        } catch (error) {
+          console.error('Remove movie favorite error:', error);
+          set({ error: error.response?.data?.message || error.message });
+        }
+      },
+      
+      // Clear recent history for movies
+      clearRecentHistory: () => {
+        const { sourceKey } = useAuthStore.getState();
+        try {
+          const cacheKey = `recentViewedVideo::${sourceKey}`;
+          localStorage.removeItem(cacheKey);
+          console.log('🎬 Movie recent history cleared');
+        } catch (error) {
+          console.error('Error clearing movie recent history:', error);
         }
       },
     }),
     {
       name: 'movie-storage',
       partialize: (state) => ({
-        recentViewed: state.recentViewed,
         favorites: state.favorites,
         playerSettings: state.playerSettings,
+        currentPath: state.currentPath,
       }),
     }
   )

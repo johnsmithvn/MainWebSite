@@ -90,13 +90,14 @@ const Home = () => {
       if (type === 'manga') {
         navigate('/manga/select');
       } else if (type === 'movie') {
-        // Check if movie folder is empty
+        // Check if movie folder is empty, if empty then scan first
         const response = await apiService.movie.checkEmpty({ key });
         if (response.data.empty) {
-          navigate('/movie');
-        } else {
-          navigate('/movie/select');
+          // Empty DB - need to scan first
+          await apiService.movie.scan({ key });
         }
+        // Always go to movie home after handling empty DB
+        navigate('/movie');
       } else if (type === 'music') {
         navigate('/music');
       }

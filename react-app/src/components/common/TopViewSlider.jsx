@@ -6,10 +6,10 @@ import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 import { FiChevronLeft, FiChevronRight, FiEye } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-import MangaCard from '@/components/manga/MangaCard';
+import UniversalCard from '@/components/common/UniversalCard';
 import Button from '@/components/common/Button';
 import { useTopViewItems } from '@/hooks/useTopViewItems';
-import { useMangaStore, useAuthStore } from '@/store';
+import { useMangaStore, useMovieStore, useMusicStore, useAuthStore } from '@/store';
 import '@/styles/components/embla.css';
 
 const TopViewSlider = ({ 
@@ -42,7 +42,15 @@ const TopViewSlider = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState([]);
 
-  const { toggleFavorite, favoritesRefreshTrigger } = useMangaStore();
+  // Use appropriate store based on type
+  const mangaStore = useMangaStore();
+  const movieStore = useMovieStore();
+  const musicStore = useMusicStore();
+  
+  const { toggleFavorite, favoritesRefreshTrigger = 0 } = 
+    type === 'movie' ? movieStore : 
+    type === 'music' ? musicStore : 
+    mangaStore;
   const { sourceKey, rootFolder } = useAuthStore();
 
   // Local refresh trigger for forcing re-renders
@@ -265,14 +273,13 @@ const TopViewSlider = ({
                       </div>
                     )}
                     
-                    <MangaCard
-                      manga={item}
+                    <UniversalCard
+                      item={item}
+                      type={type}
                       isFavorite={Boolean(item.isFavorite)}
-                      variant="compact"
                       showViews={true} // Always show views for top view slider
-                      onToggleFavorite={() => 
-                        handleToggleFavorite(item)
-                      }
+                      onToggleFavorite={() => handleToggleFavorite(item)}
+                      variant="compact"
                       className="w-48"
                     />
                   </div>
