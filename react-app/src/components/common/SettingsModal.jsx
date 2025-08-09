@@ -21,6 +21,37 @@ import {
 } from 'lucide-react';
 import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '../../store';
 
+const PlayerUISelector = () => {
+  const { playerSettings, updatePlayerSettings } = useMusicStore();
+  const current = playerSettings?.playerUI || 'v1';
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <button
+        onClick={() => updatePlayerSettings({ playerUI: 'v1' })}
+        className={`p-4 rounded-lg border-2 transition-all ${
+          current === 'v1'
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+        }`}
+      >
+        <div className="font-medium">Spotify-like (V1)</div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">Giao diện hiện tại</div>
+      </button>
+      <button
+        onClick={() => updatePlayerSettings({ playerUI: 'v2' })}
+        className={`p-4 rounded-lg border-2 transition-all ${
+          current === 'v2'
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+        }`}
+      >
+        <div className="font-medium">Zing MP3 (V2)</div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">Mới</div>
+      </button>
+    </div>
+  );
+};
+
 const SettingsModal = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { 
@@ -39,7 +70,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
     updateMangaSettings
   } = useMangaStore();
   const { clearMovieCache } = useMovieStore();
-  const { clearMusicCache } = useMusicStore();
+  const { clearMusicCache, playerSettings, updatePlayerSettings } = useMusicStore();
 
   const [activeTab, setActiveTab] = useState('appearance');
 
@@ -83,7 +114,6 @@ const SettingsModal = ({ isOpen, onClose }) => {
           await Promise.all([clearMangaCache(), clearMovieCache(), clearMusicCache()]);
           break;
       }
-      // Show success message
       console.log(`Cleared ${type} cache successfully`);
     } catch (error) {
       console.error(`Error clearing ${type} cache:`, error);
@@ -459,11 +489,15 @@ const SettingsModal = ({ isOpen, onClose }) => {
             )}
 
             {activeTab === 'player' && (
-              <div className="text-center py-12">
-                <Volume2 className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">
-                  Cài đặt phát media sẽ được thêm vào sau
-                </p>
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Phát media</h3>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Giao diện Music Player mặc định
+                  </label>
+                  <PlayerUISelector />
+                </div>
               </div>
             )}
           </div>

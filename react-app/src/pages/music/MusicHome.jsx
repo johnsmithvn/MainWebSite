@@ -177,12 +177,10 @@ const MusicHome = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Random sections at top level only */}
-      {!currentPath && (
-        <div className="mb-8">
-          <MusicRandomSection />
-        </div>
-      )}
+      {/* Random slider: always show (kept when navigating folders) */}
+      <div className="mb-8">
+        <MusicRandomSection />
+      </div>
 
       <div className="p-6">
         {/* Header with breadcrumb and controls */}

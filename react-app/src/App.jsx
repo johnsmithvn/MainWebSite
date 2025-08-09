@@ -3,7 +3,7 @@
 
 import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { useUIStore } from '@/store';
+import { useUIStore, useMusicStore } from '@/store';
 import Layout from '@/components/common/Layout';
 
 // Pages
@@ -17,9 +17,15 @@ import MoviePlayer from '@/pages/movie/MoviePlayer';
 import MovieFavorites from '@/pages/movie/MovieFavorites';
 import MusicHome from '@/pages/music/MusicHome';
 import MusicPlayer from '@/pages/music/MusicPlayer';
+import MusicPlayerV2 from '@/pages/music/MusicPlayerV2';
 import MusicFavorites from '@/pages/music/MusicFavorites';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
+
+function MusicPlayerRouter() {
+  const { playerSettings } = useMusicStore();
+  return playerSettings?.playerUI === 'v2' ? <MusicPlayerV2 /> : <MusicPlayer />;
+}
 
 function App() {
   const { darkMode } = useUIStore();
@@ -41,7 +47,7 @@ function App() {
       <Route path="/manga/reader/:folderId" element={<MangaReader />} />
       <Route path="/manga/reader" element={<MangaReader />} />
       <Route path="/movie/player" element={<MoviePlayer />} />
-      <Route path="/music/player" element={<MusicPlayer />} />
+      <Route path="/music/player" element={<MusicPlayerRouter />} />
 
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />

@@ -702,6 +702,8 @@ export const useMusicStore = create(
         autoplay: false,
         loop: false,
         quality: 'auto',
+        // UI variant for music player: 'v1' (Spotify-like) or 'v2' (Zing-like)
+        playerUI: 'v1',
       },
       
       // Music browser methods (similar to movie store)
