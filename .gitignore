@@ -10,3 +10,5 @@ backend/data/*
 # ✅ Bỏ thư mục dist trong frontend/public
 frontend/public/dist/
 !frontend/public/dist/.gitkeep
+
+# bỏ thư mục dist trong react-app
