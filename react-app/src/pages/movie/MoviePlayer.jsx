@@ -29,7 +29,7 @@ const MoviePlayer = () => {
   const { toggleFavorite, favorites, fetchFavorites, favoritesRefreshTrigger } = useMovieStore();
   const { 
     sidebarOpen, 
-    toggleSidebar, 
+    setSidebarOpen,
     showToast, 
     searchModalOpen, 
     toggleSearchModal 
@@ -64,6 +64,17 @@ const MoviePlayer = () => {
 
   // Track last initialized combination to avoid duplicate init (StrictMode / key sync)
   const lastInitRef = useRef({ file: null, key: null });
+
+  // Close sidebar on player load to avoid conflicts with video controls
+  useEffect(() => {
+    console.log('🎬 MoviePlayer mounted - closing sidebar');
+    setSidebarOpen(false);
+  }, [setSidebarOpen]);
+
+  // Debug log when sidebar state changes
+  useEffect(() => {
+    console.log('🎬 MoviePlayer sidebar state changed:', sidebarOpen);
+  }, [sidebarOpen]);
 
   // Sync current file from URL when query param changes
   useEffect(() => {
@@ -503,14 +514,38 @@ const MoviePlayer = () => {
           </button>
         }
         buttons={headerButtons}
-        onToggleSidebar={toggleSidebar}
+        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
       />
 
-      {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => toggleSidebar()} type="movie" />
+      {/* Sidebar with lower z-index for video player */}
+      {sidebarOpen && (
+        <>
+          {/* Backdrop above video to dim and capture clicks */}
+          <div 
+            className="fixed inset-0 bg-black/20"
+            style={{ zIndex: 2147483645 }}
+            onClick={() => setSidebarOpen(false)}
+          />
+
+          {/* Extra transparent overlay to ensure we block any video interactions */}
+          <div
+            className="fixed inset-0"
+            style={{ zIndex: 2147483646, pointerEvents: 'auto' }}
+            onClick={() => setSidebarOpen(false)}
+          />
+          
+          {/* Sidebar forced on top of video */}
+          <div
+            className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-72 shadow-lg pointer-events-auto"
+            style={{ zIndex: 2147483647 }}
+          >
+            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} type="movie" />
+          </div>
+        </>
+      )}
 
       {/* Main Content */}
-      <div className={`pt-16 transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'ml-0'}`}>
+      <div className="pt-16">
         <div className="max-w-7xl mx-auto p-4">
           {/* Video Info Header - Centered */}
           <div className="text-center mb-4">
@@ -534,21 +569,21 @@ const MoviePlayer = () => {
           </div>
 
           {/* Video Player */}
-          <div className="mb-6 relative">
+          <div className="mb-6 relative z-[60]">
             <video
               key={currentFile}
               ref={videoRef}
               controls
-              className="w-full rounded-lg shadow-lg"
+              className={`w-full rounded-lg shadow-lg relative z-[70] ${sidebarOpen ? 'pointer-events-none' : ''}`}
               style={{ maxHeight: '70vh' }}
               onDoubleClick={handleDoubleClick}
             />
             {/* Gesture overlay */}
             <div 
               ref={gestureTargetRef}
-              className="absolute inset-0"
+              className="absolute inset-0 z-[80]"
               style={{ 
-                pointerEvents: dragging ? 'auto' : 'none',
+                pointerEvents: sidebarOpen ? 'none' : (dragging ? 'auto' : 'none'),
                 background: 'transparent',
                 cursor: dragging ? 'grabbing' : 'default'
               }}

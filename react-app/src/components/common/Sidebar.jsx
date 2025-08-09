@@ -23,6 +23,9 @@ import Button from './Button';
 const Sidebar = ({ isOpen = false, onClose, type }) => {
   const location = useLocation();
   const { sourceKey, rootFolder } = useAuthStore();
+  
+  // Debug logging
+  console.log('🔍 Sidebar render:', { isOpen, sourceKey, rootFolder, location: location.pathname });
 
   const menuItems = [
     {
@@ -113,11 +116,15 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
     return (
       <Link
         to={item.path}
-        className={`relative flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+        className={`relative flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors pointer-events-auto ${
           isActive
             ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
             : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white'
         }`}
+        onClick={() => {
+          console.log('🔗 Sidebar link clicked:', item.path);
+          onClose?.(); // Close sidebar when link is clicked
+        }}
       >
         <Icon className="h-4 w-4 flex-shrink-0" />
         <span className="flex-1 truncate">{item.label}</span>
@@ -141,24 +148,11 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
   };
 
   return (
-    <>
-      {/* Backdrop */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={onClose}
-        />
-      )}
-      
-      {/* Sidebar */}
-      <div className={`
-        fixed top-16 left-0 h-[calc(100vh-4rem)] w-64 z-50
-        transform transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        bg-white dark:bg-dark-800 border-r border-gray-200 dark:border-dark-700
-        flex flex-col
-      `}>
-        <div className="flex-1 p-4 space-y-6 overflow-y-auto">
+    <div 
+      className="h-full w-full bg-white dark:bg-dark-800 border-r border-gray-200 dark:border-dark-700 flex flex-col pointer-events-auto"
+      style={{ pointerEvents: 'auto !important' }}
+    >
+      <div className="flex-1 p-4 space-y-6 overflow-y-auto">
         {/* Menu sections */}
         {menuItems.map((section) => (
           <div key={section.title}>
@@ -186,82 +180,98 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
             <div className="space-y-2">
               {/* Scan buttons */}
               <div className="grid grid-cols-1 gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleScan('manga')}
-                  className="justify-start"
+                <button
+                  onClick={() => {
+                    console.log('🔄 Direct scan button clicked');
+                    handleScan('manga');
+                  }}
+                  className="inline-flex items-center justify-start px-3 py-1.5 text-sm border border-gray-300 dark:border-dark-600 bg-transparent hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 rounded-lg transition-all pointer-events-auto"
+                  style={{ pointerEvents: 'auto !important' }}
                 >
                   <FiRefreshCw className="h-3 w-3 mr-2" />
                   Quét Manga
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleScan('movie')}
-                  className="justify-start"
+                </button>
+                <button
+                  onClick={() => {
+                    console.log('🔄 Direct scan button clicked');
+                    handleScan('movie');
+                  }}
+                  className="inline-flex items-center justify-start px-3 py-1.5 text-sm border border-gray-300 dark:border-dark-600 bg-transparent hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 rounded-lg transition-all pointer-events-auto"
+                  style={{ pointerEvents: 'auto !important' }}
                 >
                   <FiRefreshCw className="h-3 w-3 mr-2" />
                   Quét Movie
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleScan('music')}
-                  className="justify-start"
+                </button>
+                <button
+                  onClick={() => {
+                    console.log('🔄 Direct scan button clicked');
+                    handleScan('music');
+                  }}
+                  className="inline-flex items-center justify-start px-3 py-1.5 text-sm border border-gray-300 dark:border-dark-600 bg-transparent hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 rounded-lg transition-all pointer-events-auto"
+                  style={{ pointerEvents: 'auto !important' }}
                 >
                   <FiRefreshCw className="h-3 w-3 mr-2" />
                   Quét Music
-                </Button>
+                </button>
               </div>
 
               {/* Reset cache buttons */}
               <div className="grid grid-cols-1 gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleResetCache('manga')}
-                  className="justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                <button
+                  onClick={() => {
+                    console.log('🗑️ Direct reset button clicked');
+                    handleResetCache('manga');
+                  }}
+                  className="inline-flex items-center justify-start px-3 py-1.5 text-sm bg-transparent text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all pointer-events-auto"
+                  style={{ pointerEvents: 'auto !important' }}
                 >
                   <FiTrash2 className="h-3 w-3 mr-2" />
                   Xóa cache Manga
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleResetCache('movie')}
-                  className="justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                </button>
+                <button
+                  onClick={() => {
+                    console.log('🗑️ Direct reset button clicked');
+                    handleResetCache('movie');
+                  }}
+                  className="inline-flex items-center justify-start px-3 py-1.5 text-sm bg-transparent text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all pointer-events-auto"
+                  style={{ pointerEvents: 'auto !important' }}
                 >
                   <FiTrash2 className="h-3 w-3 mr-2" />
                   Xóa cache Movie
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleResetCache('music')}
-                  className="justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                </button>
+                <button
+                  onClick={() => {
+                    console.log('🗑️ Direct reset button clicked');
+                    handleResetCache('music');
+                  }}
+                  className="inline-flex items-center justify-start px-3 py-1.5 text-sm bg-transparent text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all pointer-events-auto"
+                  style={{ pointerEvents: 'auto !important' }}
                 >
                   <FiTrash2 className="h-3 w-3 mr-2" />
                   Xóa cache Music
-                </Button>
+                </button>
               </div>
             </div>
           </div>
         )}
       </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-dark-700">
-          <Link
-            to="/settings"
-            className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            <FiSettings className="h-4 w-4" />
-            <span>Cài đặt</span>
-          </Link>
-        </div>
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-200 dark:border-dark-700">
+        <Link
+          to="/settings"
+          className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 hover:text-gray-900 dark:hover:text-white transition-colors pointer-events-auto"
+          style={{ pointerEvents: 'auto !important' }}
+          onClick={() => {
+            console.log('⚙️ Settings link clicked');
+            onClose?.();
+          }}
+        >
+          <FiSettings className="h-4 w-4" />
+          <span>Cài đặt</span>
+        </Link>
       </div>
-    </>
+    </div>
   );
 };
 

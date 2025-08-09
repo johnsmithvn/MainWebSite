@@ -3,7 +3,6 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { clsx } from 'clsx';
 
 const Button = ({
   children,
@@ -14,6 +13,7 @@ const Button = ({
   className = '',
   onClick,
   type = 'button',
+  icon: Icon,
   ...props
 }) => {
   const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
@@ -36,15 +36,19 @@ const Button = ({
     xl: 'px-8 py-4 text-lg',
   };
 
-  const classes = clsx(
+  const classes = [
     baseClasses,
-    variants[variant],
-    sizes[size],
+    variants[variant] || variants.primary,
+    sizes[size] || sizes.md,
     className
-  );
+  ].filter(Boolean).join(' ');
 
   const handleClick = (e) => {
-    if (disabled || loading) return;
+    console.log('🔘 Button clicked:', { disabled, loading, e });
+    if (disabled || loading) {
+      console.log('❌ Button click blocked - disabled or loading');
+      return;
+    }
     onClick?.(e);
   };
 
@@ -60,6 +64,9 @@ const Button = ({
     >
       {loading && (
         <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      )}
+      {Icon && (
+        <Icon className="h-4 w-4 mr-2" />
       )}
       {children}
     </motion.button>

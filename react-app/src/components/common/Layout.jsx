@@ -2,7 +2,7 @@
 // 🏗️ Main layout component
 
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './Header';
@@ -12,6 +12,8 @@ import { useUIStore } from '../../store';
 
 const Layout = () => {
   const { sidebarOpen, loading, setSidebarOpen } = useUIStore();
+  const location = useLocation();
+  const isMoviePlayer = location.pathname.startsWith('/movie/player');
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-900 transition-colors duration-200">
@@ -19,7 +21,7 @@ const Layout = () => {
       
       <div className="flex">
         <AnimatePresence>
-          {sidebarOpen && (
+          {sidebarOpen && !isMoviePlayer && (
             <>
               {/* Backdrop */}
               <motion.div
@@ -36,9 +38,10 @@ const Layout = () => {
                 animate={{ x: 0 }}
                 exit={{ x: -280 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] w-72 bg-white dark:bg-dark-800 shadow-lg"
+                className="fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] w-72 shadow-lg pointer-events-auto"
+                style={{ pointerEvents: 'auto' }}
               >
-                <Sidebar />
+                <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
               </motion.div>
             </>
           )}
