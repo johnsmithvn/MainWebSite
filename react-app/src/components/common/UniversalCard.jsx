@@ -136,20 +136,9 @@ const UniversalCard = ({
       }
       */
     } else if (type === 'music' && (item.type === 'audio' || item.type === 'file' || item.isPlaylist)) {
-      try {
-        // Use direct fetch for music-specific endpoint
-        await fetch('/api/increase-view/music', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            key: sourceKey,
-            path: item.path
-          })
-        });
-        console.log('📈 View count increased for music:', item.path);
-      } catch (error) {
-        console.warn('Failed to increase view count for music:', error);
-      }
+      // NOTE: View count for music is handled inside MusicPlayer on playback to ensure exactly-once semantics
+      // Avoid calling increase-view here to prevent duplicate counts on initial navigation
+      // console.log('🎵 Music click - view will be increased by MusicPlayer on play');
     }
     
     // Navigate based on type
@@ -173,16 +162,19 @@ const UniversalCard = ({
     } else if (type === 'music') {
       const isAudio = item.type === 'audio' || item.type === 'file';
       const isPlaylist = item.isPlaylist;
-      
       if (isPlaylist) {
-        // Navigate to playlist player
-        navigate(`/music/player?playlist=${encodedPath}&key=${sourceKey}`);
+        // Playlist path is the folder
+        const encodedFolder = encodedPath;
+        navigate(`/music/player?playlist=${encodedFolder}&key=${sourceKey}`);
       } else if (isAudio) {
-        // Navigate to audio player
-        navigate(`/music/player?file=${encodedPath}&key=${sourceKey}`);
+        const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
+        const encodedFolder = encodeURIComponent(folderPath);
+        // Pass both file and its parent folder so player can build playlist correctly
+        navigate(`/music/player?file=${encodedPath}&playlist=${encodedFolder}&key=${sourceKey}`);
       } else {
-        // Navigate to music folder
-        navigate(`/music?path=${encodedPath}`);
+        // For music folders clicked from sliders -> open directly as playlist in player
+        const encodedFolder = encodedPath;
+        navigate(`/music/player?playlist=${encodedFolder}&key=${sourceKey}`);
       }
     }
   };

@@ -1,9 +1,9 @@
 // 📁 src/pages/music/MusicPlayer.jsx
-// 🎵 Spotify-style Music Player với design đẹp và hiện đại
+// 🎵 Spotify-style Music Player với design đẹp và hiện đại (single-file implementation)
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   FiPlay,
   FiPause,
@@ -13,19 +13,18 @@ import {
   FiVolumeX,
   FiShuffle,
   FiRepeat,
-  FiList,
   FiHeart,
   FiMoreHorizontal,
-  FiHome,
-  FiDownload,
-  FiShare2,
   FiChevronLeft,
   FiChevronRight,
-  FiMusic
+  FiDownload,
+  FiHome,
+  FiClock
 } from 'react-icons/fi';
 import { useAuthStore, useMusicStore, useUIStore } from '@/store';
 import { useRecentMusicManager } from '@/hooks/useMusicData';
 import { apiService } from '@/utils/api';
+import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 
 const MusicPlayer = () => {
@@ -34,12 +33,9 @@ const MusicPlayer = () => {
   const path = searchParams.get('file');
   const playlistPath = searchParams.get('playlist');
 
-  console.log('🎵 MusicPlayer component mounted');
-  console.log('🎵 MusicPlayer received params:', { path, playlistPath });
-
-  const { 
-    currentTrack, 
-    currentPlaylist, 
+  const {
+    currentTrack,
+    currentPlaylist,
     currentIndex,
     isPlaying,
     volume,
@@ -53,20 +49,15 @@ const MusicPlayer = () => {
     resumeTrack,
     nextTrack,
     prevTrack,
-    setVolume
+    setVolume,
   } = useMusicStore();
-  
-  const { darkMode, showToast } = useUIStore();
+
+  const { showToast } = useUIStore();
   const { sourceKey, setSourceKey } = useAuthStore();
-  
-  // Debug sourceKey - check if it's set correctly for music
-  console.log('🔑 Current sourceKey:', sourceKey);
-  console.log('🔑 Auth store state:', useAuthStore.getState());
-  
+
   // Ensure sourceKey is set to M_MUSIC for music player
   useEffect(() => {
     if (!sourceKey || sourceKey === 'ROOT_FANTASY') {
-      console.log('🔑 Setting sourceKey to M_MUSIC for music player');
       setSourceKey('M_MUSIC');
     }
   }, [sourceKey, setSourceKey]);
@@ -79,105 +70,110 @@ const MusicPlayer = () => {
   const [buffered, setBuffered] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showPlaylist, setShowPlaylist] = useState(false);
 
   // Audio ref
   const audioRef = useRef(null);
+  // Removed viewedTracksRef to allow counting on every playback start
+  const latestTrackRef = useRef(null);
 
-  /**
-   * 🎵 Build audio URL từ path
-   */
+  // Keep a ref of the latest track for event handlers
+  useEffect(() => {
+    latestTrackRef.current = currentTrack || null;
+  }, [currentTrack]);
+
+  // Increase view when playback starts (every time)
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handlePlay = async () => {
+      const track = latestTrackRef.current;
+      const trackPath = track?.path;
+      if (!trackPath || !sourceKey) return;
+
+      try {
+        await fetch('/api/increase-view/music', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: sourceKey, path: trackPath })
+        });
+      } catch (err) {
+        console.warn('Failed to increase music view count:', err);
+      }
+    };
+
+    audio.addEventListener('play', handlePlay);
+    return () => {
+      audio.removeEventListener('play', handlePlay);
+    };
+  }, [sourceKey]);
+
+  // ========= Helpers =========
   function buildAudioUrl(audioPath) {
-    if (!audioPath || !sourceKey) {
-      console.log('🎵 buildAudioUrl: Missing audioPath or sourceKey');
-      return null;
-    }
-    
-    const url = `/api/music/audio?key=${sourceKey}&file=${encodeURIComponent(audioPath)}`;
-    console.log('🎵 Built audio URL:', url);
-    return url;
+    if (!audioPath || !sourceKey) return null;
+    return `/api/music/audio?key=${sourceKey}&file=${encodeURIComponent(audioPath)}`;
   }
 
-  /**
-   * 🎵 Get track info từ path
-   */
   const getTrackInfo = useCallback(() => {
     if (!path) return null;
-    
     const fileName = path.split('/').pop();
-    const nameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
-    
+    const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
     return {
       name: nameWithoutExt,
-      path: path,
+      path,
       artist: 'Unknown Artist',
       album: 'Unknown Album',
-      thumbnail: null
+      thumbnail: null,
     };
   }, [path]);
 
-  /**
-   * 🎵 Format time helper
-   */
   const formatTime = (time) => {
     if (!time || isNaN(time)) return '0:00';
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const m = Math.floor(time / 60);
+    const s = Math.floor(time % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  /**
-   * 🎵 Toggle play/pause
-   */
   const togglePlayPause = useCallback(async () => {
     const audio = audioRef.current;
-    if (!audio) {
-      console.error('❌ Audio element not found');
-      return;
-    }
-
+    if (!audio) return;
     try {
       if (isPlaying) {
         audio.pause();
         pauseTrack();
-        console.log('⏸️ Audio paused');
       } else {
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          await playPromise;
-          resumeTrack();
-          console.log('▶️ Audio playing');
-        }
+        const p = audio.play();
+        if (p) await p;
+        resumeTrack();
       }
-    } catch (error) {
-      console.error('🔥 Play/pause error:', error);
-      setError('Failed to play/pause audio: ' + error.message);
-      showToast('Không thể play/pause: ' + error.message, 'error');
+    } catch (err) {
+      setError('Failed to play/pause audio: ' + err.message);
+      showToast('Không thể play/pause: ' + err.message, 'error');
     }
   }, [isPlaying, pauseTrack, resumeTrack, showToast]);
 
-  /**
-   * 🎵 Handle seek
-   */
   const handleSeek = (e) => {
     const audio = audioRef.current;
     if (!audio || !duration) return;
-
     const rect = e.currentTarget.getBoundingClientRect();
-    const percent = (e.clientX - rect.left) / rect.width;
+    const percent = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
     const newTime = percent * duration;
-    
     audio.currentTime = newTime;
     setCurrentTime(newTime);
   };
 
-  /**
-   * 🎵 Toggle mute
-   */
+  const handleVolumeBar = (e) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percent = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+    setVolume(percent);
+    audio.volume = percent;
+  };
+
   const toggleMute = () => {
     const audio = audioRef.current;
     if (!audio) return;
-
     if (volume === 0) {
       setVolume(0.5);
       audio.volume = 0.5;
@@ -187,117 +183,117 @@ const MusicPlayer = () => {
     }
   };
 
-  /**
-   * 🎵 Toggle shuffle
-   */
   const toggleShuffle = () => {
-    // Implement shuffle logic
-    console.log('🔀 Toggle shuffle');
+    // Optional: wire to store shuffle logic
+    showToast('Shuffle toggled', 'info');
   };
 
-  /**
-   * 🎵 Toggle repeat
-   */
   const toggleRepeat = () => {
-    // Implement repeat logic
-    console.log('🔁 Toggle repeat');
+    // Optional: wire to store repeat logic
+    showToast('Repeat toggled', 'info');
   };
 
-  /**
-   * 🎵 Load folder songs for playlist mode
-   */
-  const loadFolderSongs = async () => {
+  // ========= Data loading =========
+  const loadFolderSongs = async (folderPathArg, selectedFileArg) => {
     try {
-      console.log('🎵 Loading folder songs for path:', path);
-      
-      if (!path || !sourceKey) {
-        console.error('❌ Missing path or sourceKey:', { path, sourceKey });
-        showToast('Thiếu thông tin file hoặc source key', 'error');
+      if (!sourceKey) {
+        showToast('Thiếu source key', 'error');
         return;
       }
-      
-      const pathParts = path.split('/');
-      pathParts.pop(); // Remove filename
-      const folderPath = pathParts.join('/');
 
-      console.log('🎵 Fetching folder:', folderPath, 'with sourceKey:', sourceKey);
-      const response = await apiService.music.getFolders({
-        key: sourceKey,
-        path: folderPath
-      });
+      const folderPath = folderPathArg;
+      const selectedPath = selectedFileArg;
 
-      console.log('🎵 API Response:', response.data);
+      if (!folderPath && !selectedPath) {
+        showToast('Thiếu thông tin file/folder', 'error');
+        return;
+      }
 
-      const audioFiles = response.data.folders.filter(item => 
-        item.type === 'audio' || item.type === 'file'
-      );
+      // If folder not provided but we have a selected file, derive parent folder
+      const folderToLoad = folderPath || (selectedPath ? selectedPath.split('/').slice(0, -1).join('/') : null);
+      if (!folderToLoad) {
+        showToast('Không thể xác định thư mục chứa bài hát', 'error');
+        return;
+      }
 
-      console.log('🎵 Audio files found:', audioFiles.length);
-
-      const playlist = audioFiles.map(file => ({
+      const response = await apiService.music.getFolders({ key: sourceKey, path: folderToLoad });
+      const audioFiles = (response.data?.folders || []).filter((i) => i.type === 'audio' || i.type === 'file');
+      const playlist = audioFiles.map((file) => ({
         ...file,
         name: file.name || file.path.split('/').pop(),
-        thumbnail: file.thumbnail || '/default/music-thumb.png'
+        thumbnail: buildThumbnailUrl(file, 'music'),
       }));
 
-      // Get current track info
-      const currentTrackInfo = getTrackInfo();
-      console.log('🎵 Current track info:', currentTrackInfo);
-      
-      const currentIndex = playlist.findIndex(track => track.path === path);
-      console.log('🎵 Current track index:', currentIndex);
-      
-      if (currentIndex >= 0) {
-        console.log('🎵 Playing track from playlist:', playlist[currentIndex]);
-        playTrack(playlist[currentIndex], playlist, currentIndex);
-        
-        // Add to recent
-        addRecentMusic(playlist[currentIndex]);
+      // Determine initial track
+      let startIndex = 0;
+      if (selectedPath) {
+        const idx = playlist.findIndex((t) => t.path === selectedPath);
+        if (idx >= 0) startIndex = idx;
+      }
+
+      if (playlist.length > 0) {
+        playTrack(playlist[startIndex], playlist, startIndex);
+        addRecentMusic(playlist[startIndex]);
+      } else if (selectedPath) {
+        // Fallback: single track only
+        const fileName = selectedPath.split('/').pop();
+        const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+        const singleTrack = {
+          name: nameWithoutExt,
+          path: selectedPath,
+          artist: 'Unknown Artist',
+          album: 'Unknown Album',
+          thumbnail: buildThumbnailUrl({ path: selectedPath, type: 'audio', thumbnail: null }, 'music'),
+        };
+        playTrack(singleTrack, [singleTrack], 0);
+        addRecentMusic(singleTrack);
+        showToast('Không tìm thấy playlist, phát 1 bài', 'warning');
       } else {
-        // If not found in playlist, create a single track from current file
-        console.log('🎵 Track not found in folder, playing single track');
-        const singleTrack = {
-          ...currentTrackInfo,
-          path: path,
-          thumbnail: null
-        };
-        playTrack(singleTrack, [singleTrack], 0);
-        addRecentMusic(singleTrack);
+        showToast('Thư mục không có bài hát hợp lệ', 'warning');
       }
-    } catch (error) {
-      console.error('🔥 Failed to load folder songs:', error);
-      console.error('🔥 Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      
-      // Fallback: play as single track even if folder loading fails
-      try {
-        const currentTrackInfo = getTrackInfo();
-        const singleTrack = {
-          ...currentTrackInfo,
-          path: path,
-          thumbnail: null
-        };
-        console.log('🎵 Error fallback - playing single track:', singleTrack);
-        playTrack(singleTrack, [singleTrack], 0);
-        addRecentMusic(singleTrack);
-        showToast('Không thể load playlist, chỉ phát 1 bài', 'warning');
-      } catch (fallbackError) {
-        console.error('🔥 Even fallback failed:', fallbackError);
-        showToast('Không thể phát nhạc: ' + (error.response?.data?.message || error.message), 'error');
+    } catch (err) {
+      if (selectedFileArg) {
+        try {
+          const fileName = selectedFileArg.split('/').pop();
+          const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+          const singleTrack = {
+            name: nameWithoutExt,
+            path: selectedFileArg,
+            artist: 'Unknown Artist',
+            album: 'Unknown Album',
+            thumbnail: buildThumbnailUrl({ path: selectedFileArg, type: 'audio', thumbnail: null }, 'music'),
+          };
+          playTrack(singleTrack, [singleTrack], 0);
+          addRecentMusic(singleTrack);
+          showToast('Không thể load playlist, chỉ phát 1 bài', 'warning');
+          return;
+        } catch {}
       }
+      showToast('Không thể phát nhạc: ' + (err.response?.data?.message || err.message), 'error');
     }
   };
 
-  // Initial load effect
+  // Load whenever URL params change
   useEffect(() => {
-    if (path && sourceKey && !currentTrack) {
-      console.log('🎵 Initial load - path:', path, 'sourceKey:', sourceKey);
-      loadFolderSongs();
+    // If playlist is provided, load that folder and optionally select specific file
+    if (playlistPath) {
+      loadFolderSongs(playlistPath, path || null);
+      return;
     }
-  }, [path, sourceKey]);
+    // Else, if only file is provided, derive folder and load
+    if (path) {
+      loadFolderSongs(null, path);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playlistPath, path, sourceKey]);
+
+  // Initial load (handled by the URL-change effect above)
+  // useEffect(() => {
+  //   if (path && sourceKey && !currentTrack) {
+  //     loadFolderSongs();
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [path, sourceKey]);
 
   // Audio element effects
   useEffect(() => {
@@ -305,17 +301,13 @@ const MusicPlayer = () => {
     if (!audio) return;
 
     const updateTime = () => setCurrentTime(audio.currentTime);
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
-      console.log('🎵 Audio metadata loaded, duration:', audio.duration);
-    };
+    const handleLoadedMetadata = () => setDuration(audio.duration || 0);
     const updateBuffered = () => {
-      if (audio.buffered.length > 0) {
+      if (audio.buffered?.length > 0) {
         setBuffered(audio.buffered.end(audio.buffered.length - 1));
       }
     };
     const handleEnded = () => {
-      console.log('🎵 Audio ended');
       if (repeat === 'one') {
         audio.currentTime = 0;
         audio.play();
@@ -324,14 +316,7 @@ const MusicPlayer = () => {
       }
     };
     const handleError = (e) => {
-      console.error('🔥 Audio error:', e);
-      console.error('🔥 Audio error details:', {
-        error: e.target.error,
-        src: e.target.src,
-        networkState: e.target.networkState,
-        readyState: e.target.readyState
-      });
-      setError('Failed to load audio: ' + (e.target.error?.message || 'Unknown error'));
+      setError('Failed to load audio');
       showToast('Audio load error', 'error');
     };
 
@@ -350,383 +335,244 @@ const MusicPlayer = () => {
     };
   }, [repeat, nextTrack, showToast]);
 
-  // Auto-play when track changes
+  // Auto play when track changes
   useEffect(() => {
     const audio = audioRef.current;
-    if (audio && currentTrack && sourceKey) {
-      const audioUrl = buildAudioUrl(currentTrack.path);
-      console.log('🎵 Setting audio source:', audioUrl);
-      console.log('🎵 Current track:', currentTrack);
-      console.log('🎵 Is playing state:', isPlaying);
-      
-      if (!audioUrl) {
-        console.error('❌ Failed to build audio URL');
-        setError('Không thể tạo URL audio');
-        return;
+    if (!audio || !currentTrack || !sourceKey) return;
+    const audioUrl = buildAudioUrl(currentTrack.path);
+    if (!audioUrl) return;
+    audio.src = audioUrl;
+    audio.load();
+    const handleCanPlay = () => {
+      if (isPlaying) {
+        audio.play().catch((err) => {
+          setError('Failed to play audio: ' + err.message);
+          showToast('Không thể phát nhạc: ' + err.message, 'error');
+        });
       }
-      
-      // Set source and load
-      audio.src = audioUrl;
-      audio.load();
-      
-      // Add load event listener to ensure audio is ready before playing
-      const handleCanPlay = () => {
-        console.log('🎵 Audio can play, attempting to play...');
-        if (isPlaying) {
-          audio.play().catch(err => {
-            console.error('🔥 Audio play error:', err);
-            setError('Failed to play audio: ' + err.message);
-            showToast('Không thể phát nhạc: ' + err.message, 'error');
-          });
-        }
-        audio.removeEventListener('canplay', handleCanPlay);
-      };
-      
-      const handleLoadError = (e) => {
-        console.error('🔥 Audio load error:', e);
-        setError('Failed to load audio source');
-        showToast('Không thể load audio: ' + (e.target?.error?.message || 'Unknown error'), 'error');
-        audio.removeEventListener('error', handleLoadError);
-      };
-      
-      audio.addEventListener('canplay', handleCanPlay);
-      audio.addEventListener('error', handleLoadError);
-      
-      // Cleanup on unmount or source change
-      return () => {
-        audio.removeEventListener('canplay', handleCanPlay);
-        audio.removeEventListener('error', handleLoadError);
-      };
-    }
+      audio.removeEventListener('canplay', handleCanPlay);
+    };
+    const handleLoadError = (e) => {
+      setError('Failed to load audio source');
+      showToast('Không thể load audio', 'error');
+      audio.removeEventListener('error', handleLoadError);
+    };
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('error', handleLoadError);
+    return () => {
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('error', handleLoadError);
+    };
   }, [currentTrack, isPlaying, sourceKey, showToast]);
 
-  // Volume control
+  // Volume sync
   useEffect(() => {
     const audio = audioRef.current;
-    if (audio) {
-      audio.volume = volume;
-    }
+    if (audio) audio.volume = volume;
   }, [volume]);
 
+  // ======== Derived UI Data ========
+  const isFav = (t) => favorites.some((f) => f.path === t.path);
+  const folderTitle = (() => {
+    if (playlistPath) return playlistPath.split('/').pop();
+    if (path) {
+      const parts = path.split('/');
+      parts.pop();
+      return parts.pop() || 'Now Playing';
+    }
+    return 'Now Playing';
+  })();
+  const headerArt = (currentTrack || currentPlaylist[0])
+    ? buildThumbnailUrl(currentTrack || currentPlaylist[0], 'music')
+    : '/default/music-thumb.png';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-      {/* Top Navigation Bar */}
-      <div className="flex items-center justify-between p-6 bg-black/20 backdrop-blur-sm">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors"
-          >
-            <FiChevronLeft className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-b from-[#1f1f1f] via-[#121212] to-[#000] text-white">
+      {/* Top Controls */}
+      <div className="flex items-center justify-between px-6 py-4">
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate(-1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20">
+            <FiChevronLeft className="w-5 h-5" />
           </button>
-          <button
-            onClick={() => navigate(1)}
-            className="p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors"
-          >
-            <FiChevronRight className="w-6 h-6 text-white" />
+          <button onClick={() => navigate(1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20">
+            <FiChevronRight className="w-5 h-5" />
           </button>
         </div>
-        
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => setShowPlaylist(!showPlaylist)}
-            className={`px-4 py-2 rounded-full transition-colors ${
-              showPlaylist 
-                ? 'bg-green-500 text-black' 
-                : 'bg-black/40 text-white hover:bg-black/60'
-            }`}
-          >
-            <FiList className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => navigate('/music')}
-            className="px-4 py-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
-          >
-            <FiHome className="w-5 h-5" />
-          </button>
-        </div>
+        <button onClick={() => navigate('/music')} className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-sm">
+          <FiHome className="inline w-4 h-4 mr-1" /> Music Home
+        </button>
       </div>
 
-      <div className="flex h-[calc(100vh-88px)]">
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8">
-          {currentTrack ? (
-            <>
-              {/* Album Art */}
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="mb-8"
+      {/* Header Banner */}
+      <div className="relative px-6 pb-6">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#50306e] via-transparent to-transparent opacity-60" />
+        <div className="flex flex-col md:flex-row md:items-end gap-6">
+          <motion.img
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            src={headerArt}
+            alt={(currentTrack?.name || currentPlaylist[0]?.name || folderTitle) || 'Cover'}
+            onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')}
+            className="w-48 h-48 md:w-56 md:h-56 object-cover rounded shadow-2xl"
+          />
+          <div className="flex-1">
+            <div className="text-xs uppercase text-white/70 font-semibold">Playlist</div>
+            <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight mt-2">
+              {currentTrack?.album?.toUpperCase?.() || folderTitle?.toUpperCase?.() || 'NOW PLAYING'}
+            </h1>
+            <div className="mt-4 text-white/80 text-sm flex items-center gap-2">
+              <span className="font-semibold">Music</span>
+              <span className="w-1 h-1 rounded-full bg-white/40" />
+              <span>{currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}</span>
+            </div>
+            <div className="mt-6 flex items-center gap-4">
+              <button
+                onClick={togglePlayPause}
+                className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-lg"
+                aria-label="Play"
               >
-                <div className="relative group">
-                  <img
-                    src={currentTrack.thumbnail || '/default/music-thumb.png'}
-                    alt={currentTrack.name}
-                    className="w-80 h-80 object-cover rounded-2xl shadow-2xl"
-                    onError={(e) => {
-                      e.target.src = '/default/music-thumb.png';
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-2xl transition-colors duration-300"></div>
-                </div>
-              </motion.div>
-
-              {/* Track Info */}
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="text-center mb-8"
-              >
-                <h1 className="text-4xl font-bold text-white mb-2 max-w-2xl">
-                  {currentTrack.name}
-                </h1>
-                <p className="text-xl text-gray-300">
-                  {currentTrack.artist || 'Unknown Artist'}
-                </p>
-                {currentTrack.album && (
-                  <p className="text-lg text-gray-400 mt-1">
-                    {currentTrack.album}
-                  </p>
-                )}
-              </motion.div>
-
-              {/* Action Buttons */}
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="flex items-center space-x-4 mb-8"
-              >
+                {isPlaying ? <FiPause className="w-7 h-7" /> : <FiPlay className="w-7 h-7 ml-0.5" />}
+              </button>
+              {currentTrack && (
                 <button
                   onClick={() => toggleFavorite(currentTrack)}
-                  className={`p-3 rounded-full transition-colors ${
-                    favorites.some(f => f.path === currentTrack.path)
-                      ? 'text-green-500 hover:text-green-400'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
+                  className={`p-3 rounded-full transition-colors ${isFav(currentTrack) ? 'text-green-400' : 'text-white/70 hover:text-white'}`}
                 >
                   <FiHeart className="w-6 h-6" />
                 </button>
-                <button className="p-3 rounded-full text-gray-400 hover:text-white transition-colors">
-                  <FiDownload className="w-6 h-6" />
-                </button>
-                <button className="p-3 rounded-full text-gray-400 hover:text-white transition-colors">
-                  <FiShare2 className="w-6 h-6" />
-                </button>
-                <button className="p-3 rounded-full text-gray-400 hover:text-white transition-colors">
-                  <FiMoreHorizontal className="w-6 h-6" />
-                </button>
-              </motion.div>
+              )}
+              <button className="p-3 rounded-full text-white/70 hover:text-white"><FiDownload className="w-6 h-6" /></button>
+              <button className="p-3 rounded-full text-white/70 hover:text-white"><FiMoreHorizontal className="w-6 h-6" /></button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-              {/* Playback Controls */}
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                className="w-full max-w-2xl"
-              >
-                {/* Progress Bar */}
-                <div className="flex items-center space-x-4 mb-6">
-                  <span className="text-sm text-gray-400 min-w-[40px]">
-                    {formatTime(currentTime)}
-                  </span>
-                  <div 
-                    className="flex-1 h-2 bg-gray-600 rounded-full cursor-pointer group"
-                    onClick={handleSeek}
-                  >
-                    <div
-                      className="h-full bg-white rounded-full relative group-hover:bg-green-500 transition-colors"
-                      style={{ width: `${(currentTime / duration) * 100}%` }}
-                    >
-                      <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    </div>
-                  </div>
-                  <span className="text-sm text-gray-400 min-w-[40px]">
-                    {formatTime(duration)}
-                  </span>
-                </div>
-
-                {/* Main Controls */}
-                <div className="flex items-center justify-center space-x-6">
-                  <button
-                    onClick={toggleShuffle}
-                    className={`p-2 rounded transition-colors ${
-                      shuffle ? 'text-green-500' : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <FiShuffle className="w-5 h-5" />
-                  </button>
-
-                  <button
-                    onClick={prevTrack}
-                    className="p-2 text-white hover:text-gray-300 transition-colors"
-                  >
-                    <FiSkipBack className="w-6 h-6" />
-                  </button>
-
-                  <button
-                    onClick={togglePlayPause}
-                    className="p-4 bg-white text-black rounded-full hover:scale-105 transition-transform shadow-lg"
-                  >
-                    {isPlaying ? (
-                      <FiPause className="w-6 h-6" />
-                    ) : (
-                      <FiPlay className="w-6 h-6 ml-1" />
-                    )}
-                  </button>
-
-                  <button
-                    onClick={nextTrack}
-                    className="p-2 text-white hover:text-gray-300 transition-colors"
-                  >
-                    <FiSkipForward className="w-6 h-6" />
-                  </button>
-
-                  <button
-                    onClick={toggleRepeat}
-                    className={`p-2 rounded transition-colors ${
-                      repeat !== 'none' ? 'text-green-500' : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <FiRepeat className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Volume Control */}
-                <div className="flex items-center justify-center space-x-4 mt-6">
-                  <button
-                    onClick={toggleMute}
-                    className="text-gray-400 hover:text-white transition-colors"
-                  >
-                    {volume === 0 ? (
-                      <FiVolumeX className="w-5 h-5" />
-                    ) : (
-                      <FiVolume2 className="w-5 h-5" />
-                    )}
-                  </button>
-                  <div className="w-32 h-1 bg-gray-600 rounded-full">
-                    <div
-                      className="h-full bg-white rounded-full"
-                      style={{ width: `${volume * 100}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-sm text-gray-400 min-w-[30px]">
-                    {Math.round(volume * 100)}
-                  </span>
-                </div>
-              </motion.div>
-            </>
-          ) : (
-            /* No Track State */
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center"
-            >
-              <div className="w-32 h-32 bg-gray-800 rounded-2xl flex items-center justify-center mb-6 mx-auto">
-                <FiMusic className="w-16 h-16 text-gray-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-white mb-2">No track selected</h2>
-              <p className="text-gray-400">Choose a song to start playing</p>
-            </motion.div>
-          )}
+      {/* Tracklist */}
+      <div className="px-2 sm:px-6 pb-32">
+        <div className="grid grid-cols-[40px_1fr_1fr_60px] gap-3 px-4 py-2 text-sm text-white/60 border-b border-white/10">
+          <div className="text-center">#</div>
+          <div>Title</div>
+          <div className="hidden sm:block">Album</div>
+          <div className="flex justify-end pr-2"><FiClock className="w-4 h-4" /></div>
         </div>
 
-        {/* Playlist Sidebar */}
-        <AnimatePresence>
-          {showPlaylist && (
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-              className="w-96 bg-black/40 backdrop-blur-xl border-l border-gray-700/50"
+        <div className="divide-y divide-white/5">
+          {currentPlaylist.map((track, index) => (
+            <div
+              key={track.path || index}
+              onClick={() => playTrack(track, currentPlaylist, index)}
+              className={`grid grid-cols-[40px_1fr_1fr_60px] gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${
+                index === currentIndex ? 'bg-white/10' : ''
+              }`}
             >
-              <div className="p-6 border-b border-gray-700/50">
-                <h3 className="text-xl font-bold text-white">
-                  Now Playing
-                </h3>
-                <p className="text-sm text-gray-400 mt-1">
-                  {currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}
-                </p>
+              <div className="text-center text-white/60">
+                {index === currentIndex && isPlaying ? (
+                  <span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                ) : (
+                  index + 1
+                )}
               </div>
-              
-              <div className="overflow-y-auto h-[calc(100vh-200px)]">
-                <div className="p-4 space-y-2">
-                  {currentPlaylist.map((track, index) => (
-                    <motion.div
-                      key={track.path || index}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={`group p-3 rounded-lg cursor-pointer transition-all duration-200 ${
-                        index === currentIndex 
-                          ? 'bg-green-500/20 border border-green-500/50' 
-                          : 'hover:bg-white/10'
-                      }`}
-                      onClick={() => playTrack(track, currentPlaylist, index)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="relative">
-                          <img
-                            src={track.thumbnail || '/default/music-thumb.png'}
-                            alt={track.name}
-                            className="w-12 h-12 object-cover rounded-lg"
-                            onError={(e) => {
-                              e.target.src = '/default/music-thumb.png';
-                            }}
-                          />
-                          {index === currentIndex && isPlaying && (
-                            <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-medium truncate ${
-                            index === currentIndex ? 'text-green-400' : 'text-white'
-                          }`}>
-                            {track.name}
-                          </p>
-                          <p className="text-sm text-gray-400 truncate">
-                            {track.artist || 'Unknown Artist'}
-                          </p>
-                        </div>
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleFavorite(track);
-                            }}
-                            className={`p-1 rounded transition-colors ${
-                              favorites.some(f => f.path === track.path)
-                                ? 'text-green-500'
-                                : 'text-gray-400 hover:text-white'
-                            }`}
-                          >
-                            <FiHeart className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+
+              <div className="min-w-0 flex items-center gap-3">
+                <img
+                  src={buildThumbnailUrl(track, 'music')}
+                  onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')}
+                  alt={track.name}
+                  className="w-10 h-10 rounded object-cover flex-none"
+                />
+                <div className="min-w-0">
+                  <div className={`truncate ${index === currentIndex ? 'text-green-400' : 'text-white'}`}>{track.name}</div>
+                  <div className="text-xs text-white/60 truncate">{track.artist || 'Unknown Artist'}</div>
                 </div>
               </div>
-            </motion.div>
+
+              <div className="hidden sm:block text-sm text-white/70 truncate">{track.album || '—'}</div>
+
+              <div className="flex items-center justify-end gap-3 pr-2 text-white/70">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(track);
+                  }}
+                  className={`hover:text-white ${isFav(track) ? 'text-green-400' : ''}`}
+                  aria-label="Favorite"
+                >
+                  <FiHeart className="w-4 h-4" />
+                </button>
+                <span className="tabular-nums text-sm">{track.duration ? formatTime(track.duration) : '—'}</span>
+              </div>
+            </div>
+          ))}
+
+          {currentPlaylist.length === 0 && (
+            <div className="px-4 py-10 text-center text-white/60">Chưa có danh sách phát. Hãy chọn một bài để bắt đầu.</div>
           )}
-        </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Bottom player bar */}
+      <div className="fixed bottom-0 left-0 right-0 h-24 bg-[#121212]/95 backdrop-blur border-t border-white/10">
+        <div className="h-full px-4 md:px-6 flex items-center gap-4">
+          {/* Now playing */}
+          <div className="hidden md:flex items-center gap-3 min-w-[220px]">
+            {currentTrack ? (
+              <>
+                <img
+                  src={buildThumbnailUrl(currentTrack, 'music') || '/default/music-thumb.png'}
+                  onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')}
+                  alt={currentTrack.name}
+                  className="w-12 h-12 rounded object-cover"
+                />
+                <div className="min-w-0">
+                  <div className="text-sm truncate">{currentTrack.name}</div>
+                  <div className="text-xs text-white/60 truncate">{currentTrack.artist || 'Unknown Artist'}</div>
+                </div>
+              </>
+            ) : (
+              <div className="text-white/60 text-sm">No track selected</div>
+            )}
+          </div>
+
+          {/* Controls + progress */}
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="flex items-center gap-5">
+              <button onClick={toggleShuffle} className={`text-white/70 hover:text-white ${shuffle ? '!text-green-400' : ''}`}> <FiShuffle className="w-4 h-4" /> </button>
+              <button onClick={prevTrack} className="text-white hover:text-white/90"> <FiSkipBack className="w-5 h-5" /> </button>
+              <button onClick={togglePlayPause} className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform">
+                {isPlaying ? <FiPause className="w-5 h-5" /> : <FiPlay className="w-5 h-5 ml-0.5" />}
+              </button>
+              <button onClick={nextTrack} className="text-white hover:text-white/90"> <FiSkipForward className="w-5 h-5" /> </button>
+              <button onClick={toggleRepeat} className={`text-white/70 hover:text-white ${repeat !== 'none' ? '!text-green-400' : ''}`}> <FiRepeat className="w-4 h-4" /> </button>
+            </div>
+            <div className="w-full max-w-2xl flex items-center gap-3 mt-2">
+              <span className="text-xs text-white/60 min-w-[34px] text-right">{formatTime(currentTime)}</span>
+              <div className="h-1 w-full bg-white/20 rounded-full cursor-pointer" onClick={handleSeek}>
+                <div className="h-full bg-white rounded-full relative" style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}>
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-white rounded-full" />
+                </div>
+              </div>
+              <span className="text-xs text-white/60 min-w-[34px]">{formatTime(duration)}</span>
+            </div>
+          </div>
+
+          {/* Volume */}
+          <div className="hidden md:flex items-center gap-3 min-w-[180px] justify-end">
+            <button onClick={toggleMute} className="text-white/80 hover:text-white">
+              {volume === 0 ? <FiVolumeX className="w-5 h-5" /> : <FiVolume2 className="w-5 h-5" />}
+            </button>
+            <div className="w-28 h-1 bg-white/20 rounded-full cursor-pointer" onClick={handleVolumeBar}>
+              <div className="h-full bg-white rounded-full" style={{ width: `${Math.round(volume * 100)}%` }} />
+            </div>
+            <span className="text-xs text-white/60 w-8 text-right">{Math.round(volume * 100)}</span>
+          </div>
+        </div>
       </div>
 
       {/* Audio Element */}
-      <audio
-        ref={audioRef}
-        preload="metadata"
-        className="hidden"
-      />
+      <audio ref={audioRef} preload="metadata" className="hidden" />
 
-      {/* Loading Overlay */}
       {loading && <LoadingOverlay />}
     </div>
   );
