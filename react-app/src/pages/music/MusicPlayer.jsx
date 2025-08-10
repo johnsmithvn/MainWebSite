@@ -3,7 +3,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiPlay,
   FiPause,
@@ -25,6 +25,7 @@ import {
 } from 'react-icons/fi';
 import { useAuthStore, useMusicStore, useUIStore } from '@/store';
 import { useRecentMusicManager } from '@/hooks/useMusicData';
+import { useDebounceValue } from '@/hooks';
 import { apiService } from '@/utils/api';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
@@ -80,6 +81,16 @@ const MusicPlayer = () => {
   const [error, setError] = useState(null);
   const [playlistTitle, setPlaylistTitle] = useState(null);
   const [filterQuery, setFilterQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchWrapRef = useRef(null);
+  const suggestionsListRef = useRef(null);
+  const searchAbortRef = useRef(null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchLoadingMore, setSearchLoadingMore] = useState(false);
+  const [searchOffset, setSearchOffset] = useState(0);
+  const [searchHasMore, setSearchHasMore] = useState(false);
+  const SEARCH_LIMIT = 30;
   const [library, setLibrary] = useState({ items: [], loading: false, error: null });
   const [activePlaylistId, setActivePlaylistId] = useState(null);
   const [headerCondensed, setHeaderCondensed] = useState(false);
@@ -114,6 +125,18 @@ const MusicPlayer = () => {
         };
       });
     } catch {}
+  }, []);
+
+  // Close search suggestions when clicking outside
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!searchWrapRef.current) return;
+      if (!searchWrapRef.current.contains(e.target)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
   // Row click handler to avoid re-triggering the same track (prevents view loop)
@@ -682,6 +705,75 @@ const MusicPlayer = () => {
         return fields.includes(normalizedFilter);
       })
     : currentPlaylist;
+  // Debounced query for API suggestions
+  const debouncedQuery = useDebounceValue(filterQuery, 300);
+
+  // Fetch suggestions from API (like SearchModal)
+  const fetchSuggestions = useCallback(async (q, pageOffset = 0, isLoadMore = false) => {
+    if (!q || q.trim().length < 2 || !sourceKey) return { items: [], hasMore: false };
+    // cancel previous unless loading more
+    let controller;
+    if (!isLoadMore) {
+      if (searchAbortRef.current) searchAbortRef.current.abort();
+      controller = new AbortController();
+      searchAbortRef.current = controller;
+    }
+    try {
+      if (isLoadMore) setSearchLoadingMore(true); else setSearchLoading(true);
+      const resp = await apiService.music.getAudioCache({
+        mode: 'search',
+        key: sourceKey,
+        q,
+        type: 'all',
+        limit: SEARCH_LIMIT,
+        offset: pageOffset,
+      }, isLoadMore ? {} : { signal: controller?.signal });
+      const items = resp?.data?.folders || [];
+      return { items, hasMore: items.length === SEARCH_LIMIT };
+    } catch (err) {
+      if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
+        console.error('Player search error:', err);
+      }
+      return { items: [], hasMore: false };
+    } finally {
+      if (isLoadMore) setSearchLoadingMore(false); else setSearchLoading(false);
+    }
+  }, [SEARCH_LIMIT, sourceKey]);
+
+  // Load suggestions when query changes
+  useEffect(() => {
+    if (!searchOpen) return; // only fetch when dropdown open
+    if (!debouncedQuery || debouncedQuery.trim().length < 2) {
+      setSearchResults([]);
+      setSearchOffset(0);
+      setSearchHasMore(false);
+      return;
+    }
+    const run = async () => {
+      const { items, hasMore } = await fetchSuggestions(debouncedQuery, 0, false);
+      setSearchResults(items);
+      setSearchOffset(items.length);
+      setSearchHasMore(hasMore);
+    };
+    run();
+  }, [debouncedQuery, searchOpen, fetchSuggestions]);
+
+  // Infinite scroll inside suggestions
+  const handleSuggestionsScroll = useCallback(async () => {
+    const el = suggestionsListRef.current;
+    if (!el || searchLoading || searchLoadingMore || !searchHasMore) return;
+    const threshold = 80;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
+      const { items, hasMore } = await fetchSuggestions(debouncedQuery, searchOffset, true);
+      if (items.length > 0) {
+        setSearchResults((prev) => [...prev, ...items]);
+        setSearchOffset(searchOffset + items.length);
+        setSearchHasMore(hasMore);
+      } else {
+        setSearchHasMore(false);
+      }
+    }
+  }, [debouncedQuery, fetchSuggestions, searchHasMore, searchLoading, searchLoadingMore, searchOffset]);
 
   // Load user playlists for Library
   useEffect(() => {
@@ -742,15 +834,74 @@ const MusicPlayer = () => {
         </div>
 
         {/* Center search */}
-        <div className="flex-1 max-w-2xl mx-auto w-full">
+        <div className="flex-1 max-w-2xl mx-auto w-full" ref={searchWrapRef}>
           <div className="relative">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-4 h-4" />
             <input
               value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setFilterQuery(v);
+                setSearchOpen(v.trim().length >= 2);
+              }}
+              onFocus={() => setSearchOpen((v) => v || filterQuery.trim().length >= 2)}
               placeholder="Bạn muốn phát gì?"
               className="w-full pl-9 pr-3 py-2 rounded-full bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30"
             />
+            {/* Suggestions dropdown (like SearchModal) */}
+            <AnimatePresence>
+              {searchOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  className="absolute left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50"
+                >
+                  <div className="max-h-80 overflow-y-auto" ref={suggestionsListRef} onScroll={handleSuggestionsScroll}>
+                    {searchLoading && (
+                      <div className="p-3 text-sm text-white/60">Đang tìm kiếm…</div>
+                    )}
+                    {!searchLoading && searchResults.map((item, i) => (
+                      <div
+                        key={(item.path || '') + '-' + i}
+                        className="flex items-center gap-3 p-3 hover:bg-white/10 cursor-pointer"
+                        onClick={() => {
+                          setSearchOpen(false);
+                          // Navigate similar to SearchModal behavior
+                          const isPlaylist = item.isPlaylist;
+                          const isAudio = item.type === 'audio' || item.type === 'file';
+                          if (isPlaylist) {
+                            navigate('/music/player', { state: { kind: 'playlist', playlist: item.path, key: sourceKey } });
+                          } else if (isAudio) {
+                            const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
+                            navigate('/music/player', { state: { kind: 'audio', file: item.path, playlist: folderPath, key: sourceKey } });
+                          } else {
+                            navigate('/music/player', { state: { kind: 'folder', playlist: item.path, key: sourceKey } });
+                          }
+                        }}
+                      >
+                        <img
+                          src={buildThumbnailUrl(item, 'music')}
+                          onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')}
+                          alt={item.name}
+                          className="w-8 h-8 rounded object-cover flex-none"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-sm text-white truncate" title={item.name}>{item.name}</div>
+                          <div className="text-[11px] text-white/60 truncate" title={item.artist || ''}>{item.artist || ''}</div>
+                        </div>
+                      </div>
+                    ))}
+                    {searchLoadingMore && (
+                      <div className="p-3 text-center text-xs text-white/60">Đang tải thêm…</div>
+                    )}
+                    {!searchLoading && searchResults.length === 0 && (
+                      <div className="p-3 text-sm text-white/60">Không tìm thấy kết quả</div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -810,11 +961,30 @@ const MusicPlayer = () => {
           <div className="flex flex-col md:flex-row md:items-end gap-6">
             <motion.img initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} src={headerArt} alt={(currentTrack?.name || currentPlaylist[0]?.name || folderTitle) || 'Cover'} onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')} className="w-48 h-48 md:w-56 md:h-56 object-cover rounded shadow-2xl" />
             <div className="flex-1">
-              <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight mt-2">{currentTrack?.album?.toUpperCase?.() || folderTitle?.toUpperCase?.() || 'NOW PLAYING'}</h1>
+              <h2
+                className="text-3xl md:text-5xl font-extrabold tracking-tight mt-2 leading-tight"
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+                title={currentTrack?.album || folderTitle || 'NOW PLAYING'}
+              >
+                {currentTrack?.album?.toUpperCase?.() || folderTitle?.toUpperCase?.() || 'NOW PLAYING'}
+              </h2>
               <div className="mt-4 text-white/80 text-sm flex items-center gap-2">
-                <span className="font-semibold">Music</span>
+                <span
+                  className="min-w-0 max-w-[300px] flex items-baseline gap-1"
+                  title={currentTrack?.artist || 'Unknown Artist'}
+                >
+                  <span className="font-semibold flex-none">Artist:</span>
+                  <span className="truncate whitespace-nowrap">{currentTrack?.artist || 'Unknown Artist'}</span>
+                </span>
                 <span className="w-1 h-1 rounded-full bg-white/40" />
                 <span>{currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}</span>
+                <span className="w-1 h-1 rounded-full bg-white/40" />
+                <span>{Number(currentTrack?.viewCount ?? currentTrack?.views ?? 0).toLocaleString()} Plays</span>
               </div>
               <div className="mt-6 flex items-center gap-4">
                 <button onClick={togglePlayPause} className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-lg" aria-label="Play">
@@ -909,10 +1079,11 @@ const MusicPlayer = () => {
       </div>
 
       {/* Bottom player bar */}
-      <div className="fixed bottom-0 left-0 right-0 h-[100px] bg-[#121212]/95 backdrop-blur border-t border-white/10">
-        <div className="h-full px-4 md:px-6 pt-1 flex items-center gap-4">
-          {/* Now playing */}
-          <div className="hidden md:flex items-center gap-3 min-w-[220px]">
+  <div className="fixed bottom-0 left-0 right-0 h-[100px] bg-[#121212] z-50 backdrop-blur border-t border-white/10">
+        {/* Use a 3-column grid so center controls stay centered and sides truncate */}
+        <div className="h-full px-4 md:px-6 pt-1 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(320px,720px)_minmax(0,1fr)] items-center gap-4">
+          {/* Now playing (Left) */}
+          <div className="hidden md:flex items-center gap-3 min-w-0 overflow-hidden justify-self-start">
             {currentTrack ? (
               <>
                 <img
@@ -921,9 +1092,9 @@ const MusicPlayer = () => {
                   alt={currentTrack.name}
                   className="w-12 h-12 rounded object-cover"
                 />
-                <div className="min-w-0">
-                  <div className="text-sm truncate">{currentTrack.name}</div>
-                  <div className="text-xs text-white/60 truncate">{currentTrack.artist || 'Unknown Artist'}</div>
+                <div className="min-w-0 max-w-full w-[260px] sm:w-[320px] md:w-[360px] lg:w-[420px]">
+                  <div className="text-sm truncate whitespace-nowrap" title={currentTrack.name}>{currentTrack.name}</div>
+                  <div className="text-xs text-white/60 truncate whitespace-nowrap" title={currentTrack.artist || 'Unknown Artist'}>{currentTrack.artist || 'Unknown Artist'}</div>
                 </div>
               </>
             ) : (
@@ -931,8 +1102,8 @@ const MusicPlayer = () => {
             )}
           </div>
 
-          {/* Controls + progress */}
-          <div className="flex-1 flex flex-col items-center justify-center">
+          {/* Controls + progress (Center) */}
+          <div className="col-span-1 md:col-auto flex flex-col items-center justify-center w-full justify-self-center">
             <div className="flex items-center gap-5">
               <button onClick={toggleShuffle} className={`text-white/70 hover:text-white ${shuffle ? '!text-green-400' : ''}`}> <FiShuffle className="w-4 h-4" /> </button>
               <button onClick={prevTrack} className="text-white hover:text-white/90"> <FiSkipBack className="w-5 h-5" /> </button>
@@ -953,8 +1124,8 @@ const MusicPlayer = () => {
             </div>
           </div>
 
-          {/* Volume */}
-          <div className="hidden md:flex items-center gap-3 min-w-[180px] justify-end">
+          {/* Volume (Right) */}
+          <div className="hidden md:flex items-center gap-3 min-w-0 justify-end justify-self-end">
             <button onClick={toggleMute} className="text-white/80 hover:text-white">
               {volume === 0 ? <FiVolumeX className="w-5 h-5" /> : <FiVolume2 className="w-5 h-5" />}
             </button>
