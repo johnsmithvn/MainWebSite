@@ -10,6 +10,7 @@ import { updateFavoriteInAllCaches } from '@/utils/favoriteCache';
 
 // Dedup maps for in-flight fetches
 const musicFetchInFlight = new Map();
+const movieFetchInFlight = new Map();
 
 // Helper function to get root folder from source key
 const getRootFolderFromKey = (sourceKey) => {
@@ -451,8 +452,15 @@ export const useMovieStore = create(
       
       // Fetch movie folders from API (similar to old loadMovieFolder)
       fetchMovieFolders: async (path = '') => {
-        set({ loading: true, error: null });
         const { sourceKey } = useAuthStore.getState();
+        const fetchKey = `${sourceKey || ''}|${path || ''}`;
+
+        // If a fetch for this key is already in-flight, reuse it
+        if (movieFetchInFlight.has(fetchKey)) {
+          return movieFetchInFlight.get(fetchKey);
+        }
+
+        set({ loading: true, error: null });
         
         console.log('🎬 fetchMovieFolders called with:', { path, sourceKey });
         
@@ -462,77 +470,84 @@ export const useMovieStore = create(
           return;
         }
         
-        try {
-          const params = { key: sourceKey };
-          if (path) params.path = path;
-          
-          console.log('🎬 API request params:', params);
-          
-          const response = await apiService.movie.getFolders(params);
-          const data = response.data;
-          
-          console.log('🎬 Movie API Response:', data);
-          
-          const folders = data.folders || [];
-          
-          // Process folders to match expected format
-          const processedFolders = folders.map(folder => {
-            let thumbnailUrl = folder.thumbnail;
+        const doFetch = (async () => {
+          try {
+            const params = { key: sourceKey };
+            if (path) params.path = path;
             
-            // Build thumbnail URL like old frontend logic with encoding
-            if (thumbnailUrl && thumbnailUrl !== 'null') {
-              // Handle already complete URLs
-              if (thumbnailUrl.startsWith('/video/') || 
-                  thumbnailUrl.startsWith('http') || 
-                  thumbnailUrl.startsWith('/default/')) {
-                thumbnailUrl = thumbnailUrl;
+            console.log('🎬 API request params:', params);
+            
+            const response = await apiService.movie.getFolders(params);
+            const data = response.data;
+            
+            console.log('🎬 Movie API Response:', data);
+            
+            const folders = data.folders || [];
+            
+            // Process folders to match expected format
+            const processedFolders = folders.map(folder => {
+              let thumbnailUrl = folder.thumbnail;
+              
+              // Build thumbnail URL like old frontend logic with encoding
+              if (thumbnailUrl && thumbnailUrl !== 'null') {
+                // Handle already complete URLs
+                if (thumbnailUrl.startsWith('/video/') || 
+                    thumbnailUrl.startsWith('http') || 
+                    thumbnailUrl.startsWith('/default/')) {
+                  thumbnailUrl = thumbnailUrl;
+                } else {
+                  // Get folder prefix (remove filename if it's a video)
+                  let folderPrefixParts = folder.path?.split('/').filter(Boolean) || [];
+                  if (folder.type === 'video' || folder.type === 'file') {
+                    folderPrefixParts.pop();
+                  }
+                  const folderPrefix = folderPrefixParts.join('/');
+                  
+                  // Remove folder prefix from thumbnail if it's already included
+                  let cleanThumbnail = thumbnailUrl;
+                  if (folderPrefix && cleanThumbnail.startsWith(folderPrefix + '/')) {
+                    cleanThumbnail = cleanThumbnail.slice(folderPrefix.length + 1);
+                  }
+                  
+                  // Encode path
+                  const safeFolderPrefix = folderPrefix ? 
+                    folderPrefix.split('/').map(encodeURIComponent).join('/') + '/' : '';
+                  const safeThumbnail = cleanThumbnail.split('/').map(encodeURIComponent).join('/');
+                  
+                  // Build full thumbnail path with encoding
+                  thumbnailUrl = `/video/${safeFolderPrefix}${safeThumbnail.replace(/\\/g, '/')}`;
+                }
               } else {
-                // Get folder prefix (remove filename if it's a video)
-                let folderPrefixParts = folder.path?.split('/').filter(Boolean) || [];
-                if (folder.type === 'video' || folder.type === 'file') {
-                  folderPrefixParts.pop();
-                }
-                const folderPrefix = folderPrefixParts.join('/');
-                
-                // Remove folder prefix from thumbnail if it's already included
-                let cleanThumbnail = thumbnailUrl;
-                if (folderPrefix && cleanThumbnail.startsWith(folderPrefix + '/')) {
-                  cleanThumbnail = cleanThumbnail.slice(folderPrefix.length + 1);
-                }
-                
-                // 🔥 Encode đường dẫn để xử lý ký tự đặc biệt như # (giống logic cũ)
-                const safeFolderPrefix = folderPrefix ? 
-                  folderPrefix.split('/').map(encodeURIComponent).join('/') + '/' : '';
-                const safeThumbnail = cleanThumbnail.split('/').map(encodeURIComponent).join('/');
-                
-                // Build full thumbnail path with encoding
-                thumbnailUrl = `/video/${safeFolderPrefix}${safeThumbnail.replace(/\\/g, '/')}`;
+                // Fallback to default thumbnails
+                thumbnailUrl = (folder.type === 'video' || folder.type === 'file') 
+                  ? '/default/video-thumb.png' 
+                  : '/default/folder-thumb.png';
               }
-            } else {
-              // Fallback to default thumbnails
-              thumbnailUrl = (folder.type === 'video' || folder.type === 'file') 
-                ? '/default/video-thumb.png' 
-                : '/default/folder-thumb.png';
-            }
 
-            return {
-              ...folder,
-              thumbnail: thumbnailUrl,
-              isFavorite: !!folder.isFavorite
-            };
-          });
-          
-          set({ 
-            movieList: processedFolders,
-            allMovies: processedFolders, // Keep for compatibility
-            currentPath: path,
-            loading: false 
-          });
-          
-        } catch (error) {
-          console.error('Fetch movie folders error:', error);
-          set({ error: error.response?.data?.message || error.message, loading: false });
-        }
+              return {
+                ...folder,
+                thumbnail: thumbnailUrl,
+                isFavorite: !!folder.isFavorite
+              };
+            });
+            
+            set({ 
+              movieList: processedFolders,
+              allMovies: processedFolders, // Keep for compatibility
+              currentPath: path,
+              loading: false 
+            });
+            
+          } catch (error) {
+            console.error('Fetch movie folders error:', error);
+            set({ error: error.response?.data?.message || error.message, loading: false });
+          }
+        })().finally(() => {
+          movieFetchInFlight.delete(fetchKey);
+        });
+
+        movieFetchInFlight.set(fetchKey, doFetch);
+        return doFetch;
       },
       
       // Fetch favorites from API
@@ -567,7 +582,7 @@ export const useMovieStore = create(
                   cleanThumbnail = cleanThumbnail.slice(folderPrefix.length + 1);
                 }
                 
-                // 🔥 Encode đường dẫn để xử lý ký tự đặc biệt
+                // Encode path
                 const safeFolderPrefix = folderPrefix ? 
                   folderPrefix.split('/').map(encodeURIComponent).join('/') + '/' : '';
                 const safeThumbnail = cleanThumbnail.split('/').map(encodeURIComponent).join('/');

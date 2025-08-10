@@ -13,6 +13,22 @@ const api = axios.create({
   },
 });
 
+// In-flight GET requests dedup map (keyed by full URL + params)
+const inflightGet = new Map();
+
+// Build a stable key for GET requests
+const buildGetKey = (url, params = {}) => {
+  try {
+    const usp = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) usp.append(k, String(v));
+    });
+    return `${url}?${usp.toString()}`;
+  } catch {
+    return `${url}|${JSON.stringify(params || {})}`;
+  }
+};
+
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
@@ -62,7 +78,18 @@ export const apiService = {
 
   // Movie APIs
   movie: {
-    getFolders: (params) => api.get(`${API.ENDPOINTS.MOVIE}/movie-folder`, { params }),
+    getFolders: (params) => {
+      const url = `${API.ENDPOINTS.MOVIE}/movie-folder`;
+      const key = buildGetKey(url, params);
+      if (inflightGet.has(key)) {
+        return inflightGet.get(key);
+      }
+      const req = api.get(url, { params }).finally(() => {
+        inflightGet.delete(key);
+      });
+      inflightGet.set(key, req);
+      return req;
+    },
     getVideos: (params) => api.get(`${API.ENDPOINTS.MOVIE}/video`, { params }),
     getVideoCache: (params) => api.get(`${API.ENDPOINTS.MOVIE}/video-cache`, { params }),
     getFavorites: (params) => api.get(`${API.ENDPOINTS.MOVIE}/favorite-movie`, { params }),
@@ -76,7 +103,19 @@ export const apiService = {
 
   // Music APIs
   music: {
-    getFolders: (params) => api.get(`${API.ENDPOINTS.MUSIC}/music-folder`, { params }),
+    // Deduplicate in-flight folder requests
+    getFolders: (params) => {
+      const url = `${API.ENDPOINTS.MUSIC}/music-folder`;
+      const key = buildGetKey(url, params);
+      if (inflightGet.has(key)) {
+        return inflightGet.get(key);
+      }
+      const req = api.get(url, { params }).finally(() => {
+        inflightGet.delete(key);
+      });
+      inflightGet.set(key, req);
+      return req;
+    },
     getAudio: (params) => api.get(`${API.ENDPOINTS.MUSIC}/audio`, { params }),
     getAudioCache: (params) => api.get(`${API.ENDPOINTS.MUSIC}/audio-cache`, { params }),
     getFavorites: (params) => api.get(`${API.ENDPOINTS.MUSIC}/favorite`, { params }),

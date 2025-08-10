@@ -44,12 +44,32 @@ const MovieHome = () => {
   // Clear cache and refetch when sourceKey changes
   useEffect(() => {
     if (sourceKey && sourceKey.startsWith('V_')) {
-      console.log('🎬 MovieHome: SourceKey changed to:', sourceKey, '- Clearing cache and refetching');
+      console.log('🎬 MovieHome: SourceKey changed to:', sourceKey, '- Clearing cache');
       clearMovieCache();
-      const pathFromUrl = searchParams.get('path') || '';
-      fetchMovieFolders(pathFromUrl);
+      // Do not fetch here to avoid overlap with URL effect
     }
-  }, [sourceKey, clearMovieCache, fetchMovieFolders, searchParams]);
+  }, [sourceKey, clearMovieCache]);
+
+  // Track last fetched key to avoid duplicate fetches
+  const lastFetchRef = React.useRef('');
+
+  // Load initial path from URL (only when URL changes)
+  useEffect(() => {
+    const pathFromUrl = searchParams.get('path') || '';
+    const fetchKey = `${sourceKey || ''}|${pathFromUrl}`;
+    console.log('🎬 MovieHome: URL path changed to:', pathFromUrl);
+
+    if (!sourceKey || !sourceKey.startsWith('V_')) return;
+
+    // Avoid duplicate fetch for same key (handles StrictMode double run)
+    if (lastFetchRef.current === fetchKey && movieList.length > 0) {
+      console.log('🎬 MovieHome: Skipping fetch, same fetchKey and list already loaded');
+      return;
+    }
+
+    lastFetchRef.current = fetchKey;
+    fetchMovieFolders(pathFromUrl);
+  }, [searchParams, fetchMovieFolders, sourceKey]);
 
   // Pagination
   const moviesPerPage = PAGINATION.MOVIES_PER_PAGE;
@@ -58,21 +78,6 @@ const MovieHome = () => {
     currentPage * moviesPerPage,
     (currentPage + 1) * moviesPerPage
   );
-
-  // Load initial path from URL (only when URL changes, not when currentPath changes)
-  useEffect(() => {
-    const pathFromUrl = searchParams.get('path') || '';
-    console.log('🎬 MovieHome: URL path changed to:', pathFromUrl);
-    console.log('🎬 MovieHome: Current searchParams:', Object.fromEntries(searchParams.entries()));
-    
-    // Only fetch if sourceKey is available and the URL path is different from current path
-    if (sourceKey && sourceKey.startsWith('V_') && pathFromUrl !== currentPath && movieList.length === 0) {
-      console.log('🎬 MovieHome: Fetching because URL path differs from currentPath or movieList is empty');
-      fetchMovieFolders(pathFromUrl);
-    }
-  }, [searchParams, fetchMovieFolders, currentPath, movieList.length, sourceKey]);
-
-  // Remove the automatic URL update effect to prevent loops
 
   // Reset page when path changes
   useEffect(() => {
