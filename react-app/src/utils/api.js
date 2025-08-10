@@ -15,17 +15,28 @@ const api = axios.create({
 
 // In-flight GET requests dedup map (keyed by full URL + params)
 const inflightGet = new Map();
+// Short-lived response cache to avoid immediate duplicate server hits
+const recentGetCache = new Map(); // key -> { ts, data }
+const RECENT_CACHE_TTL_MS = 1500;
 
 // Build a stable key for GET requests
 const buildGetKey = (url, params = {}) => {
   try {
     const usp = new URLSearchParams();
-    Object.entries(params || {}).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) usp.append(k, String(v));
-    });
+    // Normalize order by sorting keys for stable cache keys
+    const entries = Object.entries(params || {})
+      .filter(([, v]) => v !== undefined && v !== null)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    for (const [k, v] of entries) {
+      usp.append(k, String(v));
+    }
     return `${url}?${usp.toString()}`;
   } catch {
-    return `${url}|${JSON.stringify(params || {})}`;
+    // Fallback: sort keys in JSON as well
+    const sorted = Object.keys(params || {})
+      .sort()
+      .reduce((acc, k) => { acc[k] = params[k]; return acc; }, {});
+    return `${url}|${JSON.stringify(sorted)}`;
   }
 };
 
@@ -67,7 +78,51 @@ export const apiService = {
 
   // Manga APIs
   manga: {
-    getFolders: (params) => api.get(`${API.ENDPOINTS.MANGA}/folder-cache`, { params }),
+    // Accept optional axios config (e.g., { signal })
+    getFolders: (params, config = {}) => {
+      const url = `${API.ENDPOINTS.MANGA}/folder-cache`;
+      const key = buildGetKey(url, params);
+
+      // Serve from recent cache if within TTL
+      const cached = recentGetCache.get(key);
+      if (cached && Date.now() - cached.ts < RECENT_CACHE_TTL_MS) {
+        return Promise.resolve({ data: cached.data });
+      }
+
+      // If a signal is provided, do NOT share in-flight requests.
+      // React StrictMode mounts can abort the first request; sharing would cancel the second one too.
+      if (!config?.signal) {
+        // In-flight dedupe only when there is no AbortSignal
+        if (inflightGet.has(key)) {
+          return inflightGet.get(key);
+        }
+
+        const req = api
+          .get(url, { params, ...config })
+          .then((resp) => {
+            try {
+              recentGetCache.set(key, { ts: Date.now(), data: resp.data });
+            } catch {}
+            return resp;
+          })
+          .finally(() => {
+            inflightGet.delete(key);
+          });
+
+        inflightGet.set(key, req);
+        return req;
+      }
+
+      // With AbortSignal: always create a fresh request bound to that signal
+      return api
+        .get(url, { params, ...config })
+        .then((resp) => {
+          try {
+            recentGetCache.set(key, { ts: Date.now(), data: resp.data });
+          } catch {}
+          return resp;
+        });
+    },
     getFavorites: (params) => {
       const url = `${API.ENDPOINTS.MANGA}/favorite`;
       const key = buildGetKey(url, params);

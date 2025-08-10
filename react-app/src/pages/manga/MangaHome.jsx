@@ -73,7 +73,8 @@ const MangaHome = () => {
       // Ensure root appears in URL for consistency/caching
       const params = new URLSearchParams(searchParams);
       params.set('root', rootFolder);
-      setSearchParams(params);
+      // Use replace to avoid adding an extra history entry for normalization
+      setSearchParams(params, { replace: true });
     }
   }, [sourceKey, rootFolder, searchParams, navigate, setRootFolder, setSearchParams]);
 
@@ -144,7 +145,8 @@ const MangaHome = () => {
         // Skip redirect to reader when explicitly forcing folder view
         clearNavigationFlag();
       } else {
-        navigate(`/manga/reader?path=${encodeURIComponent(shouldNavigateToReader)}`, { replace: true });
+        // Do NOT replace history so browser Back returns to the folder list
+        navigate(`/manga/reader?path=${encodeURIComponent(shouldNavigateToReader)}`);
         clearNavigationFlag(); // Clear flag sau khi navigate
       }
     }

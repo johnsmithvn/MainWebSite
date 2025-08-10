@@ -143,6 +143,8 @@ export const useMangaStore = create(
       currentPath: '',
       allFolders: [],
       mangaList: [], // Initialize with empty array
+  // Transient pass-through for reader data to avoid duplicate request when navigating from Home to Reader
+  readerPrefetch: null, // { path, images, ts }
       favorites: [],
       loading: false,
       error: null,
@@ -167,6 +169,7 @@ export const useMangaStore = create(
       setCurrentPath: (path) => set({ currentPath: path }),
       setAllFolders: (folders) => set({ allFolders: folders }),
       setMangaList: (mangaList) => set({ mangaList }),
+  setReaderPrefetch: (prefetch) => set({ readerPrefetch: prefetch }),
       setFavorites: (favorites) => set({ favorites }),
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
@@ -174,7 +177,7 @@ export const useMangaStore = create(
       clearNavigationFlag: () => set({ shouldNavigateToReader: null }),
       
       // Fetch manga folders from API
-      fetchMangaFolders: async (path = '') => {
+  fetchMangaFolders: async (path = '') => {
         set({ loading: true, error: null });
         const { sourceKey, rootFolder } = useAuthStore.getState();
         const { mangaSettings } = get();
@@ -244,6 +247,8 @@ export const useMangaStore = create(
               loading: false,
               shouldNavigateToReader: path
             });
+            // Save pass-through for Reader to consume immediately
+            set({ readerPrefetch: { path, images: (data.images || []).map(cleanImageUrl), ts: Date.now() } });
             return;
           }
           
