@@ -1,7 +1,7 @@
 // 📁 src/pages/manga/MangaHome.jsx
 // 🏠 Trang chủ manga - hiển thị danh sách manga
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Heart, BookOpen, Grid, List, Filter, Loader, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMangaStore, useUIStore, useAuthStore } from '../../store';
@@ -11,7 +11,7 @@ import MangaRandomSection from '../../components/manga/MangaRandomSection';
 
 const MangaHome = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { 
     mangaList, 
     currentPath, 
@@ -37,6 +37,23 @@ const MangaHome = () => {
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0); // For forcing re-renders
   const viewParam = searchParams.get('view');
   const showRandomSection = !searchParams.get('path') && viewParam !== 'folder';
+  // Pagination state from URL
+  const pageParam = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+  const sizeParam = Math.max(1, parseInt(searchParams.get('size') || '30', 10));
+  const [jumpOpen, setJumpOpen] = useState(false);
+  const [jumpValue, setJumpValue] = useState(String(pageParam));
+  const headerRef = useRef(null);
+
+  // Helper to update URL params
+  const updateParams = (patch = {}) => {
+    const obj = Object.fromEntries(searchParams.entries());
+    const next = { ...obj, ...patch };
+    // Remove empty keys
+    Object.keys(next).forEach((k) => {
+      if (next[k] === undefined || next[k] === null || next[k] === '') delete next[k];
+    });
+    setSearchParams(next);
+  };
 
   // Clear cache when sourceKey changes (fetch handled by URL effect)
   useEffect(() => {
@@ -118,15 +135,23 @@ const MangaHome = () => {
     }
     
     // Ngược lại -> navigate đến subfolder bằng URL giống Movie
-    console.log('📁 Navigating to subfolder via URL:', folder.path);
-    navigate(`/manga${folder.path ? `?path=${encodeURIComponent(folder.path)}` : ''}`);
+  console.log('📁 Navigating to subfolder via URL:', folder.path);
+  const params = new URLSearchParams();
+  if (folder.path) params.set('path', folder.path);
+  params.set('page', '1');
+  params.set('size', String(sizeParam));
+  navigate(`/manga?${params.toString()}`);
   };
 
   const handleBackClick = () => {
     const pathParts = (currentPath || '').split('/').filter(Boolean);
     pathParts.pop();
-    const newPath = pathParts.join('/');
-    navigate(`/manga${newPath ? `?path=${encodeURIComponent(newPath)}` : ''}`);
+  const newPath = pathParts.join('/');
+  const params = new URLSearchParams();
+  if (newPath) params.set('path', newPath);
+  params.set('page', '1');
+  params.set('size', String(sizeParam));
+  navigate(`/manga${params.toString() ? `?${params.toString()}` : ''}`);
   };
 
   // Generate breadcrumb items (same logic as Movie)
@@ -186,6 +211,33 @@ const MangaHome = () => {
     }
   }, [filteredManga, sortBy]);
 
+  // Pagination calculations
+  const totalItems = sortedManga.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / sizeParam));
+  const currentPage = Math.min(pageParam, totalPages);
+  const startIndex = (currentPage - 1) * sizeParam;
+  const endIndex = Math.min(startIndex + sizeParam, totalItems);
+  const pageItems = sortedManga.slice(startIndex, endIndex);
+
+  const goToPage = (page) => {
+    const p = Math.max(1, Math.min(totalPages, page));
+    updateParams({ page: String(p) });
+    setJumpValue(String(p));
+    // Smoothly scroll to the header title
+    if (headerRef.current) {
+      headerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const changePageSize = (size) => {
+    const s = Math.max(1, parseInt(size, 10) || 30);
+    updateParams({ size: String(s), page: '1' });
+    // Also scroll to the header to keep context
+    if (headerRef.current) {
+      headerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
@@ -230,7 +282,7 @@ const MangaHome = () => {
               </Button>
             )}
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 ref={headerRef} className="text-3xl font-bold text-gray-900 dark:text-white">
                 📚 Manga Library
               </h1>
               {/* Breadcrumb UI like Movie */}
@@ -249,7 +301,13 @@ const MangaHome = () => {
                         </span>
                       ) : (
                         <button
-                          onClick={() => navigate(`/manga${item.path ? `?path=${encodeURIComponent(item.path)}` : ''}`)}
+                          onClick={() => {
+                            const params = new URLSearchParams();
+                            if (item.path) params.set('path', item.path);
+                            params.set('page', '1');
+                            params.set('size', String(sizeParam));
+                            navigate(`/manga${params.toString() ? `?${params.toString()}` : ''}`);
+                          }}
                           className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
                         >
                           {item.name}
@@ -262,6 +320,19 @@ const MangaHome = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Per-page selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-300">Per page</span>
+              <select
+                value={sizeParam}
+                onChange={(e) => changePageSize(e.target.value)}
+                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
+              >
+                {[12, 24, 30, 48, 60, 96].map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -363,7 +434,7 @@ const MangaHome = () => {
         </div>
       </div>
 
-      {/* Folder/File Grid */}
+  {/* Folder/File Grid */}
       {sortedManga.length === 0 ? (
         <div className="text-center py-12">
           <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -375,8 +446,9 @@ const MangaHome = () => {
           </p>
         </div>
       ) : viewMode === 'grid' ? (
+        <>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {sortedManga.map((item, index) => (
+          {pageItems.map((item, index) => (
             <MangaCard
               key={`${item.path || item.name || index}-${localRefreshTrigger}`}
               manga={item}
@@ -391,9 +463,36 @@ const MangaHome = () => {
             />
           ))}
         </div>
+        {/* Pagination Controls */}
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage <= 1}
+          >
+            ⬅ Prev
+          </Button>
+          <button
+            onClick={() => setJumpOpen(true)}
+            className="px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+            title="Jump to page"
+          >
+            Page {currentPage} / {totalPages}
+          </button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+          >
+            Next ➡
+          </Button>
+        </div>
+        </>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {sortedManga.map((item, index) => (
+          {pageItems.map((item, index) => (
             <div
               key={`${item.path || item.name || index}`}
               onClick={() => handleFolderClick(item)}
@@ -437,6 +536,41 @@ const MangaHome = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Jump to page Modal */}
+      {jumpOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-5">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Jump to page</h3>
+            <div className="space-y-3">
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={jumpValue}
+                onChange={(e) => setJumpValue(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400">Total pages: {totalPages}</p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={() => setJumpOpen(false)}>Cancel</Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const num = parseInt(jumpValue, 10);
+                    if (!isNaN(num)) {
+                      goToPage(num);
+                    }
+                    setJumpOpen(false);
+                  }}
+                >
+                  Confirm
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
