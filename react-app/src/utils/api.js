@@ -156,8 +156,9 @@ export const apiService = {
       inflightGet.set(key, req);
       return req;
     },
-    getVideos: (params) => api.get(`${API.ENDPOINTS.MOVIE}/video`, { params }),
-    getVideoCache: (params) => api.get(`${API.ENDPOINTS.MOVIE}/video-cache`, { params }),
+  getVideos: (params) => api.get(`${API.ENDPOINTS.MOVIE}/video`, { params }),
+  // Accept optional axios config (e.g., { signal }) for abortable requests
+  getVideoCache: (params, config = {}) => api.get(`${API.ENDPOINTS.MOVIE}/video-cache`, { params, ...config }),
     getFavorites: (params) => api.get(`${API.ENDPOINTS.MOVIE}/favorite-movie`, { params }),
     toggleFavorite: (dbkey, path, value) => api.post(`${API.ENDPOINTS.MOVIE}/favorite-movie`, { dbkey, path, value }),
     extractThumbnail: (params) => api.post(`${API.ENDPOINTS.MOVIE}/extract-movie-thumbnail`, params),
@@ -182,8 +183,9 @@ export const apiService = {
       inflightGet.set(key, req);
       return req;
     },
-    getAudio: (params) => api.get(`${API.ENDPOINTS.MUSIC}/audio`, { params }),
-    getAudioCache: (params) => api.get(`${API.ENDPOINTS.MUSIC}/audio-cache`, { params }),
+  getAudio: (params) => api.get(`${API.ENDPOINTS.MUSIC}/audio`, { params }),
+  // Accept optional axios config (e.g., { signal }) for abortable requests
+  getAudioCache: (params, config = {}) => api.get(`${API.ENDPOINTS.MUSIC}/audio-cache`, { params, ...config }),
     getFavorites: (params) => api.get(`${API.ENDPOINTS.MUSIC}/favorite`, { params }),
     toggleFavorite: (dbkey, path, value) => api.post(`${API.ENDPOINTS.MUSIC}/favorite`, { dbkey, path, value }),
     getPlaylists: (params) => api.get(`${API.ENDPOINTS.MUSIC}/playlists`, { params }),

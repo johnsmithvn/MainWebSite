@@ -651,18 +651,25 @@ const MusicPlayer = () => {
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              const next = playerSettings?.playerUI === 'v2' ? 'v1' : 'v2';
-              updatePlayerSettings({ playerUI: next });
-              // keep same route: /music/player will render router which reads store
-              navigate('/music/player', { replace: true, state: location.state });
-            }}
-            className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-sm flex items-center gap-2"
-            title="Đổi giao diện Music Player"
-          >
-            <FiLayout className="w-4 h-4" /> {playerSettings?.playerUI === 'v2' ? 'Zing' : 'Spotify'}
-          </button>
+          {(() => {
+            const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+            const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (typeof window !== 'undefined' && window.innerWidth <= 768);
+            return (
+              <button
+                onClick={() => {
+                  if (isMobile) return; // disable switch on mobile
+                  const next = playerSettings?.playerUI === 'v2' ? 'v1' : 'v2';
+                  updatePlayerSettings({ playerUI: next });
+                  navigate('/music/player', { replace: true, state: location.state });
+                }}
+                className={`px-3 py-1.5 rounded-full ${isMobile ? 'bg-white/10 text-white/60 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 text-white'} text-sm flex items-center gap-2`}
+                title={isMobile ? 'Không khả dụng trên mobile' : 'Đổi giao diện Music Player'}
+                disabled={isMobile}
+              >
+                <FiLayout className="w-4 h-4" /> {playerSettings?.playerUI === 'v2' ? 'Zing' : 'Spotify'}
+              </button>
+            );
+          })()}
           <button onClick={() => navigate('/music')} className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-sm">
             <FiHome className="inline w-4 h-4 mr-1" /> Music Home
           </button>

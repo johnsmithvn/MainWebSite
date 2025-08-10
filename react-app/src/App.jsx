@@ -24,6 +24,17 @@ import NotFound from '@/pages/NotFound';
 
 function MusicPlayerRouter() {
   const { playerSettings } = useMusicStore();
+  const isMobile = (() => {
+    if (typeof window === 'undefined') return false;
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    const mobileUA = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    const narrow = window.innerWidth <= 768;
+    return mobileUA || narrow;
+  })();
+
+  // On mobile, always force v1
+  if (isMobile) return <MusicPlayer />;
+
   return playerSettings?.playerUI === 'v2' ? <MusicPlayerV2 /> : <MusicPlayer />;
 }
 

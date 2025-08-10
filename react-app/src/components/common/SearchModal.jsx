@@ -1,131 +1,201 @@
 // 📁 src/components/common/SearchModal.jsx
 // 🔍 Global search modal
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiX, FiBook, FiFilm, FiMusic } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+import { FiSearch, FiX, FiChevronDown } from 'react-icons/fi';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Modal from 'react-modal';
 import { useDebounceValue } from '../../hooks';
 import { apiService } from '../../utils/api';
 import { useAuthStore } from '../../store';
 import Button from './Button';
+import { buildThumbnailUrl } from '../../utils/thumbnailUtils';
+
+// Supported search type options: all, folder, file/audio/video (normalized per section)
+const TYPE_OPTIONS = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'folder', label: 'Folder' },
+  { key: 'file', label: 'File' },
+];
 
 const SearchModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('manga');
-  const [results, setResults] = useState({
-    manga: [],
-    movie: [],
-    music: []
-  });
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [results, setResults] = useState([]); // compact suggestions list
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const LIMIT = 30; // page size for incremental load
+  const abortRef = useRef(null); // abort for main search (not for load-more)
+  const listRef = useRef(null); // suggestions scroll area
   
   const debouncedQuery = useDebounceValue(query, 300);
-  const { sourceKey, rootFolder } = useAuthStore();
+  const { sourceKey, rootFolder, lastMusicKey, lastMovieKey } = useAuthStore();
+  const section = (/^\/(manga|movie|music)/.exec(location.pathname)?.[1]) || 'manga';
 
-  const tabs = [
-    { key: 'manga', label: 'Manga', icon: FiBook },
-    { key: 'movie', label: 'Movie', icon: FiFilm },
-    { key: 'music', label: 'Music', icon: FiMusic },
-  ];
+  // Normalize type per section for backend params
+  const resolveBackendType = useCallback((section) => {
+    if (typeFilter === 'all') return 'all';
+    if (typeFilter === 'folder') return 'folder';
+    // file mapping per section
+    if (section === 'movie') return 'video';
+    if (section === 'music') return 'audio';
+    // manga search ignores type; handled on server by folders table
+    return 'all';
+  }, [typeFilter]);
 
-  // Search function
-  const performSearch = async (searchQuery, type) => {
-    if (!searchQuery || searchQuery.length < 2) return [];
+  // Perform search for current section (suggestions only)
+  const fetchSection = useCallback(async (section, searchQuery, pageOffset = 0, isLoadMore = false) => {
+    if (!searchQuery || searchQuery.length < 2) return { items: [], hasMore: false };
+    // Only abort previous when it's a fresh search, not when loading more
+    let controller;
+    if (!isLoadMore) {
+      if (abortRef.current) abortRef.current.abort();
+      controller = new AbortController();
+      abortRef.current = controller;
+    }
 
     try {
-      setLoading(true);
-      let response;
-
-      switch (type) {
-        case 'manga':
-          response = await apiService.manga.getFolders({
-            mode: 'search',
-            key: sourceKey,
-            root: rootFolder,
-            q: searchQuery,
-            limit: 20
-          });
-          break;
-        case 'movie':
-          response = await apiService.movie.getVideoCache({
-            key: sourceKey,
-            q: searchQuery,
-            limit: 20
-          });
-          break;
-        case 'music':
-          response = await apiService.music.getAudioCache({
-            key: sourceKey,
-            q: searchQuery,
-            limit: 20
-          });
-          break;
-        default:
-          return [];
+      if (isLoadMore) setLoadingMore(true); else setLoading(true);
+      let resp;
+      if (section === 'manga') {
+        if (!sourceKey || !rootFolder) return { items: [], hasMore: false };
+        resp = await apiService.manga.getFolders({
+          mode: 'search', key: sourceKey, root: rootFolder, q: searchQuery, limit: LIMIT, offset: pageOffset
+        }, isLoadMore ? {} : { signal: controller.signal });
+        const items = resp.data || [];
+        return { items, hasMore: items.length === LIMIT };
       }
-
-      return response.data.folders || response.data || [];
+      if (section === 'movie') {
+        if (!sourceKey) return { items: [], hasMore: false };
+        resp = await apiService.movie.getVideoCache({
+          mode: 'search', key: sourceKey, q: searchQuery, type: resolveBackendType('movie'), limit: LIMIT, offset: pageOffset
+        }, isLoadMore ? {} : { signal: controller.signal });
+        const items = resp.data?.folders || [];
+        return { items, hasMore: items.length === LIMIT };
+      }
+      if (section === 'music') {
+        if (!sourceKey) return { items: [], hasMore: false };
+        resp = await apiService.music.getAudioCache({
+          mode: 'search', key: sourceKey, q: searchQuery, type: resolveBackendType('music'), limit: LIMIT, offset: pageOffset
+        }, isLoadMore ? {} : { signal: controller.signal });
+        const items = resp.data?.folders || [];
+        return { items, hasMore: items.length === LIMIT };
+      }
+      return { items: [], hasMore: false };
     } catch (error) {
-      console.error(`Search error for ${type}:`, error);
-      return [];
+      if (error.name !== 'CanceledError' && error.code !== 'ERR_CANCELED') {
+        console.error(`Search error for ${section}:`, error);
+      }
+      return { items: [], hasMore: false };
     } finally {
-      setLoading(false);
+      if (isLoadMore) setLoadingMore(false); else setLoading(false);
     }
-  };
+  }, [LIMIT, resolveBackendType, rootFolder, sourceKey]);
 
   // Search when query changes
+  // Initial search or when filters change
   useEffect(() => {
-    if (debouncedQuery && isOpen) {
-      const searchAll = async () => {
-        const [mangaResults, movieResults, musicResults] = await Promise.all([
-          performSearch(debouncedQuery, 'manga'),
-          performSearch(debouncedQuery, 'movie'),
-          performSearch(debouncedQuery, 'music')
-        ]);
-
-        setResults({
-          manga: mangaResults,
-          movie: movieResults,
-          music: musicResults
-        });
-      };
-
-      searchAll();
-    } else {
-      setResults({ manga: [], movie: [], music: [] });
+    if (!isOpen) return;
+    if (!debouncedQuery || debouncedQuery.length < 2) {
+      setResults([]);
+  setOffset(0);
+  setHasMore(false);
+      return;
     }
-  }, [debouncedQuery, isOpen, sourceKey, rootFolder]);
+    const load = async () => {
+  const { items, hasMore } = await fetchSection(section, debouncedQuery, 0, false);
+  setResults(items);
+  setOffset(items.length);
+  setHasMore(hasMore);
+    };
+    load();
+  }, [debouncedQuery, isOpen, typeFilter, sourceKey, rootFolder, fetchSection, section]);
 
   // Reset when modal closes
   useEffect(() => {
     if (!isOpen) {
       setQuery('');
-      setResults({ manga: [], movie: [], music: [] });
+  setResults([]);
+      setTypeFilter('all');
+  setOffset(0);
+  setHasMore(false);
     }
   }, [isOpen]);
 
-  const handleResultClick = (item, type) => {
+  const handleResultClick = (item) => {
     onClose();
     
-    switch (type) {
+    switch (section) {
       case 'manga':
         navigate(`/manga?path=${encodeURIComponent(item.path)}`);
         break;
       case 'movie':
-        if (item.type === 'video') {
-          navigate(`/movie/player?path=${encodeURIComponent(item.path)}`);
+        // Ensure we pass a valid movie key
+        {
+          const movieKey = (sourceKey && sourceKey.startsWith('V_'))
+            ? sourceKey
+            : (lastMovieKey || 'V_MOVIE');
+        if (item.type === 'video' || item.type === 'file') {
+          // Match UniversalCard: pass file and key via state
+          navigate('/movie/player', { state: { file: item.path, key: movieKey } });
         } else {
           navigate(`/movie?path=${encodeURIComponent(item.path)}`);
         }
+        }
         break;
       case 'music':
-        navigate(`/music?path=${encodeURIComponent(item.path)}`);
+        {
+          // Ensure we pass a valid music key regardless of current global key
+          const musicKey = (sourceKey && sourceKey.startsWith('M_'))
+            ? sourceKey
+            : (lastMusicKey || 'M_MUSIC');
+          const isPlaylist = item.isPlaylist;
+          const isAudio = item.type === 'audio' || item.type === 'file';
+          if (isPlaylist) {
+            navigate('/music/player', { state: { playlist: item.path, key: musicKey } });
+          } else if (isAudio) {
+            const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
+            navigate('/music/player', { state: { file: item.path, playlist: folderPath, key: musicKey } });
+          } else {
+            // For folders, open as playlist in player like sliders
+            navigate('/music/player', { state: { playlist: item.path, key: musicKey } });
+          }
+        }
         break;
     }
   };
+
+  const goSeeAll = () => {
+    onClose();
+    const params = new URLSearchParams();
+    params.set('q', query);
+    if (typeFilter && typeFilter !== 'all') params.set('type', typeFilter);
+    if (section === 'manga' && rootFolder) params.set('root', rootFolder);
+    navigate(`/${section}?${params.toString()}`);
+  };
+
+  // Handle infinite scroll inside suggestions
+  const handleScroll = useCallback(async () => {
+    const el = listRef.current;
+    if (!el || loading || loadingMore || !hasMore) return;
+    const threshold = 80; // px
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
+      const { items, hasMore: more } = await fetchSection(section, debouncedQuery, offset, true);
+      if (items.length > 0) {
+        setResults((prev) => [...prev, ...items]);
+        setOffset(offset + items.length);
+        setHasMore(more);
+      } else {
+        setHasMore(false);
+      }
+    }
+  }, [debouncedQuery, fetchSection, hasMore, loading, loadingMore, offset, section]);
 
   const ResultItem = ({ item, type }) => {
     const getIcon = () => {
@@ -177,96 +247,113 @@ const SearchModal = ({ isOpen, onClose }) => {
     <Modal
       isOpen={isOpen}
       onRequestClose={onClose}
-      className="max-w-4xl mx-auto mt-20 bg-white dark:bg-dark-800 rounded-2xl shadow-2xl outline-none"
-      overlayClassName="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4"
+      className="outline-none"
+      overlayClassName="fixed inset-0 bg-black/50 z-50"
     >
-      <div className="w-full max-h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-dark-700">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Tìm kiếm
-          </h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <FiX className="h-5 w-5" />
-          </Button>
-        </div>
-
-        {/* Search Input */}
-        <div className="p-6 border-b border-gray-200 dark:border-dark-700">
-          <div className="relative">
-            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Tìm kiếm manga, movie, music..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-gray-100 dark:bg-dark-700 border border-gray-300 dark:border-dark-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 dark:text-white"
-              autoFocus
-            />
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-dark-700">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const count = results[tab.key].length;
-            
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center space-x-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.key
-                    ? 'border-primary-600 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                <span>{tab.label}</span>
-                {count > 0 && (
-                  <span className="bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 px-2 py-0.5 rounded-full text-xs">
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Results */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-              <span className="ml-3 text-gray-600 dark:text-gray-400">Đang tìm kiếm...</span>
-            </div>
-          ) : results[activeTab].length > 0 ? (
-            <div className="space-y-2">
+      {/* Top search bar */}
+      <div className="w-full flex items-start justify-center mt-6">
+        <div className="relative w-full max-w-2xl px-4">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm (mặc định cả Folder + File)"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-full pl-10 pr-10 py-3 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 dark:text-white"
+                autoFocus
+              />
+              {/* Suggestions dropdown */}
               <AnimatePresence>
-                {results[activeTab].map((item, index) => (
-                  <ResultItem key={`${item.path}-${index}`} item={item} type={activeTab} />
-                ))}
+                {isOpen && query && query.length >= 2 && (results.length > 0 || !loading) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    className="absolute left-0 right-0 mt-2 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-xl shadow-xl overflow-hidden"
+                  >
+                    <div
+                      className="max-h-80 overflow-y-auto"
+                      ref={listRef}
+                      onScroll={handleScroll}
+                    >
+                      {loading && (
+                        <div className="p-3 text-sm text-gray-500 dark:text-gray-400">Đang tìm kiếm…</div>
+                      )}
+                      {!loading && results.map((item, index) => (
+                        <SuggestionItem key={`${item.path}-${index}`} item={item} onClick={() => handleResultClick(item)} />
+                      ))}
+                      {loadingMore && (
+                        <div className="p-3 text-center text-xs text-gray-500 dark:text-gray-400">Đang tải thêm…</div>
+                      )}
+                      {!loading && results.length === 0 && (
+                        <div className="p-3 text-sm text-gray-500 dark:text-gray-400">Không tìm thấy kết quả</div>
+                      )}
+                    </div>
+                    {/* See all */}
+                    {query && (
+                      <button onClick={goSeeAll} className="w-full text-left px-3 py-2 text-sm bg-gray-50 dark:bg-dark-700/60 hover:bg-gray-100 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-200">
+                        Tìm tất cả kết quả cho từ khóa “{query}”
+                      </button>
+                    )}
+                  </motion.div>
+                )}
               </AnimatePresence>
             </div>
-          ) : query.length >= 2 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🔍</div>
-              <p className="text-gray-500 dark:text-gray-400">
-                Không tìm thấy kết quả cho "{query}"
-              </p>
+            {/* Mode dropdown */}
+            <div className="relative">
+              <Button variant="secondary" onClick={() => setDropdownOpen((v) => !v)}>
+                {TYPE_OPTIONS.find((t) => t.key === typeFilter)?.label || 'Tất cả'}
+                <FiChevronDown className="ml-2" />
+              </Button>
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-dark-800 border border-gray-200 dark:border-dark-700 rounded-lg shadow-lg z-10">
+                  {TYPE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => { setTypeFilter(opt.key); setDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-dark-700 ${typeFilter === opt.key ? 'text-primary-600' : 'text-gray-700 dark:text-gray-200'}`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">💡</div>
-              <p className="text-gray-500 dark:text-gray-400">
-                Nhập ít nhất 2 ký tự để bắt đầu tìm kiếm
-              </p>
-            </div>
-          )}
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <FiX className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>
+  );
+};
+
+const SuggestionItem = ({ item, onClick }) => {
+  // Best-effort infer section from path prefix; fall back to generic
+  const mediaType = item?.type === 'audio' ? 'music' : (item?.type === 'video' ? 'movie' : 'manga');
+  const src = buildThumbnailUrl(item, mediaType);
+  const fallback = mediaType === 'music' ? '/default/music-thumb.png' : (mediaType === 'movie' ? '/default/video-thumb.png' : '/default/folder-thumb.png');
+  return (
+    <div
+      className="flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-dark-700 cursor-pointer"
+      onClick={onClick}
+    >
+      <img
+        src={src}
+        alt={item.name}
+        className="w-10 h-10 rounded object-cover bg-gray-200 dark:bg-dark-600"
+        onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = fallback; }}
+      />
+      <div className="min-w-0">
+        <div className="text-sm text-gray-900 dark:text-white truncate">{item.name}</div>
+        {typeof item.viewCount === 'number' && (
+          <div className="text-xs text-gray-500 dark:text-gray-400">👁️ {item.viewCount}</div>
+        )}
+      </div>
+    </div>
   );
 };
 

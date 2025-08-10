@@ -44,9 +44,13 @@ const Button = ({
   ].filter(Boolean).join(' ');
 
   const handleClick = (e) => {
-    console.log('🔘 Button clicked:', { disabled, loading, e });
+    const isDev = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.MODE !== 'production')
+      || (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production');
+    if (isDev) {
+      console.log('🔘 Button clicked:', { disabled, loading, e });
+    }
     if (disabled || loading) {
-      console.log('❌ Button click blocked - disabled or loading');
+      if (isDev) console.log('❌ Button click blocked - disabled or loading');
       return;
     }
     onClick?.(e);
