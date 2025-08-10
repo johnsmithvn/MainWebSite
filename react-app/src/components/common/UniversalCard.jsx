@@ -47,13 +47,15 @@ const UniversalCard = ({
     const baseName = item.name || item.path?.split('/').pop() || 'Unknown';
     
     if (type === 'manga') {
+      const isDirectory = item?.isDirectory === true || item?.type === 'folder';
+      const isReaderEntry = (item?.isSelfReader === true) || baseName === '__self__' || item?.path?.endsWith('/__self__');
       return {
         displayName: baseName === '__self__' ? 'Đọc ngay' : baseName,
-        isReadable: item.name === '__self__' || (item.images && item.images.length > 0),
-        isFolder: !item.images || item.images.length === 0,
+        isReadable: isReaderEntry && !isDirectory,
+        isFolder: isDirectory || !isReaderEntry,
         thumbnail: getThumbnailUrl(),
-        typeIcon: item.images ? FiPlay : FiFolder,
-        typeLabel: item.images ? 'Đọc truyện' : 'Thư mục'
+        typeIcon: (isReaderEntry && !isDirectory) ? FiPlay : FiFolder,
+        typeLabel: (isReaderEntry && !isDirectory) ? 'Đọc truyện' : 'Thư mục'
       };
     } else if (type === 'movie') {
       const isVideo = item.type === 'video' || item.type === 'file';
@@ -97,82 +99,66 @@ const UniversalCard = ({
   const handleClick = async () => {
     const encodedPath = encodeURIComponent(item.path);
     
-    // Add to recent items before navigation
+    if (type === 'manga') {
+      const baseName = item.name || item.path?.split('/').pop() || '';
+      const isDirectory = item?.isDirectory === true || item?.type === 'folder';
+      const isReaderEntry = (item?.isSelfReader === true) || baseName === '__self__' || item?.path?.endsWith('/__self__');
+
+      // Only track recent and increase views for reader items
+      if (isReaderEntry && !isDirectory) {
+        try {
+          addRecentItem(item);
+        } catch {}
+        try {
+          await apiService.system.increaseViewManga({
+            path: item.path,
+            dbkey: sourceKey,
+            rootKey: rootFolder
+          });
+        } catch {}
+        navigate(`/manga/reader?path=${encodedPath}`);
+        return;
+      }
+
+      // Folder or non-reader -> navigate to folder listing on Home
+      navigate(`/manga?path=${encodedPath}`);
+      return;
+    }
+    
+    // Add to recent items before navigation (non-manga types only)
     try {
-      addRecentItem(item);
-      console.log('➕ Added to recent:', { type, name: item.name, path: item.path });
+      if (type !== 'manga') {
+        addRecentItem(item);
+        console.log('➕ Added to recent:', { type, name: item.name, path: item.path });
+      }
     } catch (error) {
       console.warn('Failed to add to recent:', error);
     }
     
     // Increase view count for content items (not folders)
-    if (type === 'manga' && (item.name === '__self__' || (item.images && item.images.length > 0))) {
-      try {
-        await apiService.system.increaseViewManga({
-          path: item.path,
-          dbkey: sourceKey,
-          rootKey: rootFolder
-        });
-        console.log('📈 View count increased for manga:', item.path);
-      } catch (error) {
-        console.warn('Failed to increase view count for manga:', error);
-      }
-    } else if (type === 'movie' && (item.type === 'video' || item.type === 'file')) {
-      // NOTE: View count is handled by MoviePlayer component
-      // Don't increase view count here to avoid duplicate calls
-      console.log('🎬 Movie click - view will be increased by MoviePlayer');
-      /*
-      try {
-        // Use direct fetch for movie-specific endpoint
-        await fetch('/api/increase-view/movie', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            key: sourceKey,
-            path: item.path
-          })
-        });
-        console.log('📈 View count increased for movie:', item.path);
-      } catch (error) {
-        console.warn('Failed to increase view count for movie:', error);
-      }
-      */
+    if (type === 'movie' && (item.type === 'video' || item.type === 'file')) {
+      // handled in player
     } else if (type === 'music' && (item.type === 'audio' || item.type === 'file' || item.isPlaylist)) {
-      // NOTE: View count for music is handled inside MusicPlayer on playback to ensure exactly-once semantics
-      // Avoid calling increase-view here to prevent duplicate counts on initial navigation
-      // console.log('🎵 Music click - view will be increased by MusicPlayer on play');
+      // handled on play
     }
     
-    // Navigate based on type
-    if (type === 'manga') {
-      if (item.name === '__self__' || (item.images && item.images.length > 0)) {
-        // Navigate to reader
-        navigate(`/manga/reader?path=${encodedPath}`);
-      } else {
-        // Navigate to manga folder
-        navigate(`/manga?path=${encodedPath}`);
-      }
-    } else if (type === 'movie') {
+    // Navigate based on type for non-manga
+    if (type === 'movie') {
       const isVideo = item.type === 'video' || item.type === 'file';
       if (isVideo) {
-        // Navigate to movie player with state (stable URL)
         navigate('/movie/player', { state: { file: item.path, key: sourceKey } });
       } else {
-        // Navigate to movie folder
         navigate(`/movie?path=${encodedPath}`);
       }
     } else if (type === 'music') {
       const isAudio = item.type === 'audio' || item.type === 'file';
       const isPlaylist = item.isPlaylist;
       if (isPlaylist) {
-        // Open player with playlist context, keep URL stable
         navigate('/music/player', { state: { playlist: item.path, key: sourceKey } });
       } else if (isAudio) {
         const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
-        // Pass both file and its parent folder so player can build playlist correctly
         navigate('/music/player', { state: { file: item.path, playlist: folderPath, key: sourceKey } });
       } else {
-        // For music folders clicked from sliders -> open directly as playlist in player
         navigate('/music/player', { state: { playlist: item.path, key: sourceKey } });
       }
     }

@@ -20,12 +20,19 @@ const inflightGet = new Map();
 const buildGetKey = (url, params = {}) => {
   try {
     const usp = new URLSearchParams();
-    Object.entries(params || {}).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) usp.append(k, String(v));
-    });
+    const entries = Object.entries(params || {})
+      .filter(([, v]) => v !== undefined && v !== null)
+      .sort(([a], [b]) => a.localeCompare(b)); // sort keys for canonical order
+    for (const [k, v] of entries) {
+      usp.append(k, String(v));
+    }
     return `${url}?${usp.toString()}`;
   } catch {
-    return `${url}|${JSON.stringify(params || {})}`;
+    // Fallback: also sort keys in stringified version
+    const sorted = Object.keys(params || {})
+      .sort()
+      .reduce((acc, k) => { acc[k] = params[k]; return acc; }, {});
+    return `${url}|${JSON.stringify(sorted)}`;
   }
 };
 
