@@ -48,6 +48,15 @@ const MusicHome = () => {
   const [sortBy, setSortBy] = useState('name');
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [musicPerPage, setMusicPerPage] = useState(() => {
+    const urlVal = parseInt(searchParams.get('size') || '', 10);
+    if (!Number.isNaN(urlVal) && urlVal > 0) return urlVal;
+    try {
+      const stored = parseInt(localStorage.getItem('music.perPage') || '', 10);
+      if (!Number.isNaN(stored) && stored > 0) return stored;
+    } catch (_) {}
+    return PAGINATION.MUSIC_PER_PAGE;
+  });
 
   // Track last fetch to avoid duplicate calls (StrictMode/multiple effects)
   const lastFetchRef = useRef('');
@@ -70,8 +79,12 @@ const MusicHome = () => {
     }
   }, [sourceKey, clearMusicCache]);
 
-  // Pagination
-  const musicPerPage = PAGINATION.MUSIC_PER_PAGE;
+  // Persist per-page whenever it changes (including via URL)
+  useEffect(() => {
+    try { localStorage.setItem('music.perPage', String(musicPerPage)); } catch (_) {}
+  }, [musicPerPage]);
+
+  // Pagination (per-page selectable)
   const totalPages = Math.ceil(musicList.length / musicPerPage);
   const currentMusic = musicList.slice(
     currentPage * musicPerPage,
@@ -181,6 +194,12 @@ const MusicHome = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handlePerPageChange = (val) => {
+    const n = Math.max(1, parseInt(val, 10) || PAGINATION.MUSIC_PER_PAGE);
+    setMusicPerPage(n);
+    setCurrentPage(0);
+  };
+
   if (loading || globalLoading) {
     return <LoadingOverlay message="Loading music library..." />;
   }
@@ -219,6 +238,19 @@ const MusicHome = () => {
             </div>
 
             <div className="flex items-center space-x-3">
+              {/* Per-page selector */}
+              <div className="flex items-center gap-2 mr-2">
+                <span className="text-sm text-gray-600 dark:text-gray-300">Per page</span>
+                <select
+                  value={musicPerPage}
+                  onChange={(e) => handlePerPageChange(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
+                >
+                  {[12, 24, 30, 48, 60, 96].map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
               {/* View mode toggle */}
               <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
                 <Button
