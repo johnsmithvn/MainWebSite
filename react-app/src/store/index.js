@@ -847,17 +847,18 @@ export const useMusicStore = create(
       
       nextTrack: () => set((state) => {
         const { currentIndex, currentPlaylist, shuffle, repeat } = state;
-        let nextIndex;
-        
-        if (shuffle) {
-          nextIndex = Math.floor(Math.random() * currentPlaylist.length);
+        let nextIndex = currentIndex + 1;
+        // When shuffle is ON, currentPlaylist is pre-shuffled; advance sequentially to match UI order
+        if (!shuffle) {
+          // non-shuffle: same sequential logic
+          if (nextIndex >= currentPlaylist.length) {
+            nextIndex = repeat === 'all' ? 0 : currentIndex;
+          }
         } else {
-          nextIndex = currentIndex + 1;
           if (nextIndex >= currentPlaylist.length) {
             nextIndex = repeat === 'all' ? 0 : currentIndex;
           }
         }
-        
         return {
           currentIndex: nextIndex,
           currentTrack: currentPlaylist[nextIndex] || state.currentTrack,
@@ -867,7 +868,6 @@ export const useMusicStore = create(
       prevTrack: () => set((state) => {
         const { currentIndex, currentPlaylist } = state;
         const prevIndex = currentIndex > 0 ? currentIndex - 1 : currentPlaylist.length - 1;
-        
         return {
           currentIndex: prevIndex,
           currentTrack: currentPlaylist[prevIndex] || state.currentTrack,

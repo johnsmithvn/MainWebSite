@@ -60,7 +60,7 @@ const MusicPlaylists = () => {
           {playlists.map((p) => (
             <button
               key={p.id}
-              onClick={() => navigate(`/music/playlist/${p.id}`)}
+              onClick={() => navigate('/music/player', { state: { playlist: p.id, key: sourceKey } })}
               className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition overflow-hidden text-left"
             >
               <div className="aspect-square bg-gray-200 dark:bg-dark-700 flex items-center justify-center">

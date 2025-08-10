@@ -79,6 +79,10 @@ const MusicPlayerV2 = () => {
   // Audio
   const audioRef = useRef(null);
   const latestTrackRef = useRef(null);
+  const dragIndexRef = useRef(-1);
+  const isDraggingRef = useRef(false);
+  const [dropIndicator, setDropIndicator] = useState({ index: -1, position: 'above' });
+  const prevOrderBeforeShuffleRef = useRef(null);
 
   // Helper: bump viewCount locally (UI sync)
   const bumpViewCount = useCallback((songPath) => {
@@ -152,6 +156,7 @@ const MusicPlayerV2 = () => {
 
   const handleRowClick = useCallback((e, track, index) => {
     e?.preventDefault?.();
+  if (isDraggingRef.current) return;
     if (currentTrack?.path === track.path && currentIndex === index) {
       if (!isPlaying) {
         const audio = audioRef.current;
@@ -165,6 +170,71 @@ const MusicPlayerV2 = () => {
     }
     playTrack(track, currentPlaylist, index);
   }, [currentTrack?.path, currentIndex, isPlaying, playTrack, currentPlaylist, resumeTrack]);
+
+  // Drag & Drop handlers
+  const handleDragStart = (index) => {
+    dragIndexRef.current = index;
+    isDraggingRef.current = true;
+  };
+  const handleDragOver = (e, overIndex) => {
+    e.preventDefault();
+    if (!e.currentTarget) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const position = y < rect.height / 2 ? 'above' : 'below';
+    setDropIndicator({ index: overIndex, position });
+  };
+  const handleDragEnd = () => {
+    setTimeout(() => {
+      isDraggingRef.current = false;
+      dragIndexRef.current = -1;
+      setDropIndicator({ index: -1, position: 'above' });
+    }, 0);
+  };
+  const isPlaylistId = (val) => {
+    if (val === null || val === undefined) return false;
+    if (typeof val === 'number') return true;
+    if (typeof val === 'string') return !val.includes('/');
+    return false;
+  };
+  const handleDrop = async (e, dropIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const from = dragIndexRef.current;
+    if (from === -1 || dropIndex === -1) {
+      handleDragEnd();
+      return;
+    }
+    let insertIndex = dropIndicator.position === 'below' ? dropIndex + 1 : dropIndex;
+    const prev = useMusicStore.getState().currentPlaylist;
+    if (!Array.isArray(prev) || prev.length === 0) {
+      handleDragEnd();
+      return;
+    }
+    if (from < insertIndex) insertIndex -= 1;
+    const updated = [...prev];
+    const [moved] = updated.splice(from, 1);
+    updated.splice(Math.max(0, Math.min(insertIndex, updated.length)), 0, moved);
+    const currTrack = useMusicStore.getState().currentTrack;
+    const newIndex = currTrack ? Math.max(0, updated.findIndex((t) => t.path === currTrack.path)) : insertIndex;
+    useMusicStore.setState({ currentPlaylist: updated, currentIndex: newIndex });
+    try {
+      const effPlaylist = statePlaylist || playlistPath || null;
+      if (effPlaylist && isPlaylistId(effPlaylist) && sourceKey) {
+        const res = await fetch('/api/music/playlist/order', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: sourceKey, playlistId: Number(effPlaylist), order: updated.map((t) => t.path) })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        showToast('Đã lưu thứ tự playlist', 'success');
+      }
+    } catch (err) {
+      showToast('Không thể lưu thứ tự: ' + (err.message || 'Lỗi không rõ'), 'error');
+    } finally {
+      handleDragEnd();
+    }
+  };
 
   // Load folder songs (same logic as v1)
   const loadFolderSongs = async (folderPathArg, selectedFileArg) => {
@@ -530,9 +600,19 @@ const MusicPlayerV2 = () => {
                     return (
                       <button
                         key={track.path || idx}
+                        draggable
+                        onDragStart={() => handleDragStart(idx)}
+                        onDragOver={(e) => handleDragOver(e, idx)}
+                        onDrop={(e) => handleDrop(e, idx)}
+                        onDragEnd={handleDragEnd}
                         onClick={(e) => handleRowClick(e, track, idx)}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/10 transition-colors ${active ? 'bg-white/10' : ''}`}
+                        className={`relative w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/10 transition-colors ${active ? 'bg-white/10' : ''}`}
                       >
+                        {dropIndicator.index === idx && (
+                          <span
+                            className={`absolute left-3 right-3 ${dropIndicator.position === 'above' ? 'top-0' : 'bottom-0'} h-0.5 bg-[#b58dff] shadow-[0_0_0_2px_rgba(181,141,255,0.35)] rounded pointer-events-none`}
+                          />
+                        )}
                         <span className="w-8 text-center text-white/60">
                           {active ? (isPlaying ? <FiPause className="inline w-4 h-4" /> : <FiPlay className="inline w-4 h-4 ml-0.5" />) : (idx + 1)}
                         </span>
@@ -587,7 +667,37 @@ const MusicPlayerV2 = () => {
           {/* Transport */}
           <div className="flex-1 flex flex-col items-center justify-center">
             <div className="flex items-center gap-5">
-              <button onClick={() => showToast('Shuffle toggled', 'info')} className={`text-white/70 hover:text-white ${shuffle ? '!text-[#b58dff]' : ''}`}>
+              <button
+                onClick={() => {
+                  const store = useMusicStore.getState();
+                  if (!store.shuffle) {
+                    const current = [...(store.currentPlaylist || [])];
+                    prevOrderBeforeShuffleRef.current = current;
+                    if (current.length <= 1) {
+                      useMusicStore.setState({ shuffle: true });
+                    } else {
+                      const shuffled = [...current];
+                      for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                      }
+                      const currTrack = store.currentTrack;
+                      const newIndex = currTrack ? Math.max(0, shuffled.findIndex((t) => t.path === currTrack.path)) : 0;
+                      useMusicStore.setState({ shuffle: true, currentPlaylist: shuffled, currentIndex: newIndex });
+                    }
+                  } else {
+                    const restore = prevOrderBeforeShuffleRef.current;
+                    if (Array.isArray(restore) && restore.length > 0) {
+                      const currTrack = store.currentTrack;
+                      const newIndex = currTrack ? Math.max(0, restore.findIndex((t) => t.path === currTrack.path)) : 0;
+                      useMusicStore.setState({ shuffle: false, currentPlaylist: restore, currentIndex: newIndex });
+                    } else {
+                      useMusicStore.setState({ shuffle: false });
+                    }
+                  }
+                }}
+                className={`text-white/70 hover:text-white ${shuffle ? '!text-[#b58dff]' : ''}`}
+              >
                 <FiShuffle className="w-4 h-4" />
               </button>
               <button onClick={prevTrack} className="text-white hover:text-white/90">
@@ -599,7 +709,14 @@ const MusicPlayerV2 = () => {
               <button onClick={nextTrack} className="text-white hover:text-white/90">
                 <FiSkipForward className="w-5 h-5" />
               </button>
-              <button onClick={() => showToast('Repeat toggled', 'info')} className={`text-white/70 hover:text-white ${repeat !== 'none' ? '!text-[#b58dff]' : ''}`}>
+              <button
+                onClick={() => {
+                  const cur = useMusicStore.getState().repeat;
+                  const next = cur === 'none' ? 'all' : cur === 'all' ? 'one' : 'none';
+                  useMusicStore.setState({ repeat: next });
+                }}
+                className={`text-white/70 hover:text-white ${repeat !== 'none' ? '!text-[#b58dff]' : ''}`}
+              >
                 <FiRepeat className="w-4 h-4" />
               </button>
             </div>

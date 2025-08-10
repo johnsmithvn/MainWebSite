@@ -173,3 +173,36 @@ router.delete("/playlist", (req, res) => {
 });
 
 module.exports = router;
+ 
+// 🧩 Cập nhật thứ tự bài hát trong playlist
+// PATCH /api/music/playlist/order
+// body: { key: string, playlistId: number, order: string[] } // order = danh sách songPath theo thứ tự mới
+router.patch("/playlist/order", (req, res) => {
+  const { key, playlistId, order } = req.body || {};
+  if (!key || !playlistId || !Array.isArray(order)) {
+    return res.status(400).json({ error: "Thiếu key, playlistId hoặc order" });
+  }
+
+  try {
+    const db = getMusicDB(key);
+
+    const updateStmt = db.prepare(
+      `UPDATE playlist_items SET sortOrder = ? WHERE playlistId = ? AND songPath = ?`
+    );
+    const tx = db.transaction((paths) => {
+      let updated = 0;
+      paths.forEach((songPath, idx) => {
+        const info = updateStmt.run(idx + 1, playlistId, songPath);
+        updated += info.changes || 0;
+      });
+      db.prepare(`UPDATE playlists SET updatedAt = ? WHERE id = ?`).run(now(), playlistId);
+      return updated;
+    });
+
+    const changes = tx(order);
+    return res.json({ success: true, updated: changes });
+  } catch (err) {
+    console.error("Failed to update playlist order:", err);
+    return res.status(500).json({ error: "Không thể cập nhật thứ tự playlist" });
+  }
+});

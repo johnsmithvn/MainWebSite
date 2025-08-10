@@ -77,11 +77,16 @@ const MusicPlayer = () => {
   const [buffered, setBuffered] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [playlistTitle, setPlaylistTitle] = useState(null);
 
   // Audio ref
   const audioRef = useRef(null);
   // Removed viewedTracksRef to allow counting on every playback start
   const latestTrackRef = useRef(null);
+  const dragIndexRef = useRef(-1);
+  const isDraggingRef = useRef(false);
+  const [dropIndicator, setDropIndicator] = useState({ index: -1, position: 'above' });
+  const prevOrderBeforeShuffleRef = useRef(null);
 
   // Helper: bump viewCount locally for UI sync
   const bumpViewCount = useCallback((songPath) => {
@@ -108,6 +113,10 @@ const MusicPlayer = () => {
   // Row click handler to avoid re-triggering the same track (prevents view loop)
   const handleRowClick = useCallback((e, track, index) => {
     e?.preventDefault?.();
+    if (isDraggingRef.current) {
+      // Ignore click triggered by drag-drop
+      return;
+    }
     // If clicking the same track that's already selected
     if (currentTrack?.path === track.path && currentIndex === index) {
       // If paused, just resume without resetting src
@@ -126,6 +135,86 @@ const MusicPlayer = () => {
     // Different track -> start it normally
     playTrack(track, currentPlaylist, index);
   }, [currentTrack?.path, currentIndex, isPlaying, playTrack, currentPlaylist, resumeTrack]);
+
+  // DnD handlers
+  const handleDragStart = (index) => {
+    dragIndexRef.current = index;
+    isDraggingRef.current = true;
+  };
+
+  const handleDragOver = (e, overIndex) => {
+    // Needed to allow drop
+    e.preventDefault();
+    if (!e.currentTarget) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const position = y < rect.height / 2 ? 'above' : 'below';
+    setDropIndicator({ index: overIndex, position });
+  };
+
+  const handleDragEnd = () => {
+    // Allow click again shortly after drag
+    setTimeout(() => {
+      isDraggingRef.current = false;
+      dragIndexRef.current = -1;
+      setDropIndicator({ index: -1, position: 'above' });
+    }, 0);
+  };
+
+  const handleDrop = async (e, dropIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const from = dragIndexRef.current;
+    if (from === -1 || dropIndex === -1) {
+      handleDragEnd();
+      return;
+    }
+
+    // Determine insertion index based on indicator position
+    let insertIndex = dropIndicator.position === 'below' ? dropIndex + 1 : dropIndex;
+    if (from < insertIndex) insertIndex -= 1; // adjust for removal shift
+
+    // Reorder playlist locally
+    const prev = useMusicStore.getState().currentPlaylist;
+    if (!Array.isArray(prev) || prev.length === 0) {
+      handleDragEnd();
+      return;
+    }
+    const updated = [...prev];
+    const [moved] = updated.splice(from, 1);
+    updated.splice(Math.max(0, Math.min(insertIndex, updated.length)), 0, moved);
+
+    // Keep the current track selection
+    const currTrack = useMusicStore.getState().currentTrack;
+  const newIndex = currTrack ? Math.max(0, updated.findIndex((t) => t.path === currTrack.path)) : insertIndex;
+    useMusicStore.setState({ currentPlaylist: updated, currentIndex: newIndex });
+
+    // Persist only when this session is a playlist id
+    try {
+      const shuffledOn = useMusicStore.getState().shuffle;
+      if (!shuffledOn && effectivePlaylist && isPlaylistId(effectivePlaylist) && sourceKey) {
+        const body = {
+          key: sourceKey,
+          playlistId: Number(effectivePlaylist),
+          order: updated.map((t) => t.path),
+        };
+        const res = await fetch('/api/music/playlist/order', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const msg = await res.text();
+          throw new Error(msg || 'Failed to save order');
+        }
+        showToast('Đã lưu thứ tự playlist', 'success');
+      }
+    } catch (err) {
+      showToast('Không thể lưu thứ tự: ' + (err.message || 'Lỗi không rõ'), 'error');
+    } finally {
+      handleDragEnd();
+    }
+  };
 
   // Keep a ref of the latest track for event handlers
   useEffect(() => {
@@ -250,16 +339,100 @@ const MusicPlayer = () => {
   };
 
   const toggleShuffle = () => {
-    // Optional: wire to store shuffle logic
-    showToast('Shuffle toggled', 'info');
+    const store = useMusicStore.getState();
+    const currentlyShuffled = store.shuffle;
+    if (!currentlyShuffled) {
+      // Save current order to restore later, then shuffle
+      const current = [...(store.currentPlaylist || [])];
+      prevOrderBeforeShuffleRef.current = current;
+      if (current.length <= 1) {
+        useMusicStore.setState({ shuffle: true });
+        return;
+      }
+      const shuffled = [...current];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const currTrack = store.currentTrack;
+      const newIndex = currTrack ? Math.max(0, shuffled.findIndex((t) => t.path === currTrack.path)) : 0;
+      useMusicStore.setState({ shuffle: true, currentPlaylist: shuffled, currentIndex: newIndex });
+    } else {
+      // Restore previous order
+      const restore = prevOrderBeforeShuffleRef.current;
+      if (Array.isArray(restore) && restore.length > 0) {
+        const currTrack = store.currentTrack;
+        const newIndex = currTrack ? Math.max(0, restore.findIndex((t) => t.path === currTrack.path)) : 0;
+        useMusicStore.setState({ shuffle: false, currentPlaylist: restore, currentIndex: newIndex });
+      } else {
+        useMusicStore.setState({ shuffle: false });
+      }
+    }
   };
 
   const toggleRepeat = () => {
-    // Optional: wire to store repeat logic
-    showToast('Repeat toggled', 'info');
+    const current = useMusicStore.getState().repeat;
+    const next = current === 'none' ? 'all' : current === 'all' ? 'one' : 'none';
+    useMusicStore.setState({ repeat: next });
   };
 
   // ========= Data loading =========
+  const isPlaylistId = (val) => {
+    if (val === null || val === undefined) return false;
+    if (typeof val === 'number') return true;
+    if (typeof val === 'string') return !val.includes('/');
+    return false;
+  };
+
+  const loadPlaylistById = async (playlistIdArg, selectedFileArg) => {
+    try {
+      if (!sourceKey) {
+        showToast('Thiếu source key', 'error');
+        return;
+      }
+      const playlistId = String(playlistIdArg);
+      const res = await fetch(`/api/music/playlist/${encodeURIComponent(playlistId)}?key=${encodeURIComponent(sourceKey)}`);
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      const tracks = Array.isArray(data.tracks) ? data.tracks : [];
+      const playlist = tracks.map((t) => ({
+        ...t,
+        name: t.name || (t.path ? t.path.split('/').pop() : 'Unknown'),
+        thumbnail: buildThumbnailUrl(t, 'music'),
+      }));
+
+      setPlaylistTitle(data?.name || null);
+
+      let startIndex = 0;
+      if (selectedFileArg) {
+        const idx = playlist.findIndex((x) => x.path === selectedFileArg);
+        if (idx >= 0) startIndex = idx;
+      }
+
+      if (playlist.length > 0) {
+        playTrack(playlist[startIndex], playlist, startIndex);
+        addRecentMusic(playlist[startIndex]);
+      } else if (selectedFileArg) {
+        const fileName = selectedFileArg.split('/').pop();
+        const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+        const singleTrack = {
+          name: nameWithoutExt,
+          path: selectedFileArg,
+          artist: 'Unknown Artist',
+          album: 'Unknown Album',
+          thumbnail: buildThumbnailUrl({ path: selectedFileArg, type: 'audio', thumbnail: null }, 'music'),
+        };
+        playTrack(singleTrack, [singleTrack], 0);
+        addRecentMusic(singleTrack);
+        showToast('Playlist rỗng, phát 1 bài', 'warning');
+      } else {
+        showToast('Playlist rỗng', 'warning');
+      }
+    } catch (err) {
+      showToast('Không thể load playlist: ' + (err.message || 'unknown error'), 'error');
+    }
+  };
+
   const loadFolderSongs = async (folderPathArg, selectedFileArg) => {
     try {
       if (!sourceKey) {
@@ -346,7 +519,11 @@ const MusicPlayer = () => {
   useEffect(() => {
     // If playlist is provided, load that folder and optionally select specific file
     if (effectivePlaylist) {
-      loadFolderSongs(effectivePlaylist, effectivePath || null);
+      if (isPlaylistId(effectivePlaylist)) {
+        loadPlaylistById(effectivePlaylist, effectivePath || null);
+      } else {
+        loadFolderSongs(effectivePlaylist, effectivePath || null);
+      }
       return;
     }
     // Else, if only file is provided, derive folder and load
@@ -446,7 +623,10 @@ const MusicPlayer = () => {
   // ======== Derived UI Data ========
   const isFav = (t) => favorites.some((f) => f.path === t.path);
   const folderTitle = (() => {
-    if (effectivePlaylist) return effectivePlaylist.split('/').pop();
+    if (effectivePlaylist) {
+      if (isPlaylistId(effectivePlaylist)) return playlistTitle || `Playlist #${effectivePlaylist}`;
+      return String(effectivePlaylist).split('/').pop();
+    }
     if (effectivePath) {
       const parts = effectivePath.split('/');
       parts.pop();
@@ -550,11 +730,21 @@ const MusicPlayer = () => {
           {currentPlaylist.map((track, index) => (
             <div
               key={track.path || index}
+        draggable
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+        onDrop={(e) => handleDrop(e, index)}
+        onDragEnd={handleDragEnd}
               onClick={(e) => handleRowClick(e, track, index)}
-              className={`grid grid-cols-[40px_1fr_60px] md:grid-cols-[40px_1fr_1fr_90px_60px] lg:grid-cols-[40px_1fr_1fr_1fr_90px_60px] gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${
+              className={`relative grid grid-cols-[40px_1fr_60px] md:grid-cols-[40px_1fr_1fr_90px_60px] lg:grid-cols-[40px_1fr_1fr_1fr_90px_60px] gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${
                 index === currentIndex ? 'bg-white/10' : ''
               }`}
             >
+              {dropIndicator.index === index && (
+                <div
+                  className={`absolute left-2 right-2 ${dropIndicator.position === 'above' ? 'top-0' : 'bottom-0'} h-0.5 bg-emerald-400 shadow-[0_0_0_2px_rgba(16,185,129,0.35)] rounded pointer-events-none`}
+                />
+              )}
               <div className="text-center text-white/60">
                 {index === currentIndex && isPlaying ? (
                   <span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse" />
