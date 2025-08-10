@@ -36,23 +36,23 @@ const MangaHome = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0); // For forcing re-renders
 
+  // Track last favorites fetch to avoid duplicates (StrictMode)
+  const lastFavKeyRef = React.useRef('');
+  const navigatedToReaderRef = React.useRef(false);
+
   // Clear cache and refetch when sourceKey changes
   useEffect(() => {
     if (sourceKey && sourceKey.startsWith('ROOT_')) {
       console.log('🏠 MangaHome: SourceKey changed to:', sourceKey, '- Clearing cache and refetching');
       clearMangaCache();
       const urlPath = searchParams.get('path');
-      if (urlPath) {
-        fetchMangaFolders(urlPath);
-      } else {
+      // If URL already targets a specific path, let URL effect handle navigation to reader
+      if (!urlPath) {
         fetchMangaFolders();
       }
       // fetchFavorites will be handled in URL effect to avoid duplicates
     }
   }, [sourceKey, clearMangaCache, fetchMangaFolders, searchParams]);
-
-  // Track last favorites fetch to avoid duplicates (StrictMode)
-  const lastFavKeyRef = React.useRef('');
 
   useEffect(() => {
     // Xử lý URL path parameter giống frontend cũ
@@ -60,12 +60,24 @@ const MangaHome = () => {
     console.log('🔍 DEBUG MangaHome URL path param:', urlPath);
     
     if (sourceKey && sourceKey.startsWith('ROOT_')) {
-      if (mangaList.length === 0) {
-        if (urlPath) {
-          fetchMangaFolders(urlPath);
-        } else {
-          fetchMangaFolders();
+      // If URL has a path, navigate directly to reader once and skip list fetch
+      if (urlPath) {
+        if (!navigatedToReaderRef.current) {
+          navigatedToReaderRef.current = true;
+          navigate(`/manga/reader?path=${encodeURIComponent(urlPath)}`, { replace: true });
         }
+        // Still ensure favorites are fetched once per key/root
+        const favKey = `${sourceKey}|${rootFolder}`;
+        if (lastFavKeyRef.current !== favKey) {
+          lastFavKeyRef.current = favKey;
+          fetchFavorites();
+        }
+        return;
+      }
+
+      // No URL path -> load current folder listing if needed
+      if (mangaList.length === 0) {
+        fetchMangaFolders();
       }
       // Fetch favorites once per sourceKey/root
       const favKey = `${sourceKey}|${rootFolder}`;
@@ -74,7 +86,7 @@ const MangaHome = () => {
         fetchFavorites();
       }
     }
-  }, [searchParams, fetchMangaFolders, fetchFavorites, sourceKey, mangaList.length, rootFolder]);
+  }, [searchParams, fetchMangaFolders, fetchFavorites, sourceKey, mangaList.length, rootFolder, navigate]);
 
   useEffect(() => {
     // Debug: Log manga list when it changes
@@ -100,18 +112,14 @@ const MangaHome = () => {
   const handleFolderClick = (folder) => {
     console.log('🔍 Clicked folder:', folder);
     
-    // Logic theo frontend cũ - không validation path
-    // if (folder.isSelfReader && folder.images) -> go to reader
-    // else -> loadFolder(folder.path)
-    
-    if (folder.isSelfReader && folder.images) {
-      // Đây là selfReader entry với images -> đi đến reader
-      console.log('📖 Opening reader for selfReader with images:', folder.path);
+    // If this item is a selfReader, navigate directly to reader and let the reader load data
+    if (folder.isSelfReader) {
+      console.log('📖 Opening reader directly for selfReader:', folder.path);
       navigate(`/manga/reader?path=${encodeURIComponent(folder.path)}`);
       return;
     }
     
-    // Ngược lại -> navigate đến subfolder (loadFolder equivalent)
+    // Otherwise, load the subfolder in-place
     console.log('📁 Loading subfolder:', folder.path);
     fetchMangaFolders(folder.path);
   };

@@ -67,7 +67,18 @@ export const apiService = {
 
   // Manga APIs
   manga: {
-    getFolders: (params) => api.get(`${API.ENDPOINTS.MANGA}/folder-cache`, { params }),
+    getFolders: (params) => {
+      const url = `${API.ENDPOINTS.MANGA}/folder-cache`;
+      const key = buildGetKey(url, params);
+      if (inflightGet.has(key)) {
+        return inflightGet.get(key);
+      }
+      const req = api.get(url, { params }).finally(() => {
+        inflightGet.delete(key);
+      });
+      inflightGet.set(key, req);
+      return req;
+    },
     getFavorites: (params) => {
       const url = `${API.ENDPOINTS.MANGA}/favorite`;
       const key = buildGetKey(url, params);
