@@ -377,6 +377,33 @@ const MangaReader = () => {
     }
   };
 
+  // Keyboard navigation for horizontal mode (ArrowLeft/ArrowRight)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignore when typing in inputs/textareas or contenteditable
+      const target = e.target;
+      const tag = target?.tagName;
+      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable;
+      if (isTyping) return;
+
+      // Only handle in horizontal mode
+      if (readerSettings.readingMode === 'vertical') return;
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        // Prev page
+        setCurrentPage((prev) => Math.max(0, prev - 1));
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        // Next page
+        setCurrentPage((prev) => Math.min(currentImages.length - 1, prev + 1));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [readerSettings.readingMode, currentImages.length]);
+
   // Toggle favorite
   const handleToggleFavorite = async () => {
     if (!sourceKey || !currentPath) return;
