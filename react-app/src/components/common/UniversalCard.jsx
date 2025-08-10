@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlay, FiFolder, FiMusic, FiHeart, FiEye, FiClock } from 'react-icons/fi';
+import { FiPlay, FiFolder, FiMusic, FiHeart, FiEye, FiClock, FiPlus } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store';
 import { useRecentManager } from '@/hooks/useRecentManager';
@@ -257,24 +257,42 @@ const UniversalCard = ({
           </div>
         )}
 
-        {/* Favorite button */}
-        <motion.button
-          className={`
-            absolute top-2 right-2 p-2 rounded-full backdrop-blur-sm transition-colors duration-200
-            ${currentFavoriteState 
-              ? 'bg-red-500/80 text-white hover:bg-red-600/80' 
-              : 'bg-black/20 text-white hover:bg-black/40'
-            }
-          `}
-          onClick={handleFavoriteClick}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-        >
-          <FiHeart className={`w-4 h-4 ${currentFavoriteState ? 'fill-current' : ''}`} />
-        </motion.button>
+        {/* Favorite button (hidden for music) */}
+        {type !== 'music' && (
+          <motion.button
+            className={`
+              absolute top-2 right-2 p-2 rounded-full backdrop-blur-sm transition-colors duration-200
+              ${currentFavoriteState 
+                ? 'bg-red-500/80 text-white hover:bg-red-600/80' 
+                : 'bg-black/20 text-white hover:bg-black/40'
+              }
+            `}
+            onClick={handleFavoriteClick}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <FiHeart className={`w-4 h-4 ${currentFavoriteState ? 'fill-current' : ''}`} />
+          </motion.button>
+        )}
 
-        {/* Bottom-left overlay: type label or views depending on overlayMode */}
-        <div className="absolute bottom-2 left-2">
+    {/* Add to playlist button (music only, top-right) */}
+        {type === 'music' && (
+          <motion.button
+            className="absolute top-2 right-2 h-9 w-9 flex items-center justify-center rounded-full border-2 border-white/80 text-white bg-black/30 hover:bg-black/40 backdrop-blur-sm shadow-md transition-all"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(new CustomEvent('openPlaylistModal', { detail: { item } }));
+            }}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.95 }}
+            aria-label="Thêm vào playlist"
+          >
+            <FiPlus className="w-4 h-4" />
+          </motion.button>
+        )}
+
+  {/* Overlay: type badge top-left for music; otherwise bottom-left */}
+  <div className={`absolute ${type === 'music' ? 'top-2 left-2' : 'bottom-2 left-2'}`}>
           {overlayMode === 'views' ? (
             <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
               <FiEye className="w-3 h-3" />

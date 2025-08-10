@@ -19,6 +19,8 @@ import MusicHome from '@/pages/music/MusicHome';
 import MusicPlayer from '@/pages/music/MusicPlayer';
 import MusicPlayerV2 from '@/pages/music/MusicPlayerV2';
 import MusicFavorites from '@/pages/music/MusicFavorites';
+import MusicPlaylists from '@/pages/music/MusicPlaylists';
+import PlaylistDetail from '@/pages/music/PlaylistDetail';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
 
@@ -69,6 +71,8 @@ function App() {
         <Route path="music">
           <Route index element={<MusicHome />} />
           <Route path="favorites" element={<MusicFavorites />} />
+          <Route path="playlists" element={<MusicPlaylists />} />
+          <Route path="playlist/:id" element={<PlaylistDetail />} />
         </Route>
         
         {/* Settings */}

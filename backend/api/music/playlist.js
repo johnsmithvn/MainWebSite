@@ -8,19 +8,34 @@ function now() {
 }
 
 // 📄 GET /api/music/playlists
+// Hỗ trợ songPath để đánh dấu playlist đã chứa bài hát (hasTrack) và ưu tiên lên đầu
 router.get("/playlists", (req, res) => {
-  const { key } = req.query;
+  const { key, songPath } = req.query;
   if (!key) return res.status(400).json({ error: "Thiếu key" });
 
   const db = getMusicDB(key);
-  const rows = db
-    .prepare(
-      `
-    SELECT id, name, description, thumbnail FROM playlists
-    ORDER BY updatedAt DESC
-  `
-    )
-    .all();
+
+  // Dynamic SQL: nếu có songPath thì thêm cột hasTrack và order theo hasTrack DESC
+  const hasSong = typeof songPath === 'string' && songPath.length > 0;
+  const baseSelect = `
+    SELECT 
+      p.id, 
+      p.name, 
+      p.description, 
+      p.thumbnail,
+      p.updatedAt
+      ${hasSong ? `,
+      EXISTS(
+        SELECT 1 FROM playlist_items x 
+        WHERE x.playlistId = p.id AND x.songPath = ?
+      ) AS hasTrack` : ``}
+    FROM playlists p
+  `;
+
+  const orderBy = hasSong ? `ORDER BY hasTrack DESC, p.updatedAt DESC` : `ORDER BY p.updatedAt DESC`;
+
+  const sql = `${baseSelect}\n${orderBy}`;
+  const rows = hasSong ? db.prepare(sql).all(songPath) : db.prepare(sql).all();
 
   res.json(rows);
 });

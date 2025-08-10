@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlay, FiFolder, FiMusic, FiHeart } from 'react-icons/fi';
+import { FiPlay, FiFolder, FiMusic, FiPlus } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { useMusicStore, useAuthStore } from '@/store';
 
@@ -15,7 +15,7 @@ const MusicCard = ({
   className = ''
 }) => {
   const navigate = useNavigate();
-  const { toggleFavorite, favorites } = useMusicStore();
+  const { /* remove favorites for music */ } = useMusicStore();
   const { sourceKey } = useAuthStore();
 
   // Normalize item data
@@ -23,7 +23,7 @@ const MusicCard = ({
   const isAudio = item.type === 'audio' || item.type === 'file';
   const isFolder = item.type === 'folder';
   const isPlaylist = item.isPlaylist;
-  const isFavorite = Boolean(item.isFavorite || favorites.some(fav => fav.path === item.path));
+  const isFavorite = false; // Favorite removed for music
 
   // Handle thumbnail URL với fallback cho music
   const getThumbnailUrl = () => {
@@ -57,22 +57,10 @@ const MusicCard = ({
     }
   };
 
-  const handleFavoriteClick = async (e) => {
+  const handleAddToPlaylist = (e) => {
     e.stopPropagation();
-    
-    try {
-      console.log('❤️ MusicCard toggleFavorite:', { path: item.path, currentFavorite: isFavorite });
-      
-      // Gọi toggleFavorite từ store (đã có updateFavoriteInAllCaches)
-      await toggleFavorite(item);
-      if (onFavoriteChange) {
-        onFavoriteChange(item, !isFavorite);
-      }
-      
-      console.log('✅ MusicCard favorite toggle completed');
-    } catch (error) {
-      console.error('❌ Error toggling favorite in MusicCard:', error);
-    }
+    // Dispatch global event consumed by PlaylistModal
+    window.dispatchEvent(new CustomEvent('openPlaylistModal', { detail: { item } }));
   };
 
   const cardVariants = {
@@ -123,24 +111,19 @@ const MusicCard = ({
           </div>
         )}
 
-        {/* Favorite button */}
+        {/* Add to playlist button (top-right, outlined translucent) */}
         <motion.button
-          className={`
-            absolute top-2 right-2 p-2 rounded-full backdrop-blur-sm transition-colors duration-200
-            ${isFavorite 
-              ? 'bg-red-500/80 text-white hover:bg-red-600/80' 
-              : 'bg-black/20 text-white hover:bg-black/40'
-            }
-          `}
-          onClick={handleFavoriteClick}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
+          className="absolute top-2 right-2 h-9 w-9 flex items-center justify-center rounded-full border-2 border-white/80 text-white bg-black/30 hover:bg-black/40 backdrop-blur-sm shadow-md transition-all"
+          onClick={handleAddToPlaylist}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label="Thêm vào playlist"
         >
-          <FiHeart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+          <FiPlus className="w-4 h-4" />
         </motion.button>
 
-        {/* Type indicator */}
-        <div className="absolute bottom-2 left-2">
+  {/* Type indicator - top-left */}
+        <div className="absolute top-2 left-2">
           <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
             {getTypeIcon()}
             <span>{getTypeLabel()}</span>

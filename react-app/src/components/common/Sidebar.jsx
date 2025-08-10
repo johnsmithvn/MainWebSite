@@ -13,7 +13,8 @@ import {
   FiSettings,
   FiRefreshCw,
   FiTrash2,
-  FiHeart
+  FiHeart,
+  FiList
 } from 'react-icons/fi';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '../../store';
 import { apiService } from '../../utils/api';
@@ -38,11 +39,11 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
       ]
     },
     {
-      title: 'Yêu thích',
+      title: 'Bộ sưu tập',
       items: [
         { path: '/manga/favorites', icon: FiHeart, label: 'Manga yêu thích' },
         { path: '/movie/favorites', icon: FiHeart, label: 'Movie yêu thích' },
-        { path: '/music/favorites', icon: FiHeart, label: 'Music yêu thích' },
+        { path: '/music/playlists', icon: FiList, label: 'Music playlists' },
       ]
     }
   ];

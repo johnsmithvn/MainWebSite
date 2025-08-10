@@ -9,6 +9,7 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import LoadingOverlay from './LoadingOverlay';
 import { useUIStore } from '../../store';
+import PlaylistModal from '@/components/music/PlaylistModal';
 
 const Layout = () => {
   const { sidebarOpen, loading, setSidebarOpen } = useUIStore();
@@ -82,6 +83,9 @@ const Layout = () => {
           },
         }}
       />
+
+  {/* Global Playlist Modal */}
+  <PlaylistModal />
     </div>
   );
 };
