@@ -36,30 +36,24 @@ const ReaderHeader = ({
     return pathParts[pathParts.length - 1] || 'Manga Reader';
   };
 
+  // Compute parent folder path of the reading folder
+  const computeParentFolderPath = (path) => {
+    if (!path) return '';
+    // If path ends with __self__, remove it first to get the actual folder
+    const withoutSelf = path.replace(/\/__self__$/, '');
+    const parts = withoutSelf.split('/').filter(Boolean);
+    if (parts.length === 0) return '';
+    // Remove the reading folder itself to get its parent
+    parts.pop();
+    return parts.join('/');
+  };
+
   // Get parent folder path (folder containing the current reading folder)
   const getParentFolderPath = () => {
     if (!currentPath) return '/manga';
-    
-    console.log('🔍 DEBUG ReaderHeader currentPath:', currentPath);
-    
-    // Logic tương tự frontend cũ
-    const parts = currentPath.split('/').filter(Boolean);
-    console.log('🔍 DEBUG parts before pop:', parts);
-    
-    parts.pop(); // bỏ folder hiện tại
-    console.log('🔍 DEBUG parts after pop:', parts);
-    
-    const parentPath = parts.join('/');
-    console.log('🔍 DEBUG parentPath:', parentPath);
-
-    if (!parentPath) {
-      console.log('🔍 DEBUG returning /manga (no parent path)');
-      return '/manga';
-    } else {
-      const result = `/manga?path=${encodeURIComponent(parentPath)}`;
-      console.log('🔍 DEBUG returning:', result);
-      return result;
-    }
+    const parentPath = computeParentFolderPath(currentPath);
+    if (!parentPath) return '/manga';
+    return `/manga?path=${encodeURIComponent(parentPath)}`;
   };
 
   // Navigate to manga home (root folder)
@@ -69,30 +63,11 @@ const ReaderHeader = ({
 
   // Navigate to parent folder
   const handleFolderNameClick = () => {
-    if (!currentPath) {
-      navigate('/manga');
-      return;
-    }
-    
-    console.log('🔍 DEBUG ReaderHeader currentPath:', currentPath);
-    
-    // Logic tương tự frontend cũ
-    const parts = currentPath.split('/').filter(Boolean);
-    console.log('🔍 DEBUG parts before pop:', parts);
-    
-    parts.pop(); // bỏ folder hiện tại
-    console.log('🔍 DEBUG parts after pop:', parts);
-    
-    const parentPath = parts.join('/');
-    console.log('🔍 DEBUG parentPath:', parentPath);
-
-    if (!parentPath) {
-      console.log('🔍 DEBUG navigating to /manga (no parent path)');
-      navigate('/manga');
-    } else {
-      console.log('🔍 DEBUG navigating to /manga with path:', parentPath);
-      navigate(`/manga?path=${parentPath}`);
-    }
+    if (!currentPath) return navigate('/manga');
+    const parentPath = computeParentFolderPath(currentPath);
+    if (!parentPath) return navigate('/manga');
+    // Pass view=folder to force list view (avoid auto reader redirect)
+    navigate(`/manga?path=${encodeURIComponent(parentPath)}&view=folder`);
   };
 
   // Handle favorite toggle

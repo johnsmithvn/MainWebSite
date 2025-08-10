@@ -2,7 +2,7 @@
 // 🏠 Trang chủ manga - hiển thị danh sách manga
 
 import React, { useState, useEffect } from 'react';
-import { Search, Heart, BookOpen, Grid, List, Filter, Loader, ArrowLeft, Settings } from 'lucide-react';
+import { Search, Heart, BookOpen, Grid, List, Filter, Loader, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMangaStore, useUIStore, useAuthStore } from '../../store';
 import Button from '../../components/common/Button';
@@ -35,38 +35,38 @@ const MangaHome = () => {
   const [sortBy, setSortBy] = useState('name');
   const [showFilters, setShowFilters] = useState(false);
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0); // For forcing re-renders
+  const viewParam = searchParams.get('view');
+  const showRandomSection = !searchParams.get('path') && viewParam !== 'folder';
 
-  // Clear cache and refetch when sourceKey changes
+  // Clear cache when sourceKey changes (fetch handled by URL effect)
   useEffect(() => {
     if (sourceKey && sourceKey.startsWith('ROOT_')) {
-      console.log('🏠 MangaHome: SourceKey changed to:', sourceKey, '- Clearing cache and refetching');
+      console.log('🏠 MangaHome: SourceKey changed to:', sourceKey, '- Clearing cache');
       clearMangaCache();
-      const urlPath = searchParams.get('path');
-      if (urlPath) {
-        fetchMangaFolders(urlPath);
-      } else {
-        fetchMangaFolders();
-      }
-      // fetchFavorites will be handled in URL effect to avoid duplicates
     }
-  }, [sourceKey, clearMangaCache, fetchMangaFolders, searchParams]);
+  }, [sourceKey, clearMangaCache]);
 
   // Track last favorites fetch to avoid duplicates (StrictMode)
   const lastFavKeyRef = React.useRef('');
 
+  // Track last fetched key to avoid duplicate fetches (similar to Movie)
+  const lastFetchRef = React.useRef('');
+
   useEffect(() => {
-    // Xử lý URL path parameter giống frontend cũ
-    const urlPath = searchParams.get('path');
-    console.log('🔍 DEBUG MangaHome URL path param:', urlPath);
-    
+    // Handle URL path parameter
+    const urlPath = searchParams.get('path') || '';
+    const fetchKey = `${sourceKey || ''}|${urlPath}`;
+    console.log('� MangaHome: URL path changed to:', urlPath);
+
     if (sourceKey && sourceKey.startsWith('ROOT_')) {
-      if (mangaList.length === 0) {
-        if (urlPath) {
-          fetchMangaFolders(urlPath);
-        } else {
-          fetchMangaFolders();
-        }
+      // Avoid duplicate fetch for same key (handles StrictMode double run)
+      if (lastFetchRef.current === fetchKey && mangaList.length > 0) {
+        console.log('📚 MangaHome: Skipping fetch, same fetchKey and list already loaded');
+      } else {
+        lastFetchRef.current = fetchKey;
+        fetchMangaFolders(urlPath);
       }
+
       // Fetch favorites once per sourceKey/root
       const favKey = `${sourceKey}|${rootFolder}`;
       if (lastFavKeyRef.current !== favKey) {
@@ -82,12 +82,18 @@ const MangaHome = () => {
   }, [mangaList]);
 
   // Effect để handle navigation to reader khi API trả về type: 'reader'
+  // Respect view=folder flag to force list view when coming from reader
   useEffect(() => {
     if (shouldNavigateToReader) {
-      navigate(`/manga/reader?path=${encodeURIComponent(shouldNavigateToReader)}`, { replace: true });
-      clearNavigationFlag(); // Clear flag sau khi navigate
+      if (viewParam === 'folder') {
+        // Skip redirect to reader when explicitly forcing folder view
+        clearNavigationFlag();
+      } else {
+        navigate(`/manga/reader?path=${encodeURIComponent(shouldNavigateToReader)}`, { replace: true });
+        clearNavigationFlag(); // Clear flag sau khi navigate
+      }
     }
-  }, [shouldNavigateToReader, navigate, clearNavigationFlag]);
+  }, [shouldNavigateToReader, navigate, clearNavigationFlag, viewParam]);
 
   // Force refresh khi favorites thay đổi
   useEffect(() => {
@@ -104,23 +110,41 @@ const MangaHome = () => {
     // if (folder.isSelfReader && folder.images) -> go to reader
     // else -> loadFolder(folder.path)
     
-    if (folder.isSelfReader && folder.images) {
+  if (folder.isSelfReader && folder.images) {
       // Đây là selfReader entry với images -> đi đến reader
       console.log('📖 Opening reader for selfReader with images:', folder.path);
       navigate(`/manga/reader?path=${encodeURIComponent(folder.path)}`);
       return;
     }
     
-    // Ngược lại -> navigate đến subfolder (loadFolder equivalent)
-    console.log('📁 Loading subfolder:', folder.path);
-    fetchMangaFolders(folder.path);
+    // Ngược lại -> navigate đến subfolder bằng URL giống Movie
+    console.log('📁 Navigating to subfolder via URL:', folder.path);
+    navigate(`/manga${folder.path ? `?path=${encodeURIComponent(folder.path)}` : ''}`);
   };
 
   const handleBackClick = () => {
-    const pathParts = currentPath.split('/');
+    const pathParts = (currentPath || '').split('/').filter(Boolean);
     pathParts.pop();
     const newPath = pathParts.join('/');
-    fetchMangaFolders(newPath);
+    navigate(`/manga${newPath ? `?path=${encodeURIComponent(newPath)}` : ''}`);
+  };
+
+  // Generate breadcrumb items (same logic as Movie)
+  const breadcrumbItems = () => {
+    if (!currentPath) return [{ name: 'Manga', path: '' }];
+    const pathParts = currentPath.split('/').filter(Boolean);
+    const items = [{ name: 'Manga', path: '' }];
+    let currentBreadcrumbPath = '';
+    pathParts.forEach((part) => {
+      currentBreadcrumbPath += (currentBreadcrumbPath ? '/' : '') + part;
+      items.push({ name: part, path: currentBreadcrumbPath });
+    });
+    return items;
+  };
+
+  // Handle refresh like Movie
+  const handleRefresh = () => {
+    fetchMangaFolders(currentPath || '');
   };
 
   const handleToggleFavorite = async (item) => {
@@ -142,22 +166,25 @@ const MangaHome = () => {
     }
   };
 
-  const filteredManga = mangaList?.filter(manga =>
-    manga.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredManga = React.useMemo(() => (
+    mangaList?.filter(manga =>
+      manga.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || []
+  ), [mangaList, searchTerm]);
 
-  const sortedManga = [...filteredManga].sort((a, b) => {
+  const sortedManga = React.useMemo(() => {
+    const list = [...filteredManga];
     switch (sortBy) {
       case 'name':
-        return a.name?.localeCompare(b.name) || 0;
+        return list.sort((a, b) => a.name?.localeCompare(b.name) || 0);
       case 'date':
-        return new Date(b.lastModified || 0) - new Date(a.lastModified || 0);
+        return list.sort((a, b) => new Date(b.lastModified || 0) - new Date(a.lastModified || 0));
       case 'size':
-        return (b.size || 0) - (a.size || 0);
+        return list.sort((a, b) => (b.size || 0) - (a.size || 0));
       default:
-        return 0;
+        return list;
     }
-  });
+  }, [filteredManga, sortBy]);
 
   if (loading) {
     return (
@@ -185,34 +212,65 @@ const MangaHome = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      {/* Random Sections - Hiển thị ở tất cả các level */}
-      <MangaRandomSection />
+  {/* Random Sections - chỉ hiển thị ở root để giảm tải khi quay lại từ Reader */}
+  {showRandomSection && <MangaRandomSection />}
       
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              📚 Manga Library
-            </h1>
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-2 mt-2">
-              {currentPath && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBackClick}
-                  icon={ArrowLeft}
-                >
-                  Back
-                </Button>
-              )}
-              <p className="text-gray-600 dark:text-gray-400">
-                Path: /{currentPath || 'Root'}
-              </p>
+          <div className="flex items-center gap-4">
+            {currentPath && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBackClick}
+                icon={ArrowLeft}
+              >
+                Back
+              </Button>
+            )}
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                📚 Manga Library
+              </h1>
+              {/* Breadcrumb UI like Movie */}
+              <nav className="flex mt-2" aria-label="Breadcrumb">
+                <ol className="inline-flex items-center space-x-1 md:space-x-3">
+                  {breadcrumbItems().map((item, index) => (
+                    <li key={index} className="inline-flex items-center">
+                      {index > 0 && (
+                        <svg className="w-6 h-6 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      {index === breadcrumbItems().length - 1 ? (
+                        <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">
+                          {item.name}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => navigate(`/manga${item.path ? `?path=${encodeURIComponent(item.path)}` : ''}`)}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
+                        >
+                          {item.name}
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </nav>
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              icon={RefreshCw}
+              disabled={loading}
+            >
+              Refresh
+            </Button>
             <Button
               variant="outline"
               size="sm"
