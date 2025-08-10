@@ -20,7 +20,8 @@ import {
   FiDownload,
   FiHome,
   FiClock,
-  FiLayout
+  FiLayout,
+  FiSearch
 } from 'react-icons/fi';
 import { useAuthStore, useMusicStore, useUIStore } from '@/store';
 import { useRecentMusicManager } from '@/hooks/useMusicData';
@@ -34,7 +35,7 @@ const MusicPlayer = () => {
   const location = useLocation();
   const path = searchParams.get('file');
   const playlistPath = searchParams.get('playlist');
-  const { file: stateFile, playlist: statePlaylist, key: stateKey } = location.state || {};
+  const { kind: stateKind, file: stateFile, playlist: statePlaylist, key: stateKey } = location.state || {};
 
   const {
     currentTrack,
@@ -78,6 +79,11 @@ const MusicPlayer = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [playlistTitle, setPlaylistTitle] = useState(null);
+  const [filterQuery, setFilterQuery] = useState('');
+  const [library, setLibrary] = useState({ items: [], loading: false, error: null });
+  const [activePlaylistId, setActivePlaylistId] = useState(null);
+  const [headerCondensed, setHeaderCondensed] = useState(false);
+  const headerSentinelRef = useRef(null);
 
   // Audio ref
   const audioRef = useRef(null);
@@ -261,7 +267,8 @@ const MusicPlayer = () => {
 
   // Compute effective inputs (navigation state has priority, fallback to query params)
   const effectivePath = stateFile || path || null;
-  const effectivePlaylist = statePlaylist || playlistPath || null;
+  const effectivePlaylist = statePlaylist ?? playlistPath ?? null; // allow ''
+  const effectiveKind = stateKind || (effectivePlaylist && !String(effectivePlaylist).includes('/') ? 'playlist' : (effectivePath ? 'audio' : 'folder'));
 
   // ========= Helpers =========
   function buildAudioUrl(audioPath) {
@@ -337,6 +344,33 @@ const MusicPlayer = () => {
       audio.volume = 0;
     }
   };
+
+  // Detect scroll to condense top header like screenshot 2 (robust: IntersectionObserver + fallback)
+  useEffect(() => {
+    let observer;
+    const node = headerSentinelRef.current;
+    if ('IntersectionObserver' in window && node) {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          // Condense when sentinel leaves viewport (minus the sticky header height)
+          setHeaderCondensed(!entry.isIntersecting);
+        },
+        { root: null, threshold: 0, rootMargin: '-64px 0px 0px 0px' }
+      );
+      observer.observe(node);
+    } else {
+      const onScroll = () => {
+        const y = window.scrollY || document.documentElement.scrollTop || 0;
+        setHeaderCondensed(y > 80);
+      };
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+      return () => window.removeEventListener('scroll', onScroll);
+    }
+    return () => {
+      if (observer) observer.disconnect();
+    };
+  }, []);
 
   const toggleShuffle = () => {
     const store = useMusicStore.getState();
@@ -517,21 +551,24 @@ const MusicPlayer = () => {
 
   // Load whenever inputs change
   useEffect(() => {
-    // If playlist is provided, load that folder and optionally select specific file
-    if (effectivePlaylist) {
-      if (isPlaylistId(effectivePlaylist)) {
-        loadPlaylistById(effectivePlaylist, effectivePath || null);
-      } else {
-        loadFolderSongs(effectivePlaylist, effectivePath || null);
-      }
-      return;
+    // Route by explicit kind first to avoid folder/playlist confusion
+    if (effectiveKind === 'playlist' && effectivePlaylist !== null && effectivePlaylist !== undefined && effectivePlaylist !== '') {
+      return void loadPlaylistById(effectivePlaylist, effectivePath || null);
     }
-    // Else, if only file is provided, derive folder and load
-    if (effectivePath) {
-      loadFolderSongs(null, effectivePath);
+    if (effectiveKind === 'folder') {
+      return void loadFolderSongs(effectivePlaylist ?? '', effectivePath || null);
     }
+    if (effectiveKind === 'audio' && effectivePath) {
+      return void loadFolderSongs(null, effectivePath);
+    }
+    // Fallbacks
+    if (effectivePlaylist !== null && effectivePlaylist !== undefined) {
+      if (isPlaylistId(effectivePlaylist)) return void loadPlaylistById(effectivePlaylist, effectivePath || null);
+      return void loadFolderSongs(effectivePlaylist ?? '', effectivePath || null);
+    }
+    if (effectivePath) return void loadFolderSongs(null, effectivePath);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectivePlaylist, effectivePath, sourceKey]);
+  }, [effectiveKind, effectivePlaylist, effectivePath, sourceKey]);
 
   // Initial load (handled by the URL-change effect above)
   // useEffect(() => {
@@ -638,31 +675,55 @@ const MusicPlayer = () => {
     ? buildThumbnailUrl(currentTrack || currentPlaylist[0], 'music')
     : '/default/music-thumb.png';
 
+  const normalizedFilter = (filterQuery || '').trim().toLowerCase();
+  const visiblePlaylist = normalizedFilter
+    ? currentPlaylist.filter((t) => {
+        const fields = [t?.name, t?.artist, t?.album, t?.path].filter(Boolean).join(' ').toLowerCase();
+        return fields.includes(normalizedFilter);
+      })
+    : currentPlaylist;
+
+  // Load user playlists for Library
+  useEffect(() => {
+    const load = async () => {
+      if (!sourceKey) return;
+      setLibrary((s) => ({ ...s, loading: true }));
+      try {
+        const songPath = (currentTrack?.path || effectivePath || '') || undefined;
+        const res = await apiService.music.getPlaylists({ key: sourceKey, songPath });
+        const rows = Array.isArray(res.data) ? res.data : [];
+        setLibrary({ items: rows, loading: false, error: null });
+      } catch (err) {
+        setLibrary({ items: [], loading: false, error: err.message || 'Failed to load playlists' });
+      }
+    };
+    load();
+  }, [sourceKey, currentTrack?.path, effectivePath]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1f1f1f] via-[#121212] to-[#000] text-white">
-      {/* Top Controls */}
-      <div className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20">
-            <FiChevronLeft className="w-5 h-5" />
-          </button>
-          <button onClick={() => navigate(1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20">
-            <FiChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
+      {/* Top Controls with centered search (sticky + condense on scroll) */}
+      <div
+        className={`sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 ${headerCondensed ? 'py-2' : 'py-4'} gap-3 backdrop-blur border-b border-white/10 transition-[background-color,box-shadow,padding] duration-200 ${
+          headerCondensed ? 'bg-[#121212]/95 shadow-[0_2px_10px_rgba(0,0,0,0.35)]' : 'bg-[#121212]/70'
+        }`}
+      >
+        {/* Left controls: nav + mode + home */}
+        <div className="flex items-center gap-2 min-w-[220px]">
+          <button onClick={() => navigate(-1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20"><FiChevronLeft className="w-5 h-5" /></button>
+          <button onClick={() => navigate(1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20"><FiChevronRight className="w-5 h-5" /></button>
           {(() => {
             const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
             const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (typeof window !== 'undefined' && window.innerWidth <= 768);
             return (
               <button
                 onClick={() => {
-                  if (isMobile) return; // disable switch on mobile
+                  if (isMobile) return;
                   const next = playerSettings?.playerUI === 'v2' ? 'v1' : 'v2';
                   updatePlayerSettings({ playerUI: next });
                   navigate('/music/player', { replace: true, state: location.state });
                 }}
-                className={`px-3 py-1.5 rounded-full ${isMobile ? 'bg-white/10 text-white/60 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 text-white'} text-sm flex items-center gap-2`}
+                className={`px-3 py-1.5 rounded-full ${isMobile ? 'bg-white/10 text-white/60 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 text-white'} text-sm hidden md:flex items-center gap-2`}
                 title={isMobile ? 'Không khả dụng trên mobile' : 'Đổi giao diện Music Player'}
                 disabled={isMobile}
               >
@@ -670,148 +731,186 @@ const MusicPlayer = () => {
               </button>
             );
           })()}
-          <button onClick={() => navigate('/music')} className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-sm">
+          <button onClick={() => navigate('/music')} className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-sm hidden sm:inline-flex">
             <FiHome className="inline w-4 h-4 mr-1" /> Music Home
           </button>
+          {headerCondensed && (
+            <span className="ml-2 hidden md:inline text-white font-semibold truncate max-w-[40vw]">
+              {folderTitle}
+            </span>
+          )}
         </div>
+
+        {/* Center search */}
+        <div className="flex-1 max-w-2xl mx-auto w-full">
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-4 h-4" />
+            <input
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              placeholder="Bạn muốn phát gì?"
+              className="w-full pl-9 pr-3 py-2 rounded-full bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30"
+            />
+          </div>
+        </div>
+
+        {/* Right spacer */}
+        <div className="min-w-[120px]" />
       </div>
 
-      {/* Header Banner */}
-      <div className="relative px-6 pb-6">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#50306e] via-transparent to-transparent opacity-60" />
-        <div className="flex flex-col md:flex-row md:items-end gap-6">
-          <motion.img
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            src={headerArt}
-            alt={(currentTrack?.name || currentPlaylist[0]?.name || folderTitle) || 'Cover'}
-            onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')}
-            className="w-48 h-48 md:w-56 md:h-56 object-cover rounded shadow-2xl"
-          />
-          <div className="flex-1">
-            <div className="text-xs uppercase text-white/70 font-semibold">Playlist</div>
-            <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight mt-2">
-              {currentTrack?.album?.toUpperCase?.() || folderTitle?.toUpperCase?.() || 'NOW PLAYING'}
-            </h1>
-            <div className="mt-4 text-white/80 text-sm flex items-center gap-2">
-              <span className="font-semibold">Music</span>
-              <span className="w-1 h-1 rounded-full bg-white/40" />
-              <span>{currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}</span>
+  {/* Sentinel for header condense detection */}
+  <div ref={headerSentinelRef} aria-hidden className="h-0" />
+
+  {/* Main layout: left Library sidebar, right content with header + bottom tracklist */}
+  <div className="px-4 sm:px-6 mt-1 pb-[100px] grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-start">
+        {/* Left: Library sidebar */}
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] h-[60vh] md:h-[72vh] flex flex-col">
+          <div className="px-4 py-3 text-xs uppercase tracking-wider text-white/60 border-b border-white/10 flex items-center justify-between">
+            <span>Thư viện</span>
+            <span className="text-white/40 text-[11px]">Playlists</span>
+          </div>
+          <div className="p-3">
+            <div className="relative">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-4 h-4" />
+              <input placeholder="Tìm playlist" className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30" />
             </div>
-            <div className="mt-6 flex items-center gap-4">
-              <button
-                onClick={togglePlayPause}
-                className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-lg"
-                aria-label="Play"
-              >
-                {isPlaying ? <FiPause className="w-7 h-7" /> : <FiPlay className="w-7 h-7 ml-0.5" />}
-              </button>
-              {currentTrack && (
-                <button
-                  onClick={() => toggleFavorite(currentTrack)}
-                  className={`p-3 rounded-full transition-colors ${isFav(currentTrack) ? 'text-green-400' : 'text-white/70 hover:text-white'}`}
-                >
-                  <FiHeart className="w-6 h-6" />
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {library.loading && <div className="px-4 py-2 text-white/60 text-sm">Đang tải…</div>}
+            {!library.loading && library.items.length === 0 && (
+              <div className="px-4 py-6 text-white/60 text-sm">Chưa có playlist</div>
+            )}
+            {!library.loading && library.items.length > 0 && (
+              <div className="px-2 space-y-1">
+                {library.items.map((pl) => (
+                  <button
+                    key={pl.id}
+                    onClick={() => {
+                      setActivePlaylistId(pl.id);
+                      navigate('/music/player', { state: { kind: 'playlist', playlist: String(pl.id), key: sourceKey } });
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-left ${activePlaylistId === pl.id ? 'bg-white/10' : ''}`}
+                    title={pl.name}
+                  >
+                    <img src={pl.thumbnail || '/default/music-thumb.png'} onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')} alt={pl.name} className="w-9 h-9 rounded object-cover" />
+                    <div className="min-w-0">
+                      <div className="text-sm text-white truncate">{pl.name}</div>
+                      <div className="text-[11px] text-white/60 truncate">{new Date(pl.updatedAt || Date.now()).toLocaleDateString()}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+  {/* Right: Header banner and actions */}
+  <div className="relative ml-1">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#50306e] via-transparent to-transparent opacity-60" />
+          <div className="flex flex-col md:flex-row md:items-end gap-6">
+            <motion.img initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} src={headerArt} alt={(currentTrack?.name || currentPlaylist[0]?.name || folderTitle) || 'Cover'} onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')} className="w-48 h-48 md:w-56 md:h-56 object-cover rounded shadow-2xl" />
+            <div className="flex-1">
+              <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight mt-2">{currentTrack?.album?.toUpperCase?.() || folderTitle?.toUpperCase?.() || 'NOW PLAYING'}</h1>
+              <div className="mt-4 text-white/80 text-sm flex items-center gap-2">
+                <span className="font-semibold">Music</span>
+                <span className="w-1 h-1 rounded-full bg-white/40" />
+                <span>{currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}</span>
+              </div>
+              <div className="mt-6 flex items-center gap-4">
+                <button onClick={togglePlayPause} className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-lg" aria-label="Play">
+                  {isPlaying ? <FiPause className="w-7 h-7" /> : <FiPlay className="w-7 h-7 ml-0.5" />}
                 </button>
+                {currentTrack && (
+                  <button onClick={() => toggleFavorite(currentTrack)} className={`p-3 rounded-full transition-colors ${isFav(currentTrack) ? 'text-green-400' : 'text-white/70 hover:text-white'}`}>
+                    <FiHeart className="w-6 h-6" />
+                  </button>
+                )}
+                <button className="p-3 rounded-full text-white/70 hover:text-white"><FiDownload className="w-6 h-6" /></button>
+                <button className="p-3 rounded-full text-white/70 hover:text-white"><FiMoreHorizontal className="w-6 h-6" /></button>
+              </div>
+            </div>
+          </div>
+          {/* Bottom: Full tracklist */}
+          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+            <div className="grid grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_72px_56px] gap-3 px-4 py-2 text-sm text-white/60 border-b border-white/10">
+              <div className="text-center">#</div>
+              <div>Title</div>
+              <div className="hidden lg:block">Album</div>
+              <div className="hidden md:block">Folder</div>
+              <div className="hidden md:flex justify-end pr-2">Views</div>
+              <div className="flex justify-end pr-2"><FiClock className="w-4 h-4" /></div>
+            </div>
+
+    <div className="divide-y divide-white/5">
+              {currentPlaylist.map((track, index) => (
+                <div
+                  key={track.path || index}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  onClick={(e) => handleRowClick(e, track, index)}
+      className={`relative grid grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_72px_56px] gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${index === currentIndex ? 'bg-white/10' : ''}`}
+                >
+                  {dropIndicator.index === index && (
+                    <div className={`absolute left-2 right-2 ${dropIndicator.position === 'above' ? 'top-0' : 'bottom-0'} h-0.5 bg-emerald-400 shadow-[0_0_0_2px_rgba(16,185,129,0.35)] rounded pointer-events-none`} />
+                  )}
+                  <div className="text-center text-white/60">
+                    {index === currentIndex && isPlaying ? (<span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse" />) : (index + 1)}
+                  </div>
+
+                  <div className="min-w-0 flex items-center gap-3">
+                    <img src={buildThumbnailUrl(track, 'music')} onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')} alt={track.name} className="w-10 h-10 rounded object-cover flex-none" />
+                    <div className="min-w-0">
+                      <div className={`${index === currentIndex ? 'text-green-400' : 'text-white'} truncate`}>{track.name}</div>
+                      <div className="text-xs text-white/60 truncate">{track.artist || 'Unknown Artist'}</div>
+                    </div>
+                  </div>
+
+                  <div className="hidden lg:block text-sm text-white/70 truncate">{track.album || '—'}</div>
+
+                  <div className="hidden md:block text-sm text-white/70 truncate">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const parentPath = (track.path || '').split('/').slice(0, -1).join('/');
+                        if (parentPath) {
+                          navigate(`/music?path=${encodeURIComponent(parentPath)}`);
+                        } else {
+                          navigate('/music');
+                        }
+                      }}
+                      className="hover:underline hover:text-white"
+                      title="Mở thư mục chứa"
+                    >
+                      {(() => {
+                        const p = (track.path || '').split('/').slice(0, -1).join('/');
+                        const name = p ? p.split('/').pop() : '';
+                        return name || 'Home';
+                      })()}
+                    </button>
+                  </div>
+
+                  <div className="hidden md:flex items-center justify-end pr-2 text-white/70 tabular-nums">{Number(track.viewCount ?? track.views ?? 0).toLocaleString()}</div>
+
+                  <div className="flex items-center justify-end gap-3 pr-2 text-white/70">
+                    <span className="tabular-nums text-sm">{track.duration ? formatTime(track.duration) : '—'}</span>
+                  </div>
+                </div>
+              ))}
+
+              {currentPlaylist.length === 0 && (
+                <div className="px-4 py-10 text-center text-white/60">Chưa có danh sách phát. Hãy chọn một bài để bắt đầu.</div>
               )}
-              <button className="p-3 rounded-full text-white/70 hover:text-white"><FiDownload className="w-6 h-6" /></button>
-              <button className="p-3 rounded-full text-white/70 hover:text-white"><FiMoreHorizontal className="w-6 h-6" /></button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tracklist */}
-      <div className="px-2 sm:px-6 pb-32">
-        <div className="grid grid-cols-[40px_1fr_60px] md:grid-cols-[40px_1fr_1fr_90px_60px] lg:grid-cols-[40px_1fr_1fr_1fr_90px_60px] gap-3 px-4 py-2 text-sm text-white/60 border-b border-white/10">
-          <div className="text-center">#</div>
-          <div>Title</div>
-          <div className="hidden lg:block">Album</div>
-          <div className="hidden md:block">Folder</div>
-          <div className="hidden md:flex justify-end pr-2">Views</div>
-          <div className="flex justify-end pr-2"><FiClock className="w-4 h-4" /></div>
-        </div>
-
-        <div className="divide-y divide-white/5">
-          {currentPlaylist.map((track, index) => (
-            <div
-              key={track.path || index}
-        draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-        onDrop={(e) => handleDrop(e, index)}
-        onDragEnd={handleDragEnd}
-              onClick={(e) => handleRowClick(e, track, index)}
-              className={`relative grid grid-cols-[40px_1fr_60px] md:grid-cols-[40px_1fr_1fr_90px_60px] lg:grid-cols-[40px_1fr_1fr_1fr_90px_60px] gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${
-                index === currentIndex ? 'bg-white/10' : ''
-              }`}
-            >
-              {dropIndicator.index === index && (
-                <div
-                  className={`absolute left-2 right-2 ${dropIndicator.position === 'above' ? 'top-0' : 'bottom-0'} h-0.5 bg-emerald-400 shadow-[0_0_0_2px_rgba(16,185,129,0.35)] rounded pointer-events-none`}
-                />
-              )}
-              <div className="text-center text-white/60">
-                {index === currentIndex && isPlaying ? (
-                  <span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                ) : (
-                  index + 1
-                )}
-              </div>
-
-              <div className="min-w-0 flex items-center gap-3">
-                <img
-                  src={buildThumbnailUrl(track, 'music')}
-                  onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')}
-                  alt={track.name}
-                  className="w-10 h-10 rounded object-cover flex-none"
-                />
-                <div className="min-w-0">
-                  <div className={`${index === currentIndex ? 'text-green-400' : 'text-white'} truncate`}>{track.name}</div>
-                  <div className="text-xs text-white/60 truncate">{track.artist || 'Unknown Artist'}</div>
-                </div>
-              </div>
-
-              <div className="hidden lg:block text-sm text-white/70 truncate">{track.album || '—'}</div>
-
-              <div className="hidden md:block text-sm text-white/70 truncate">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const parentPath = (track.path || '').split('/').slice(0, -1).join('/');
-                    if (parentPath) {
-                      navigate(`/music?path=${encodeURIComponent(parentPath)}`);
-                    } else {
-                      navigate('/music');
-                    }
-                  }}
-                  className="hover:underline hover:text-white"
-                  title="Mở thư mục chứa"
-                >
-                  {(track.path || '').split('/').slice(0, -1).pop() || '—'}
-                </button>
-              </div>
-
-              <div className="hidden md:flex items-center justify-end pr-2 text-white/70 tabular-nums">
-                {Number(track.viewCount ?? track.views ?? 0).toLocaleString()}
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pr-2 text-white/70">
-                <span className="tabular-nums text-sm">{track.duration ? formatTime(track.duration) : '—'}</span>
-              </div>
-            </div>
-          ))}
-
-          {currentPlaylist.length === 0 && (
-            <div className="px-4 py-10 text-center text-white/60">Chưa có danh sách phát. Hãy chọn một bài để bắt đầu.</div>
-          )}
-        </div>
-      </div>
-
       {/* Bottom player bar */}
-      <div className="fixed bottom-0 left-0 right-0 h-24 bg-[#121212]/95 backdrop-blur border-t border-white/10">
-        <div className="h-full px-4 md:px-6 flex items-center gap-4">
+      <div className="fixed bottom-0 left-0 right-0 h-[100px] bg-[#121212]/95 backdrop-blur border-t border-white/10">
+        <div className="h-full px-4 md:px-6 pt-1 flex items-center gap-4">
           {/* Now playing */}
           <div className="hidden md:flex items-center gap-3 min-w-[220px]">
             {currentTrack ? (

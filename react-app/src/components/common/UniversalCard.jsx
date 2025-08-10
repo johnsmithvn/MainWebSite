@@ -171,14 +171,14 @@ const UniversalCard = ({
       const isPlaylist = item.isPlaylist;
       if (isPlaylist) {
         // Open player with playlist context, keep URL stable
-        navigate('/music/player', { state: { playlist: item.path, key: sourceKey } });
+        navigate('/music/player', { state: { kind: 'playlist', playlist: item.path, key: sourceKey } });
       } else if (isAudio) {
         const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
         // Pass both file and its parent folder so player can build playlist correctly
-        navigate('/music/player', { state: { file: item.path, playlist: folderPath, key: sourceKey } });
+        navigate('/music/player', { state: { kind: 'audio', file: item.path, playlist: folderPath, key: sourceKey } });
       } else {
         // For music folders clicked from sliders -> open directly as playlist in player
-        navigate('/music/player', { state: { playlist: item.path, key: sourceKey } });
+        navigate('/music/player', { state: { kind: 'folder', playlist: item.path, key: sourceKey } });
       }
     }
   };

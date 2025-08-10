@@ -17,6 +17,7 @@ import {
   FiChevronRight,
   FiHome,
   FiFolder,
+  FiClock,
   FiLayout,
   FiHeart,
   FiMoreHorizontal
@@ -35,7 +36,7 @@ const MusicPlayerV2 = () => {
   // Read params/state like v1 (stable URL preferred via state)
   const path = searchParams.get('file');
   const playlistPath = searchParams.get('playlist');
-  const { file: stateFile, playlist: statePlaylist, key: stateKey } = location.state || {};
+  const { kind: stateKind, file: stateFile, playlist: statePlaylist, key: stateKey } = location.state || {};
 
   const {
     currentTrack,
@@ -75,6 +76,10 @@ const MusicPlayerV2 = () => {
   const [duration, setDuration] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [filterQuery, setFilterQuery] = useState('');
+  const [playlistTitle, setPlaylistTitle] = useState(null);
+  const [library, setLibrary] = useState({ items: [], loading: false, error: null });
+  const [activePlaylistId, setActivePlaylistId] = useState(null);
 
   // Audio
   const audioRef = useRef(null);
@@ -139,7 +144,8 @@ const MusicPlayerV2 = () => {
 
   // Effective inputs
   const effectivePath = stateFile || path || null;
-  const effectivePlaylist = statePlaylist || playlistPath || null;
+  const effectivePlaylist = statePlaylist ?? playlistPath ?? null; // allow ''
+  const effectiveKind = stateKind || (effectivePlaylist && !String(effectivePlaylist).includes('/') ? 'playlist' : (effectivePath ? 'audio' : 'folder'));
 
   // Helpers
   function buildAudioUrl(audioPath) {
@@ -196,6 +202,54 @@ const MusicPlayerV2 = () => {
     if (typeof val === 'number') return true;
     if (typeof val === 'string') return !val.includes('/');
     return false;
+  };
+  const loadPlaylistById = async (playlistIdArg, selectedFileArg) => {
+    try {
+      if (!sourceKey) {
+        showToast('Thiếu source key', 'error');
+        return;
+      }
+      const playlistId = String(playlistIdArg);
+      const res = await fetch(`/api/music/playlist/${encodeURIComponent(playlistId)}?key=${encodeURIComponent(sourceKey)}`);
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      const tracks = Array.isArray(data.tracks) ? data.tracks : [];
+      const playlist = tracks.map((t) => ({
+        ...t,
+        name: t.name || (t.path ? t.path.split('/').pop() : 'Unknown'),
+        thumbnail: buildThumbnailUrl(t, 'music'),
+      }));
+
+      setPlaylistTitle(data?.name || null);
+
+      let startIndex = 0;
+      if (selectedFileArg) {
+        const idx = playlist.findIndex((x) => x.path === selectedFileArg);
+        if (idx >= 0) startIndex = idx;
+      }
+
+      if (playlist.length > 0) {
+        playTrack(playlist[startIndex], playlist, startIndex);
+        addRecentMusic(playlist[startIndex]);
+      } else if (selectedFileArg) {
+        const fileName = selectedFileArg.split('/').pop();
+        const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+        const singleTrack = {
+          name: nameWithoutExt,
+          path: selectedFileArg,
+          artist: 'Unknown Artist',
+          album: 'Unknown Album',
+          thumbnail: buildThumbnailUrl({ path: selectedFileArg, type: 'audio', thumbnail: null }, 'music'),
+        };
+        playTrack(singleTrack, [singleTrack], 0);
+        addRecentMusic(singleTrack);
+        showToast('Playlist rỗng, phát 1 bài', 'warning');
+      } else {
+        showToast('Playlist rỗng', 'warning');
+      }
+    } catch (err) {
+      showToast('Không thể load playlist: ' + (err.message || 'unknown error'), 'error');
+    }
   };
   const handleDrop = async (e, dropIndex) => {
     e.preventDefault();
@@ -309,15 +363,25 @@ const MusicPlayerV2 = () => {
 
   // Trigger load when inputs change
   useEffect(() => {
-    if (effectivePlaylist) {
-      loadFolderSongs(effectivePlaylist, effectivePath || null);
-      return;
+    if (effectiveKind === 'playlist' && effectivePlaylist !== null && effectivePlaylist !== undefined && effectivePlaylist !== '') {
+      if (isPlaylistId(effectivePlaylist)) {
+        return void loadPlaylistById(effectivePlaylist, effectivePath || null);
+      }
+      return void loadFolderSongs(effectivePlaylist, effectivePath || null);
     }
-    if (effectivePath) {
-      loadFolderSongs(null, effectivePath);
+    if (effectiveKind === 'folder') {
+      return void loadFolderSongs(effectivePlaylist ?? '', effectivePath || null);
     }
+    if (effectiveKind === 'audio' && effectivePath) {
+      return void loadFolderSongs(null, effectivePath);
+    }
+    if (effectivePlaylist !== null && effectivePlaylist !== undefined) {
+      if (isPlaylistId(effectivePlaylist)) return void loadPlaylistById(effectivePlaylist, effectivePath || null);
+      return void loadFolderSongs(effectivePlaylist ?? '', effectivePath || null);
+    }
+    if (effectivePath) return void loadFolderSongs(null, effectivePath);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectivePlaylist, effectivePath, sourceKey]);
+  }, [effectiveKind, effectivePlaylist, effectivePath, sourceKey]);
 
   // Audio element lifecycle
   useEffect(() => {
@@ -431,7 +495,10 @@ const MusicPlayerV2 = () => {
 
   // Derived
   const folderTitle = (() => {
-    if (effectivePlaylist) return effectivePlaylist.split('/').pop();
+    if (effectivePlaylist) {
+      if (isPlaylistId(effectivePlaylist)) return playlistTitle || `Playlist #${effectivePlaylist}`;
+      return effectivePlaylist.split('/').pop();
+    }
     if (effectivePath) {
       const parts = effectivePath.split('/');
       parts.pop();
@@ -473,20 +540,43 @@ const MusicPlayerV2 = () => {
     };
   }, []);
 
+  const normalizedFilter = (filterQuery || '').trim().toLowerCase();
+  const visiblePlaylist = normalizedFilter
+    ? currentPlaylist.filter((t) => {
+        const fields = [t?.name, t?.artist, t?.album, t?.path].filter(Boolean).join(' ').toLowerCase();
+        return fields.includes(normalizedFilter);
+      })
+    : currentPlaylist;
+
+  // Load user playlists for Library (right panel)
+  useEffect(() => {
+    const load = async () => {
+      if (!sourceKey) return;
+      setLibrary((s) => ({ ...s, loading: true }));
+      try {
+        const songPath = (currentTrack?.path || effectivePath || '') || undefined;
+        const res = await apiService.music.getPlaylists({ key: sourceKey, songPath });
+        const rows = Array.isArray(res.data) ? res.data : [];
+        setLibrary({ items: rows, loading: false, error: null });
+      } catch (err) {
+        setLibrary({ items: [], loading: false, error: err.message || 'Failed to load playlists' });
+      }
+    };
+    load();
+  }, [sourceKey, currentTrack?.path, effectivePath]);
+
   // Render
   return (
     <div className="min-h-screen bg-[#1b1026] text-white">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2">
+  {/* Top Bar with centered search (sticky) */}
+  <div className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-4 gap-3 bg-[#1b1026]/85 supports-[backdrop-filter]:bg-[#1b1026]/70 backdrop-blur border-b border-white/10">
+        <div className="flex items-center gap-2 min-w-[220px]">
           <button onClick={() => navigate(-1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20">
             <FiChevronLeft className="w-5 h-5" />
           </button>
           <button onClick={() => navigate(1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20">
             <FiChevronRight className="w-5 h-5" />
           </button>
-        </div>
-        <div className="flex items-center gap-2">
           {(() => {
             const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
             const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (typeof window !== 'undefined' && window.innerWidth <= 768);
@@ -498,7 +588,7 @@ const MusicPlayerV2 = () => {
                   updatePlayerSettings({ playerUI: next });
                   navigate('/music/player', { replace: true, state: location.state });
                 }}
-                className={`px-3 py-1.5 rounded-full ${isMobile ? 'bg-white/10 text-white/60 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 text-white'} text-sm flex items-center gap-2`}
+                className={`px-3 py-1.5 rounded-full ${isMobile ? 'bg-white/10 text-white/60 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 text-white'} text-sm hidden md:flex items-center gap-2`}
                 title={isMobile ? 'Không khả dụng trên mobile' : 'Đổi giao diện Music Player'}
                 disabled={isMobile}
               >
@@ -506,15 +596,26 @@ const MusicPlayerV2 = () => {
               </button>
             );
           })()}
-          <button onClick={() => navigate('/music')} className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-sm">
+          <button onClick={() => navigate('/music')} className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-sm hidden sm:inline-flex">
             <FiHome className="inline w-4 h-4 mr-1" /> Music Home
           </button>
         </div>
+
+        {/* Center search */}
+        <div className="flex-1 max-w-2xl mx-auto w-full">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21L15.803 15.803M18 10.5C18 14.0899 15.0899 17 11.5 17C7.91015 17 5 14.0899 5 10.5C5 6.91015 7.91015 4 11.5 4C15.0899 4 18 6.91015 18 10.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <input value={filterQuery} onChange={(e) => setFilterQuery(e.target.value)} placeholder="Bạn muốn phát gì?" className="w-full pl-9 pr-3 py-2 rounded-full bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30" />
+          </div>
+        </div>
+
+        {/* Right spacer */}
+        <div className="min-w-[120px]" />
       </div>
 
-      {/* Main: Left info + Right full playlist */}
-      <div className="px-6 pb-28">
-        <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8 items-start">
+      {/* Main: Left info + Center list + Right playlist panel */}
+  <div className="px-4 sm:px-6 mt-1 pb-28">
+        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr_320px] gap-6 items-start">
           {/* Left: Cover + Info + Actions */}
           <div className="flex flex-col items-start gap-4">
             <div className="relative">
@@ -577,81 +678,139 @@ const MusicPlayerV2 = () => {
             </div>
 
             {/* Parent folder link */}
-            {parentInfo.parentName && (
-              <div className="text-xs text-white/50">
-                Thư mục:
-                <button
-                  className="ml-1 underline hover:text-white"
-                  onClick={() => {
-                    if (parentInfo.parentPath) navigate(`/music?path=${encodeURIComponent(parentInfo.parentPath)}`);
-                  }}
+            <div className="text-xs text-white/50">
+              Thư mục:
+              <button
+                className="ml-1 underline hover:text-white"
+                onClick={() => {
+                  if (parentInfo.parentPath) {
+                    navigate(`/music?path=${encodeURIComponent(parentInfo.parentPath)}`);
+                  } else {
+                    navigate('/music');
+                  }
+                }}
+              >
+                {parentInfo.parentName || 'Home'}
+              </button>
+            </div>
+          </div>
+
+          {/* Center: Main track list */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+            <div className="grid grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_72px_56px] gap-3 px-4 py-2 text-sm text-white/60 border-b border-white/10">
+              <div className="text-center">#</div>
+              <div>Bài hát</div>
+              <div className="hidden lg:block">Album</div>
+              <div className="hidden md:block">Thư mục</div>
+              <div className="hidden md:flex justify-end pr-2">Lượt xem</div>
+              <div className="flex justify-end pr-2"><FiClock className="w-4 h-4" /></div>
+            </div>
+            <div className="divide-y divide-white/5">
+              {visiblePlaylist.map((track, index) => (
+                <div
+                  key={track.path || index}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  onClick={(e) => handleRowClick(e, track, index)}
+                  className={`relative grid grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_72px_56px] gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${index === currentIndex ? 'bg-white/10' : ''}`}
                 >
-                  {parentInfo.parentName}
-                </button>
-              </div>
-            )}
-          </div>
+                  {dropIndicator.index === index && (
+                    <div className={`absolute left-2 right-2 ${dropIndicator.position === 'above' ? 'top-0' : 'bottom-0'} h-0.5 bg-[#b58dff] shadow-[0_0_0_2px_rgba(181,141,255,0.35)] rounded pointer-events-none`} />
+                  )}
+                  <div className="text-center text-white/60">
+                    {index === currentIndex && isPlaying ? (<span className="inline-block w-2 h-2 rounded-full bg-[#b58dff] animate-pulse" />) : (index + 1)}
+                  </div>
 
-          {/* Right: Full playlist */}
-          <div className="min-w-0">
-            <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-white/60 mb-2">
-              <div className="flex items-center gap-2">
-                <span>Bài hát</span>
-              </div>
-              <span className="hidden md:block">Thời gian</span>
-            </div>
+                  <div className="min-w-0 flex items-center gap-3">
+                    <img src={buildThumbnailUrl(track, 'music')} onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')} alt={track.name} className="w-10 h-10 rounded object-cover flex-none" />
+                    <div className="min-w-0">
+                      <div className={`${index === currentIndex ? 'text-[#b58dff]' : 'text-white'} truncate`}>{track.name}</div>
+                      <div className="text-xs text-white/60 truncate">{track.artist || 'Unknown Artist'}</div>
+                    </div>
+                  </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
-              <div className="divide-y divide-white/10">
-                {(currentPlaylist && currentPlaylist.length > 0) ? (
-                  currentPlaylist.map((track, idx) => {
-                    const active = currentIndex === idx;
-                    const thumb = buildThumbnailUrl(track, 'music') || '/default/music-thumb.png';
-                    const timeVal = (typeof track?.duration === 'number' && !isNaN(track.duration))
-                      ? track.duration
-                      : (typeof track?.length === 'number' ? track.length : null);
-                    return (
-                      <button
-                        key={track.path || idx}
-                        draggable
-                        onDragStart={() => handleDragStart(idx)}
-                        onDragOver={(e) => handleDragOver(e, idx)}
-                        onDrop={(e) => handleDrop(e, idx)}
-                        onDragEnd={handleDragEnd}
-                        onClick={(e) => handleRowClick(e, track, idx)}
-                        className={`relative w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/10 transition-colors ${active ? 'bg-white/10' : ''}`}
-                      >
-                        {dropIndicator.index === idx && (
-                          <span
-                            className={`absolute left-3 right-3 ${dropIndicator.position === 'above' ? 'top-0' : 'bottom-0'} h-0.5 bg-[#b58dff] shadow-[0_0_0_2px_rgba(181,141,255,0.35)] rounded pointer-events-none`}
-                          />
-                        )}
-                        <span className="w-8 text-center text-white/60">
-                          {active ? (isPlaying ? <FiPause className="inline w-4 h-4" /> : <FiPlay className="inline w-4 h-4 ml-0.5" />) : (idx + 1)}
-                        </span>
-                        <img
-                          src={thumb}
-                          onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')}
-                          alt={track.name}
-                          className="w-10 h-10 rounded object-cover"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className={`text-sm truncate ${active ? 'font-semibold' : ''}`}>{track.name}</div>
-                          <div className="text-xs text-white/60 truncate">{track.artist || track.album || 'Unknown'}</div>
-                        </div>
-                        <span className="w-24 text-right text-xs text-white/60 hidden md:block">
-                          {timeVal ? `${Math.floor(timeVal / 60)}:${String(Math.floor(timeVal % 60)).padStart(2, '0')}` : '--:--'}
-                        </span>
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="px-4 py-8 text-white/60 text-sm">Playlist trống</div>
-                )}
-              </div>
+                  <div className="hidden lg:block text-sm text-white/70 truncate">{track.album || '—'}</div>
+
+                  <div className="hidden md:block text-sm text-white/70 truncate">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const parentPath = (track.path || '').split('/').slice(0, -1).join('/');
+                        if (parentPath) {
+                          navigate(`/music?path=${encodeURIComponent(parentPath)}`);
+                        } else {
+                          navigate('/music');
+                        }
+                      }}
+                      className="hover:underline hover:text-white"
+                      title="Mở thư mục chứa"
+                    >
+                      {(() => {
+                        const p = (track.path || '').split('/').slice(0, -1).join('/');
+                        const name = p ? p.split('/').pop() : '';
+                        return name || 'Home';
+                      })()}
+                    </button>
+                  </div>
+
+                  <div className="hidden md:flex items-center justify-end pr-2 text-white/70 tabular-nums">{Number(track.viewCount ?? track.views ?? 0).toLocaleString()}</div>
+
+                  <div className="flex items-center justify-end gap-3 pr-2 text-white/70">
+                    <span className="tabular-nums text-sm">{track.duration ? `${Math.floor(track.duration / 60)}:${String(Math.floor(track.duration % 60)).padStart(2, '0')}` : '—'}</span>
+                  </div>
+                </div>
+              ))}
+
+              {visiblePlaylist.length === 0 && (
+                <div className="px-4 py-10 text-center text-white/60">Không có bài hát phù hợp</div>
+              )}
             </div>
           </div>
-        </div>
+
+          {/* Right: Playlists Library panel */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden h-[60vh] md:h-[70vh] flex flex-col">
+            <div className="px-4 py-3 text-[11px] uppercase tracking-wider text-white/60 border-b border-white/10 flex items-center justify-between">
+              <span>Playlists</span>
+              <span className="text-white/40 text-[11px] hidden md:inline">Thư viện</span>
+            </div>
+            <div className="p-3">
+              <div className="relative">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21L15.803 15.803M18 10.5C18 14.0899 15.0899 17 11.5 17C7.91015 17 5 14.0899 5 10.5C5 6.91015 7.91015 4 11.5 4C15.0899 4 18 6.91015 18 10.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <input placeholder="Tìm playlist" className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30" />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto divide-y divide-white/10">
+              {library.loading && <div className="px-4 py-2 text-white/60 text-sm">Đang tải…</div>}
+              {!library.loading && library.items.length === 0 && (
+                <div className="px-4 py-8 text-white/60 text-sm">Chưa có playlist</div>
+              )}
+              {!library.loading && library.items.length > 0 && (
+                <div className="px-2 space-y-1">
+                  {library.items.map((pl) => (
+                    <button
+                      key={pl.id}
+                      onClick={() => {
+                        setActivePlaylistId(pl.id);
+                        navigate('/music/player', { state: { kind: 'playlist', playlist: String(pl.id), key: sourceKey } });
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-left ${activePlaylistId === pl.id ? 'bg-white/10' : ''}`}
+                      title={pl.name}
+                    >
+                      <img src={pl.thumbnail || '/default/music-thumb.png'} onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')} alt={pl.name} className="w-9 h-9 rounded object-cover" />
+                      <div className="min-w-0">
+                        <div className="text-sm text-white truncate">{pl.name}</div>
+                        <div className="text-[11px] text-white/60 truncate">{new Date(pl.updatedAt || Date.now()).toLocaleDateString()}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+  </div>
       </div>
 
       {/* Bottom Controls */}

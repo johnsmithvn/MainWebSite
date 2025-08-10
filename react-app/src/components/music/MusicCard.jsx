@@ -46,11 +46,11 @@ const MusicCard = ({
     
     if (isPlaylist) {
       // Open player with playlist context, keep URL stable
-      navigate('/music/player', { state: { playlist: item.path, key: sourceKey } });
+      navigate('/music/player', { state: { kind: 'playlist', playlist: item.path, key: sourceKey } });
     } else if (isAudio) {
       // Open player with both file and its parent folder as playlist context
       const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
-      navigate('/music/player', { state: { file: item.path, playlist: folderPath, key: sourceKey } });
+      navigate('/music/player', { state: { kind: 'audio', file: item.path, playlist: folderPath, key: sourceKey } });
     } else if (isFolder) {
       // Navigate to folder browser
       navigate(`/music?path=${encodedPath}`);

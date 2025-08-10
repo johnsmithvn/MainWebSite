@@ -158,13 +158,13 @@ const SearchModal = ({ isOpen, onClose }) => {
           const isPlaylist = item.isPlaylist;
           const isAudio = item.type === 'audio' || item.type === 'file';
           if (isPlaylist) {
-            navigate('/music/player', { state: { playlist: item.path, key: musicKey } });
+            navigate('/music/player', { state: { kind: 'playlist', playlist: item.path, key: musicKey } });
           } else if (isAudio) {
             const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
-            navigate('/music/player', { state: { file: item.path, playlist: folderPath, key: musicKey } });
+            navigate('/music/player', { state: { kind: 'audio', file: item.path, playlist: folderPath, key: musicKey } });
           } else {
             // For folders, open as playlist in player like sliders
-            navigate('/music/player', { state: { playlist: item.path, key: musicKey } });
+            navigate('/music/player', { state: { kind: 'folder', playlist: item.path, key: musicKey } });
           }
         }
         break;
