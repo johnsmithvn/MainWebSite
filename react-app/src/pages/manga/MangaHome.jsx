@@ -37,9 +37,18 @@ const MangaHome = () => {
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0); // For forcing re-renders
   const viewParam = searchParams.get('view');
   const showRandomSection = !searchParams.get('path') && viewParam !== 'folder';
-  // Pagination state from URL
+  const focusParam = searchParams.get('focus');
+  // Pagination state from URL with localStorage-backed default for page size
   const pageParam = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-  const sizeParam = Math.max(1, parseInt(searchParams.get('size') || '30', 10));
+  const sizeParam = (() => {
+    const urlVal = parseInt(searchParams.get('size') || '', 10);
+    if (!Number.isNaN(urlVal) && urlVal > 0) return urlVal;
+    try {
+      const stored = parseInt(localStorage.getItem('manga.perPage') || '', 10);
+      if (!Number.isNaN(stored) && stored > 0) return stored;
+    } catch (_) {}
+    return 30;
+  })();
   const [jumpOpen, setJumpOpen] = useState(false);
   const [jumpValue, setJumpValue] = useState(String(pageParam));
   const headerRef = useRef(null);
@@ -97,6 +106,11 @@ const MangaHome = () => {
     // Debug: Log manga list when it changes
     console.log('Manga list updated:', mangaList);
   }, [mangaList]);
+
+  // Persist per-page selection whenever it changes (including via URL)
+  useEffect(() => {
+    try { localStorage.setItem('manga.perPage', String(sizeParam)); } catch (_) {}
+  }, [sizeParam]);
 
   // Effect để handle navigation to reader khi API trả về type: 'reader'
   // Respect view=folder flag to force list view when coming from reader
@@ -231,12 +245,36 @@ const MangaHome = () => {
 
   const changePageSize = (size) => {
     const s = Math.max(1, parseInt(size, 10) || 30);
+    // Persist selection
+    try { localStorage.setItem('manga.perPage', String(s)); } catch (_) {}
     updateParams({ size: String(s), page: '1' });
     // Also scroll to the header to keep context
     if (headerRef.current) {
       headerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
+
+  // If coming from reader with focus param, auto-jump to the page that contains the focused item
+  const focusHandledRef = React.useRef('');
+  useEffect(() => {
+    if (!focusParam || !sortedManga?.length) return;
+    const key = `${focusParam}|${sizeParam}`;
+    if (focusHandledRef.current === key) return; // already handled
+    const idx = sortedManga.findIndex(i => i.path === focusParam);
+    if (idx >= 0) {
+      const pageOfItem = Math.floor(idx / sizeParam) + 1;
+      if (pageOfItem !== pageParam) {
+        focusHandledRef.current = key;
+        updateParams({ page: String(pageOfItem) });
+        // no scroll change here; optional: scroll header
+      } else {
+        focusHandledRef.current = key;
+      }
+    } else {
+      // If not found, still mark handled to avoid loops
+      focusHandledRef.current = key;
+    }
+  }, [focusParam, sortedManga, sizeParam, pageParam]);
 
   if (loading) {
     return (

@@ -58,16 +58,43 @@ const ReaderHeader = ({
 
   // Navigate to manga home (root folder)
   const handleHomeClick = () => {
-    navigate('/manga');
+  // Ensure we force folder view to avoid auto-redirect back to reader
+  const sizeFromUrl = (new URLSearchParams(location.search)).get('size');
+  const params = new URLSearchParams();
+  params.set('view', 'folder');
+  if (sizeFromUrl) params.set('size', sizeFromUrl);
+  navigate(`/manga?${params.toString()}`);
   };
 
   // Navigate to parent folder
   const handleFolderNameClick = () => {
-    if (!currentPath) return navigate('/manga');
+    if (!currentPath) {
+      // No current path, just go home with folder view
+      const sizeFromUrl = (new URLSearchParams(location.search)).get('size');
+      const params = new URLSearchParams();
+      params.set('view', 'folder');
+      if (sizeFromUrl) params.set('size', sizeFromUrl);
+      return navigate(`/manga?${params.toString()}`);
+    }
     const parentPath = computeParentFolderPath(currentPath);
-    if (!parentPath) return navigate('/manga');
-    // Pass view=folder to force list view (avoid auto reader redirect)
-    navigate(`/manga?path=${encodeURIComponent(parentPath)}&view=folder`);
+    const sizeFromUrl = (new URLSearchParams(location.search)).get('size');
+    if (!parentPath) {
+      // At root parent, navigate to home but keep view=folder and pass focus to land on the correct page
+      const focusPath = currentPath.replace(/\/__self__$/, '');
+      const params = new URLSearchParams();
+      params.set('view', 'folder');
+      params.set('focus', focusPath);
+      if (sizeFromUrl) params.set('size', sizeFromUrl);
+      return navigate(`/manga?${params.toString()}`);
+    }
+    // Build focus (child path without __self__) so grid can jump to correct page
+    const focusPath = currentPath.replace(/\/__self__$/, '');
+    const params = new URLSearchParams();
+    params.set('path', parentPath);
+    params.set('view', 'folder');
+    params.set('focus', focusPath);
+    if (sizeFromUrl) params.set('size', sizeFromUrl);
+    navigate(`/manga?${params.toString()}`);
   };
 
   // Handle favorite toggle
