@@ -223,6 +223,23 @@ const MangaReader = () => {
     };
   }, []);
 
+  // Handle browser back button
+  useEffect(() => {
+    const handlePopState = (event) => {
+      const returnUrl = searchParams.get('returnUrl');
+      if (returnUrl) {
+        console.log('🔙 Browser back detected, returning to:', returnUrl);
+        navigate(returnUrl, { replace: true });
+        return;
+      }
+      // Default back behavior
+      navigate('/manga', { replace: true });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [navigate, searchParams]);
+
   // Optimized preload function - only preload what's needed
   const preloadImagesAroundCurrentPage = useCallback(async () => {
     if (!currentImages.length) return;

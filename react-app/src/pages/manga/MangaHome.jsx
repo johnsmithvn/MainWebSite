@@ -170,7 +170,11 @@ const MangaHome = () => {
   if (folder.isSelfReader && folder.images) {
       // Đây là selfReader entry với images -> đi đến reader
       console.log('📖 Opening reader for selfReader with images:', folder.path);
-      navigate(`/manga/reader?path=${encodeURIComponent(folder.path)}`);
+      const readerParams = new URLSearchParams();
+      readerParams.set('path', folder.path);
+      // Preserve current manga home URL for back navigation
+      readerParams.set('returnUrl', `${window.location.pathname}${window.location.search}`);
+      navigate(`/manga/reader?${readerParams.toString()}`);
       return;
     }
     

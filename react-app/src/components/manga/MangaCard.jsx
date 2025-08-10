@@ -52,7 +52,15 @@ const MangaCard = ({
     
     if (isReaderItem) {
       console.log('📖 Navigating directly to reader:', manga.path);
-      navigate(`/manga/reader?path=${encodeURIComponent(manga.path)}`);
+      // Preserve current search params for back navigation
+      const currentParams = new URLSearchParams(window.location.search);
+      const readerParams = new URLSearchParams();
+      readerParams.set('path', manga.path);
+      // Add return URL for proper back navigation
+      if (window.location.pathname === '/manga') {
+        readerParams.set('returnUrl', `${window.location.pathname}${window.location.search}`);
+      }
+      navigate(`/manga/reader?${readerParams.toString()}`);
       
       // Only add to recent when going to reader
       setTimeout(() => {

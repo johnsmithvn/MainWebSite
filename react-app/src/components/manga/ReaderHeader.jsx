@@ -58,16 +58,32 @@ const ReaderHeader = ({
 
   // Navigate to manga home (root folder)
   const handleHomeClick = () => {
-  // Ensure we force folder view to avoid auto-redirect back to reader
-  const sizeFromUrl = (new URLSearchParams(location.search)).get('size');
-  const params = new URLSearchParams();
-  params.set('view', 'folder');
-  if (sizeFromUrl) params.set('size', sizeFromUrl);
-  navigate(`/manga?${params.toString()}`);
+    // Check if we have a returnUrl parameter for proper back navigation
+    const returnUrl = searchParams.get('returnUrl');
+    if (returnUrl) {
+      console.log('🔙 Returning to previous URL:', returnUrl);
+      navigate(returnUrl);
+      return;
+    }
+    
+    // Fallback: Ensure we force folder view to avoid auto-redirect back to reader
+    const sizeFromUrl = (new URLSearchParams(location.search)).get('size');
+    const params = new URLSearchParams();
+    params.set('view', 'folder');
+    if (sizeFromUrl) params.set('size', sizeFromUrl);
+    navigate(`/manga?${params.toString()}`);
   };
 
   // Navigate to parent folder
   const handleFolderNameClick = () => {
+    // Check if we have a returnUrl parameter for proper back navigation
+    const returnUrl = searchParams.get('returnUrl');
+    if (returnUrl) {
+      console.log('🔙 Returning to previous URL from folder click:', returnUrl);
+      navigate(returnUrl);
+      return;
+    }
+    
     if (!currentPath) {
       // No current path, just go home with folder view
       const sizeFromUrl = (new URLSearchParams(location.search)).get('size');

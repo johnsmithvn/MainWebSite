@@ -146,8 +146,13 @@ const UniversalCard = ({
     // Navigate based on type
     if (type === 'manga') {
       if (item.name === '__self__' || (item.images && item.images.length > 0)) {
-        // Navigate to reader
-        navigate(`/manga/reader?path=${encodedPath}`);
+        // Navigate to reader with return URL for proper back navigation
+        const readerParams = new URLSearchParams();
+        readerParams.set('path', item.path);
+        if (window.location.pathname === '/manga') {
+          readerParams.set('returnUrl', `${window.location.pathname}${window.location.search}`);
+        }
+        navigate(`/manga/reader?${readerParams.toString()}`);
       } else {
         // Navigate to manga folder
         navigate(`/manga?path=${encodedPath}`);
