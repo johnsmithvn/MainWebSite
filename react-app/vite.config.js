@@ -4,7 +4,29 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    // Ensure SPA fallback for client routes under /manga in dev
+    {
+      name: 'manga-spa-fallback',
+      configureServer(server) {
+        server.middlewares.use((req, _res, next) => {
+          const accept = req.headers?.accept || ''
+          if (
+            req.method === 'GET' &&
+            req.url &&
+            req.url.startsWith('/manga') &&
+            typeof accept === 'string' &&
+            accept.includes('text/html')
+          ) {
+            // Rewrite HTML navigations to root so React Router can handle it
+            req.url = '/'
+          }
+          next()
+        })
+      },
+    },
+    react(),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -17,6 +39,7 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+      // Proxy only static manga assets to backend; client HTML navigations are handled by the plugin above
       '/manga': {
         target: 'http://localhost:3000',
         changeOrigin: true,
