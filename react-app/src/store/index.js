@@ -12,54 +12,62 @@ import { updateFavoriteInAllCaches } from '@/utils/favoriteCache';
 const musicFetchInFlight = new Map();
 const movieFetchInFlight = new Map();
 
-// Helper function to get root folder from source key
-const getRootFolderFromKey = (sourceKey) => {
-  const keyToRootMap = {
-    'ROOT_DOW': 'dow',
-    'ROOT_FANTASY': 'fantasy', 
-    'ROOT_MANGAH': 'mangah',
-    'V_ANIME': 'anime',
-    'V_ANIMEH': 'animeh',
-    'V_JAVA': 'java',
-    'V_MOVIE': 'movie',
-    'M_MUSIC': 'music'
-  };
-  
-  return keyToRootMap[sourceKey] || sourceKey.toLowerCase().replace(/^(root_|v_|m_)/, '');
+// Helper: infer content type from key prefix
+const getTypeFromKey = (sourceKey = '') => {
+  if (!sourceKey) return null;
+  if (sourceKey.startsWith('ROOT_')) return 'manga';
+  if (sourceKey.startsWith('V_')) return 'movie';
+  if (sourceKey.startsWith('M_')) return 'music';
+  return null;
 };
 
 // Auth store
 export const useAuthStore = create(
   persist(
     (set, get) => ({
-      sourceKey: 'ROOT_FANTASY', // Default for testing
-      rootFolder: '', // Will be auto-calculated from sourceKey
+      sourceKey: '',
+  rootFolder: '',
       token: '',
       isAuthenticated: false,
       secureKeys: [],
+      // Last-used keys per content type
+      lastMangaKey: '',
+      lastMovieKey: '',
+      lastMusicKey: '',
+  // Manga-specific last selected root folder (empty string when none)
+  lastMangaRootFolder: '',
       
       setSourceKey: (sourceKey) => {
-        const rootFolder = getRootFolderFromKey(sourceKey);
-        set({ sourceKey, rootFolder });
+        const updates = { sourceKey };
+        const type = getTypeFromKey(sourceKey);
+        if (type === 'manga') {
+          updates.lastMangaKey = sourceKey;
+        } else if (type === 'movie') {
+          updates.lastMovieKey = sourceKey;
+        } else if (type === 'music') {
+          updates.lastMusicKey = sourceKey;
+        }
+        set(updates);
       },
       
       setRootFolder: (rootFolder) => set({ rootFolder }),
+      setLastMangaRootFolder: (folder) => set({ lastMangaRootFolder: folder }),
       setToken: (token) => set({ token, isAuthenticated: !!token }),
       setSecureKeys: (secureKeys) => set({ secureKeys }),
       
       login: (sourceKey, token) => {
-        const rootFolder = getRootFolderFromKey(sourceKey);
-        set({ 
-          sourceKey, 
-          rootFolder,
-          token, 
-          isAuthenticated: true 
-        });
+        // Record last key for its type; do not auto-set rootFolder here
+        const type = getTypeFromKey(sourceKey);
+        const updates = { sourceKey, token, isAuthenticated: true };
+        if (type === 'manga') updates.lastMangaKey = sourceKey;
+        if (type === 'movie') updates.lastMovieKey = sourceKey;
+        if (type === 'music') updates.lastMusicKey = sourceKey;
+        set(updates);
       },
       
       logout: () => set({ 
         sourceKey: '', 
-        rootFolder: '', 
+  rootFolder: '', 
         token: '', 
         isAuthenticated: false 
       }),
@@ -67,15 +75,6 @@ export const useAuthStore = create(
       isSecureKey: (key) => {
         const { secureKeys } = get();
         return secureKeys.includes(key);
-      },
-      
-      // Initialize rootFolder if not set
-      initializeRootFolder: () => {
-        const { sourceKey, rootFolder } = get();
-        if (sourceKey && !rootFolder) {
-          const calculatedRoot = getRootFolderFromKey(sourceKey);
-          set({ rootFolder: calculatedRoot });
-        }
       },
     }),
     {
@@ -85,16 +84,19 @@ export const useAuthStore = create(
         rootFolder: state.rootFolder,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
+        lastMangaKey: state.lastMangaKey,
+        lastMovieKey: state.lastMovieKey,
+        lastMusicKey: state.lastMusicKey,
+        lastMangaRootFolder: state.lastMangaRootFolder,
       }),
       onRehydrateStorage: () => (state) => {
-        // Auto-calculate rootFolder if missing after rehydration
-        if (state?.sourceKey && !state?.rootFolder) {
-          const rootFolder = getRootFolderFromKey(state.sourceKey);
-          state.rootFolder = rootFolder;
+        // No auto-mapping of rootFolder from sourceKey; rely on explicit selection (especially for manga)
+        if (state && (state.rootFolder === undefined || state.rootFolder === null)) {
+          state.rootFolder = '';
         }
-        // Set default rootFolder for ROOT_FANTASY if not set
-        if (state?.sourceKey === 'ROOT_FANTASY' && !state?.rootFolder) {
-          state.rootFolder = 'fantasy';
+        // Normalize lastMangaRootFolder to empty string for consistency
+        if (state && (state.lastMangaRootFolder === null || state.lastMangaRootFolder === undefined)) {
+          state.lastMangaRootFolder = '';
         }
       },
     }
@@ -269,6 +271,11 @@ export const useMangaStore = create(
       fetchFavorites: async () => {
         try {
           const { sourceKey, rootFolder } = useAuthStore.getState();
+          if (!sourceKey || !rootFolder) {
+            // Skip when prerequisites are missing (manga needs rootFolder)
+            set({ favorites: [] });
+            return;
+          }
           const params = { key: sourceKey, root: rootFolder };
           const response = await apiService.manga.getFavorites(params);
           set({ favorites: response.data || [] });
@@ -638,8 +645,9 @@ export const useMovieStore = create(
             };
           });
 
-          // Update all cache entries - đảm bảo cập nhật cache cho RandomSlider và RecentSlider
-          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState, 'java'); // rootFolder cho movie là 'java' 
+          // Update all cache entries - ensure caches reflect new favorite state
+          const { rootFolder } = useAuthStore.getState();
+          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState, rootFolder);
 
           console.log('✅ MovieStore toggleFavorite completed');
           

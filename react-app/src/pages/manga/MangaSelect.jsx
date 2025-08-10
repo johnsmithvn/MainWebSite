@@ -18,7 +18,7 @@ const MangaSelect = () => {
   const [rootFolders, setRootFolders] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  const { sourceKey, setRootFolder } = useAuthStore();
+  const { sourceKey, setRootFolder, setLastMangaRootFolder } = useAuthStore();
   const { setLoading: setGlobalLoading } = useUIStore();
 
   // Redirect if no source key
@@ -27,6 +27,9 @@ const MangaSelect = () => {
       navigate('/');
       return;
     }
+  // On entering select, reset last selected root folder to empty string for consistency
+  setLastMangaRootFolder('');
+  setRootFolder('');
     // Guard against immediate double-invoke
     const fetchKey = String(sourceKey);
     const now = Date.now();
@@ -35,7 +38,7 @@ const MangaSelect = () => {
     }
     __lastRootsFetch = { key: fetchKey, ts: now };
     loadRootFolders();
-  }, [sourceKey, navigate]);
+  }, [sourceKey, navigate, setLastMangaRootFolder]);
 
   const loadRootFolders = async () => {
     try {
@@ -52,11 +55,12 @@ const MangaSelect = () => {
 
   const handleFolderSelect = async (folderName) => {
     setRootFolder(folderName);
+    setLastMangaRootFolder(folderName);
     setGlobalLoading(true);
     
     try {
       // Navigate to manga home with selected root folder
-      navigate(`/manga?root=${encodeURIComponent(folderName)}`);
+  navigate(`/manga?root=${encodeURIComponent(folderName)}`);
     } catch (error) {
       console.error('Error selecting folder:', error);
       toast.error('Lỗi chọn thư mục');

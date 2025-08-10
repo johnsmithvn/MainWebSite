@@ -29,7 +29,7 @@ const MangaHome = () => {
     clearMangaCache
   } = useMangaStore();
   
-  const { sourceKey, rootFolder } = useAuthStore();
+  const { sourceKey, rootFolder, setRootFolder } = useAuthStore();
   
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('name');
@@ -52,6 +52,30 @@ const MangaHome = () => {
   const [jumpOpen, setJumpOpen] = useState(false);
   const [jumpValue, setJumpValue] = useState(String(pageParam));
   const headerRef = useRef(null);
+
+  // Guard: ensure we have a sourceKey; then ensure a root is selected or present in URL
+  useEffect(() => {
+    if (!sourceKey) {
+      navigate('/', { replace: true });
+      return;
+    }
+    // Sync root from URL to store; or redirect to select if missing
+    const urlRoot = searchParams.get('root') || '';
+    if (urlRoot) {
+      if (urlRoot !== rootFolder) {
+        setRootFolder(urlRoot);
+      }
+    } else {
+      if (!rootFolder) {
+        navigate('/manga/select', { replace: true });
+        return;
+      }
+      // Ensure root appears in URL for consistency/caching
+      const params = new URLSearchParams(searchParams);
+      params.set('root', rootFolder);
+      setSearchParams(params);
+    }
+  }, [sourceKey, rootFolder, searchParams, navigate, setRootFolder, setSearchParams]);
 
   // Helper to update URL params
   const updateParams = (patch = {}) => {
@@ -84,7 +108,7 @@ const MangaHome = () => {
     const fetchKey = `${sourceKey || ''}|${urlPath}`;
     console.log('� MangaHome: URL path changed to:', urlPath);
 
-    if (sourceKey && sourceKey.startsWith('ROOT_')) {
+  if (sourceKey && sourceKey.startsWith('ROOT_')) {
       // Avoid duplicate fetch for same key (handles StrictMode double run)
       if (lastFetchRef.current === fetchKey && mangaList.length > 0) {
         console.log('📚 MangaHome: Skipping fetch, same fetchKey and list already loaded');

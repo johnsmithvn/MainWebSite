@@ -42,9 +42,9 @@ const MovieHome = () => {
     return PAGINATION.MOVIES_PER_PAGE;
   });
 
-  // Redirect to home if no sourceKey selected
+  // Redirect to home only when there's no sourceKey; don't bounce when switching sections
   useEffect(() => {
-    if (!sourceKey || !sourceKey.startsWith('V_')) {
+    if (!sourceKey) {
       navigate('/');
       return;
     }

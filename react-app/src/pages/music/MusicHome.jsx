@@ -61,7 +61,7 @@ const MusicHome = () => {
   // Track last fetch to avoid duplicate calls (StrictMode/multiple effects)
   const lastFetchRef = useRef('');
 
-  // Redirect to home if no sourceKey selected
+  // Redirect to home only when there's no sourceKey; don't bounce when switching sections
   useEffect(() => {
     if (!sourceKey) {
       navigate('/');

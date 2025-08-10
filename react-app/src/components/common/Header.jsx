@@ -13,8 +13,7 @@ import {
   FiBook,
   FiFilm,
   FiMusic,
-  FiSettings,
-  FiLogOut
+  FiSettings
 } from 'react-icons/fi';
 import { useUIStore, useAuthStore } from '../../store';
 import SearchModal from './SearchModal';
@@ -26,27 +25,52 @@ const Header = () => {
   const navigate = useNavigate();
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  // Only show search on specific sections, excluding /manga/select
+  const pathname = location.pathname;
+  const showSearch = (/^\/(manga|movie|music)(?:\/|$)/.test(pathname)) && !/^\/manga\/select(?:\/|$)/.test(pathname);
+  const homePath = '/';
   
   const { 
     darkMode, 
-    sidebarOpen, 
     toggleDarkMode, 
     toggleSidebar 
   } = useUIStore();
-  
-  const { sourceKey, logout } = useAuthStore();
+  const {
+    lastMangaKey,
+    lastMovieKey,
+    lastMusicKey,
+    lastMangaRootFolder,
+  setSourceKey
+  } = useAuthStore();
+
+  const handleSectionClick = (section) => {
+    // Apply last-known keys before navigating to ensure initial fetch has required params
+    if (section === 'manga') {
+  if (lastMangaKey) setSourceKey(lastMangaKey);
+    } else if (section === 'movie') {
+  if (lastMovieKey) setSourceKey(lastMovieKey);
+    } else if (section === 'music') {
+  if (lastMusicKey) setSourceKey(lastMusicKey);
+    }
+  };
 
   const navItems = [
-    { path: '/', icon: FiHome, label: 'Trang chủ' },
-    { path: '/manga', icon: FiBook, label: 'Manga' },
-    { path: '/movie', icon: FiFilm, label: 'Movie' },
-    { path: '/music', icon: FiMusic, label: 'Music' },
+    { path: homePath, to: homePath, icon: FiHome, label: 'Trang chủ', section: null },
+    { path: '/manga', to: (lastMangaRootFolder && lastMangaRootFolder.length > 0) ? `/manga?root=${encodeURIComponent(lastMangaRootFolder)}` : '/manga/select', icon: FiBook, label: 'Manga', section: 'manga' },
+    { path: '/movie', to: '/movie', icon: FiFilm, label: 'Movie', section: 'movie' },
+    { path: '/music', to: '/music', icon: FiMusic, label: 'Music', section: 'music' },
   ];
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  const handleNav = (e, item) => {
+    // Ensure state changes apply before routing to avoid first-click bounce
+    if (item.section) {
+      e.preventDefault();
+      handleSectionClick(item.section);
+      navigate(item.to || item.path);
+    }
   };
+
+  // Removed source key CTA and logout logic
 
   return (
     <>
@@ -65,7 +89,7 @@ const Header = () => {
               </Button>
 
               <Link 
-                to="/" 
+                to={homePath} 
                 className="flex items-center space-x-2 text-xl font-bold text-primary-600 dark:text-primary-400"
               >
                 <span>📚</span>
@@ -83,7 +107,8 @@ const Header = () => {
                 return (
                   <Link
                     key={item.path}
-                    to={item.path}
+                    to={item.to || item.path}
+                    onClick={(e) => handleNav(e, item)}
                     className={`relative flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive
                         ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
@@ -109,15 +134,17 @@ const Header = () => {
             {/* Right section */}
             <div className="flex items-center space-x-2">
               {/* Search button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchModalOpen(true)}
-                className="hidden sm:flex"
-              >
-                <FiSearch className="h-4 w-4" />
-                <span className="hidden lg:inline ml-2">Tìm kiếm</span>
-              </Button>
+              {showSearch && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchModalOpen(true)}
+                  className="hidden sm:flex"
+                >
+                  <FiSearch className="h-4 w-4" />
+                  <span className="hidden lg:inline ml-2">Tìm kiếm</span>
+                </Button>
+              )}
 
               {/* Dark mode toggle */}
               <Button
@@ -141,22 +168,7 @@ const Header = () => {
                 <FiSettings className="h-4 w-4" />
               </Button>
 
-              {/* Source key indicator */}
-              {sourceKey && (
-                <div className="hidden lg:flex items-center space-x-2 px-3 py-1 bg-primary-100 dark:bg-primary-900/30 rounded-full text-sm">
-                  <span className="text-primary-600 dark:text-primary-400 font-medium">
-                    {sourceKey}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={handleLogout}
-                    className="text-red-500 hover:text-red-600"
-                  >
-                    <FiLogOut className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
+              {/* Source key CTA removed */}
             </div>
           </div>
         </div>
@@ -172,7 +184,8 @@ const Header = () => {
               return (
                 <Link
                   key={item.path}
-                  to={item.path}
+                  to={item.to || item.path}
+                  onClick={(e) => handleNav(e, item)}
                   className={`flex-1 flex flex-col items-center justify-center py-2 text-xs ${
                     isActive
                       ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'

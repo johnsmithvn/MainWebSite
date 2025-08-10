@@ -23,7 +23,7 @@ export const useRandomItems = (type, options = {}) => {
     force = false
   } = options;
 
-  const { sourceKey, rootFolder, initializeRootFolder } = useAuthStore();
+  const { sourceKey, rootFolder } = useAuthStore();
   const { favoritesRefreshTrigger } = useMangaStore();
   const mangaStore = useMangaStore();
   const movieStore = useMovieStore();
@@ -31,13 +31,12 @@ export const useRandomItems = (type, options = {}) => {
   const queryClient = useQueryClient();
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  // Initialize rootFolder only for manga type
+  // For manga, require a selected rootFolder; movie/music don't need it
   useEffect(() => {
     if (type === 'manga' && sourceKey && !rootFolder) {
-      console.log('🔄 Initializing rootFolder for manga sourceKey:', sourceKey);
-      initializeRootFolder();
+      console.log('ℹ️ Manga random requires a selected rootFolder; waiting for selection...');
     }
-  }, [type, sourceKey, rootFolder, initializeRootFolder]);
+  }, [type, sourceKey, rootFolder]);
 
   // Clear cache and invalidate query when sourceKey changes
   useEffect(() => {
