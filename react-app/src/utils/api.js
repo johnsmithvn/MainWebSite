@@ -68,7 +68,18 @@ export const apiService = {
   // Manga APIs
   manga: {
     getFolders: (params) => api.get(`${API.ENDPOINTS.MANGA}/folder-cache`, { params }),
-    getFavorites: (params) => api.get(`${API.ENDPOINTS.MANGA}/favorite`, { params }),
+    getFavorites: (params) => {
+      const url = `${API.ENDPOINTS.MANGA}/favorite`;
+      const key = buildGetKey(url, params);
+      if (inflightGet.has(key)) {
+        return inflightGet.get(key);
+      }
+      const req = api.get(url, { params }).finally(() => {
+        inflightGet.delete(key);
+      });
+      inflightGet.set(key, req);
+      return req;
+    },
     toggleFavorite: (dbkey, path, value) => api.post(`${API.ENDPOINTS.MANGA}/favorite`, { dbkey, path, value }),
     resetCache: (params) => api.delete(`${API.ENDPOINTS.MANGA}/reset-cache`, { params }),
     scan: (root, key) => api.post(`${API.ENDPOINTS.MANGA}/scan`, { root, key }),
@@ -136,9 +147,24 @@ export const apiService = {
   system: {
     getSourceKeys: () => api.get(`${API.ENDPOINTS.SYSTEM}/source-keys.js`),
     getSecurityKeys: () => api.get(`${API.ENDPOINTS.SYSTEM}/security-keys.js`),
-    listRoots: (params) => api.get(`${API.ENDPOINTS.SYSTEM}/list-roots`, { params }),
+    listRoots: (params) => {
+      const url = `${API.ENDPOINTS.SYSTEM}/list-roots`;
+      const key = buildGetKey(url, params);
+      if (inflightGet.has(key)) {
+        return inflightGet.get(key);
+      }
+      const req = api.get(url, { params }).finally(() => {
+        inflightGet.delete(key);
+      });
+      inflightGet.set(key, req);
+      return req;
+    },
     login: (data) => api.post(`${API.ENDPOINTS.SYSTEM}/login`, data),
+    // Back-compat: default increaseView targets movie
     increaseView: (params) => api.post(`/api/increase-view/movie`, params),
+    // Explicit methods
+    increaseViewMovie: (params) => api.post(`/api/increase-view/movie`, params),
+    increaseViewManga: (params) => api.post(`/api/increase-view`, params),
   },
 };
 

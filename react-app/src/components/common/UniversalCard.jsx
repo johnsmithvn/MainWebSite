@@ -17,7 +17,9 @@ const UniversalCard = ({
   showViews = false, 
   onToggleFavorite,
   variant = 'default', // 'default', 'compact', 'slider'
-  className = ''
+  className = '',
+  // New: control what appears in the bottom-left overlay: 'type' or 'views'
+  overlayMode = 'type'
 }) => {
   const navigate = useNavigate();
   const { sourceKey, rootFolder } = useAuthStore();
@@ -106,7 +108,7 @@ const UniversalCard = ({
     // Increase view count for content items (not folders)
     if (type === 'manga' && (item.name === '__self__' || (item.images && item.images.length > 0))) {
       try {
-        await apiService.system.increaseView({
+        await apiService.system.increaseViewManga({
           path: item.path,
           dbkey: sourceKey,
           rootKey: rootFolder
@@ -266,20 +268,27 @@ const UniversalCard = ({
           <FiHeart className={`w-4 h-4 ${currentFavoriteState ? 'fill-current' : ''}`} />
         </motion.button>
 
-        {/* Type indicator */}
+        {/* Bottom-left overlay: type label or views depending on overlayMode */}
         <div className="absolute bottom-2 left-2">
-          <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
-            <TypeIcon className="w-3 h-3" />
-            <span>{itemData.typeLabel}</span>
-          </div>
+          {overlayMode === 'views' ? (
+            <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
+              <FiEye className="w-3 h-3" />
+              <span>{(item?.views ?? item?.viewCount ?? item?.count ?? 0)}</span>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
+              <TypeIcon className="w-3 h-3" />
+              <span>{itemData.typeLabel}</span>
+            </div>
+          )}
         </div>
 
-        {/* View count */}
-        {showViews && (item.views || item.viewCount) && (
+        {/* View count (bottom-right). Hide if overlayMode already shows views to avoid duplication */}
+        {showViews && overlayMode !== 'views' && (item?.views ?? item?.viewCount ?? item?.count) !== undefined && (
           <div className="absolute bottom-2 right-2">
             <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
               <FiEye className="w-3 h-3" />
-              <span>{item.views || item.viewCount}</span>
+              <span>{item?.views ?? item?.viewCount ?? item?.count ?? 0}</span>
             </div>
           </div>
         )}

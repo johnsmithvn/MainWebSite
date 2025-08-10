@@ -10,6 +10,9 @@ import { apiService } from '@/utils/api';
 import Button from '@/components/common/Button';
 import toast from 'react-hot-toast';
 
+// Prevent duplicate list-roots fetches (e.g., React 18 StrictMode double-invoke)
+let __lastRootsFetch = { key: '', ts: 0 };
+
 const MangaSelect = () => {
   const navigate = useNavigate();
   const [rootFolders, setRootFolders] = useState([]);
@@ -24,6 +27,13 @@ const MangaSelect = () => {
       navigate('/');
       return;
     }
+    // Guard against immediate double-invoke
+    const fetchKey = String(sourceKey);
+    const now = Date.now();
+    if (__lastRootsFetch.key === fetchKey && now - __lastRootsFetch.ts < 4000) {
+      return;
+    }
+    __lastRootsFetch = { key: fetchKey, ts: now };
     loadRootFolders();
   }, [sourceKey, navigate]);
 

@@ -277,10 +277,11 @@ const TopViewSlider = ({
                       item={item}
                       type={type}
                       isFavorite={Boolean(item.isFavorite)}
-                      showViews={true} // Always show views for top view slider
+                      showViews={true}
                       onToggleFavorite={() => handleToggleFavorite(item)}
                       variant="compact"
                       className="w-48"
+                      overlayMode={type === 'manga' ? 'views' : 'type'}
                     />
                   </div>
                 </div>

@@ -47,25 +47,34 @@ const MangaHome = () => {
       } else {
         fetchMangaFolders();
       }
-      fetchFavorites();
+      // fetchFavorites will be handled in URL effect to avoid duplicates
     }
-  }, [sourceKey, clearMangaCache, fetchMangaFolders, fetchFavorites, searchParams]);
+  }, [sourceKey, clearMangaCache, fetchMangaFolders, searchParams]);
+
+  // Track last favorites fetch to avoid duplicates (StrictMode)
+  const lastFavKeyRef = React.useRef('');
 
   useEffect(() => {
     // Xử lý URL path parameter giống frontend cũ
     const urlPath = searchParams.get('path');
     console.log('🔍 DEBUG MangaHome URL path param:', urlPath);
     
-    // Only fetch if sourceKey is available and we have cache cleared
-    if (sourceKey && sourceKey.startsWith('ROOT_') && mangaList.length === 0) {
-      if (urlPath) {
-        fetchMangaFolders(urlPath);
-      } else {
-        fetchMangaFolders();
+    if (sourceKey && sourceKey.startsWith('ROOT_')) {
+      if (mangaList.length === 0) {
+        if (urlPath) {
+          fetchMangaFolders(urlPath);
+        } else {
+          fetchMangaFolders();
+        }
       }
-      fetchFavorites();
+      // Fetch favorites once per sourceKey/root
+      const favKey = `${sourceKey}|${rootFolder}`;
+      if (lastFavKeyRef.current !== favKey) {
+        lastFavKeyRef.current = favKey;
+        fetchFavorites();
+      }
     }
-  }, [searchParams, fetchMangaFolders, fetchFavorites, sourceKey, mangaList.length]);
+  }, [searchParams, fetchMangaFolders, fetchFavorites, sourceKey, mangaList.length, rootFolder]);
 
   useEffect(() => {
     // Debug: Log manga list when it changes

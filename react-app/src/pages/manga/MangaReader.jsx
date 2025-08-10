@@ -64,7 +64,7 @@ const MangaReader = () => {
     viewCountProcessing.current.add(viewKey);
     
     try {
-      await apiService.system.increaseView({
+      await apiService.system.increaseViewManga({
         path: cleanPath,
         dbkey: sKey,
         rootKey: rFolder
