@@ -270,14 +270,17 @@ const MusicPlayer = () => {
       const folderPath = folderPathArg;
       const selectedPath = selectedFileArg;
 
-      if (!folderPath && !selectedPath) {
+      if ((folderPath === undefined || folderPath === null) && !selectedPath) {
         showToast('Thiếu thông tin file/folder', 'error');
         return;
       }
 
-      // If folder not provided but we have a selected file, derive parent folder
-      const folderToLoad = folderPath || (selectedPath ? selectedPath.split('/').slice(0, -1).join('/') : null);
-      if (!folderToLoad) {
+      // If folder not provided but we have a selected file, derive parent folder.
+      // Important: allow '' (empty string) as ROOT path.
+      const derivedParent = selectedPath ? selectedPath.split('/').slice(0, -1).join('/') : null; // '' at root
+      const hasExplicitFolder = folderPath !== undefined && folderPath !== null;
+      const folderToLoad = hasExplicitFolder ? folderPath : derivedParent;
+      if (folderToLoad === null || folderToLoad === undefined) {
         showToast('Không thể xác định thư mục chứa bài hát', 'error');
         return;
       }
