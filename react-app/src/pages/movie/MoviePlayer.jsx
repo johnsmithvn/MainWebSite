@@ -576,44 +576,46 @@ const MoviePlayer = () => {
 
       {/* Main Content */}
       <div className="pt-16">
-        <div className="max-w-7xl mx-auto p-4">
-          {/* Video Info Header - Centered */}
-          <div className="text-center mb-4">
+        <div className="max-w-6xl mx-auto p-4">
+          {/* Video Info Header */}
+          <div className="text-center mb-6">
             <button
               onClick={handleFolderClick}
-              className="block w-full max-w-4xl mx-auto mb-3 hover:bg-gray-100 dark:hover:bg-gray-800 px-4 py-2 rounded-lg transition-colors"
+              className="inline-block mb-4 hover:bg-gray-100 dark:hover:bg-gray-800 px-4 py-2 rounded-lg transition-colors"
               title={`${videoName} - Click để về thư mục: ${folderPath || 'Trang chủ'}`}
             >
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white line-clamp-2">
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
                 {videoName}
               </h1>
             </button>
 
-            {/* ExoPlayer Button - Centered */}
-            <button
-              onClick={handleOpenExoPlayer}
-              className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
-            >
-              ▶ Mở bằng ExoPlayer
-            </button>
+            {/* ExoPlayer Button */}
+            <div>
+              <button
+                onClick={handleOpenExoPlayer}
+                className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
+              >
+                ▶ Mở bằng ExoPlayer
+              </button>
+            </div>
           </div>
 
           {/* Video Player */}
-          <div className="mb-6 relative z-[60]">
+          <div className="mb-6 relative">
             <video
               key={currentFile}
               ref={videoRef}
               controls
-              className={`w-full rounded-lg shadow-lg relative z-[70] ${sidebarOpen ? 'pointer-events-none' : ''}`}
+              className="w-full rounded-lg shadow-lg"
               style={{ maxHeight: '70vh' }}
               onDoubleClick={handleDoubleClick}
             />
             {/* Gesture overlay */}
             <div 
               ref={gestureTargetRef}
-              className="absolute inset-0 z-[80]"
+              className="absolute inset-0"
               style={{ 
-                pointerEvents: sidebarOpen ? 'none' : (dragging ? 'auto' : 'none'),
+                pointerEvents: dragging ? 'auto' : 'none',
                 background: 'transparent',
                 cursor: dragging ? 'grabbing' : 'default'
               }}
