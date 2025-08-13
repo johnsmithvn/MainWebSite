@@ -7,20 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiPlay,
   FiPause,
-  FiSkipBack,
-  FiSkipForward,
-  FiVolume2,
-  FiVolumeX,
-  FiShuffle,
-  FiRepeat,
   FiHeart,
   FiMoreHorizontal,
-  FiChevronLeft,
-  FiChevronRight,
   FiDownload,
-  FiHome,
   FiClock,
-  FiLayout,
   FiSearch
 } from 'react-icons/fi';
 import { useAuthStore, useMusicStore, useUIStore } from '@/store';
@@ -30,6 +20,7 @@ import { apiService } from '@/utils/api';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import PlayerFooter from '../../components/music/PlayerFooter';
+import PlayerHeader from '../../components/music/PlayerHeader';
 
 const MusicPlayer = () => {
   const navigate = useNavigate();
@@ -84,17 +75,6 @@ const MusicPlayer = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [playlistTitle, setPlaylistTitle] = useState(null);
-  const [filterQuery, setFilterQuery] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
-  const searchWrapRef = useRef(null);
-  const suggestionsListRef = useRef(null);
-  const searchAbortRef = useRef(null);
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchLoadingMore, setSearchLoadingMore] = useState(false);
-  const [searchOffset, setSearchOffset] = useState(0);
-  const [searchHasMore, setSearchHasMore] = useState(false);
-  const SEARCH_LIMIT = 30;
   const [library, setLibrary] = useState({ items: [], loading: false, error: null });
   const [activePlaylistId, setActivePlaylistId] = useState(null);
   const [headerCondensed, setHeaderCondensed] = useState(false);
@@ -129,18 +109,6 @@ const MusicPlayer = () => {
         };
       });
     } catch {}
-  }, []);
-
-  // Close search suggestions when clicking outside
-  useEffect(() => {
-    const onDocClick = (e) => {
-      if (!searchWrapRef.current) return;
-      if (!searchWrapRef.current.contains(e.target)) {
-        setSearchOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
   // Row click handler to avoid re-triggering the same track (prevents view loop)
@@ -666,82 +634,8 @@ const MusicPlayer = () => {
     ? buildThumbnailUrl(currentTrack || currentPlaylist[0], 'music')
     : '/default/music-thumb.png';
 
-  const normalizedFilter = (filterQuery || '').trim().toLowerCase();
-  const visiblePlaylist = normalizedFilter
-    ? currentPlaylist.filter((t) => {
-        const fields = [t?.name, t?.artist, t?.album, t?.path].filter(Boolean).join(' ').toLowerCase();
-        return fields.includes(normalizedFilter);
-      })
-    : currentPlaylist;
-  // Debounced query for API suggestions
-  const debouncedQuery = useDebounceValue(filterQuery, 300);
-
-  // Fetch suggestions from API (like SearchModal)
-  const fetchSuggestions = useCallback(async (q, pageOffset = 0, isLoadMore = false) => {
-    if (!q || q.trim().length < 2 || !sourceKey) return { items: [], hasMore: false };
-    // cancel previous unless loading more
-    let controller;
-    if (!isLoadMore) {
-      if (searchAbortRef.current) searchAbortRef.current.abort();
-      controller = new AbortController();
-      searchAbortRef.current = controller;
-    }
-    try {
-      if (isLoadMore) setSearchLoadingMore(true); else setSearchLoading(true);
-      const resp = await apiService.music.getAudioCache({
-        mode: 'search',
-        key: sourceKey,
-        q,
-        type: 'all',
-        limit: SEARCH_LIMIT,
-        offset: pageOffset,
-      }, isLoadMore ? {} : { signal: controller?.signal });
-      const items = resp?.data?.folders || [];
-      return { items, hasMore: items.length === SEARCH_LIMIT };
-    } catch (err) {
-      if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
-        console.error('Player search error:', err);
-      }
-      return { items: [], hasMore: false };
-    } finally {
-      if (isLoadMore) setSearchLoadingMore(false); else setSearchLoading(false);
-    }
-  }, [SEARCH_LIMIT, sourceKey]);
-
-  // Load suggestions when query changes
-  useEffect(() => {
-    if (!searchOpen) return; // only fetch when dropdown open
-    if (!debouncedQuery || debouncedQuery.trim().length < 2) {
-      setSearchResults([]);
-      setSearchOffset(0);
-      setSearchHasMore(false);
-      return;
-    }
-    const run = async () => {
-      const { items, hasMore } = await fetchSuggestions(debouncedQuery, 0, false);
-      setSearchResults(items);
-      setSearchOffset(items.length);
-      setSearchHasMore(hasMore);
-    };
-    run();
-  }, [debouncedQuery, searchOpen, fetchSuggestions]);
-
-  // Infinite scroll inside suggestions
-  const handleSuggestionsScroll = useCallback(async () => {
-    const el = suggestionsListRef.current;
-    if (!el || searchLoading || searchLoadingMore || !searchHasMore) return;
-    const threshold = 80;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
-      const { items, hasMore } = await fetchSuggestions(debouncedQuery, searchOffset, true);
-      if (items.length > 0) {
-        setSearchResults((prev) => [...prev, ...items]);
-        setSearchOffset(searchOffset + items.length);
-        setSearchHasMore(hasMore);
-      } else {
-        setSearchHasMore(false);
-      }
-    }
-  }, [debouncedQuery, fetchSuggestions, searchHasMore, searchLoading, searchLoadingMore, searchOffset]);
+  const normalizedFilter = '';
+  const visiblePlaylist = currentPlaylist;
 
   // Load user playlists for Library
   useEffect(() => {
@@ -763,127 +657,19 @@ const MusicPlayer = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1f1f1f] via-[#121212] to-[#000] text-white">
       {/* Top Controls with centered search (sticky + condense on scroll) */}
-      <div
-        className={`sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 ${headerCondensed ? 'py-2' : 'py-4'} gap-3 backdrop-blur border-b border-white/10 transition-[background-color,box-shadow,padding] duration-200 ${
-          headerCondensed ? 'bg-[#121212]/95 shadow-[0_2px_10px_rgba(0,0,0,0.35)]' : 'bg-[#121212]/70'
-        }`}
-      >
-        {/* Left controls: nav + mode + home */}
-        <div className="flex items-center gap-2 min-w-[220px]">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20"><FiChevronLeft className="w-5 h-5" /></button>
-          <button onClick={() => navigate(1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20"><FiChevronRight className="w-5 h-5" /></button>
-          {(() => {
-            const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-            const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (typeof window !== 'undefined' && window.innerWidth <= 768);
-            return (
-              <button
-                onClick={() => {
-                  if (isMobile) return;
-                  const next = playerSettings?.playerUI === 'v2' ? 'v1' : 'v2';
-                  updatePlayerSettings({ playerUI: next });
-                  navigate('/music/player', { replace: true, state: location.state });
-                }}
-                className={`px-3 py-1.5 rounded-full ${isMobile ? 'bg-white/10 text-white/60 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 text-white'} text-sm hidden md:flex items-center gap-2`}
-                title={isMobile ? 'Không khả dụng trên mobile' : 'Đổi giao diện Music Player'}
-                disabled={isMobile}
-              >
-                <FiLayout className="w-4 h-4" /> {playerSettings?.playerUI === 'v2' ? 'Zing' : 'Spotify'}
-              </button>
-            );
-          })()}
-          <button onClick={() => navigate('/music')} className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-sm hidden sm:inline-flex">
-            <FiHome className="inline w-4 h-4 mr-1" /> Music Home
-          </button>
-          {headerCondensed && (
-            <span className="ml-2 hidden md:inline text-white font-semibold truncate max-w-[40vw]">
-              {folderTitle}
-            </span>
-          )}
-        </div>
-
-        {/* Center search */}
-        <div className="flex-1 max-w-2xl mx-auto w-full" ref={searchWrapRef}>
-          <div className="relative">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-4 h-4" />
-            <input
-              value={filterQuery}
-              onChange={(e) => {
-                const v = e.target.value;
-                setFilterQuery(v);
-                setSearchOpen(v.trim().length >= 2);
-              }}
-              onFocus={() => setSearchOpen((v) => v || filterQuery.trim().length >= 2)}
-              placeholder="Bạn muốn phát gì?"
-              className="w-full pl-9 pr-3 py-2 rounded-full bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30"
-            />
-            {/* Suggestions dropdown (like SearchModal) */}
-            <AnimatePresence>
-              {searchOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 8 }}
-                  className="absolute left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50"
-                >
-                  <div className="max-h-80 overflow-y-auto" ref={suggestionsListRef} onScroll={handleSuggestionsScroll}>
-                    {searchLoading && (
-                      <div className="p-3 text-sm text-white/60">Đang tìm kiếm…</div>
-                    )}
-                    {!searchLoading && searchResults.map((item, i) => (
-                      <div
-                        key={(item.path || '') + '-' + i}
-                        className="flex items-center gap-3 p-3 hover:bg-white/10 cursor-pointer"
-                        onClick={() => {
-                          setSearchOpen(false);
-                          // Navigate similar to SearchModal behavior
-                          const isPlaylist = item.isPlaylist;
-                          const isAudio = item.type === 'audio' || item.type === 'file';
-                          if (isPlaylist) {
-                            navigate('/music/player', { state: { kind: 'playlist', playlist: item.path, key: sourceKey } });
-                          } else if (isAudio) {
-                            const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
-                            navigate('/music/player', { state: { kind: 'audio', file: item.path, playlist: folderPath, key: sourceKey } });
-                          } else {
-                            navigate('/music/player', { state: { kind: 'folder', playlist: item.path, key: sourceKey } });
-                          }
-                        }}
-                      >
-                        <img
-                          src={buildThumbnailUrl(item, 'music')}
-                          onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')}
-                          alt={item.name}
-                          className="w-8 h-8 rounded object-cover flex-none"
-                        />
-                        <div className="min-w-0">
-                          <div className="text-sm text-white truncate" title={item.name}>{item.name}</div>
-                          <div className="text-[11px] text-white/60 truncate" title={item.artist || ''}>{item.artist || ''}</div>
-                        </div>
-                      </div>
-                    ))}
-                    {searchLoadingMore && (
-                      <div className="p-3 text-center text-xs text-white/60">Đang tải thêm…</div>
-                    )}
-                    {!searchLoading && searchResults.length === 0 && (
-                      <div className="p-3 text-sm text-white/60">Không tìm thấy kết quả</div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Right spacer */}
-        <div className="min-w-[120px]" />
-      </div>
+      <PlayerHeader
+        folderTitle={folderTitle}
+        headerCondensed={headerCondensed}
+        theme="v1"
+      />
 
   {/* Sentinel for header condense detection */}
   <div ref={headerSentinelRef} aria-hidden className="h-0" />
 
   {/* Main layout: left Library sidebar, right content with header + bottom tracklist */}
-  <div className="px-4 sm:px-6 mt-1 pb-[100px] grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-start">
+  <div className="px-4 sm:px-6 mt-1 pb-[104px] grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-start">
         {/* Left: Library sidebar */}
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] h-[60vh] md:h-[72vh] flex flex-col">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] flex flex-col" style={{ height: 'calc(100vh - 200px)' }}>
           <div className="px-4 py-3 text-xs uppercase tracking-wider text-white/60 border-b border-white/10 flex items-center justify-between">
             <span>Thư viện</span>
             <span className="text-white/40 text-[11px]">Playlists</span>
@@ -926,7 +712,8 @@ const MusicPlayer = () => {
   {/* Right: Header banner and actions */}
   <div className="relative ml-1">
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#50306e] via-transparent to-transparent opacity-60" />
-          <div className="flex flex-col md:flex-row md:items-end gap-6">
+          <div className="bg-gradient-to-b from-[#121212] via-[#121212]/95 to-transparent -mx-4 px-4 pt-1 pb-3">
+            <div className="flex flex-col md:flex-row md:items-end gap-6">
             <motion.img initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} src={headerArt} alt={(currentTrack?.name || currentPlaylist[0]?.name || folderTitle) || 'Cover'} onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')} className="w-48 h-48 md:w-56 md:h-56 object-cover rounded shadow-2xl" />
             <div className="flex-1">
               <h2
@@ -968,8 +755,9 @@ const MusicPlayer = () => {
               </div>
             </div>
           </div>
+          </div>
           {/* Bottom: Full tracklist */}
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+          <div className="mt-4 mb-0.5 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 420px)', minHeight: '300px' }}>
             <div className="grid grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_72px_56px] gap-3 px-4 py-2 text-sm text-white/60 border-b border-white/10">
               <div className="text-center">#</div>
               <div>Title</div>
@@ -979,7 +767,7 @@ const MusicPlayer = () => {
               <div className="flex justify-end pr-2"><FiClock className="w-4 h-4" /></div>
             </div>
 
-    <div className="divide-y divide-white/5">
+    <div className="divide-y divide-white/5 flex-1 overflow-y-auto">
               {currentPlaylist.map((track, index) => (
                 <div
                   key={track.path || index}

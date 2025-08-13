@@ -7,11 +7,7 @@ import { motion } from 'framer-motion';
 import {
   FiPlay,
   FiPause,
-  FiChevronLeft,
-  FiChevronRight,
-  FiHome,
   FiClock,
-  FiLayout,
   FiHeart,
   FiMoreHorizontal
 } from 'react-icons/fi';
@@ -21,6 +17,7 @@ import { apiService } from '@/utils/api';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import PlayerFooter from '../../components/music/PlayerFooter';
+import PlayerHeader from '../../components/music/PlayerHeader';
 
 const MusicPlayerV2 = () => {
   const navigate = useNavigate();
@@ -73,7 +70,6 @@ const MusicPlayerV2 = () => {
   const [duration, setDuration] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [filterQuery, setFilterQuery] = useState('');
   const [playlistTitle, setPlaylistTitle] = useState(null);
   const [library, setLibrary] = useState({ items: [], loading: false, error: null });
   const [activePlaylistId, setActivePlaylistId] = useState(null);
@@ -537,13 +533,8 @@ const MusicPlayerV2 = () => {
     };
   }, []);
 
-  const normalizedFilter = (filterQuery || '').trim().toLowerCase();
-  const visiblePlaylist = normalizedFilter
-    ? currentPlaylist.filter((t) => {
-        const fields = [t?.name, t?.artist, t?.album, t?.path].filter(Boolean).join(' ').toLowerCase();
-        return fields.includes(normalizedFilter);
-      })
-    : currentPlaylist;
+  const normalizedFilter = '';
+  const visiblePlaylist = currentPlaylist;
 
   // Load user playlists for Library (right panel)
   useEffect(() => {
@@ -565,56 +556,19 @@ const MusicPlayerV2 = () => {
   // Render
   return (
     <div className="min-h-screen bg-[#1b1026] text-white">
-  {/* Top Bar with centered search (sticky) */}
-  <div className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-4 gap-3 bg-[#1b1026]/85 supports-[backdrop-filter]:bg-[#1b1026]/70 backdrop-blur border-b border-white/10">
-        <div className="flex items-center gap-2 min-w-[220px]">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20">
-            <FiChevronLeft className="w-5 h-5" />
-          </button>
-          <button onClick={() => navigate(1)} className="p-2 rounded-full bg-white/10 hover:bg-white/20">
-            <FiChevronRight className="w-5 h-5" />
-          </button>
-          {(() => {
-            const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
-            const isMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (typeof window !== 'undefined' && window.innerWidth <= 768);
-            return (
-              <button
-                onClick={() => {
-                  if (isMobile) return; // disable switch on mobile
-                  const next = playerSettings?.playerUI === 'v2' ? 'v1' : 'v2';
-                  updatePlayerSettings({ playerUI: next });
-                  navigate('/music/player', { replace: true, state: location.state });
-                }}
-                className={`px-3 py-1.5 rounded-full ${isMobile ? 'bg-white/10 text-white/60 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 text-white'} text-sm hidden md:flex items-center gap-2`}
-                title={isMobile ? 'Không khả dụng trên mobile' : 'Đổi giao diện Music Player'}
-                disabled={isMobile}
-              >
-                <FiLayout className="w-4 h-4" /> {playerSettings?.playerUI === 'v2' ? 'Zing' : 'Spotify'}
-              </button>
-            );
-          })()}
-          <button onClick={() => navigate('/music')} className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-sm hidden sm:inline-flex">
-            <FiHome className="inline w-4 h-4 mr-1" /> Music Home
-          </button>
-        </div>
-
-        {/* Center search */}
-        <div className="flex-1 max-w-2xl mx-auto w-full">
-          <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21L15.803 15.803M18 10.5C18 14.0899 15.0899 17 11.5 17C7.91015 17 5 14.0899 5 10.5C5 6.91015 7.91015 4 11.5 4C15.0899 4 18 6.91015 18 10.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            <input value={filterQuery} onChange={(e) => setFilterQuery(e.target.value)} placeholder="Bạn muốn phát gì?" className="w-full pl-9 pr-3 py-2 rounded-full bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30" />
-          </div>
-        </div>
-
-        {/* Right spacer */}
-        <div className="min-w-[120px]" />
-      </div>
+      {/* Top Bar with centered search (sticky) */}
+      <PlayerHeader
+        folderTitle={folderTitle}
+        headerCondensed={false}
+        theme="v2"
+      />
 
       {/* Main: Left info + Center list + Right playlist panel */}
-  <div className="px-4 sm:px-6 mt-1 pb-[120px]">
+  <div className="px-4 sm:px-6 mt-1 pb-[104px]">
         <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr_320px] gap-6 items-start">
           {/* Left: Cover + Info + Actions */}
-          <div className="flex flex-col items-start gap-4">
+          <div className="pb-3">
+            <div className="flex flex-col items-start gap-4">
             <div className="relative">
               <motion.img
                 initial={{ opacity: 0, y: 8 }}
@@ -691,9 +645,10 @@ const MusicPlayerV2 = () => {
               </button>
             </div>
           </div>
+          </div>
 
           {/* Center: Main track list */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 200px)', minHeight: '400px' }}>
             <div className="grid grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_72px_56px] gap-3 px-4 py-2 text-sm text-white/60 border-b border-white/10">
               <div className="text-center">#</div>
               <div>Bài hát</div>
@@ -702,7 +657,7 @@ const MusicPlayerV2 = () => {
               <div className="hidden md:flex justify-end pr-2">Lượt xem</div>
               <div className="flex justify-end pr-2"><FiClock className="w-4 h-4" /></div>
             </div>
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-white/5 flex-1 overflow-y-auto">
               {visiblePlaylist.map((track, index) => (
                 <div
                   key={track.path || index}
@@ -768,7 +723,7 @@ const MusicPlayerV2 = () => {
           </div>
 
           {/* Right: Playlists Library panel */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden h-[60vh] md:h-[70vh] flex flex-col">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 200px)', minHeight: '400px' }}>
             <div className="px-4 py-3 text-[11px] uppercase tracking-wider text-white/60 border-b border-white/10 flex items-center justify-between">
               <span>Playlists</span>
               <span className="text-white/40 text-[11px] hidden md:inline">Thư viện</span>
