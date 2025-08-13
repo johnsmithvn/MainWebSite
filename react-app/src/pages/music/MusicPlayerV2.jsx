@@ -7,16 +7,9 @@ import { motion } from 'framer-motion';
 import {
   FiPlay,
   FiPause,
-  FiSkipBack,
-  FiSkipForward,
-  FiVolume2,
-  FiVolumeX,
-  FiShuffle,
-  FiRepeat,
   FiChevronLeft,
   FiChevronRight,
   FiHome,
-  FiFolder,
   FiClock,
   FiLayout,
   FiHeart,
@@ -27,6 +20,7 @@ import { useRecentMusicManager } from '@/hooks/useMusicData';
 import { apiService } from '@/utils/api';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
+import PlayerFooter from '../../components/music/PlayerFooter';
 
 const MusicPlayerV2 = () => {
   const navigate = useNavigate();
@@ -54,6 +48,9 @@ const MusicPlayerV2 = () => {
     nextTrack,
     prevTrack,
     setVolume,
+    toggleShuffle,
+    setRepeat,
+    setShuffle,
   } = useMusicStore();
 
   const { showToast } = useUIStore();
@@ -614,7 +611,7 @@ const MusicPlayerV2 = () => {
       </div>
 
       {/* Main: Left info + Center list + Right playlist panel */}
-  <div className="px-4 sm:px-6 mt-1 pb-28">
+  <div className="px-4 sm:px-6 mt-1 pb-[120px]">
         <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr_320px] gap-6 items-start">
           {/* Left: Cover + Info + Actions */}
           <div className="flex flex-col items-start gap-4">
@@ -813,119 +810,17 @@ const MusicPlayerV2 = () => {
   </div>
       </div>
 
-      {/* Bottom Controls */}
-      <div className="fixed bottom-0 left-0 right-0 h-22 bg-[#1a0f24]/95 backdrop-blur border-t border-white/10">
-        <div className="h-full px-4 md:px-6 flex items-center gap-4">
-          {/* Now Playing */}
-          <div className="hidden md:flex items-center gap-3 min-w-[220px]">
-            {currentTrack ? (
-              <>
-                <img
-                  src={buildThumbnailUrl(currentTrack, 'music') || '/default/music-thumb.png'}
-                  onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')}
-                  alt={currentTrack.name}
-                  className="w-12 h-12 rounded object-cover"
-                />
-                <div className="min-w-0">
-                  <div className="text-sm truncate">{currentTrack.name}</div>
-                  <div className="text-xs text-white/60 truncate">{currentTrack.artist || 'Unknown Artist'}</div>
-                </div>
-              </>
-            ) : (
-              <div className="text-white/60 text-sm">No track selected</div>
-            )}
-          </div>
-
-          {/* Transport */}
-          <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="flex items-center gap-5">
-              <button
-                onClick={() => {
-                  const store = useMusicStore.getState();
-                  if (!store.shuffle) {
-                    const current = [...(store.currentPlaylist || [])];
-                    prevOrderBeforeShuffleRef.current = current;
-                    if (current.length <= 1) {
-                      useMusicStore.setState({ shuffle: true });
-                    } else {
-                      const shuffled = [...current];
-                      for (let i = shuffled.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-                      }
-                      const currTrack = store.currentTrack;
-                      const newIndex = currTrack ? Math.max(0, shuffled.findIndex((t) => t.path === currTrack.path)) : 0;
-                      useMusicStore.setState({ shuffle: true, currentPlaylist: shuffled, currentIndex: newIndex });
-                    }
-                  } else {
-                    const restore = prevOrderBeforeShuffleRef.current;
-                    if (Array.isArray(restore) && restore.length > 0) {
-                      const currTrack = store.currentTrack;
-                      const newIndex = currTrack ? Math.max(0, restore.findIndex((t) => t.path === currTrack.path)) : 0;
-                      useMusicStore.setState({ shuffle: false, currentPlaylist: restore, currentIndex: newIndex });
-                    } else {
-                      useMusicStore.setState({ shuffle: false });
-                    }
-                  }
-                }}
-                className={`text-white/70 hover:text-white ${shuffle ? '!text-[#b58dff]' : ''}`}
-              >
-                <FiShuffle className="w-4 h-4" />
-              </button>
-              <button onClick={prevTrack} className="text-white hover:text-white/90">
-                <FiSkipBack className="w-5 h-5" />
-              </button>
-              <button onClick={togglePlayPause} className="w-10 h-10 rounded-full bg-[#b58dff] text-black flex items-center justify-center hover:scale-105 transition-transform">
-                {isPlaying ? <FiPause className="w-5 h-5" /> : <FiPlay className="w-5 h-5 ml-0.5" />}
-              </button>
-              <button onClick={nextTrack} className="text-white hover:text-white/90">
-                <FiSkipForward className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => {
-                  const cur = useMusicStore.getState().repeat;
-                  const next = cur === 'none' ? 'all' : cur === 'all' ? 'one' : 'none';
-                  useMusicStore.setState({ repeat: next });
-                }}
-                className={`text-white/70 hover:text-white ${repeat !== 'none' ? '!text-[#b58dff]' : ''}`}
-              >
-                <FiRepeat className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="w-full max-w-2xl flex items-center gap-3 mt-2">
-              <span className="text-xs text-white/60 min-w-[34px] text-right">{formatTime(currentTime)}</span>
-              <div className="h-1 w-full bg-white/20 rounded-full cursor-pointer" onClick={handleSeek}>
-                <div className="h-full bg-[#b58dff] rounded-full relative" style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}>
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-[#b58dff] rounded-full" />
-                </div>
-              </div>
-              <span className="text-xs text-white/60 min-w-[34px]">{formatTime(duration)}</span>
-            </div>
-          </div>
-
-          {/* Volume */}
-          <div className="hidden md:flex items-center gap-3 min-w-[180px] justify-end">
-            <button
-              onClick={() => {
-                if (volume === 0) {
-                  setVolume(0.5);
-                  if (audioRef.current) audioRef.current.volume = 0.5;
-                } else {
-                  setVolume(0);
-                  if (audioRef.current) audioRef.current.volume = 0;
-                }
-              }}
-              className="text-white/80 hover:text-white"
-            >
-              {volume === 0 ? <FiVolumeX className="w-5 h-5" /> : <FiVolume2 className="w-5 h-5" />}
-            </button>
-            <div className="w-28 h-1 bg-white/20 rounded-full cursor-pointer" onClick={handleVolumeBar}>
-              <div className="h-full bg-[#b58dff] rounded-full" style={{ width: `${Math.round(volume * 100)}%` }} />
-            </div>
-            <span className="text-xs text-white/60 w-8 text-right">{Math.round(volume * 100)}</span>
-          </div>
-        </div>
-      </div>
+      {/* Bottom Controls replaced with PlayerFooter component */}
+      <PlayerFooter
+        audioRef={audioRef}
+        currentTime={currentTime}
+        duration={duration}
+        formatTime={formatTime}
+        handleSeek={handleSeek}
+        handleVolumeBar={handleVolumeBar}
+        prevOrderBeforeShuffleRef={prevOrderBeforeShuffleRef}
+        theme="v2"
+      />
 
       {/* Audio Element */}
       <audio ref={audioRef} preload="metadata" className="hidden" />

@@ -877,6 +877,7 @@ export const useMusicStore = create(
       setVolume: (volume) => set({ volume }),
       toggleShuffle: () => set((state) => ({ shuffle: !state.shuffle })),
       setRepeat: (repeat) => set({ repeat }),
+      setShuffle: (shuffle) => set({ shuffle }),
       
       // Playlist management
       setPlaylists: (playlists) => set({ playlists }),
