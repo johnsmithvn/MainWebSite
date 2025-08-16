@@ -1,7 +1,6 @@
 // 📁 src/components/manga/MangaRandomSection.jsx
 // 🎯 Component hiển thị các section random cho manga
 
-import React from 'react';
 import RandomSlider from '@/components/common/RandomSlider';
 import TopViewSlider from '@/components/common/TopViewSlider';
 import RecentSlider from '@/components/common/RecentSlider';

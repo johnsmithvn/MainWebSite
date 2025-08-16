@@ -132,19 +132,4 @@ export const useTopViewItems = (type = 'manga', options = {}) => {
   });
 };
 
-// Helper function to get root folder from source key
-const getRootFolderFromKey = (sourceKey) => {
-  // Map source keys to root folders
-  const keyToRoot = {
-    'ROOT_DOW': 'dow',
-    'ROOT_FANTASY': 'fantasy', 
-    'ROOT_MANGAH': 'mangah',
-    'V_ANIME': 'anime',
-    'V_ANIMEH': 'animeh',
-    'V_JAVA': 'java',
-    'V_MOVIE': 'movie',
-    'M_MUSIC': 'music'
-  };
-  
-  return keyToRoot[sourceKey] || sourceKey.toLowerCase().replace(/^(root_|v_|m_)/, '');
-};
+

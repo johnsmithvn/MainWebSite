@@ -71,6 +71,14 @@ export const useAuthStore = create(
         token: '', 
         isAuthenticated: false 
       }),
+
+      // Clear all last keys (for debugging/testing)
+      clearLastKeys: () => set({
+        lastMangaKey: '',
+        lastMovieKey: '',
+        lastMusicKey: '',
+        lastMangaRootFolder: ''
+      }),
       
       isSecureKey: (key) => {
         const { secureKeys } = get();

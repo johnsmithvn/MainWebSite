@@ -133,39 +133,44 @@ const SearchModal = ({ isOpen, onClose }) => {
     
     switch (section) {
       case 'manga':
+        // Check if we have valid manga source
+        if (!sourceKey || !sourceKey.startsWith('ROOT_')) {
+          alert('Vui lòng chọn source manga từ trang chủ');
+          navigate('/');
+          return;
+        }
         navigate(`/manga?path=${encodeURIComponent(item.path)}`);
         break;
       case 'movie':
-        // Ensure we pass a valid movie key
-        {
-          const movieKey = (sourceKey && sourceKey.startsWith('V_'))
-            ? sourceKey
-            : (lastMovieKey || 'V_MOVIE');
+        // Check if we have valid movie source
+        if (!sourceKey || !sourceKey.startsWith('V_')) {
+          alert('Vui lòng chọn source movie từ trang chủ');
+          navigate('/');
+          return;
+        }
         if (item.type === 'video' || item.type === 'file') {
-          // Match UniversalCard: pass file and key via state
-          navigate('/movie/player', { state: { file: item.path, key: movieKey } });
+          navigate('/movie/player', { state: { file: item.path, key: sourceKey } });
         } else {
           navigate(`/movie?path=${encodeURIComponent(item.path)}`);
         }
-        }
         break;
       case 'music':
-        {
-          // Ensure we pass a valid music key regardless of current global key
-          const musicKey = (sourceKey && sourceKey.startsWith('M_'))
-            ? sourceKey
-            : (lastMusicKey || 'M_MUSIC');
-          const isPlaylist = item.isPlaylist;
-          const isAudio = item.type === 'audio' || item.type === 'file';
-          if (isPlaylist) {
-            navigate('/music/player', { state: { kind: 'playlist', playlist: item.path, key: musicKey } });
-          } else if (isAudio) {
-            const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
-            navigate('/music/player', { state: { kind: 'audio', file: item.path, playlist: folderPath, key: musicKey } });
-          } else {
-            // For folders, open as playlist in player like sliders
-            navigate('/music/player', { state: { kind: 'folder', playlist: item.path, key: musicKey } });
-          }
+        // Check if we have valid music source
+        if (!sourceKey || !sourceKey.startsWith('M_')) {
+          alert('Vui lòng chọn source music từ trang chủ');
+          navigate('/');
+          return;
+        }
+        const isPlaylist = item.isPlaylist;
+        const isAudio = item.type === 'audio' || item.type === 'file';
+        if (isPlaylist) {
+          navigate('/music/player', { state: { kind: 'playlist', playlist: item.path, key: sourceKey } });
+        } else if (isAudio) {
+          const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
+          navigate('/music/player', { state: { kind: 'audio', file: item.path, playlist: folderPath, key: sourceKey } });
+        } else {
+          // For folders, open as playlist in player like sliders
+          navigate('/music/player', { state: { kind: 'folder', playlist: item.path, key: sourceKey } });
         }
         break;
     }

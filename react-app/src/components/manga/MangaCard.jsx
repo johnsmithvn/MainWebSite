@@ -1,10 +1,8 @@
 // 📁 src/components/manga/MangaCard.jsx
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiEye, FiHeart } from 'react-icons/fi';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
-import { useMangaStore } from '@/store';
 import { useRecentManager } from '@/hooks/useRecentManager';
 import { formatViewCount } from '@/utils/formatters';
 

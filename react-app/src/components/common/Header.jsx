@@ -40,18 +40,42 @@ const Header = () => {
     lastMovieKey,
     lastMusicKey,
     lastMangaRootFolder,
-  setSourceKey
+  setSourceKey,
+  clearLastKeys // Add this for debugging
   } = useAuthStore();
 
+  // Debug: Add temporary button to clear all last keys
+  const handleDebugClear = () => {
+    clearLastKeys();
+    console.log('🧹 Cleared all last keys');
+    alert('Đã xóa tất cả last keys');
+  };
+
   const handleSectionClick = (section) => {
-    // Apply last-known keys before navigating to ensure initial fetch has required params
+    // Check if source key exists, if not show toast and prevent navigation
     if (section === 'manga') {
-  if (lastMangaKey) setSourceKey(lastMangaKey);
+      console.log('🔍 Manga check - lastMangaKey:', lastMangaKey);
+      if (!lastMangaKey || lastMangaKey === '') {
+        alert('Vui lòng chọn source manga từ trang chủ');
+        return false;
+      }
+      setSourceKey(lastMangaKey);
     } else if (section === 'movie') {
-  if (lastMovieKey) setSourceKey(lastMovieKey);
+      console.log('🔍 Movie check - lastMovieKey:', lastMovieKey);
+      if (!lastMovieKey || lastMovieKey === '') {
+        alert('Vui lòng chọn source movie từ trang chủ');
+        return false;
+      }
+      setSourceKey(lastMovieKey);
     } else if (section === 'music') {
-  if (lastMusicKey) setSourceKey(lastMusicKey);
+      console.log('🔍 Music check - lastMusicKey:', lastMusicKey);
+      if (!lastMusicKey || lastMusicKey === '') {
+        alert('Vui lòng chọn source music từ trang chủ');
+        return false;
+      }
+      setSourceKey(lastMusicKey);
     }
+    return true;
   };
 
   const navItems = [
@@ -65,8 +89,10 @@ const Header = () => {
     // Ensure state changes apply before routing to avoid first-click bounce
     if (item.section) {
       e.preventDefault();
-      handleSectionClick(item.section);
-      navigate(item.to || item.path);
+      const canNavigate = handleSectionClick(item.section);
+      if (canNavigate) {
+        navigate(item.to || item.path);
+      }
     }
   };
 
@@ -166,6 +192,17 @@ const Header = () => {
                 onClick={() => setSettingsModalOpen(true)}
               >
                 <FiSettings className="h-4 w-4" />
+              </Button>
+
+              {/* Debug: Clear last keys button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDebugClear}
+                className="text-red-500 hover:text-red-600"
+                title="Debug: Clear all last keys"
+              >
+                🧹
               </Button>
 
               {/* Source key CTA removed */}

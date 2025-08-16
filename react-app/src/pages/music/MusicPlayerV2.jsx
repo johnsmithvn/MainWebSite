@@ -54,14 +54,16 @@ const MusicPlayerV2 = () => {
   const { sourceKey, setSourceKey } = useAuthStore();
   const { playerSettings, updatePlayerSettings } = useMusicStore();
 
-  // Prefer key from navigation state if provided, else default to M_MUSIC
+  // Prefer key from navigation state if provided, else navigate to home for source selection
   useEffect(() => {
     if (stateKey && sourceKey !== stateKey) {
       setSourceKey(stateKey);
-    } else if (!sourceKey || sourceKey === 'ROOT_FANTASY') {
-      setSourceKey('M_MUSIC');
+    } else if (!sourceKey || !sourceKey.startsWith('M_')) {
+      // No source or wrong source type (not music) -> go to home
+      showToast('Vui lòng chọn source music', 'warning');
+      navigate('/');
     }
-  }, [stateKey, sourceKey, setSourceKey]);
+  }, [stateKey, sourceKey, setSourceKey, navigate, showToast]);
 
   const { addRecentMusic } = useRecentMusicManager();
 

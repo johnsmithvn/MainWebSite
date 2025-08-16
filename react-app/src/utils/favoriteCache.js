@@ -3,7 +3,7 @@
 
 /**
  * Cập nhật isFavorite cho tất cả cache entries có path tương ứng
- * @param {string} sourceKey - Key của database (ROOT_FANTASY, V_MOVIE, etc.)
+ * @param {string} sourceKey - Key của database (ROOT_*, V_*, etc.)
  * @param {string} itemPath - Path của item cần update
  * @param {boolean} isFavorite - Trạng thái favorite mới
  * @param {string} rootFolder - Root folder (optional, for manga)
