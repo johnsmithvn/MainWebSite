@@ -22,8 +22,17 @@ const Home = () => {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [selectedKey, setSelectedKey] = useState('');
   
-  const { setSourceKey, setSecureKeys, isSecureKey, isAuthenticated, token } = useAuthStore();
+  const { setSourceKey, setSecureKeys, isSecureKey, isAuthenticated, token, logout } = useAuthStore();
   const { setLoading } = useUIStore();
+
+  // Force clear auth when landing on Home (fresh login required)
+  useEffect(() => {
+    if (isAuthenticated || token) {
+      logout();
+      console.log('🔒 Cleared auth on Home load');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Load source keys on mount
   useEffect(() => {

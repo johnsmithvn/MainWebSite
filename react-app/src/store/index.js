@@ -71,12 +71,15 @@ export const useAuthStore = create(
   set(updates);
       },
       
-      logout: () => set({ 
-        sourceKey: '', 
-  rootFolder: '', 
-        token: '', 
-        isAuthenticated: false 
-      }),
+      logout: () => {
+        try { localStorage.removeItem('userToken'); } catch {}
+        set({ 
+          sourceKey: '', 
+          rootFolder: '', 
+          token: '', 
+          isAuthenticated: false 
+        });
+      },
 
       // Clear all last keys (for debugging/testing)
       clearLastKeys: () => set({
