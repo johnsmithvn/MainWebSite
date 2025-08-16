@@ -21,6 +21,64 @@ const getTypeFromKey = (sourceKey = '') => {
   return null;
 };
 
+// Shared settings store for common features
+export const useSharedSettingsStore = create(
+  persist(
+    (set, get) => ({
+      // Common cache management
+      clearAllCache: () => {
+        try {
+          // Clear localStorage cache keys
+          const keysToRemove = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (
+              key.includes('recentViewed') || 
+              key.includes('randomCache') || 
+              key.includes('topViewCache')
+            )) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach(key => localStorage.removeItem(key));
+          console.log('🗑️ Cleared all cache:', keysToRemove);
+        } catch (error) {
+          console.warn('Error clearing all cache:', error);
+        }
+      },
+      
+      // Clear recent history for any type
+      clearRecentHistory: (type, sourceKey, rootFolder) => {
+        try {
+          let cacheKey;
+          switch (type) {
+            case 'manga':
+              cacheKey = `recentViewed::${rootFolder}::${rootFolder}`;
+              break;
+            case 'movie':
+              cacheKey = `recentViewedVideo::${sourceKey}`;
+              break;
+            case 'music':
+              cacheKey = `recentViewedMusic::${sourceKey}`;
+              break;
+            default:
+              cacheKey = `recentViewed::${type}::${sourceKey}`;
+          }
+          
+          localStorage.removeItem(cacheKey);
+          console.log('🗑️ Cleared recent history:', { type, cacheKey });
+        } catch (error) {
+          console.warn('Error clearing recent history:', error);
+        }
+      },
+    }),
+    {
+      name: 'shared-settings-storage',
+      partialize: (state) => ({}), // Don't persist anything for now
+    }
+  )
+);
+
 // Auth store
 export const useAuthStore = create(
   persist(
@@ -323,67 +381,17 @@ export const useMangaStore = create(
         mangaSettings: { ...state.mangaSettings, ...settings }
       })),
       
-      // Clear recent history from localStorage
+      // Use shared clearRecentHistory
       clearRecentHistory: (type = 'manga') => {
         const { sourceKey, rootFolder } = useAuthStore.getState();
-        try {
-          let cacheKey;
-          switch (type) {
-            case 'manga':
-              cacheKey = `recentViewed::${rootFolder}::${rootFolder}`;
-              break;
-            case 'movie':
-              cacheKey = `recentViewedVideo::${sourceKey}`;
-              break;
-            case 'music':
-              cacheKey = `recentViewedMusic::${sourceKey}`;
-              break;
-            default:
-              cacheKey = `recentViewed::${type}::${sourceKey}`;
-          }
-          
-          localStorage.removeItem(cacheKey);
-          console.log('🗑️ Cleared recent history:', { type, cacheKey });
-        } catch (error) {
-          console.warn('Error clearing recent history:', error);
-        }
+        const { clearRecentHistory } = useSharedSettingsStore.getState();
+        clearRecentHistory(type, sourceKey, rootFolder);
       },
       
-      // Clear all cache (recent, random, topview)
+      // Use shared clearAllCache
       clearAllCache: () => {
-        const { sourceKey, rootFolder } = useAuthStore.getState();
-        try {
-          // Recent history cache keys
-          const recentKeys = [
-            `recentViewed::${rootFolder}::${rootFolder}`,
-            `recentViewedVideo::${sourceKey}`,
-            `recentViewedMusic::${sourceKey}`
-          ];
-          
-          // Random cache keys
-          const randomKeys = [
-            `randomView::${sourceKey}::${rootFolder}::manga`,
-            `randomView::${sourceKey}::${rootFolder}::movie`,
-            `randomView::${sourceKey}::${rootFolder}::music`
-          ];
-          
-          // Top view cache keys
-          const topViewKeys = [
-            `topView::${sourceKey}::${rootFolder}::manga`,
-            `topView::${sourceKey}::${rootFolder}::movie`,
-            `topView::${sourceKey}::${rootFolder}::music`
-          ];
-          
-          const allKeys = [...recentKeys, ...randomKeys, ...topViewKeys];
-          
-          allKeys.forEach(key => {
-            localStorage.removeItem(key);
-          });
-          
-          console.log('🗑️ Cleared all cache:', allKeys.length, 'keys');
-        } catch (error) {
-          console.warn('Error clearing all cache:', error);
-        }
+        const { clearAllCache } = useSharedSettingsStore.getState();
+        clearAllCache();
       },
       
       clearMangaCache: () => set({ 

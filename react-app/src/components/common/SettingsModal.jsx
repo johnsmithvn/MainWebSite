@@ -7,19 +7,15 @@ import { useLocation } from 'react-router-dom';
 import { 
   X, 
   Settings, 
-  Moon, 
-  Sun, 
-  Monitor,
   Volume2,
   Eye,
   Globe,
   Palette,
   Database,
-  Download,
   RotateCcw,
   Save
 } from 'lucide-react';
-import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '../../store';
+import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore, useSharedSettingsStore } from '../../store';
 
 const PlayerUISelector = () => {
   const { playerSettings, updatePlayerSettings } = useMusicStore();
@@ -55,8 +51,6 @@ const PlayerUISelector = () => {
 const SettingsModal = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { 
-    darkMode, 
-    toggleDarkMode,
     animationsEnabled,
     toggleAnimations
   } = useUIStore();
@@ -98,6 +92,8 @@ const SettingsModal = ({ isOpen, onClose }) => {
     { id: 'system', label: 'Hệ thống', icon: Database },
   ];
 
+  const { clearAllCache: sharedClearAllCache } = useSharedSettingsStore();
+
   const handleClearCache = async (type) => {
     try {
       switch (type) {
@@ -111,6 +107,8 @@ const SettingsModal = ({ isOpen, onClose }) => {
           await clearMusicCache();
           break;
         case 'all':
+          // Use shared cache clearing + individual store clearing
+          sharedClearAllCache();
           await Promise.all([clearMangaCache(), clearMovieCache(), clearMusicCache()]);
           break;
       }
@@ -178,38 +176,6 @@ const SettingsModal = ({ isOpen, onClose }) => {
                   Giao diện
                 </h3>
                 
-                {/* Theme Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Chế độ hiển thị
-                  </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      onClick={() => !darkMode && toggleDarkMode()}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        !darkMode 
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                          : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
-                      }`}
-                    >
-                      <Sun className="w-8 h-8 mx-auto mb-2 text-yellow-500" />
-                      <p className="font-medium text-gray-900 dark:text-white">Sáng</p>
-                    </button>
-                    
-                    <button
-                      onClick={() => darkMode && toggleDarkMode()}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        darkMode 
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                          : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
-                      }`}
-                    >
-                      <Moon className="w-8 h-8 mx-auto mb-2 text-blue-500" />
-                      <p className="font-medium text-gray-900 dark:text-white">Tối</p>
-                    </button>
-                  </div>
-                </div>
-
                 {/* Animations */}
                 <div>
                   <label className="flex items-center justify-between">
@@ -229,6 +195,9 @@ const SettingsModal = ({ isOpen, onClose }) => {
                       />
                     </button>
                   </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    Bật/tắt hiệu ứng chuyển tiếp và animation. Để tùy chỉnh theme, vui lòng vào trang Settings chính.
+                  </p>
                 </div>
               </div>
             )}

@@ -7,7 +7,7 @@ import {
   Palette, Volume2, Eye, Database, Download, Upload,
   Shield, User, Bell, Trash2, RotateCcw, Save
 } from 'lucide-react';
-import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
+import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore, useSharedSettingsStore } from '@/store';
 import Button from '@/components/common/Button';
 import { useModal } from '@/components/common/Modal';
 
@@ -27,12 +27,11 @@ const Settings = () => {
     readerSettings, 
     mangaSettings, 
     updateReaderSettings, 
-    updateMangaSettings,
-    clearRecentHistory,
-    clearAllCache
+    updateMangaSettings
   } = useMangaStore();
   const { clearMovieCache } = useMovieStore();
   const { clearMusicCache } = useMusicStore();
+  const { clearAllCache: sharedClearAllCache, clearRecentHistory: sharedClearRecentHistory } = useSharedSettingsStore();
 
   const [activeTab, setActiveTab] = useState('appearance');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -120,7 +119,8 @@ const Settings = () => {
       confirmText: 'Xóa lịch sử',
       cancelText: 'Hủy',
       onConfirm: () => {
-        clearRecentHistory('manga');
+        const { sourceKey, rootFolder } = useAuthStore.getState();
+        sharedClearRecentHistory('manga', sourceKey, rootFolder);
         successModal({
           title: 'Đã xóa!',
           message: 'Lịch sử xem đã được xóa thành công.'
@@ -137,7 +137,7 @@ const Settings = () => {
       confirmText: 'Xóa tất cả',
       cancelText: 'Hủy',
       onConfirm: () => {
-        clearAllCache();
+        sharedClearAllCache();
         successModal({
           title: 'Đã xóa!',
           message: 'Toàn bộ cache đã được xóa thành công.'

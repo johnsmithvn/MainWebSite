@@ -563,7 +563,7 @@ const MangaReader = () => {
                     src={imageSrc}
                     alt={`Page ${globalIndex + 1}`}
                     className="scroll-img"
-                    loading="lazy"
+                    loading={mangaSettings.lazyLoad ? "lazy" : "eager"}
                     onClick={handleImageClick}
                     onLoad={(e) => {
                       e.target.classList.remove('loading');
@@ -600,6 +600,7 @@ const MangaReader = () => {
                   src={currentImages[currentPage]}
                   alt={`Page ${currentPage + 1}`}
                   className="reader-image-fullsize"
+                  loading={mangaSettings.lazyLoad ? "lazy" : "eager"}
                   onClick={handleImageClick}
                   onLoad={(e) => {
                     e.target.classList.remove('loading');
