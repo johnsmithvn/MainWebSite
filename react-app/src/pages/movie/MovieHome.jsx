@@ -3,11 +3,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Heart, Play, Grid, List, Filter, ArrowLeft, Loader, RefreshCw } from 'lucide-react';
+import { Search, Play, Grid, List, Filter, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useMovieStore, useUIStore, useAuthStore } from '@/store';
 import Button from '@/components/common/Button';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import MovieCard from '@/components/movie/MovieCard';
+import Pagination from '@/components/common/Pagination';
 import MovieRandomSection from '@/components/movie/MovieRandomSection';
 import { PAGINATION } from '@/constants';
 
@@ -41,6 +42,13 @@ const MovieHome = () => {
     } catch (_) {}
     return PAGINATION.MOVIES_PER_PAGE;
   });
+
+  // Ensure selector options always include configured default (MOVIES_PER_PAGE)
+  const moviePerPageOptions = React.useMemo(() => {
+    const base = [1, 12, 24, 30, 48, 60, 96];
+    const withDefault = [PAGINATION.MOVIES_PER_PAGE, ...base];
+    return Array.from(new Set(withDefault)).sort((a, b) => a - b);
+  }, []);
 
   // Redirect to home only when there's no sourceKey; don't bounce when switching sections
   useEffect(() => {
@@ -85,12 +93,12 @@ const MovieHome = () => {
     try { localStorage.setItem('movie.perPage', String(moviesPerPage)); } catch (_) {}
   }, [moviesPerPage]);
 
-  // Pagination (per-page selectable)
-  const totalPages = Math.ceil(movieList.length / moviesPerPage);
-  const currentMovies = movieList.slice(
-    currentPage * moviesPerPage,
-    (currentPage + 1) * moviesPerPage
-  );
+  // NOTE: Pagination now applies AFTER filtering & sorting (was previously on raw movieList)
+  // We'll compute filtered + sorted lists first, then slice for current page.
+  // (Declarations of filteredMovies/sortedMovies appear later; we lift pagination calculation below after they exist.)
+  // Temporary placeholders; real values assigned after sortedMovies defined.
+  let totalPages = 0;
+  let currentMovies = [];
 
   // Reset page when path changes
   useEffect(() => {
@@ -129,11 +137,20 @@ const MovieHome = () => {
     fetchMovieFolders(currentPath);
   };
 
-  // Filter and sort movies
+  // Helper to normalize text for more robust search (case & basic accents insensitive)
+  const normalize = (str = '') => str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+
+  const needle = normalize(searchTerm);
+
+  // Filter and sort movies (apply search to name & path)
   const filteredMovies = movieList.filter(movie => {
-    const matchesSearch = movie.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         movie.path?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    if (!needle) return true;
+    const name = normalize(movie.name || '');
+    const path = normalize(movie.path || '');
+    return name.includes(needle) || path.includes(needle);
   });
 
   const sortedMovies = [...filteredMovies].sort((a, b) => {
@@ -148,6 +165,23 @@ const MovieHome = () => {
         return 0;
     }
   });
+
+  // Now compute pagination based on sortedMovies
+  totalPages = Math.ceil(sortedMovies.length / moviesPerPage) || 1;
+  currentMovies = sortedMovies.slice(
+    currentPage * moviesPerPage,
+    (currentPage + 1) * moviesPerPage
+  );
+
+  // Reset page when search term changes or filtered size shrinks below current window
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [searchTerm, sortBy]);
+  useEffect(() => {
+    if (currentPage >= totalPages) {
+      setCurrentPage(0);
+    }
+  }, [totalPages]);
 
   // Handle navigation
   const handleGoBack = () => {
@@ -238,7 +272,7 @@ const MovieHome = () => {
                   onChange={(e) => handlePerPageChange(e.target.value)}
                   className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
                 >
-                  {[12, 24, 30, 48, 60, 96].map(n => (
+                  {moviePerPageOptions.map(n => (
                     <option key={n} value={n}>{n}</option>
                   ))}
                 </select>
@@ -332,7 +366,7 @@ const MovieHome = () => {
           </div>
         ) : (
           <>
-            {/* Current page items */}
+            {/* Current page items (after filtering & sorting) */}
             <div className={`grid ${
               viewMode === 'grid' 
                 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' 
@@ -347,52 +381,23 @@ const MovieHome = () => {
               ))}
             </div>
 
-            {/* Pagination */}
+            {/* Pagination (shared component) */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 0}
-                >
-                  ⬅ Previous
-                </Button>
-
-                <div className="flex items-center gap-2">
-                  {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                    const pageNum = Math.max(0, Math.min(currentPage - 2, totalPages - 5)) + i;
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => handlePageChange(pageNum)}
-                        className={`px-3 py-1 rounded ${
-                          pageNum === currentPage
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        {pageNum + 1}
-                      </button>
-                    );
-                  })}
+              <div className="mt-4 flex flex-col items-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  totalItems={filteredMovies.length}
+                  itemsPerPage={moviesPerPage}
+                  enableJump={true}
+                  center
+                />
+                <div className="text-center mt-4 text-sm text-gray-600 dark:text-gray-400">
+                  Page {currentPage + 1} of {totalPages} • {filteredMovies.length} result{filteredMovies.length === 1 ? '' : 's'}
                 </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage >= totalPages - 1}
-                >
-                  Next ➡
-                </Button>
               </div>
             )}
-
-            {/* Page info */}
-            <div className="text-center mt-4 text-sm text-gray-600 dark:text-gray-400">
-              Page {currentPage + 1} of {totalPages} • {filteredMovies.length} total items
-            </div>
           </>
         )}
       </div>

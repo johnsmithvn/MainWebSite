@@ -58,6 +58,14 @@ const MusicHome = () => {
     return PAGINATION.MUSIC_PER_PAGE;
   });
 
+  // Ensure selector options always include the configured default (MUSIC_PER_PAGE)
+  const musicPerPageOptions = React.useMemo(() => {
+    const base = [1, 12, 24, 30, 48, 60, 96];
+    const withDefault = [PAGINATION.MUSIC_PER_PAGE, ...base];
+    // Unique & sorted ascending
+    return Array.from(new Set(withDefault)).sort((a, b) => a - b);
+  }, []);
+
   // Track last fetch to avoid duplicate calls (StrictMode/multiple effects)
   const lastFetchRef = useRef('');
 
@@ -84,12 +92,9 @@ const MusicHome = () => {
     try { localStorage.setItem('music.perPage', String(musicPerPage)); } catch (_) {}
   }, [musicPerPage]);
 
-  // Pagination (per-page selectable)
-  const totalPages = Math.ceil(musicList.length / musicPerPage);
-  const currentMusic = musicList.slice(
-    currentPage * musicPerPage,
-    (currentPage + 1) * musicPerPage
-  );
+  // NOTE: We'll paginate AFTER filtering & sorting for correct search results
+  let totalPages = 0;
+  let currentMusic = [];
 
   // Load path from URL and fetch (single place to fetch)
   useEffect(() => {
@@ -152,13 +157,19 @@ const MusicHome = () => {
     fetchMusicFolders(currentPath);
   };
 
-  // Filter and sort music
-  const filteredMusic = musicList.filter(music => 
-    !searchTerm || 
-    music.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    music.artist?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    music.album?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Normalize helper to make search accent-insensitive
+  const normalize = (str = '') => str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+  const needle = normalize(searchTerm);
+
+  // Filter (apply normalized search across relevant fields)
+  const filteredMusic = musicList.filter(music => {
+    if (!needle) return true;
+    return [music.name, music.artist, music.album, music.path]
+      .some(val => normalize(val || '').includes(needle));
+  });
 
   const sortedMusic = [...filteredMusic].sort((a, b) => {
     switch (sortBy) {
@@ -179,6 +190,21 @@ const MusicHome = () => {
         return 0;
     }
   });
+
+  // Pagination after sorting
+  totalPages = Math.ceil(sortedMusic.length / musicPerPage) || 1;
+  currentMusic = sortedMusic.slice(
+    currentPage * musicPerPage,
+    (currentPage + 1) * musicPerPage
+  );
+
+  // Reset page on search or sort changes
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [searchTerm, sortBy]);
+  useEffect(() => {
+    if (currentPage >= totalPages) setCurrentPage(0);
+  }, [totalPages]);
 
   // Handle navigation
   const handleGoBack = () => {
@@ -246,7 +272,7 @@ const MusicHome = () => {
                   onChange={(e) => handlePerPageChange(e.target.value)}
                   className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
                 >
-                  {[12, 24, 30, 48, 60, 96].map(n => (
+                  {musicPerPageOptions.map(n => (
                     <option key={n} value={n}>{n}</option>
                   ))}
                 </select>
@@ -443,15 +469,19 @@ const MusicHome = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="mt-8">
+              <div className="mt-8 flex flex-col items-center">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
                   onPageChange={handlePageChange}
-                  showInfo={true}
                   totalItems={filteredMusic.length}
                   itemsPerPage={musicPerPage}
+                  enableJump={true}
+                  center
                 />
+                <div className="text-center mt-4 text-sm text-gray-600 dark:text-gray-400">
+                  Page {currentPage + 1} of {totalPages} • {filteredMusic.length} result{filteredMusic.length === 1 ? '' : 's'}
+                </div>
               </div>
             )}
           </>
