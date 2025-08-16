@@ -76,6 +76,7 @@ const Home = () => {
 
   const handleSourceSelect = async (key, type) => {
     const isSecure = isSecureKey(key);
+    console.log('🔐 Source select:', { key, type, isSecure, isAuthenticated: isAuthenticated });
     
     if (isSecure && !isAuthenticated) {
       setSelectedKey(key);
@@ -109,11 +110,22 @@ const Home = () => {
     }
   };
 
-  const handleLoginSuccess = (key) => {
+  const handleLoginSuccess = () => {
+    console.log('✅ Login success, selectedKey:', selectedKey);
     setLoginModalOpen(false);
-    const type = getKeyType(key);
-    handleSourceSelect(key, type);
+    const type = getKeyType(selectedKey);
+    handleSourceSelect(selectedKey, type);
   };
+
+  // Auto-navigate once authenticated after secure login (prevents needing another click)
+  React.useEffect(() => {
+    if (isAuthenticated && loginModalOpen && selectedKey) {
+      console.log('🔁 Detected auth after modal, auto navigating:', selectedKey);
+      setLoginModalOpen(false);
+      const type = getKeyType(selectedKey);
+      handleSourceSelect(selectedKey, type);
+    }
+  }, [isAuthenticated, loginModalOpen, selectedKey]);
 
   const getKeyType = (key) => {
     if (sourceKeys.manga.includes(key)) return 'manga';
@@ -236,7 +248,7 @@ const Home = () => {
         isOpen={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
         sourceKey={selectedKey}
-        onSuccess={() => handleLoginSuccess(selectedKey)}
+        onSuccess={handleLoginSuccess}
       />
     </div>
   );

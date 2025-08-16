@@ -15,7 +15,7 @@ const LoginModal = ({ isOpen, onClose, sourceKey, onSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  const { setToken } = useAuthStore();
+  const { login } = useAuthStore();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -33,12 +33,13 @@ const LoginModal = ({ isOpen, onClose, sourceKey, onSuccess }) => {
         password: password
       });
 
-      const { token } = response.data;
-      setToken(token);
-      localStorage.setItem('userToken', token);
+  const { token } = response.data;
+  // Unified login path ensures store + localStorage sync
+  login(sourceKey, token);
       
       toast.success('Đăng nhập thành công');
       setPassword('');
+      onClose(); // Đóng modal sau khi đăng nhập thành công
       onSuccess?.();
       
     } catch (error) {

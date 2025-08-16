@@ -53,6 +53,11 @@ export const useAuthStore = create(
       setRootFolder: (rootFolder) => set({ rootFolder }),
       setLastMangaRootFolder: (folder) => set({ lastMangaRootFolder: folder }),
       setToken: (token) => set({ token, isAuthenticated: !!token }),
+      // Debug watcher utility (optional usage in components)
+      _debugAuth: () => {
+        const s = get();
+        console.log('[AUTH DEBUG]', { token: s.token, isAuthenticated: s.isAuthenticated, sourceKey: s.sourceKey });
+      },
       setSecureKeys: (secureKeys) => set({ secureKeys }),
       
       login: (sourceKey, token) => {
@@ -62,7 +67,8 @@ export const useAuthStore = create(
         if (type === 'manga') updates.lastMangaKey = sourceKey;
         if (type === 'movie') updates.lastMovieKey = sourceKey;
         if (type === 'music') updates.lastMusicKey = sourceKey;
-        set(updates);
+  try { localStorage.setItem('userToken', token); } catch {}
+  set(updates);
       },
       
       logout: () => set({ 
@@ -106,6 +112,13 @@ export const useAuthStore = create(
         if (state && (state.lastMangaRootFolder === null || state.lastMangaRootFolder === undefined)) {
           state.lastMangaRootFolder = '';
         }
+          try {
+            const token = localStorage.getItem('userToken');
+            if (token && !state?.token) {
+              // Ensure store reflects existing token
+              useAuthStore.setState({ token, isAuthenticated: true });
+            }
+          } catch {}
       },
     }
   )

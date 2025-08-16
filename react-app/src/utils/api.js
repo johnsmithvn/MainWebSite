@@ -46,7 +46,10 @@ api.interceptors.request.use(
     // Add auth token if available
     const token = localStorage.getItem('userToken');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  // Keep Authorization for potential future use
+  config.headers.Authorization = `Bearer ${token}`;
+  // Also send legacy header expected by backend security middleware
+  config.headers['x-secure-token'] = token;
     }
     return config;
   },
