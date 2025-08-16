@@ -37,6 +37,10 @@ const MangaFavorites = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(24); // Default 24 items per page
 
   // Load favorites when component mounts
   useEffect(() => {
@@ -75,6 +79,17 @@ const MangaFavorites = () => {
         return 0;
     }
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(sortedFavorites.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = sortedFavorites.slice(startIndex, endIndex);
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortBy, itemsPerPage]);
 
   // Handle remove favorite with API call (must pass full object for store logic)
   const handleRemoveFavorite = async (manga) => {
@@ -115,6 +130,8 @@ const MangaFavorites = () => {
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
               {favorites.length} manga in your favorites
+              {searchTerm && ` • ${sortedFavorites.length} results`}
+              {sortedFavorites.length > 0 && totalPages > 1 && ` • Page ${currentPage} of ${totalPages} • Showing ${startIndex + 1}-${Math.min(endIndex, sortedFavorites.length)} of ${sortedFavorites.length}`}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -156,7 +173,7 @@ const MangaFavorites = () => {
                        focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div>
+          <div className="flex gap-2">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -166,6 +183,17 @@ const MangaFavorites = () => {
               <option value="dateAdded">Date Added</option>
               <option value="name">Name</option>
               <option value="lastRead">Last Read</option>
+            </select>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
+                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option value={12}>12 per page</option>
+              <option value={24}>24 per page</option>
+              <option value={48}>48 per page</option>
+              <option value={96}>96 per page</option>
             </select>
           </div>
         </div>
@@ -219,13 +247,14 @@ const MangaFavorites = () => {
           </p>
         </div>
       ) : (
-        /* Favorites Grid/List */
-        <div className={`grid ${
-          viewMode === 'grid' 
-            ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-6' 
-            : 'grid-cols-1'
-        } gap-4`}>
-          {sortedFavorites.map((manga, index) => (
+        <>
+          {/* Favorites Grid/List */}
+          <div className={`grid ${
+            viewMode === 'grid' 
+              ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-6' 
+              : 'grid-cols-1'
+          } gap-4 mb-8`}>
+            {currentItems.map((manga, index) => (
             <div
               key={manga.id || manga.path || index}
               className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg 
@@ -350,7 +379,85 @@ const MangaFavorites = () => {
               )}
             </div>
           ))}
-        </div>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Showing {startIndex + 1}-{Math.min(endIndex, sortedFavorites.length)} of {sortedFavorites.length} results
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  First
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                
+                {/* Page numbers */}
+                <div className="flex items-center gap-1">
+                  {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "primary" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className="w-10 h-10 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  Last
+                </Button>
+              </div>
+              
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Page {currentPage} of {totalPages}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Bulk Actions */}
