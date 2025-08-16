@@ -57,7 +57,7 @@ const Layout = () => {
 
       {/* Loading overlay */}
       <AnimatePresence>
-        {loading && <LoadingOverlay />}
+        {loading && <LoadingOverlay loading={loading} />}
       </AnimatePresence>
 
       {/* Toast notifications */}
