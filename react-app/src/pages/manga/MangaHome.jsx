@@ -245,7 +245,18 @@ const MangaHome = () => {
     const list = [...filteredManga];
     switch (sortBy) {
       case 'name':
-        return list.sort((a, b) => a.name?.localeCompare(b.name) || 0);
+        // Natural sorting for grid view like Windows Explorer
+        return list.sort((a, b) => {
+          const nameA = a.name || '';
+          const nameB = b.name || '';
+          
+          // Use localeCompare with numeric option for natural sorting
+          return nameA.localeCompare(nameB, undefined, { 
+            numeric: true, 
+            sensitivity: 'base',
+            caseFirst: 'upper'
+          });
+        });
       case 'date':
         return list.sort((a, b) => new Date(b.lastModified || 0) - new Date(a.lastModified || 0));
       case 'size':
