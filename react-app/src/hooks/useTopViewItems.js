@@ -40,7 +40,7 @@ export const useTopViewItems = (type = 'manga', options = {}) => {
     const triggers = {
       manga: favoritesRefreshTrigger,
       movie: movieStore.favoritesRefreshTrigger || 0,
-      music: musicStore.favoritesRefreshTrigger || 0
+      music: 0
     };
     
     const currentTrigger = triggers[type] || 0;
@@ -50,7 +50,7 @@ export const useTopViewItems = (type = 'manga', options = {}) => {
       // Invalidate query to force refetch and merge favorite state
       queryClient.invalidateQueries(['topViewItems', type, sourceKey, rootFolder]);
     }
-  }, [favoritesRefreshTrigger, movieStore.favoritesRefreshTrigger, musicStore.favoritesRefreshTrigger, type, queryClient, sourceKey, rootFolder]);
+  }, [favoritesRefreshTrigger, movieStore.favoritesRefreshTrigger, type, queryClient, sourceKey, rootFolder]);
 
   return useQuery({
     queryKey: ['topViewItems', type, sourceKey, rootFolder],
@@ -112,8 +112,7 @@ export const useTopViewItems = (type = 'manga', options = {}) => {
       
       // Merge with current favorite state from stores
       const favoriteStore = type === 'manga' ? mangaStore : 
-                           type === 'movie' ? movieStore : 
-                           type === 'music' ? musicStore : null;
+                           type === 'movie' ? movieStore : null;
       
       if (favoriteStore && Array.isArray(items)) {
         items = items.map(item => {

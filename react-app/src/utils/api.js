@@ -186,8 +186,6 @@ export const apiService = {
   getAudio: (params) => api.get(`${API.ENDPOINTS.MUSIC}/audio`, { params }),
   // Accept optional axios config (e.g., { signal }) for abortable requests
   getAudioCache: (params, config = {}) => api.get(`${API.ENDPOINTS.MUSIC}/audio-cache`, { params, ...config }),
-    getFavorites: (params) => api.get(`${API.ENDPOINTS.MUSIC}/favorite`, { params }),
-    toggleFavorite: (dbkey, path, value) => api.post(`${API.ENDPOINTS.MUSIC}/favorite`, { dbkey, path, value }),
     getPlaylists: (params) => api.get(`${API.ENDPOINTS.MUSIC}/playlists`, { params }),
     getPlaylist: (id, params) => api.get(`${API.ENDPOINTS.MUSIC}/playlist/${id}`, { params }),
     createPlaylist: (data) => api.post(`${API.ENDPOINTS.MUSIC}/playlists`, data),

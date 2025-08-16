@@ -455,9 +455,7 @@ const MoviePlayer = () => {
     if (dragging) {
       e.preventDefault();
       const skipped = Math.floor(diff / PIXELS_PER_SECOND);
-      if (skipped !== 0) {
-        showToast(`${skipped > 0 ? '⏩' : '⏪'} ${Math.abs(skipped)}s`, 'info');
-      }
+      // Removed toast for skip gesture
     }
     
     setDragStartX(null);
@@ -482,13 +480,13 @@ const MoviePlayer = () => {
     
     if (x < width / 2) {
       videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - SKIP_SECONDS);
-      showToast(`⏪ Lùi ${SKIP_SECONDS}s`, 'info');
+      // Removed skip back toast
     } else {
       videoRef.current.currentTime = Math.min(
         videoRef.current.duration,
         videoRef.current.currentTime + SKIP_SECONDS
       );
-      showToast(`⏩ Tua ${SKIP_SECONDS}s`, 'info');
+      // Removed skip forward toast
     }
   };
 

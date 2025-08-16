@@ -722,7 +722,6 @@ export const useMusicStore = create(
       currentPath: '',
       musicList: [], // Current folder's music/folders
       allMusic: [], // For backward compatibility
-      favorites: [],
       loading: false,
       error: null,
       searchTerm: '',
@@ -737,7 +736,6 @@ export const useMusicStore = create(
       repeat: 'none', // 'none', 'one', 'all'
       playlists: [],
       recentPlayed: [],
-      favoritesRefreshTrigger: 0, // Add trigger for forcing slider refresh
       playerSettings: {
         volume: 1,
         autoplay: false,
@@ -903,132 +901,6 @@ export const useMusicStore = create(
         playlists: state.playlists.filter(p => p.id !== id)
       })),
       
-      // Fetch favorites from API
-      fetchFavorites: async () => {
-        try {
-          const { sourceKey } = useAuthStore.getState();
-          const params = { key: sourceKey };
-          
-          // Note: Music favorites API might not exist yet, so handle gracefully
-          try {
-            const response = await apiService.music.getFavorites?.(params);
-            
-            // Process favorites similar to the old code with encoding (using /audio/ prefix)
-            const allFavorites = response.data || [];
-            const favorites = allFavorites.map(item => {
-              let thumbnailUrl = item.thumbnail;
-              
-              if (thumbnailUrl && thumbnailUrl !== 'null') {
-                // Handle already complete URLs
-                if (thumbnailUrl.startsWith('/audio/') || 
-                    thumbnailUrl.startsWith('http') || 
-                    thumbnailUrl.startsWith('/default/')) {
-                  thumbnailUrl = thumbnailUrl;
-                } else {
-                  // Get folder prefix (remove filename if it's a music file)
-                  let folderPrefix;
-                  if (item.type === 'folder') {
-                    folderPrefix = item.path || '';
-                  } else {
-                    folderPrefix = item.path?.split('/').slice(0, -1).join('/') || '';
-                  }
-                  
-                  // Remove folder prefix from thumbnail if it's already included
-                  let cleanThumbnail = thumbnailUrl;
-                  if (folderPrefix && cleanThumbnail.startsWith(folderPrefix + '/')) {
-                    cleanThumbnail = cleanThumbnail.slice(folderPrefix.length + 1);
-                  }
-                  
-                  // Encode path components to handle special characters
-                  const safeFolderPrefix = folderPrefix ? 
-                    folderPrefix.split('/').map(encodeURIComponent).join('/') + '/' : '';
-                  const safeThumbnail = cleanThumbnail.split('/').map(encodeURIComponent).join('/');
-                  
-                  // Build thumbnail URL using /audio/ prefix
-                  thumbnailUrl = `/audio/${safeFolderPrefix}${safeThumbnail.replace(/\\/g, '/')}`;
-                }
-              } else {
-                // Use default thumbnails
-                thumbnailUrl = (item.type === 'audio' || item.type === 'file') 
-                  ? '/default/music-thumb.png' 
-                  : '/default/folder-thumb.png';
-              }
-              
-              return {
-                ...item,
-                thumbnail: thumbnailUrl
-              };
-            });
-            
-            set({ favorites });
-          } catch {
-            // Music favorites API not implemented yet, keep local storage
-            console.warn('Music favorites API not implemented');
-            set({ favorites: [] });
-          }
-        } catch (error) {
-          console.error('Fetch music favorites error:', error);
-          set({ error: error.response?.data?.message || error.message });
-        }
-      },
-      
-      toggleFavorite: async (item) => {
-        try {
-          const { sourceKey, rootFolder } = useAuthStore.getState();
-          const isFavorited = get().favorites.some(f => f.path === item.path);
-          const newFavoriteState = !isFavorited;
-          
-          console.log('🎵 MusicStore toggleFavorite:', { sourceKey, path: item.path, newFavoriteState });
-          
-          // Try to call API if it exists
-          try {
-            await apiService.music.toggleFavorite(sourceKey, item.path, newFavoriteState);
-          } catch {
-            // Music favorites API not implemented yet, just log
-            console.warn('Music toggle favorite API not implemented');
-          }
-          
-          // Update local state regardless
-          set((state) => {
-            const favorites = isFavorited
-              ? state.favorites.filter(f => f.path !== item.path)
-              : [...state.favorites, item];
-            
-            // Increment favoritesRefreshTrigger to trigger slider refresh
-            return { 
-              favorites,
-              favoritesRefreshTrigger: state.favoritesRefreshTrigger + 1
-            };
-          });
-
-          // Update all cache entries
-          updateFavoriteInAllCaches(sourceKey, item.path, newFavoriteState, rootFolder);
-          
-          console.log('✅ MusicStore toggleFavorite completed');
-          
-        } catch (error) {
-          console.error('Toggle music favorite error:', error);
-        }
-      },
-      
-      removeFavorite: async (item) => {
-        try {
-          const { sourceKey } = useAuthStore.getState();
-          
-          // Call API to remove favorite
-          await apiService.music.toggleFavorite(sourceKey, item.path, false);
-          
-          // Update local state
-          set((state) => ({
-            favorites: state.favorites.filter(f => f.path !== item.path)
-          }));
-          
-        } catch (error) {
-          console.error('Remove music favorite error:', error);
-          set({ error: error.response?.data?.message || error.message });
-        }
-      },
-      
       // Clear recent history for music
       clearRecentHistory: () => {
         const { sourceKey } = useAuthStore.getState();
@@ -1055,7 +927,6 @@ export const useMusicStore = create(
         shuffle: state.shuffle,
         repeat: state.repeat,
         playlists: state.playlists,
-        favorites: state.favorites,
         recentPlayed: state.recentPlayed,
         playerSettings: state.playerSettings,
         currentPath: state.currentPath,
