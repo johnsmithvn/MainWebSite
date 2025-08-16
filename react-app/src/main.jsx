@@ -23,17 +23,23 @@ const queryClient = new QueryClient({
 // Set Modal app element for accessibility
 Modal.setAppElement('#root');
 
+// Allow disabling StrictMode in dev to investigate double image requests (e.g., React 18 intentional double-mount)
+// Set VITE_DISABLE_STRICT_MODE=true in .env.local to render without StrictMode.
+const disableStrict = import.meta.env.VITE_DISABLE_STRICT_MODE === 'true';
+
+const AppTree = (
+  <BrowserRouter
+    future={{
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    }}
+  >
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  </BrowserRouter>
+);
+
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <BrowserRouter 
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}
-    >
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
-    </BrowserRouter>
-  </React.StrictMode>
+  disableStrict ? AppTree : <React.StrictMode>{AppTree}</React.StrictMode>
 );

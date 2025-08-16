@@ -18,13 +18,16 @@ const MangaReader = () => {
   const { addRecentItem } = useRecentManager('manga');
   
   const [currentImages, setCurrentImages] = useState([]);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(0); // index within current group for horizontal OR global index in vertical
+  const [scrollPageIndex, setScrollPageIndex] = useState(0); // page group index for vertical pagination
   const [loading, setLoading] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [error, setError] = useState(null);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
-  const [preloadedImages, setPreloadedImages] = useState(new Set());
+  // Use ref (not state) for preloaded images so StrictMode double-mount doesn't flush the cache
+  // and we avoid unnecessary re-renders when the Set changes.
+  const preloadedImagesRef = useRef(new Set());
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentPath, setCurrentPath] = useState('');
   const readerRef = useRef(null);
@@ -36,6 +39,14 @@ const MangaReader = () => {
   const requestIdRef = useRef(0);
   // Guard to avoid duplicate initial loads (e.g., StrictMode double-effect)
   const lastLoadKeyRef = useRef('');
+  // Track images currently loading to avoid duplicate network fetches
+  const loadingImagesRef = useRef(new Set());
+  // Diagnostics: track onLoad counts per image to verify duplicate actual loads vs cached
+  const loadCountRef = useRef(new Map());
+  // Jump modal state (supports both vertical chunk jump & horizontal single-page jump)
+  const [showJumpModal, setShowJumpModal] = useState(false);
+  const [jumpInput, setJumpInput] = useState('');
+  const [jumpContext, setJumpContext] = useState('vertical'); // 'vertical' | 'horizontal'
 
   // the required distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 50;
@@ -80,16 +91,27 @@ const MangaReader = () => {
   // Lightweight preload using browser cache (no blob/objectURL)
   const preloadImage = useCallback((src) => {
     return new Promise((resolve, reject) => {
-      if (!src || preloadedImages.has(src)) return resolve(src);
-      const img = new Image();
-      img.onload = () => {
-        setPreloadedImages((prev) => new Set(prev).add(src));
-        resolve(src);
-      };
-      img.onerror = reject;
-      img.src = src;
+      if (!src) return resolve(src);
+      if (preloadedImagesRef.current.has(src)) return resolve(src);
+      if (loadingImagesRef.current.has(src)) return resolve(src); // already in-flight
+      loadingImagesRef.current.add(src);
+      // Defer a tick so that if an <img> tag is about to request the same src
+      // the browser can consolidate via its pending queue before we create another object.
+      setTimeout(() => {
+        const img = new Image();
+        img.onload = () => {
+          loadingImagesRef.current.delete(src);
+          preloadedImagesRef.current.add(src);
+          resolve(src);
+        };
+        img.onerror = (e) => {
+          loadingImagesRef.current.delete(src);
+          reject(e);
+        };
+        img.src = src;
+      }, 0);
     });
-  }, [preloadedImages]);
+  }, []);
 
   const loadFolderData = useCallback(async (path) => {
     // Abort previous in-flight request
@@ -127,7 +149,7 @@ const MangaReader = () => {
       // Ignore stale responses
       if (myRequestId !== requestIdRef.current) return;
 
-      if (response.data && response.data.type === 'reader' && Array.isArray(response.data.images)) {
+  if (response.data && response.data.type === 'reader' && Array.isArray(response.data.images)) {
         setCurrentImages(response.data.images);
         console.log('✅ Loaded images:', response.data.images.length);
 
@@ -142,8 +164,7 @@ const MangaReader = () => {
           console.warn('Error adding to recent:', err);
         }
 
-        // Preload the first image lightly
-        if (response.data.images.length > 0) preloadImage(response.data.images[0]);
+  // Do NOT preload first image (both modes) to avoid duplicate network (DOM <img> + Image())
       } else {
         setError('No images found in this folder');
       }
@@ -164,7 +185,7 @@ const MangaReader = () => {
     } finally {
       if (myRequestId === requestIdRef.current) setLoading(false);
     }
-  }, [stableAuthKeys.sourceKey, stableAuthKeys.rootFolder, mangaSettings.useDb, preloadImage, addRecentItem]);
+  }, [stableAuthKeys.sourceKey, stableAuthKeys.rootFolder, mangaSettings.useDb, preloadImage, addRecentItem, readerSettings.readingMode]);
 
   useEffect(() => {
     if (currentMangaPath && stableAuthKeys.sourceKey && stableAuthKeys.rootFolder) {
@@ -183,8 +204,7 @@ const MangaReader = () => {
           setLoading(false);
           // Clear once consumed to avoid stale reuse later
           try { setReaderPrefetch(null); } catch {}
-          // Preload first image
-          preloadImage(readerPrefetch.images[0]);
+          // Skip preloading first image intentionally
         } else {
           console.log('🔍 Loading folder data for path:', currentMangaPath);
           loadFolderData(currentMangaPath);
@@ -242,42 +262,38 @@ const MangaReader = () => {
 
   // Optimized preload function - only preload what's needed
   const preloadImagesAroundCurrentPage = useCallback(async () => {
+    // Skip entirely in vertical mode – the images are already in DOM (with lazy loading)
+    if (readerSettings.readingMode === 'vertical') return;
     if (!currentImages.length) return;
-    // clamp preload to 2–4
     const preloadCount = Math.max(2, Math.min(4, Number(readerSettings.preloadCount) || 2));
-    const start = Math.max(0, currentPage - Math.floor(preloadCount / 2));
-    const end = Math.min(currentImages.length - 1, currentPage + Math.ceil(preloadCount / 2));
-    
+    // Forward-only strategy: preload next N images ahead (not previous) to prevent re-preloading when going forward.
+    const start = currentPage + 1;
+    const end = Math.min(currentImages.length - 1, currentPage + preloadCount);
     const imagesToPreload = [];
     for (let i = start; i <= end; i++) {
-      if (currentImages[i] && !preloadedImages.has(currentImages[i])) {
-        imagesToPreload.push(currentImages[i]);
-      }
+      const src = currentImages[i];
+      if (src && !preloadedImagesRef.current.has(src)) imagesToPreload.push(src);
     }
-    
-    if (imagesToPreload.length === 0) return;
-    
-    console.log(`🖼️ Preloading ${imagesToPreload.length} images around page ${currentPage} (range: ${start}-${end})`);
-    
+
+    if (!imagesToPreload.length) return;
+  console.log(`🖼️ Preloading (horizontal forward) ${imagesToPreload.length} images after page ${currentPage} (range: ${start}-${end})`);
     try {
-      await Promise.allSettled(imagesToPreload.map(src => preloadImage(src)));
-      console.log(`✅ Preload complete. Total cached: ${preloadedImages.size}/${currentImages.length}`);
+      await Promise.allSettled(imagesToPreload.map(preloadImage));
+      console.log(`✅ Preload complete. Total cached: ${preloadedImagesRef.current.size}/${currentImages.length}`);
     } catch (error) {
       console.error('❌ Error preloading images:', error);
     }
-  }, [currentImages, currentPage, readerSettings.preloadCount, preloadedImages, preloadImage]);
+  }, [currentImages, currentPage, readerSettings.readingMode, readerSettings.preloadCount, preloadImage]);
 
   // Effect to preload images when currentPage or currentImages change with throttling
   useEffect(() => {
     if (currentImages.length > 0) {
-      // Debounce preload to avoid too frequent calls
       const timeoutId = setTimeout(() => {
         preloadImagesAroundCurrentPage();
       }, 100);
-      
       return () => clearTimeout(timeoutId);
     }
-  }, [currentImages.length, currentPage, readerSettings.preloadCount, preloadImagesAroundCurrentPage]);
+  }, [currentImages.length, currentPage, readerSettings.preloadCount, readerSettings.readingMode, preloadImagesAroundCurrentPage]);
 
   const toggleControls = () => {
     setShowControls(!showControls);
@@ -389,6 +405,61 @@ const MangaReader = () => {
     }
   };
 
+  // ===== Derived pagination (vertical mode) - must be before any conditional returns for hook order stability =====
+  const imagesPerScrollPage = readerSettings.scrollImagesPerPage || 200;
+  const totalScrollPages = Math.ceil(currentImages.length / imagesPerScrollPage);
+  const currentScrollImages = readerSettings.readingMode === 'vertical'
+    ? currentImages.slice(scrollPageIndex * imagesPerScrollPage, (scrollPageIndex + 1) * imagesPerScrollPage)
+    : currentImages;
+
+  // Keep currentPage aligned to start of scroll chunk in vertical mode
+  useEffect(() => {
+    if (readerSettings.readingMode === 'vertical') {
+      setCurrentPage(scrollPageIndex * imagesPerScrollPage);
+    }
+  }, [scrollPageIndex, readerSettings.readingMode, imagesPerScrollPage]);
+
+  const goToPrevScrollPage = () => {
+    setScrollPageIndex((p) => Math.max(0, p - 1));
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+  const goToNextScrollPage = () => {
+    setScrollPageIndex((p) => Math.min(totalScrollPages - 1, p + 1));
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+  const openJumpModal = (mode) => {
+    setJumpContext(mode);
+    setJumpInput('');
+    setShowJumpModal(true);
+  };
+
+  const closeJumpModal = () => setShowJumpModal(false);
+  const handleJumpSelect = (page) => {
+    if (jumpContext === 'vertical') {
+      setScrollPageIndex(page);
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    } else {
+      setCurrentPage(page);
+    }
+    closeJumpModal();
+  };
+  const handleJumpSubmit = (e) => {
+    e.preventDefault();
+  const num = parseInt(jumpInput, 10);
+  const total = jumpContext === 'vertical' ? totalScrollPages : currentImages.length;
+  if (!isNaN(num) && num >= 1 && num <= total) handleJumpSelect(num - 1);
+  };
+
+  // ESC close & focus restoration
+  useEffect(() => {
+    if (!showJumpModal) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') closeJumpModal();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showJumpModal]);
+
   if (loading) {
     return (
       <div className="manga-reader">
@@ -481,23 +552,35 @@ const MangaReader = () => {
         className={`reader ${readerSettings.readingMode === 'vertical' ? 'scroll-mode' : ''}`}
       >
         {readerSettings.readingMode === 'vertical' ? (
-          // Vertical scroll mode - render all images with zoom wrapper
+          // Vertical scroll mode with pagination
           <div className="scroll-container">
             <div className="zoom-wrapper">
-              {currentImages.map((imageSrc, index) => (
-                <img
-                  key={index}
-                  src={imageSrc}
-                  alt={`Page ${index + 1}`}
-                  className="scroll-img"
-                  onClick={handleImageClick}
-                  onLoad={(e) => e.target.classList.remove('loading')}
-                  onError={(e) => {
-                    e.target.style.background = '#333';
-                    e.target.alt = 'Lỗi tải ảnh';
-                  }}
-                />
-              ))}
+              {currentScrollImages.map((imageSrc, index) => {
+                const globalIndex = scrollPageIndex * imagesPerScrollPage + index;
+                return (
+                  <img
+                    key={globalIndex}
+                    src={imageSrc}
+                    alt={`Page ${globalIndex + 1}`}
+                    className="scroll-img"
+                    loading="lazy"
+                    onClick={handleImageClick}
+                    onLoad={(e) => {
+                      e.target.classList.remove('loading');
+                      const c = (loadCountRef.current.get(imageSrc) || 0) + 1;
+                      loadCountRef.current.set(imageSrc, c);
+                      const perfCount = performance.getEntriesByName(imageSrc).length;
+                      if (!window.__IMG_LOAD_STATS__) window.__IMG_LOAD_STATS__ = {};
+                      window.__IMG_LOAD_STATS__[imageSrc] = { count: c, perf: perfCount };
+                      console.log(`🧪 Vertical load #${c} for ${globalIndex + 1} (${imageSrc.split('/').pop()}) perfEntries=${perfCount}`);
+                    }}
+                    onError={(e) => {
+                      e.target.style.background = '#333';
+                      e.target.alt = 'Lỗi tải ảnh';
+                    }}
+                  />
+                );
+              })}
             </div>
           </div>
         ) : (
@@ -520,7 +603,7 @@ const MangaReader = () => {
                   onClick={handleImageClick}
                   onLoad={(e) => {
                     e.target.classList.remove('loading');
-                    const isPreloaded = preloadedImages.has(currentImages[currentPage]);
+                    const isPreloaded = preloadedImagesRef.current.has(currentImages[currentPage]);
                     console.log(`🖼️ Page ${currentPage + 1}: ${isPreloaded ? '✅ Preloaded' : '❌ Not preloaded'}`);
                   }}
                   onError={(e) => {
@@ -546,27 +629,143 @@ const MangaReader = () => {
       )}
 
       {/* Simple Footer */}
-      {showControls && (
+    {showControls && readerSettings.readingMode === 'horizontal' && (
         <div className="simple-footer">
-          <button 
-            onClick={goToPrevPage}
-            disabled={currentPage === 0}
-            className="nav-btn"
-          >
-            ← Prev
-          </button>
-          
-          <div className="page-counter">
+          <button onClick={goToPrevPage} disabled={currentPage === 0} className="nav-btn">← Prev</button>
+      <div className="page-counter" style={{ cursor: 'pointer' }} onClick={() => openJumpModal('horizontal')}>
             Trang {currentPage + 1} / {currentImages.length}
           </div>
-          
-          <button 
-            onClick={goToNextPage}
-            disabled={currentPage === currentImages.length - 1}
-            className="nav-btn"
-          >
-            Next →
-          </button>
+          <button onClick={goToNextPage} disabled={currentPage === currentImages.length - 1} className="nav-btn">Next →</button>
+        </div>
+      )}
+
+      {showControls && readerSettings.readingMode === 'vertical' && (
+        <div className="simple-footer">
+          <button onClick={goToPrevScrollPage} disabled={scrollPageIndex === 0} className="nav-btn">← Trang</button>
+      <div className="page-counter" onClick={() => openJumpModal('vertical')} style={{ cursor: 'pointer' }}>
+            Trang {scrollPageIndex + 1} / {totalScrollPages} ({currentScrollImages.length} ảnh)
+          </div>
+          <button onClick={goToNextScrollPage} disabled={scrollPageIndex === totalScrollPages - 1} className="nav-btn">Trang →</button>
+        </div>
+      )}
+
+      {/* Jump Modal */}
+      {showJumpModal && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) closeJumpModal(); }}
+        >
+          <div className="relative w-full max-w-md bg-gray-900 text-gray-100 rounded-xl shadow-2xl ring-1 ring-white/10 overflow-hidden animate-in fade-in zoom-in">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+              <h2 className="text-sm font-semibold tracking-wide text-gray-200">
+                {jumpContext === 'vertical' ? 'Chuyển nhóm trang nhanh' : 'Chuyển trang nhanh'}
+              </h2>
+              <button
+                onClick={closeJumpModal}
+                className="text-gray-400 hover:text-white transition-colors rounded-md p-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleJumpSubmit} className="px-5 pt-4 pb-3 border-b border-white/5">
+              <label className="block text-xs uppercase tracking-wider font-medium mb-1 text-gray-400">Nhập số trang</label>
+              <div className="flex gap-2">
+                <input
+                  autoFocus
+                  type="number"
+                  min={1}
+                  max={jumpContext === 'vertical' ? totalScrollPages : currentImages.length}
+                  value={jumpInput}
+                  onChange={(e) => setJumpInput(e.target.value)}
+                  placeholder={`1-${jumpContext === 'vertical' ? totalScrollPages : currentImages.length}`}
+                  className="w-full rounded-md bg-gray-800 border border-gray-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium rounded-md bg-blue-600 hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!jumpInput}
+                >
+                  Đi
+                </button>
+              </div>
+              <p className="mt-2 text-[11px] text-gray-500">
+                Trang hiện tại: <span className="text-gray-300 font-medium">{jumpContext === 'vertical' ? (scrollPageIndex + 1) : (currentPage + 1)}</span>
+                {' '} / {jumpContext === 'vertical' ? totalScrollPages : currentImages.length}
+              </p>
+            </form>
+            {(() => {
+              // Show grid ONLY in vertical mode; remove for horizontal per request
+              if (jumpContext !== 'vertical') return null;
+              const total = totalScrollPages;
+              if (total <= 300) {
+                const activeIndex = scrollPageIndex;
+                return (
+                  <div className="p-4 max-h-[45vh] overflow-y-auto custom-scrollbar grid grid-cols-5 gap-2 md:grid-cols-6 lg:grid-cols-7">
+                    {Array.from({ length: total }, (_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => handleJumpSelect(i)}
+                        className={
+                          `group relative h-10 rounded-md text-sm font-medium flex items-center justify-center transition-all border ` +
+                          (i === activeIndex
+                            ? 'bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-600/30'
+                            : 'bg-gray-800/70 border-gray-700 text-gray-300 hover:bg-gray-700/70 hover:text-white hover:border-gray-600')
+                        }
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+                );
+              }
+              // Large total vertical pages -> compact helper buttons
+              return (
+                <div className="px-5 py-6 text-xs text-gray-400 space-y-3">
+                  <p>Quá nhiều nhóm ({total}). Dùng ô nhập số hoặc nút trước / kế tiếp.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {['1','5','10','25','50','100'].map(v => {
+                      const jump = parseInt(v,10)-1;
+                      if (jump >= total) return null;
+                      return (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => handleJumpSelect(jump)}
+                          className="px-3 py-1.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium border border-gray-700"
+                        >
+                          {v}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+            <div className="flex items-center justify-between px-5 py-3 bg-gray-800/60 border-t border-white/5 text-[11px]">
+              <button
+                onClick={() => {
+                  if (jumpContext === 'vertical') handleJumpSelect(Math.max(scrollPageIndex - 1, 0));
+                  else handleJumpSelect(Math.max(currentPage - 1, 0));
+                }}
+                disabled={jumpContext === 'vertical' ? scrollPageIndex === 0 : currentPage === 0}
+                className="px-3 py-1.5 rounded-md bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-xs font-medium text-gray-200"
+              >
+                ← Trang trước
+              </button>
+              <button
+                onClick={() => {
+                  if (jumpContext === 'vertical') handleJumpSelect(Math.min(scrollPageIndex + 1, totalScrollPages - 1));
+                  else handleJumpSelect(Math.min(currentPage + 1, currentImages.length - 1));
+                }}
+                disabled={jumpContext === 'vertical' ? (scrollPageIndex === totalScrollPages - 1) : (currentPage === currentImages.length - 1)}
+                className="px-3 py-1.5 rounded-md bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-xs font-medium text-gray-200"
+              >
+                Trang kế tiếp →
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

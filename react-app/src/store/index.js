@@ -156,7 +156,8 @@ export const useMangaStore = create(
         darkMode: false,
         zoomLevel: 100,
         autoNext: false,
-        preloadCount: 10, // Number of images to preload before and after current page
+  preloadCount: 10, // Number of images to preload before and after current page
+  scrollImagesPerPage: 200, // Pagination size for vertical scroll mode
       },
       mangaSettings: {
         useDb: true, // true: load folder từ DB, false: load từ disk

@@ -361,6 +361,23 @@ const Settings = () => {
                   <p className="text-xs text-gray-500 mt-1">Số ảnh được tải trước để đọc mượt hơn</p>
                 </div>
 
+                {/* Scroll Images Per Page */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Ảnh mỗi trang (Scroll): {readerSettings.scrollImagesPerPage}
+                  </label>
+                  <input
+                    type="range"
+                    min="20"
+                    max="400"
+                    step="20"
+                    value={readerSettings.scrollImagesPerPage || 200}
+                    onChange={(e) => updateReaderSettings({ scrollImagesPerPage: parseInt(e.target.value) })}
+                    className="w-full max-w-xs"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Điều chỉnh số ảnh trong mỗi trang của chế độ cuộn. Số thấp giúp chuyển trang nhanh hơn.</p>
+                </div>
+
                 {/* Recent History Count */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
