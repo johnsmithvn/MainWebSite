@@ -2,18 +2,35 @@
 // ❤️ Trang manga yêu thích với tích hợp API backend
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Heart, Search, Grid, List, Trash2, BookOpen, Download, RefreshCw } from 'lucide-react';
 import { useMangaStore, useUIStore } from '@/store';
 import Button from '@/components/common/Button';
 
 const MangaFavorites = () => {
-  const { 
-    favorites, 
-    removeFavorite, 
-    fetchFavorites, 
-    toggleFavorite,
-    loading: mangaLoading 
-  } = useMangaStore();
+  const { favorites, fetchFavorites, toggleFavorite, loading: mangaLoading } = useMangaStore();
+  const navigate = useNavigate();
+  // Navigation helper: determine if favorite is a reader entry or folder
+  const handleNavigate = (manga) => {
+    if (!manga) return;
+    const path = manga.path || '';
+    // Heuristic: if marked reader or self, go direct
+    const directReader = manga.isSelfReader || path.endsWith('/__self__') || manga.type === 'reader';
+    if (directReader) {
+      const params = new URLSearchParams();
+      params.set('path', path);
+      params.set('returnUrl', '/manga/favorites');
+      navigate(`/manga/reader?${params.toString()}`);
+      return;
+    }
+    // Otherwise navigate to MangaHome WITHOUT view=folder so effect can auto-redirect if API says reader
+    const size = (() => { try { return localStorage.getItem('manga.perPage') || '30'; } catch (_) { return '30'; } })();
+    const params = new URLSearchParams();
+    if (path) params.set('path', path);
+    params.set('page', '1');
+    params.set('size', size);
+    navigate(`/manga?${params.toString()}`);
+  };
   
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('dateAdded');
@@ -25,6 +42,7 @@ const MangaFavorites = () => {
   useEffect(() => {
     const loadFavorites = async () => {
       setLoading(true);
+  
       setError('');
       try {
         await fetchFavorites();
@@ -58,12 +76,12 @@ const MangaFavorites = () => {
     }
   });
 
-  // Handle remove favorite with API call
-  const handleRemoveFavorite = async (mangaId) => {
+  // Handle remove favorite with API call (must pass full object for store logic)
+  const handleRemoveFavorite = async (manga) => {
+    if (!manga) return;
     if (window.confirm('Remove this manga from favorites?')) {
       try {
-        await toggleFavorite(mangaId); // This will remove if already favorite
-        // Refresh the favorites list
+        await toggleFavorite(manga); // store determines add/remove by presence
         await fetchFavorites();
       } catch (err) {
         console.error('Error removing favorite:', err);
@@ -216,9 +234,12 @@ const MangaFavorites = () => {
             >
               {viewMode === 'grid' ? (
                 <>
-                  <div className="relative">
-                    <div className="aspect-[3/4] bg-gray-200 dark:bg-gray-700 rounded-md mb-3 
-                                  overflow-hidden cursor-pointer">
+                    <div className="relative" onClick={() => handleNavigate(manga)}>
+                    <div
+                      className="aspect-[3/4] bg-gray-200 dark:bg-gray-700 rounded-md mb-3 
+                                  overflow-hidden cursor-pointer"
+                      // inner click delegated to parent
+                    >
                       <img
                         src={manga.thumbnail || '/default/default-cover.jpg'}
                         alt={manga.title}
@@ -226,7 +247,7 @@ const MangaFavorites = () => {
                       />
                     </div>
                     <button
-                      onClick={() => handleRemoveFavorite(manga.id)}
+                      onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(manga); }}
                       className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full
                                opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                     >
@@ -234,19 +255,18 @@ const MangaFavorites = () => {
                     </button>
                   </div>
                   
-                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1 
-                               line-clamp-2 cursor-pointer hover:text-blue-500">
-                    {manga.title}
+                  <h3
+                    className="font-semibold text-gray-900 dark:text-white text-sm mb-2 truncate-3 cursor-pointer hover:text-blue-500 leading-snug"
+                    onClick={() => handleNavigate(manga)}
+                    title={manga.title || manga.name || ''}
+                  >
+                    {manga.title || manga.name || ''}
                   </h3>
                   
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                    {manga.chapters} chapters
-                  </p>
-                  
                   <div className="flex flex-col gap-1">
-                    <span className="text-xs text-gray-500">
-                      Added: {new Date(manga.favoriteDate || manga.lastUpdated).toLocaleDateString()}
-                    </span>
+                     <span className="text-xs text-gray-500">
+                       Added: {manga.favoriteDate ? new Date(manga.favoriteDate).toLocaleDateString() : (manga.lastUpdated ? new Date(manga.lastUpdated).toLocaleDateString() : '—')}
+                     </span>
                     {manga.lastRead && (
                       <span className="text-xs text-green-600 dark:text-green-400">
                         Last read: {new Date(manga.lastRead).toLocaleDateString()}
@@ -259,15 +279,15 @@ const MangaFavorites = () => {
                       variant="outline"
                       size="xs"
                       className="flex-1"
-                      onClick={() => {/* Navigate to reader */}}
+                      onClick={() => handleNavigate(manga)}
                     >
                       <BookOpen className="w-3 h-3 mr-1" />
-                      Read
+                      Open
                     </Button>
                     <Button
                       variant="outline"
                       size="xs"
-                      onClick={() => handleRemoveFavorite(manga.id)}
+                      onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(manga); }}
                       className="text-red-500 hover:text-red-600"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -276,8 +296,11 @@ const MangaFavorites = () => {
                 </>
               ) : (
                 <>
-                  <div className="w-16 h-20 bg-gray-200 dark:bg-gray-700 rounded-md mr-4 
-                                flex-shrink-0 overflow-hidden cursor-pointer">
+                  <div
+                    className="w-16 h-20 bg-gray-200 dark:bg-gray-700 rounded-md mr-4 
+                                flex-shrink-0 overflow-hidden cursor-pointer"
+                    onClick={() => handleNavigate(manga)}
+                  >
                     <img
                       src={manga.thumbnail || '/default/default-cover.jpg'}
                       alt={manga.title}
@@ -286,16 +309,17 @@ const MangaFavorites = () => {
                   </div>
                   
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1 cursor-pointer hover:text-blue-500">
-                      {manga.title}
+                    <h3
+                      className="font-semibold text-gray-900 dark:text-white mb-2 truncate-3 cursor-pointer hover:text-blue-500 leading-snug"
+                      onClick={() => handleNavigate(manga)}
+                      title={manga.title || manga.name || ''}
+                    >
+                      {manga.title || manga.name || ''}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      {manga.chapters} chapters • {manga.views} views
-                    </p>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-gray-500">
-                        Added: {new Date(manga.favoriteDate || manga.lastUpdated).toLocaleDateString()}
-                      </span>
+                       <span className="text-xs text-gray-500">
+                         Added: {manga.favoriteDate ? new Date(manga.favoriteDate).toLocaleDateString() : (manga.lastUpdated ? new Date(manga.lastUpdated).toLocaleDateString() : '—')}
+                       </span>
                       {manga.lastRead && (
                         <span className="text-xs text-green-600 dark:text-green-400">
                           Last read: {new Date(manga.lastRead).toLocaleDateString()}
@@ -308,15 +332,15 @@ const MangaFavorites = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {/* Navigate to reader */}}
+                      onClick={() => handleNavigate(manga)}
                     >
                       <BookOpen className="w-4 h-4 mr-1" />
-                      Read
+                      Open
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleRemoveFavorite(manga.id)}
+                      onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(manga); }}
                       className="text-red-500 hover:text-red-600"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -337,9 +361,16 @@ const MangaFavorites = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
+                onClick={async () => {
                   if (window.confirm('Remove all manga from favorites?')) {
-                    favorites.forEach(id => removeFavorite(id));
+                    try {
+                      for (const item of favorites) {
+                        await toggleFavorite(item);
+                      }
+                      await fetchFavorites();
+                    } catch (err) {
+                      console.error('Bulk remove failed', err);
+                    }
                   }
                 }}
                 className="text-red-500 hover:text-red-600"

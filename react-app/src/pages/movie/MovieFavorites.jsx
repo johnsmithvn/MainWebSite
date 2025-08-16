@@ -66,8 +66,7 @@ const MovieFavorites = () => {
         return (a.type || '').localeCompare(b.type || '');
       case 'dateAdded':
       default:
-        // If we had dateAdded, we'd sort by that
-        return (a.name || '').localeCompare(b.name || '');
+        return (b.favoriteDate || 0) - (a.favoriteDate || 0);
     }
   });
 
@@ -172,12 +171,16 @@ const MovieFavorites = () => {
               : 'grid-cols-1'
           } gap-6`}>
             {items.map((item) => (
-              <MovieCard
-                key={item.path}
-                item={item}
-                showViews={false}
-                onFavoriteChange={handleFavoriteChange}
-              />
+              <div key={item.path} className="relative">
+                <MovieCard
+                  item={item}
+                  showViews={false}
+                  onFavoriteChange={handleFavoriteChange}
+                />
+                <div className="absolute top-2 left-2 bg-black/60 text-[10px] text-white px-2 py-0.5 rounded">
+                  {item.favoriteDate ? new Date(item.favoriteDate).toLocaleDateString() : ''}
+                </div>
+              </div>
             ))}
           </div>
 

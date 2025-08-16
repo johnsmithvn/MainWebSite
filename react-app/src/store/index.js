@@ -564,7 +564,7 @@ export const useMovieStore = create(
       },
       
       // Fetch favorites from API
-      fetchFavorites: async () => {
+  fetchFavorites: async () => {
         try {
           const { sourceKey } = useAuthStore.getState();
           const params = { key: sourceKey };
@@ -608,7 +608,8 @@ export const useMovieStore = create(
             
             return {
               ...item,
-              thumbnail: thumbnailUrl
+              thumbnail: thumbnailUrl,
+              favoriteDate: item.favoriteDate || (item.favoriteAt ? item.favoriteAt * 1000 : undefined)
             };
           });
           
@@ -619,7 +620,7 @@ export const useMovieStore = create(
         }
       },
       
-      toggleFavorite: async (item) => {
+  toggleFavorite: async (item) => {
         try {
           const { sourceKey } = useAuthStore.getState();
           const isFavorited = get().favorites.some(f => f.path === item.path);
@@ -628,18 +629,18 @@ export const useMovieStore = create(
           console.log('🎬 MovieStore toggleFavorite:', { sourceKey, path: item.path, newFavoriteState });
           
           // Call API to toggle favorite (note: API expects dbkey not key)
-          await apiService.movie.toggleFavorite(sourceKey, item.path, newFavoriteState);
+          const resp = await apiService.movie.toggleFavorite(sourceKey, item.path, newFavoriteState);
           
           // Update local state
           set((state) => {
             const favorites = isFavorited
               ? state.favorites.filter(f => f.path !== item.path)
-              : [...state.favorites, { ...item, isFavorite: true }];
+              : [...state.favorites, { ...item, isFavorite: true, favoriteDate: Date.now() }];
             
             // Also update the item in movieList if it exists
             const updatedMovieList = state.movieList.map(movie => 
               movie.path === item.path 
-                ? { ...movie, isFavorite: newFavoriteState }
+                ? { ...movie, isFavorite: newFavoriteState, favoriteDate: newFavoriteState ? Date.now() : movie.favoriteDate }
                 : movie
             );
             
