@@ -47,6 +47,14 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
   const displayName = item.name || item.path?.split('/').pop() || 'Unknown';
   const isVideo = item.type === 'video' || item.type === 'file';
   const isFolder = item.type === 'folder';
+  const getTypeLabel = () => {
+    if (isVideo) {
+      const ext = item.path?.split('.').pop()?.toLowerCase();
+      return `.${ext || 'video'}`;
+    }
+    return 'Folder';
+  };
+  const typeLabel = getTypeLabel();
 
   return (
     <div
@@ -94,17 +102,8 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
         {/* Type indicator */}
         <div className="absolute bottom-2 left-2">
           <span className="bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-            {isVideo ? (
-              <>
-                <Play className="w-3 h-3" />
-                Video
-              </>
-            ) : (
-              <>
-                <Folder className="w-3 h-3" />
-                Folder
-              </>
-            )}
+            {isVideo ? <Play className="w-3 h-3" /> : <Folder className="w-3 h-3" />}
+            {typeLabel}
           </span>
         </div>
 
@@ -131,17 +130,8 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
         {/* Additional info */}
         <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
           <span className="flex items-center gap-1">
-            {isVideo ? (
-              <>
-                <Play className="w-3 h-3" />
-                Video
-              </>
-            ) : (
-              <>
-                <Folder className="w-3 h-3" />
-                Folder
-              </>
-            )}
+            {isVideo ? <Play className="w-3 h-3" /> : <Folder className="w-3 h-3" />}
+            {typeLabel}
           </span>
           
           {item.size && (

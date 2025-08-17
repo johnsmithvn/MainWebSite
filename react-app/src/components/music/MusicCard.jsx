@@ -77,7 +77,10 @@ const MusicCard = ({
 
   const getTypeLabel = () => {
     if (isPlaylist) return 'Playlist';
-    if (isAudio) return 'Audio';
+    if (isAudio) {
+      const ext = item.path?.split('.').pop()?.toLowerCase();
+      return `.${ext || 'audio'}`;
+    }
     return 'Thư mục';
   };
 
