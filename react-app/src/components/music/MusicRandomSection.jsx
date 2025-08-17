@@ -20,7 +20,7 @@ const MusicRandomSection = () => {
       {/* Random Banner */}
       <RandomSlider
         type="music"
-        title="🎵 Nhạc ngẫu nhiên"
+        title="🎵 Random Music"
         showViews={true}
         autoplay={true}
         showRefresh={true}
@@ -31,7 +31,7 @@ const MusicRandomSection = () => {
       {/* Top View - using dedicated TopViewSlider */}
       <TopViewSlider
         type="music"
-        title="🔥 Nghe nhiều"
+        title="🔥 Most Played"
         autoplay={false}
         className="music-top-view"
       />
@@ -39,7 +39,7 @@ const MusicRandomSection = () => {
       {/* Recent Viewed */}
       <RecentSlider
         type="music"
-        title="🕒 Vừa nghe"
+        title="🕒 Recently Played"
         autoplay={false}
         showRefresh={false}
         showTimestamp={true}

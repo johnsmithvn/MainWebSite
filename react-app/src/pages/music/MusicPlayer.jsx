@@ -671,7 +671,7 @@ const MusicPlayer = () => {
         {/* Left: Library sidebar */}
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] flex flex-col" style={{ height: 'calc(100vh - 200px)' }}>
           <div className="px-4 py-3 text-xs uppercase tracking-wider text-white/60 border-b border-white/10 flex items-center justify-between">
-            <span>Thư viện</span>
+            <span>Playlist</span>
             <span className="text-white/40 text-[11px]">Playlists</span>
           </div>
           <div className="p-3">
@@ -753,11 +753,12 @@ const MusicPlayer = () => {
           </div>
           {/* Bottom: Full tracklist */}
           <div className="mt-4 mb-0.5 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 420px)', minHeight: '300px' }}>
-            <div className="grid grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_72px_56px] gap-3 px-4 py-2 text-sm text-white/60 border-b border-white/10">
+            <div className="grid grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_56px_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_56px_72px_56px] gap-3 px-4 py-2 text-sm text-white/60 border-b border-white/10">
               <div className="text-center">#</div>
               <div>Title</div>
               <div className="hidden lg:block">Album</div>
               <div className="hidden md:block">Folder</div>
+              <div className="hidden md:block text-center">Format</div>
               <div className="hidden md:flex justify-end pr-2">Views</div>
               <div className="flex justify-end pr-2"><FiClock className="w-4 h-4" /></div>
             </div>
@@ -772,7 +773,7 @@ const MusicPlayer = () => {
                   onDrop={(e) => handleDrop(e, index)}
                   onDragEnd={handleDragEnd}
                   onClick={(e) => handleRowClick(e, track, index)}
-      className={`relative grid grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_72px_56px] gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${index === currentIndex ? 'bg-white/10' : ''}`}
+      className={`relative grid grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_56px_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_56px_72px_56px] gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${index === currentIndex ? 'bg-white/10' : ''}`}
                 >
                   {dropIndicator.index === index && (
                     <div className={`absolute left-2 right-2 ${dropIndicator.position === 'above' ? 'top-0' : 'bottom-0'} h-0.5 bg-emerald-400 shadow-[0_0_0_2px_rgba(16,185,129,0.35)] rounded pointer-events-none`} />
@@ -811,6 +812,13 @@ const MusicPlayer = () => {
                         return name || 'Home';
                       })()}
                     </button>
+                  </div>
+
+                  <div className="hidden md:block text-sm text-white/70 text-center">
+                    {(() => {
+                      const ext = track.path?.split('.').pop();
+                      return ext ? `${ext.toLowerCase()}` : '—';
+                    })()}
                   </div>
 
                   <div className="hidden md:flex items-center justify-end pr-2 text-white/70 tabular-nums">{Number(track.viewCount ?? track.views ?? 0).toLocaleString()}</div>
