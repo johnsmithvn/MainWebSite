@@ -1,0 +1,505 @@
+/* ========== ORIGINAL FRONTEND REPLICATION ========== */
+.manga-reader {
+  width: 100%;
+  height: 100vh;
+  background-color: #000;
+  position: relative;
+  /* Allow browser zoom to affect the entire reader */
+  transform-origin: center center;
+  /* overflow is handled by the child or a modifier class */
+}
+
+.manga-reader:not(.scroll-mode-active) {
+  overflow: hidden;
+}
+
+/* ========== MAIN READER CONTAINER ========== */
+.reader {
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  position: relative;
+  overflow: hidden;
+  /* Ensure container responds to browser zoom */
+  transform-origin: center center;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .reader {
+    padding-top: 56px;
+  }
+}
+
+@media (max-width: 480px) {
+  .reader {
+    padding-top: 52px;
+  }
+}
+
+/* ========== VERTICAL SCROLL MODE ========== */
+.reader.scroll-mode {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.scroll-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  /* Add zoom wrapper for scroll mode */
+  position: relative;
+}
+
+.scroll-container .zoom-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ========== SCROLL IMAGES ========== */
+.scroll-img {
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border: none;
+  background: transparent;
+  /* Allow browser zoom to affect the image */
+  transform-origin: center center;
+}
+
+.scroll-img.loading {
+  opacity: 0.5;
+  filter: blur(1px);
+}
+
+/* ========== SWIPER MODE ========== */
+.swiper {
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+}
+
+.swiper-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.swiper-slide {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #000;
+  position: relative;
+  z-index: 10;
+}
+
+.swiper-slide img {
+  max-width: 100%;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  position: relative;
+  z-index: 10;
+}
+
+/* ========== PINCH ZOOM ========== */
+.pinch-zoom {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ========== NAVIGATION ZONES ========== */
+.navigation-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 25%;
+  z-index: 100;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+
+.navigation-zone.left {
+  left: 0;
+}
+
+.navigation-zone.right {
+  right: 0;
+}
+
+/* ========== CONTROLS ========== */
+.reader-controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  z-index: 200;
+  backdrop-filter: blur(5px);
+}
+
+.reader-controls button {
+  background: #333;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.reader-controls button:hover {
+  background: #555;
+}
+
+.reader-controls button:disabled {
+  background: #666;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ========== PAGE INFO ========== */
+.page-info {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 80px;
+  text-align: center;
+}
+
+/* ========== LOADING STATES ========== */
+.loading {
+  opacity: 0.5;
+  filter: blur(1px);
+}
+
+/* ========== READER IMAGE FALLBACKS ========== */
+.reader-image {
+  border: none !important;
+  background: transparent !important;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.reader-image.vertical {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0;
+}
+
+.reader-image.horizontal {
+  max-width: 100%;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+/* ========== RESPONSIVE DESIGN ========== */
+@media (max-width: 768px) {
+  .reader-controls {
+    padding: 8px;
+    gap: 8px;
+  }
+  
+  .reader-controls button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .navigation-zone {
+    width: 30%;
+  }
+  
+  /* Ensure zoom works properly on mobile */
+  .manga-reader {
+    touch-action: manipulation;
+  }
+  
+  .zoom-wrapper {
+    touch-action: pinch-zoom;
+  }
+  
+  .reader-image-fullsize {
+    touch-action: pinch-zoom;
+  }
+  
+  .scroll-img {
+    touch-action: pinch-zoom;
+  }
+}
+
+/* ========== SIMPLE HEADER/FOOTER UI ========== */
+.simple-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.manga-title {
+  color: white;
+  font-size: 18px;
+  font-weight: 500;
+  text-align: center;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.simple-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-counter {
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ========== READING MODE TOGGLE ========== */
+.reading-mode-toggle {
+  position: fixed;
+  bottom: 80px; /* Above the footer (footer height + padding) */
+  left: 20px;
+  z-index: 999; /* Below footer but above content */
+}
+
+.mode-toggle-btn {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+}
+
+.mode-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.preload-status {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.reader-image-fullsize {
+  max-width: 100%;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  cursor: pointer;
+  /* Allow browser zoom to affect the image */
+  transform-origin: center center;
+}
+
+.horizontal-reader-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.image-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease-out;
+  /* Create a zoom-responsive container */
+  overflow: hidden;
+}
+
+.zoom-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  /* This wrapper will respond to browser zoom */
+  transform-origin: center center;
+}
+
+.image-container.slide-left {
+  animation: slideLeft 0.3s ease-out forwards;
+}
+
+.image-container.slide-right {
+  animation: slideRight 0.3s ease-out forwards;
+}
+
+.image-container.next-image {
+  transform: translateX(100%);
+  animation: slideInFromRight 0.3s ease-out forwards;
+}
+
+.image-container.prev-image {
+  transform: translateX(-100%);
+  animation: slideInFromLeft 0.3s ease-out forwards;
+}
+
+@keyframes slideLeft {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slideRight {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.nav-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 25%; /* 1/4 of the screen */
+  z-index: 10;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.nav-zone:active {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-zone.left {
+  left: 0;
+}
+
+.nav-zone.right {
+  right: 0;
+}
+
+/* ========== ZOOM ENHANCEMENT ========== */
+.zoom-wrapper {
+  /* Ensure zoom transitions are smooth */
+  transition: transform 0.1s ease-out;
+}
+
+/* Allow pinch zoom and browser zoom */
+.reader-image-fullsize,
+.scroll-img {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  
+  /* Enable hardware acceleration for smoother zoom */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Prevent zoom conflicts with navigation */
+.nav-zone {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+

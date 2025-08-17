@@ -3,6 +3,7 @@
 
 const express = require("express");
 const compression = require("compression");
+const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
@@ -21,6 +22,14 @@ const securityMiddleware = require("./middleware/security");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ✅ CORS Configuration
+app.use(cors({
+  origin: ['http://localhost:3001', 'http://127.0.0.1:3001'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
 // ✅ Middleware cơ bản (giữ nguyên logic cũ)
 app.use(express.json());
 app.use(compression());
@@ -35,14 +44,58 @@ app.use("/api/manga", require("./api/manga/scan"));
 app.use("/api/manga", require("./api/manga/favorite"));
 app.use("/api/manga", require("./api/manga/root-thumbnail"));
 
-// ✅ Static files - giữ nguyên logic cũ
+// ✅ Cache constants and helpers
+const ONE_HOUR = 3600;
+const ONE_DAY = 86400;
+
+const isImg = /\.(avif|jpe?g|png|gif|webp|bmp)$/i;
+const isAudio = /\.(mp3|m4a|aac|ogg|flac|wav)$/i;
+const isVideo = /\.(mp4|m4v|webm|mov|mkv|ts|m3u8)$/i;
+
+// Nếu bạn ĐÃ hash tên file ảnh manga, bật immutable + TTL dài
+const MANGA_IMAGES_IMMUTABLE = true; // Nếu build có hash (Vite/Webpack/Next…): = True
+
+function setStaticHeaders(kind) {
+  return (res, path) => {
+    if (isImg.test(path)) {
+      if (kind === 'manga' && MANGA_IMAGES_IMMUTABLE) {
+        res.setHeader('Cache-Control', `public, max-age=${ONE_DAY}, immutable`);
+      } else {
+        res.setHeader('Cache-Control', `public, max-age=${ONE_HOUR}, must-revalidate`);
+      }
+    } else if (isVideo.test(path) || isAudio.test(path)) {
+      // Media thường ổn với TTL ngắn + SWR
+      res.setHeader('Cache-Control', `public, max-age=${ONE_HOUR}, stale-while-revalidate=60`);
+    }
+  };
+}
+
+// ✅ Static files với cache headers tối ưu và consistent
 for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
   if (key.startsWith("V_")) {
-    app.use("/video", express.static(absPath, { dotfiles: "allow" }));
+    app.use("/video", express.static(absPath, {
+      dotfiles: "allow", // Giữ theo yêu cầu
+      maxAge: ONE_HOUR * 1000,
+      etag: true,
+      lastModified: true,
+      setHeaders: setStaticHeaders('video')
+    }));
   } else if (key.startsWith("M_")) {
-    app.use("/audio", express.static(absPath, { dotfiles: "allow" }));
+    app.use("/audio", express.static(absPath, {
+      dotfiles: "allow", // Giữ theo yêu cầu
+      maxAge: ONE_HOUR * 1000,
+      etag: true,
+      lastModified: true,
+      setHeaders: setStaticHeaders('audio')
+    }));
   } else {
-    app.use("/manga", express.static(absPath));
+    app.use("/manga", express.static(absPath, {
+      dotfiles: "allow", // Giữ theo yêu cầu
+      maxAge: ONE_HOUR * 1000,
+      etag: true,
+      lastModified: true,
+      setHeaders: setStaticHeaders('manga')
+    }));
   }
 }
 

@@ -1,0 +1,14 @@
+/* 📁 src/styles/components/index.css */
+/* 🎨 Component Styles Index */
+
+/* Import all component styles */
+@import './manga-reader.css';
+@import './manga-card.css';
+@import './random-slider.css';
+
+/* Future component imports can be added here:
+@import './movie-player.css';
+@import './music-player.css';
+@import './sidebar.css';
+@import './modal.css';
+*/

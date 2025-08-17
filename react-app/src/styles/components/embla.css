@@ -1,0 +1,208 @@
+/* Embla Carousel Styles */
+
+.embla {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+.embla__viewport {
+  overflow: hidden;
+  width: 100%;
+}
+
+.embla__container {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--slide-spacing, 0.75rem);
+  padding: 0 var(--slide-spacing, 0.75rem);
+}
+
+.embla__slide {
+  flex: 0 0 auto;
+  min-width: 0;
+  position: relative;
+}
+
+/* Responsive slide widths */
+@media (max-width: 640px) {
+  .embla__slide {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 768px) {
+  .embla__slide {
+    flex: 0 0 33.333333%;
+    max-width: 33.333333%;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .embla__slide {
+    flex: 0 0 25%;
+    max-width: 25%;
+  }
+}
+
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .embla__slide {
+    flex: 0 0 20%;
+    max-width: 20%;
+  }
+}
+
+@media (min-width: 1281px) {
+  .embla__slide {
+    flex: 0 0 16.666667%;
+    max-width: 16.666667%;
+  }
+}
+
+/* Smooth transitions */
+.embla__viewport,
+.embla__container {
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Fix for dragging */
+.embla__container:active {
+  cursor: grabbing;
+}
+
+/* Loading skeleton styles */
+.embla__slide .animate-pulse {
+  border-radius: 0.5rem;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+.dark .embla__slide .animate-pulse {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Card hover effects */
+.embla__slide:hover {
+  transform: translateY(-4px);
+  transition: transform 0.2s ease-out;
+}
+
+/* RTL support */
+[dir="rtl"] .embla__container {
+  flex-direction: row-reverse;
+  margin-left: 0;
+  margin-right: calc(var(--slide-spacing, 1rem) * -1);
+}
+
+[dir="rtl"] .embla__slide {
+  padding-left: 0;
+  padding-right: var(--slide-spacing, 1rem);
+}
+
+/* Pagination Dots */
+.embla__dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0 1.5rem 1rem;
+}
+
+.embla__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #d1d5db;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  outline: none;
+}
+
+.embla__dot:hover {
+  background-color: #9ca3af;
+  transform: scale(1.2);
+}
+
+.embla__dot.active {
+  background-color: #3b82f6;
+  transform: scale(1.3);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+.dark .embla__dot {
+  background-color: #4b5563;
+}
+
+.dark .embla__dot:hover {
+  background-color: #6b7280;
+}
+
+.dark .embla__dot.active {
+  background-color: #60a5fa;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+}
+
+/* Auto-play progress indicator */
+.embla__dot.active.auto-playing::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, #3b82f6 0deg, #3b82f6 var(--progress, 0deg), transparent var(--progress, 0deg));
+  animation: auto-progress var(--autoplay-delay, 3000ms) linear infinite;
+}
+
+.dark .embla__dot.active.auto-playing::before {
+  background: conic-gradient(from 0deg, #60a5fa 0deg, #60a5fa var(--progress, 0deg), transparent var(--progress, 0deg));
+}
+
+@keyframes auto-progress {
+  0% {
+    --progress: 0deg;
+  }
+  100% {
+    --progress: 360deg;
+  }
+}
+
+/* View count badge styles */
+.view-count-badge {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+
+.view-count-badge svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.dark .view-count-badge {
+  background-color: rgba(0, 0, 0, 0.85);
+}

@@ -49,7 +49,12 @@ router.get("/folder-cache", async (req, res) => {
         WHERE root = ? AND thumbnail IS NOT NULL
         ORDER BY RANDOM() LIMIT 30
       `).all(root);
-      return res.json(rows);
+      // Convert isFavorite to boolean
+      const folders = rows.map(row => ({
+        ...row,
+        isFavorite: !!row.isFavorite
+      }));
+      return res.json(folders);
     }
     if (mode === "top") {
       // Top view từ bảng views + folders
@@ -58,7 +63,12 @@ router.get("/folder-cache", async (req, res) => {
         JOIN folders f ON f.path = v.path AND f.root = ?
         ORDER BY v.count DESC LIMIT 30
       `).all(root);
-      return res.json(rows);
+      // Convert isFavorite to boolean
+      const folders = rows.map(row => ({
+        ...row,
+        isFavorite: !!row.isFavorite
+      }));
+      return res.json(folders);
     }
     if (mode === "path") {
       // Tuỳ chọn đọc folder từ DB hay trực tiếp từ ổ đĩa
@@ -97,7 +107,12 @@ router.get("/folder-cache", async (req, res) => {
            ORDER BY name COLLATE NOCASE ASC LIMIT ? OFFSET ?`
         )
         .all(root, `%${q}%`, `%${q}%`, lim, off);
-      return res.json(rows);
+      // Convert isFavorite to boolean
+      const folders = rows.map(row => ({
+        ...row,
+        isFavorite: !!row.isFavorite
+      }));
+      return res.json(folders);
     }
     // Nếu mode không hợp lệ
     return res.status(400).json({ error: "Invalid mode" });
