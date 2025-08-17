@@ -48,6 +48,27 @@ const MangaReader = () => {
   const [jumpInput, setJumpInput] = useState('');
   const [jumpContext, setJumpContext] = useState('vertical'); // 'vertical' | 'horizontal'
 
+  // Debug cache status function
+  const getCacheStatus = useCallback(() => {
+    const total = currentImages.length;
+    const preloaded = preloadedImagesRef.current.size;
+    const currentSrc = currentImages[currentPage];
+    const currentPreloaded = currentSrc ? preloadedImagesRef.current.has(currentSrc) : false;
+    
+    return {
+      total,
+      preloaded,
+      percentage: total > 0 ? Math.round((preloaded / total) * 100) : 0,
+      currentPreloaded,
+      currentSrc: currentSrc?.split('/').pop()
+    };
+  }, [currentImages, currentPage]);
+
+  // Make cache status available globally for debugging
+  useEffect(() => {
+    window.__MANGA_CACHE_STATUS__ = getCacheStatus;
+  }, [getCacheStatus]);
+
   // the required distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 50;
 
@@ -88,28 +109,55 @@ const MangaReader = () => {
     setIsFavorite(isFav);
   }, [favorites, currentPath]);
 
-  // Lightweight preload using browser cache (no blob/objectURL)
+  // Enhanced preload using link preload for better browser cache integration
   const preloadImage = useCallback((src) => {
     return new Promise((resolve, reject) => {
       if (!src) return resolve(src);
       if (preloadedImagesRef.current.has(src)) return resolve(src);
       if (loadingImagesRef.current.has(src)) return resolve(src); // already in-flight
+      
       loadingImagesRef.current.add(src);
-      // Defer a tick so that if an <img> tag is about to request the same src
-      // the browser can consolidate via its pending queue before we create another object.
-      setTimeout(() => {
-        const img = new Image();
-        img.onload = () => {
+      
+      // Strategy 1: Use <link rel="preload"> for better cache integration
+      const existingLink = document.querySelector(`link[href="${src}"]`);
+      if (!existingLink) {
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.href = src;
+        
+        link.onload = () => {
           loadingImagesRef.current.delete(src);
           preloadedImagesRef.current.add(src);
+          console.log(`✅ Preloaded (link): ${src.split('/').pop()}`);
+          // Clean up after successful preload
+          setTimeout(() => link.remove(), 1000);
           resolve(src);
         };
-        img.onerror = (e) => {
+        
+        link.onerror = () => {
           loadingImagesRef.current.delete(src);
-          reject(e);
+          console.warn(`❌ Link preload failed: ${src.split('/').pop()}`);
+          link.remove();
+          
+          // Fallback to Image object
+          const img = new Image();
+          img.onload = () => {
+            preloadedImagesRef.current.add(src);
+            console.log(`✅ Preloaded (img fallback): ${src.split('/').pop()}`);
+            resolve(src);
+          };
+          img.onerror = reject;
+          img.src = src;
         };
-        img.src = src;
-      }, 0);
+        
+        document.head.appendChild(link);
+      } else {
+        // Link already exists
+        loadingImagesRef.current.delete(src);
+        preloadedImagesRef.current.add(src);
+        resolve(src);
+      }
     });
   }, []);
 
@@ -260,40 +308,74 @@ const MangaReader = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [navigate, searchParams]);
 
-  // Optimized preload function - only preload what's needed
+  // Optimized preload function - intelligent cache-aware preloading
   const preloadImagesAroundCurrentPage = useCallback(async () => {
     // Skip entirely in vertical mode – the images are already in DOM (with lazy loading)
     if (readerSettings.readingMode === 'vertical') return;
     if (!currentImages.length) return;
-    const preloadCount = Math.max(2, Math.min(4, Number(readerSettings.preloadCount) || 2));
-    // Forward-only strategy: preload next N images ahead (not previous) to prevent re-preloading when going forward.
-    const start = currentPage + 1;
-    const end = Math.min(currentImages.length - 1, currentPage + preloadCount);
+    
+    const preloadCount = Math.max(2, Math.min(6, Number(readerSettings.preloadCount) || 3));
+    
+    // Smart preload strategy: 
+    // 1. Skip current image (already loading in DOM)
+    // 2. Preload next N images (forward-looking)
+    // 3. Preload 1 previous image for quick back navigation
     const imagesToPreload = [];
-    for (let i = start; i <= end; i++) {
+    
+    // Forward preload (next N images)
+    const forwardStart = currentPage + 1;
+    const forwardEnd = Math.min(currentImages.length - 1, currentPage + preloadCount);
+    for (let i = forwardStart; i <= forwardEnd; i++) {
       const src = currentImages[i];
-      if (src && !preloadedImagesRef.current.has(src)) imagesToPreload.push(src);
+      if (src && !preloadedImagesRef.current.has(src) && !loadingImagesRef.current.has(src)) {
+        imagesToPreload.push({ src, type: 'forward', index: i });
+      }
+    }
+    
+    // Backward preload (1 previous image for quick navigation)
+    if (currentPage > 0) {
+      const prevSrc = currentImages[currentPage - 1];
+      if (prevSrc && !preloadedImagesRef.current.has(prevSrc) && !loadingImagesRef.current.has(prevSrc)) {
+        imagesToPreload.push({ src: prevSrc, type: 'backward', index: currentPage - 1 });
+      }
     }
 
-    if (!imagesToPreload.length) return;
-  console.log(`🖼️ Preloading (horizontal forward) ${imagesToPreload.length} images after page ${currentPage} (range: ${start}-${end})`);
+    if (!imagesToPreload.length) {
+      console.log(`🖼️ All nearby images already cached (current: ${currentPage + 1})`);
+      return;
+    }
+
+    console.log(`🖼️ Preloading ${imagesToPreload.length} images around page ${currentPage + 1}:`, 
+      imagesToPreload.map(img => `${img.type}:${img.index + 1}`).join(', '));
+    
     try {
-      await Promise.allSettled(imagesToPreload.map(preloadImage));
+      // Preload with priority: forward images first, then backward
+      const forwardImages = imagesToPreload.filter(img => img.type === 'forward');
+      const backwardImages = imagesToPreload.filter(img => img.type === 'backward');
+      
+      // Preload forward images first (more likely to be needed)
+      if (forwardImages.length > 0) {
+        await Promise.allSettled(forwardImages.map(img => preloadImage(img.src)));
+      }
+      
+      // Then preload backward images
+      if (backwardImages.length > 0) {
+        await Promise.allSettled(backwardImages.map(img => preloadImage(img.src)));
+      }
+      
       console.log(`✅ Preload complete. Total cached: ${preloadedImagesRef.current.size}/${currentImages.length}`);
     } catch (error) {
       console.error('❌ Error preloading images:', error);
     }
   }, [currentImages, currentPage, readerSettings.readingMode, readerSettings.preloadCount, preloadImage]);
 
-  // Effect to preload images when currentPage or currentImages change with throttling
+  // Effect to preload images when currentPage changes with optimized timing
   useEffect(() => {
-    if (currentImages.length > 0) {
-      const timeoutId = setTimeout(() => {
-        preloadImagesAroundCurrentPage();
-      }, 100);
-      return () => clearTimeout(timeoutId);
+    if (currentImages.length > 0 && readerSettings.readingMode === 'horizontal') {
+      // Immediate preload for better UX (no delay)
+      preloadImagesAroundCurrentPage();
     }
-  }, [currentImages.length, currentPage, readerSettings.preloadCount, readerSettings.readingMode, preloadImagesAroundCurrentPage]);
+  }, [currentImages.length, currentPage, readerSettings.readingMode, preloadImagesAroundCurrentPage]);
 
   const toggleControls = () => {
     setShowControls(!showControls);
@@ -604,8 +686,59 @@ const MangaReader = () => {
                   onClick={handleImageClick}
                   onLoad={(e) => {
                     e.target.classList.remove('loading');
-                    const isPreloaded = preloadedImagesRef.current.has(currentImages[currentPage]);
-                    console.log(`🖼️ Page ${currentPage + 1}: ${isPreloaded ? '✅ Preloaded' : '❌ Not preloaded'}`);
+                    const src = currentImages[currentPage];
+                    const wasPreloaded = preloadedImagesRef.current.has(src);
+                    const loadCount = (loadCountRef.current.get(src) || 0) + 1;
+                    loadCountRef.current.set(src, loadCount);
+                    
+                    // Enhanced cache detection
+                    const perfEntries = performance.getEntriesByName(src);
+                    let isFromCache = false;
+                    let cacheInfo = 'unknown';
+                    
+                    if (perfEntries.length > 0) {
+                      const entry = perfEntries[perfEntries.length - 1];
+                      // Browser cache indicators
+                      const hasTransferSize = entry.transferSize > 0;
+                      const fastResponse = (entry.responseEnd - entry.requestStart) < 50;
+                      const zeroDuration = (entry.duration < 5);
+                      
+                      if (entry.transferSize === 0) {
+                        isFromCache = true;
+                        cacheInfo = 'memory-cache';
+                      } else if (fastResponse && hasTransferSize) {
+                        isFromCache = true;
+                        cacheInfo = 'disk-cache';
+                      } else if (zeroDuration) {
+                        isFromCache = true;
+                        cacheInfo = 'browser-cache';
+                      } else {
+                        cacheInfo = 'network';
+                      }
+                    }
+                    
+                    console.log(`🖼️ Page ${currentPage + 1} loaded:`, {
+                      wasPreloaded,
+                      isFromCache,
+                      cacheInfo,
+                      loadCount,
+                      filename: src.split('/').pop(),
+                      perfData: perfEntries.length > 0 ? {
+                        transferSize: perfEntries[perfEntries.length - 1].transferSize,
+                        duration: Math.round(perfEntries[perfEntries.length - 1].duration * 100) / 100,
+                        responseTime: Math.round((perfEntries[perfEntries.length - 1].responseEnd - perfEntries[perfEntries.length - 1].requestStart) * 100) / 100
+                      } : null
+                    });
+                    
+                    // Store debug info globally
+                    if (!window.__IMG_LOAD_STATS__) window.__IMG_LOAD_STATS__ = {};
+                    window.__IMG_LOAD_STATS__[src] = { 
+                      wasPreloaded, 
+                      isFromCache,
+                      cacheInfo,
+                      loadCount,
+                      perfEntries: perfEntries.length
+                    };
                   }}
                   onError={(e) => {
                     e.target.style.background = '#333';
