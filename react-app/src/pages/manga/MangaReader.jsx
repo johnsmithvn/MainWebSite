@@ -314,7 +314,10 @@ const MangaReader = () => {
     if (readerSettings.readingMode === 'vertical') return;
     if (!currentImages.length) return;
     
-    const preloadCount = Math.max(2, Math.min(6, Number(readerSettings.preloadCount) || 3));
+    // Use actual user setting for preload count (1-20)
+    const preloadCount = Math.max(1, Math.min(20, Number(readerSettings.preloadCount) || 10));
+    
+    console.log(`🔧 Preload settings: count=${preloadCount}, mode=${readerSettings.readingMode}, currentPage=${currentPage + 1}`);
     
     // Smart preload strategy: 
     // 1. Skip current image (already loading in DOM)
@@ -332,11 +335,13 @@ const MangaReader = () => {
       }
     }
     
-    // Backward preload (1 previous image for quick navigation)
-    if (currentPage > 0) {
-      const prevSrc = currentImages[currentPage - 1];
-      if (prevSrc && !preloadedImagesRef.current.has(prevSrc) && !loadingImagesRef.current.has(prevSrc)) {
-        imagesToPreload.push({ src: prevSrc, type: 'backward', index: currentPage - 1 });
+    // Backward preload (preloadCount previous images for quick navigation)
+    const backwardStart = Math.max(0, currentPage - preloadCount);
+    const backwardEnd = currentPage - 1;
+    for (let i = backwardEnd; i >= backwardStart; i--) {
+      const src = currentImages[i];
+      if (src && !preloadedImagesRef.current.has(src) && !loadingImagesRef.current.has(src)) {
+        imagesToPreload.push({ src, type: 'backward', index: i });
       }
     }
 
