@@ -9,7 +9,9 @@ import {
 } from 'lucide-react';
 import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore, useSharedSettingsStore } from '@/store';
 import { clearSourceCache, clearAllCache as clearAllCacheKeys, clearTypeCache, clearRecentViewCache, CACHE_PREFIXES } from '@/constants/cacheKeys';
+import { getContentTypeFromSourceKey } from '@/utils/databaseOperations';
 import Button from '@/components/common/Button';
+import DatabaseActions from '@/components/common/DatabaseActions';
 import { useModal } from '@/components/common/Modal';
 
 const Settings = () => {
@@ -22,7 +24,7 @@ const Settings = () => {
     toggleAnimations
   } = useUIStore();
   
-  const { isAuthenticated, currentUser, logout } = useAuthStore();
+  const { isAuthenticated, currentUser, logout, sourceKey, rootFolder } = useAuthStore();
   const { 
     clearMangaCache, 
     readerSettings, 
@@ -33,6 +35,9 @@ const Settings = () => {
   const { clearMovieCache } = useMovieStore();
   const { clearMusicCache } = useMusicStore();
   const { clearAllCache: sharedClearAllCache, clearRecentHistory: sharedClearRecentHistory } = useSharedSettingsStore();
+
+  // Auto-detect current content type
+  const currentContentType = getContentTypeFromSourceKey(sourceKey);
 
   // Get current auth state for cache operations
   const getCurrentAuthState = () => {
@@ -906,7 +911,6 @@ const Settings = () => {
 
   const [activeTab, setActiveTab] = useState('appearance');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [activeCacheTab, setActiveCacheTab] = useState('manga');
   
   // Modal hook
   const { 
@@ -1271,297 +1275,168 @@ const Settings = () => {
               </p>
               
               <div className="space-y-6">
-                {/* Cache Type Tabs */}
+                {/* Cache Type Display - Auto-detect current content type */}
                 <div>
-                  <h5 className="text-md font-medium text-gray-800 dark:text-gray-200 mb-3">Xóa cache từng loại</h5>
+                  <h5 className="text-md font-medium text-gray-800 dark:text-gray-200 mb-3">
+                    Xóa cache - {currentContentType ? 
+                      (currentContentType === 'manga' ? '📚 Manga' : 
+                       currentContentType === 'movie' ? '🎬 Movie' : '🎵 Music') : 
+                      'Chưa chọn nguồn'}
+                  </h5>
                   
-                  {/* Tab Navigation */}
-                  <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg mb-4">
-                    <button
-                      onClick={() => setActiveCacheTab('manga')}
-                      className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                        activeCacheTab === 'manga'
-                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                      }`}
-                    >
-                      📚 Manga
-                    </button>
-                    <button
-                      onClick={() => setActiveCacheTab('movie')}
-                      className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                        activeCacheTab === 'movie'
-                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                      }`}
-                    >
-                      🎬 Movie
-                    </button>
-                    <button
-                      onClick={() => setActiveCacheTab('music')}
-                      className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                        activeCacheTab === 'music'
-                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                      }`}
-                    >
-                      🎵 Music
-                    </button>
-                  </div>
-
-                  {/* Tab Content */}
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    {activeCacheTab === 'manga' && (
+                  {/* Show content type specific cache actions */}
+                  {currentContentType && sourceKey ? (
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border-l-4 border-orange-400">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Clear Current Root Cache</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Clear cache for current root folder only</p>
-                            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">📁 Scope: Current source + current root folder</p>
-                          </div>
-                          <Button variant="outline" onClick={handleClearMangaCurrentRoot} className="text-orange-600 hover:text-orange-700">
-                            Clear Root
-                          </Button>
-                        </div>
+                        {currentContentType === 'manga' && (
+                          <>
+                            <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border-l-4 border-orange-400">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white">Clear Current Root Cache</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Clear cache for current root folder only</p>
+                                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">📁 Scope: Current source + current root folder</p>
+                              </div>
+                              <Button variant="outline" onClick={handleClearMangaCurrentRoot} className="text-orange-600 hover:text-orange-700">
+                                Clear Root
+                              </Button>
+                            </div>
 
-                        <div className="flex items-center justify-between p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg border-l-4 border-orange-500">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Clear Current Source Cache</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Clear all cache for current source (all roots)</p>
-                            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">🌐 Scope: Current source + all root folders</p>
-                          </div>
-                          <Button variant="outline" onClick={handleClearMangaCurrentSource} className="text-orange-600 hover:text-orange-700">
-                            Clear Source
-                          </Button>
-                        </div>
+                            <div className="flex items-center justify-between p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg border-l-4 border-orange-500">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white">Clear Current Source Cache</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Clear all cache for current source (all roots)</p>
+                                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">🌐 Scope: Current source + all root folders</p>
+                              </div>
+                              <Button variant="outline" onClick={handleClearMangaCurrentSource} className="text-orange-600 hover:text-orange-700">
+                                Clear Source
+                              </Button>
+                            </div>
 
-                        <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-500">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Clear Source + Storage</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Clear source cache + manga app storage</p>
-                            <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">⚠️ Scope: Current source + app settings/favorites</p>
-                          </div>
-                          <Button variant="outline" onClick={handleClearMangaSourceAndStorage} className="text-yellow-600 hover:text-yellow-700">
-                            Clear Source + Storage
-                          </Button>
-                        </div>
+                            <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-500">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white">Clear Source + Storage</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Clear source cache + manga app storage</p>
+                                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">⚠️ Scope: Current source + app settings/favorites</p>
+                              </div>
+                              <Button variant="outline" onClick={handleClearMangaSourceAndStorage} className="text-yellow-600 hover:text-yellow-700">
+                                Clear Source + Storage
+                              </Button>
+                            </div>
 
-                        <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-500">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Clear ALL Manga Data</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Nuclear option: ALL sources + ALL storage</p>
-                            <p className="text-xs text-red-600 dark:text-red-400 mt-1">💥 Scope: Everything manga-related</p>
-                          </div>
-                          <Button variant="outline" onClick={handleClearMangaAllSourcesAndStorage} className="text-red-600 hover:text-red-700">
-                            💥 Clear Everything
-                          </Button>
-                        </div>
+                            <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-500">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white">Clear ALL Manga Data</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Nuclear option: ALL sources + ALL storage</p>
+                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">💥 Scope: Everything manga-related</p>
+                              </div>
+                              <Button variant="outline" onClick={handleClearMangaAllSourcesAndStorage} className="text-red-600 hover:text-red-700">
+                                💥 Clear Everything
+                              </Button>
+                            </div>
+                          </>
+                        )}
 
-                        {/* Database Operations Section */}
+                        {currentContentType === 'movie' && (
+                          <>
+                            <div className="flex items-center justify-between p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg border-l-4 border-blue-500">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white">Clear Current Source Cache</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Clear all cache for current movie source</p>
+                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">🌐 Scope: Current source + metadata cache</p>
+                              </div>
+                              <Button variant="outline" onClick={handleClearMovieCurrentSource} className="text-blue-600 hover:text-blue-700">
+                                Clear Source
+                              </Button>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-500">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white">Clear Source + Storage</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Clear source cache + movie app storage</p>
+                                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">⚠️ Scope: Current source + app settings/favorites</p>
+                              </div>
+                              <Button variant="outline" onClick={handleClearMovieSourceAndStorage} className="text-yellow-600 hover:text-yellow-700">
+                                Clear Source + Storage
+                              </Button>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-500">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white">Clear ALL Movie Data</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Nuclear option: ALL sources + ALL storage</p>
+                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">💥 Scope: Everything movie-related</p>
+                              </div>
+                              <Button variant="outline" onClick={handleClearMovieAllSourcesAndStorage} className="text-red-600 hover:text-red-700">
+                                💥 Clear Everything
+                              </Button>
+                            </div>
+                          </>
+                        )}
+
+                        {currentContentType === 'music' && (
+                          <>
+                            <div className="flex items-center justify-between p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg border-l-4 border-purple-500">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white">Clear Current Source Cache</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Clear all cache for current music source</p>
+                                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">🌐 Scope: Current source + metadata cache</p>
+                              </div>
+                              <Button variant="outline" onClick={handleClearMusicCurrentSource} className="text-purple-600 hover:text-purple-700">
+                                Clear Source
+                              </Button>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-500">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white">Clear Source + Storage</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Clear source cache + music app storage</p>
+                                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">⚠️ Scope: Current source + app settings/playlists</p>
+                              </div>
+                              <Button variant="outline" onClick={handleClearMusicSourceAndStorage} className="text-yellow-600 hover:text-yellow-700">
+                                Clear Source + Storage
+                              </Button>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-500">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white">Clear ALL Music Data</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">Nuclear option: ALL sources + ALL storage</p>
+                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">💥 Scope: Everything music-related</p>
+                              </div>
+                              <Button variant="outline" onClick={handleClearMusicAllSourcesAndStorage} className="text-red-600 hover:text-red-700">
+                                💥 Clear Everything
+                              </Button>
+                            </div>
+                          </>
+                        )}
+
+                        {/* Database Operations Section for current content type */}
                         <div className="border-t pt-4 mt-6">
                           <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
                             <Database className="w-5 h-5 mr-2" />
                             Database Operations
                           </h4>
                           
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
-                              <div>
-                                <p className="font-medium text-gray-900 dark:text-white">Scan Database</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Update database with new manga folders</p>
-                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">🔍 Adds new content without deleting existing data</p>
-                              </div>
-                              <Button variant="outline" onClick={handleMangaScan} className="text-blue-600 hover:text-blue-700">
-                                🔍 Scan
-                              </Button>
-                            </div>
-
-                            <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-400">
-                              <div>
-                                <p className="font-medium text-gray-900 dark:text-white">Delete Database</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Remove all manga entries from database</p>
-                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">🗑️ Removes database entries only, not files</p>
-                              </div>
-                              <Button variant="outline" onClick={handleMangaDelete} className="text-red-600 hover:text-red-700">
-                                🗑️ Delete
-                              </Button>
-                            </div>
-
-                            <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-400">
-                              <div>
-                                <p className="font-medium text-gray-900 dark:text-white">Reset & Scan Database</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Delete all entries and scan fresh</p>
-                                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">🔄 Completely rebuilds database from scratch</p>
-                              </div>
-                              <Button variant="outline" onClick={handleMangaScanAndDelete} className="text-yellow-600 hover:text-yellow-700">
-                                🔄 Reset & Scan
-                              </Button>
-                            </div>
-                          </div>
+                          <DatabaseActions
+                            contentType={currentContentType}
+                            sourceKey={sourceKey}
+                            rootFolder={rootFolder}
+                            layout="vertical"
+                            size="md"
+                            variant="outline"
+                            showLabels={true}
+                            className="space-y-3"
+                          />
                         </div>
                       </div>
-                    )}
-
-                    {activeCacheTab === 'movie' && (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg border-l-4 border-blue-500">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Clear Current Source Cache</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Clear all cache for current movie source</p>
-                            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">🌐 Scope: Current source + metadata cache</p>
-                          </div>
-                          <Button variant="outline" onClick={handleClearMovieCurrentSource} className="text-blue-600 hover:text-blue-700">
-                            Clear Source
-                          </Button>
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-500">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Clear Source + Storage</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Clear source cache + movie app storage</p>
-                            <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">⚠️ Scope: Current source + app settings/favorites</p>
-                          </div>
-                          <Button variant="outline" onClick={handleClearMovieSourceAndStorage} className="text-yellow-600 hover:text-yellow-700">
-                            Clear Source + Storage
-                          </Button>
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-500">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Clear ALL Movie Data</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Nuclear option: ALL sources + ALL storage</p>
-                            <p className="text-xs text-red-600 dark:text-red-400 mt-1">💥 Scope: Everything movie-related</p>
-                          </div>
-                          <Button variant="outline" onClick={handleClearMovieAllSourcesAndStorage} className="text-red-600 hover:text-red-700">
-                            💥 Clear Everything
-                          </Button>
-                        </div>
-
-                        {/* Database Operations Section */}
-                        <div className="border-t pt-4 mt-6">
-                          <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
-                            <Database className="w-5 h-5 mr-2" />
-                            Database Operations
-                          </h4>
-                          
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
-                              <div>
-                                <p className="font-medium text-gray-900 dark:text-white">Scan Database</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Update database with new video files</p>
-                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">🔍 Adds new content without deleting existing data</p>
-                              </div>
-                              <Button variant="outline" onClick={handleMovieScan} className="text-blue-600 hover:text-blue-700">
-                                🔍 Scan
-                              </Button>
-                            </div>
-
-                            <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-400">
-                              <div>
-                                <p className="font-medium text-gray-900 dark:text-white">Delete Database</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Remove all movie entries from database</p>
-                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">🗑️ Removes database entries only, not files</p>
-                              </div>
-                              <Button variant="outline" onClick={handleMovieDelete} className="text-red-600 hover:text-red-700">
-                                🗑️ Delete
-                              </Button>
-                            </div>
-
-                            <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-400">
-                              <div>
-                                <p className="font-medium text-gray-900 dark:text-white">Reset & Scan Database</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Delete all entries and scan fresh</p>
-                                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">🔄 Completely rebuilds database from scratch</p>
-                              </div>
-                              <Button variant="outline" onClick={handleMovieScanAndDelete} className="text-yellow-600 hover:text-yellow-700">
-                                🔄 Reset & Scan
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {activeCacheTab === 'music' && (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg border-l-4 border-purple-500">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Clear Current Source Cache</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Clear all cache for current music source</p>
-                            <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">🌐 Scope: Current source + metadata cache</p>
-                          </div>
-                          <Button variant="outline" onClick={handleClearMusicCurrentSource} className="text-purple-600 hover:text-purple-700">
-                            Clear Source
-                          </Button>
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-500">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Clear Source + Storage</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Clear source cache + music app storage</p>
-                            <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">⚠️ Scope: Current source + app settings/playlists</p>
-                          </div>
-                          <Button variant="outline" onClick={handleClearMusicSourceAndStorage} className="text-yellow-600 hover:text-yellow-700">
-                            Clear Source + Storage
-                          </Button>
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-500">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">Clear ALL Music Data</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Nuclear option: ALL sources + ALL storage</p>
-                            <p className="text-xs text-red-600 dark:text-red-400 mt-1">💥 Scope: Everything music-related</p>
-                          </div>
-                          <Button variant="outline" onClick={handleClearMusicAllSourcesAndStorage} className="text-red-600 hover:text-red-700">
-                            💥 Clear Everything
-                          </Button>
-                        </div>
-
-                        {/* Database Operations Section */}
-                        <div className="border-t pt-4 mt-6">
-                          <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
-                            <Database className="w-5 h-5 mr-2" />
-                            Database Operations
-                          </h4>
-                          
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
-                              <div>
-                                <p className="font-medium text-gray-900 dark:text-white">Scan Database</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Update database with new audio files</p>
-                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">🔍 Adds new content without deleting existing data</p>
-                              </div>
-                              <Button variant="outline" onClick={handleMusicScan} className="text-blue-600 hover:text-blue-700">
-                                🔍 Scan
-                              </Button>
-                            </div>
-
-                            <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-400">
-                              <div>
-                                <p className="font-medium text-gray-900 dark:text-white">Delete Database</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Remove all music entries from database</p>
-                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">🗑️ Removes database entries, playlists, not files</p>
-                              </div>
-                              <Button variant="outline" onClick={handleMusicDelete} className="text-red-600 hover:text-red-700">
-                                🗑️ Delete
-                              </Button>
-                            </div>
-
-                            <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-400">
-                              <div>
-                                <p className="font-medium text-gray-900 dark:text-white">Reset & Scan Database</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Delete all entries and scan fresh</p>
-                                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">🔄 Completely rebuilds database from scratch</p>
-                              </div>
-                              <Button variant="outline" onClick={handleMusicScanAndDelete} className="text-yellow-600 hover:text-yellow-700">
-                                🔄 Reset & Scan
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 text-center">
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {!sourceKey ? 'Vui lòng chọn source key để hiển thị các tùy chọn cache' : 'Không thể xác định loại nội dung từ source key'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

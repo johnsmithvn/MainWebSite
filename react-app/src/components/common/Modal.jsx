@@ -1,7 +1,7 @@
 // 📁 src/components/common/Modal.jsx
 // 🔔 Modal component chung cho confirm, alert, và custom content
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, AlertTriangle, CheckCircle, Info, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from './Button';
@@ -132,9 +132,13 @@ const Modal = ({
               {/* Body */}
               <div className="px-6 pb-6">
                 {message && (
-                  <p className="text-gray-600 dark:text-gray-300 mb-6">
-                    {message}
-                  </p>
+                  <div className="text-gray-600 dark:text-gray-300 mb-6">
+                    {typeof message === 'string' ? (
+                      <p>{message}</p>
+                    ) : (
+                      message
+                    )}
+                  </div>
                 )}
                 {children}
               </div>
@@ -166,7 +170,7 @@ const Modal = ({
 
 // Hook để sử dụng Modal dễ dàng hơn
 export const useModal = () => {
-  const [modalState, setModalState] = React.useState({
+  const [modalState, setModalState] = useState({
     isOpen: false,
     type: 'default',
     title: '',

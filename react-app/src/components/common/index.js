@@ -14,3 +14,4 @@ export { default as SettingsModal } from './SettingsModal';
 export { default as Toast } from './Toast';
 export { default as Breadcrumb } from './Breadcrumb';
 export { default as Pagination } from './Pagination';
+export { default as DatabaseActions } from './DatabaseActions';

@@ -11,22 +11,28 @@ import {
   FiMusic, 
   FiStar, 
   FiSettings,
-  FiRefreshCw,
-  FiTrash2,
   FiHeart,
   FiList
 } from 'react-icons/fi';
-import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '../../store';
-import { apiService } from '../../utils/api';
-import toast from 'react-hot-toast';
-import Button from './Button';
+import { useAuthStore } from '../../store';
+import { getContentTypeFromSourceKey } from '../../utils/databaseOperations';
+import DatabaseActions from './DatabaseActions';
 
 const Sidebar = ({ isOpen = false, onClose, type }) => {
   const location = useLocation();
   const { sourceKey, rootFolder } = useAuthStore();
   
+  // Auto-detect content type from current sourceKey
+  const currentContentType = getContentTypeFromSourceKey(sourceKey);
+  
   // Debug logging
-  console.log('🔍 Sidebar render:', { isOpen, sourceKey, rootFolder, location: location.pathname });
+  console.log('🔍 Sidebar render:', { 
+    isOpen, 
+    sourceKey, 
+    rootFolder, 
+    currentContentType,
+    location: location.pathname 
+  });
 
   const menuItems = [
     {
@@ -47,75 +53,6 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
       ]
     }
   ];
-
-  const handleResetCache = async (type) => {
-    if (!sourceKey) {
-      toast.error('Chưa chọn source key');
-      return;
-    }
-
-    const confirmed = window.confirm(`Bạn có chắc muốn xóa cache ${type}?`);
-    if (!confirmed) return;
-
-    try {
-      switch (type) {
-        case 'manga':
-          await apiService.manga.resetCache({ 
-            key: sourceKey, 
-            root: rootFolder, 
-            mode: 'delete' 
-          });
-          break;
-        case 'movie':
-          await apiService.movie.resetDb({ 
-            key: sourceKey, 
-            mode: 'delete' 
-          });
-          break;
-        case 'music':
-          await apiService.music.resetDb({ 
-            key: sourceKey, 
-            mode: 'delete' 
-          });
-          break;
-        default:
-          throw new Error('Invalid type');
-      }
-      
-      toast.success(`Đã xóa cache ${type} thành công`);
-    } catch (error) {
-      console.error(`Reset ${type} cache error:`, error);
-      toast.error(`Lỗi xóa cache ${type}`);
-    }
-  };
-
-  const handleScan = async (type) => {
-    if (!sourceKey) {
-      toast.error('Chưa chọn source key');
-      return;
-    }
-
-    try {
-      switch (type) {
-        case 'manga':
-          await apiService.manga.scan({ root: rootFolder, key: sourceKey });
-          break;
-        case 'movie':
-          await apiService.movie.scan({ key: sourceKey });
-          break;
-        case 'music':
-          await apiService.music.scan({ key: sourceKey });
-          break;
-        default:
-          throw new Error('Invalid type');
-      }
-      
-      toast.success(`Đã quét ${type} thành công`);
-    } catch (error) {
-      console.error(`Scan ${type} error:`, error);
-      toast.error(`Lỗi quét ${type}`);
-    }
-  };
 
   const SidebarItem = ({ item, isActive }) => {
     const Icon = item.icon;
@@ -177,88 +114,23 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
           </div>
         ))}
 
-        {/* Admin tools */}
-        {sourceKey && (
+        {/* Admin tools - Only show for valid content type */}
+        {sourceKey && currentContentType && (
           <div>
             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-              Công cụ
+              Công cụ {currentContentType === 'manga' ? '📚 Manga' : currentContentType === 'movie' ? '🎬 Movie' : '🎵 Music'}
             </h3>
             
-            <div className="space-y-2">
-              {/* Scan buttons */}
-              <div className="grid grid-cols-1 gap-1">
-                <button
-                  onClick={() => {
-                    console.log('🔄 Direct scan button clicked');
-                    handleScan('manga');
-                  }}
-                  className="inline-flex items-center justify-start px-3 py-1.5 text-sm border border-gray-300 dark:border-dark-600 bg-transparent hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 rounded-lg transition-all pointer-events-auto"
-                  style={{ pointerEvents: 'auto !important' }}
-                >
-                  <FiRefreshCw className="h-3 w-3 mr-2" />
-                  Quét Manga
-                </button>
-                <button
-                  onClick={() => {
-                    console.log('🔄 Direct scan button clicked');
-                    handleScan('movie');
-                  }}
-                  className="inline-flex items-center justify-start px-3 py-1.5 text-sm border border-gray-300 dark:border-dark-600 bg-transparent hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 rounded-lg transition-all pointer-events-auto"
-                  style={{ pointerEvents: 'auto !important' }}
-                >
-                  <FiRefreshCw className="h-3 w-3 mr-2" />
-                  Quét Movie
-                </button>
-                <button
-                  onClick={() => {
-                    console.log('🔄 Direct scan button clicked');
-                    handleScan('music');
-                  }}
-                  className="inline-flex items-center justify-start px-3 py-1.5 text-sm border border-gray-300 dark:border-dark-600 bg-transparent hover:bg-gray-50 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-300 rounded-lg transition-all pointer-events-auto"
-                  style={{ pointerEvents: 'auto !important' }}
-                >
-                  <FiRefreshCw className="h-3 w-3 mr-2" />
-                  Quét Music
-                </button>
-              </div>
-
-              {/* Reset cache buttons */}
-              <div className="grid grid-cols-1 gap-1">
-                <button
-                  onClick={() => {
-                    console.log('🗑️ Direct reset button clicked');
-                    handleResetCache('manga');
-                  }}
-                  className="inline-flex items-center justify-start px-3 py-1.5 text-sm bg-transparent text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all pointer-events-auto"
-                  style={{ pointerEvents: 'auto !important' }}
-                >
-                  <FiTrash2 className="h-3 w-3 mr-2" />
-                  Xóa cache Manga
-                </button>
-                <button
-                  onClick={() => {
-                    console.log('🗑️ Direct reset button clicked');
-                    handleResetCache('movie');
-                  }}
-                  className="inline-flex items-center justify-start px-3 py-1.5 text-sm bg-transparent text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all pointer-events-auto"
-                  style={{ pointerEvents: 'auto !important' }}
-                >
-                  <FiTrash2 className="h-3 w-3 mr-2" />
-                  Xóa cache Movie
-                </button>
-                <button
-                  onClick={() => {
-                    console.log('🗑️ Direct reset button clicked');
-                    handleResetCache('music');
-                  }}
-                  className="inline-flex items-center justify-start px-3 py-1.5 text-sm bg-transparent text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all pointer-events-auto"
-                  style={{ pointerEvents: 'auto !important' }}
-                >
-                  <FiTrash2 className="h-3 w-3 mr-2" />
-                  Xóa cache Music
-                </button>
-              </div>
-            </div>
+            <DatabaseActions
+              contentType={currentContentType}
+              sourceKey={sourceKey}
+              rootFolder={rootFolder}
+              layout="vertical"
+              size="sm"
+              variant="outline"
+              showLabels={true}
+              className="space-y-1"
+            />
           </div>
         )}
       </div>
