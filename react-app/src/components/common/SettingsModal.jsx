@@ -12,11 +12,9 @@ import {
   Globe,
   Palette,
   Database,
-  HardDrive,
-  RotateCcw,
   Save
 } from 'lucide-react';
-import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore, useSharedSettingsStore } from '../../store';
+import { useUIStore, useAuthStore, useMangaStore, useMusicStore } from '../../store';
 
 const PlayerUISelector = () => {
   const { playerSettings, updatePlayerSettings } = useMusicStore();
@@ -64,7 +62,6 @@ const SettingsModal = ({ isOpen, onClose }) => {
     mangaSettings,
     updateMangaSettings
   } = useMangaStore();
-  const { clearMovieCache } = useMovieStore();
   const { clearMusicCache, playerSettings, updatePlayerSettings } = useMusicStore();
 
   const [activeTab, setActiveTab] = useState('appearance');
@@ -90,35 +87,8 @@ const SettingsModal = ({ isOpen, onClose }) => {
       icon: Eye 
     },
     { id: 'player', label: 'Phát media', icon: Volume2 },
-    { id: 'cache', label: 'Bộ nhớ đệm', icon: HardDrive },
     { id: 'system', label: 'Hệ thống', icon: Database },
   ];
-
-  const { clearAllCache: sharedClearAllCache } = useSharedSettingsStore();
-
-  const handleClearCache = async (type) => {
-    try {
-      switch (type) {
-        case 'manga':
-          await clearMangaCache();
-          break;
-        case 'movie':
-          await clearMovieCache();
-          break;
-        case 'music':
-          await clearMusicCache();
-          break;
-        case 'all':
-          // Use shared cache clearing + individual store clearing
-          sharedClearAllCache();
-          await Promise.all([clearMangaCache(), clearMovieCache(), clearMusicCache()]);
-          break;
-      }
-      console.log(`Cleared ${type} cache successfully`);
-    } catch (error) {
-      console.error(`Error clearing ${type} cache:`, error);
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -204,81 +174,6 @@ const SettingsModal = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            {activeTab === 'cache' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  Quản lý bộ nhớ đệm
-                </h3>
-                
-                {/* Source Key Info */}
-                {sourceKey && (
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <Globe className="w-5 h-5 text-blue-600" />
-                      <span className="font-medium text-blue-700 dark:text-blue-300">
-                        Source hiện tại: {sourceKey}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Cache Management */}
-                <div>
-                  <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
-                    Xóa bộ nhớ đệm
-                  </h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Xóa dữ liệu đã lưu trong bộ nhớ để giải phóng không gian và cập nhật nội dung mới.
-                  </p>
-                  
-                  <div className="space-y-4">
-                    {/* Individual Cache Buttons */}
-                    <div>
-                      <h5 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Xóa cache từng loại</h5>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <button
-                          onClick={() => handleClearCache('manga')}
-                          className="flex items-center justify-center px-4 py-3 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg transition-colors"
-                        >
-                          <HardDrive className="w-4 h-4 mr-2" />
-                          Manga Cache
-                        </button>
-                        <button
-                          onClick={() => handleClearCache('movie')}
-                          className="flex items-center justify-center px-4 py-3 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg transition-colors"
-                        >
-                          <HardDrive className="w-4 h-4 mr-2" />
-                          Movie Cache
-                        </button>
-                        <button
-                          onClick={() => handleClearCache('music')}
-                          className="flex items-center justify-center px-4 py-3 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg transition-colors"
-                        >
-                          <HardDrive className="w-4 h-4 mr-2" />
-                          Music Cache
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* All Cache Button */}
-                    <div>
-                      <h5 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Xóa tất cả</h5>
-                      <button
-                        onClick={() => handleClearCache('all')}
-                        className="w-full flex items-center justify-center px-4 py-3 bg-red-100 hover:bg-red-200 dark:bg-red-800/30 dark:hover:bg-red-800/50 text-red-800 dark:text-red-200 rounded-lg transition-colors font-medium"
-                      >
-                        <RotateCcw className="w-4 h-4 mr-2" />
-                        Xóa tất cả cache & dữ liệu
-                      </button>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        ⚠️ Thao tác này sẽ xóa toàn bộ lịch sử xem, random cache và top view cache.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {activeTab === 'system' && (
               <div className="space-y-6">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -296,6 +191,22 @@ const SettingsModal = ({ isOpen, onClose }) => {
                     </div>
                   </div>
                 )}
+
+                {/* Notice about Cache Management */}
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border-l-4 border-yellow-400">
+                  <div className="flex items-start space-x-3">
+                    <Database className="w-5 h-5 text-yellow-600 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-yellow-800 dark:text-yellow-200">
+                        Quản lý Cache & Database
+                      </h4>
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                        Để quản lý bộ nhớ đệm, xóa cache, hoặc thực hiện Database Operations (Scan/Delete/Reset), 
+                        vui lòng vào <strong>Settings {`>`} Cache & Storage</strong> từ menu chính.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 {/* System Information */}
                 <div>
@@ -383,89 +294,6 @@ const SettingsModal = ({ isOpen, onClose }) => {
                       <div className="text-center">
                         <div className="font-medium">Trang đôi</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">Hiển thị 2 trang</div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Reading Direction */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Hướng đọc
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => updateReaderSettings({ readingDirection: 'ltr' })}
-                      className={`p-3 rounded-lg border-2 transition-all ${
-                        readerSettings.readingDirection === 'ltr'
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">Trái → Phải</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Left to Right</div>
-                      </div>
-                    </button>
-                    
-                    <button
-                      onClick={() => updateReaderSettings({ readingDirection: 'rtl' })}
-                      className={`p-3 rounded-lg border-2 transition-all ${
-                        readerSettings.readingDirection === 'rtl'
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="font-medium">Phải → Trái</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Right to Left</div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Zoom Mode */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Chế độ zoom
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <button
-                      onClick={() => updateReaderSettings({ zoomMode: 'fit-width' })}
-                      className={`p-3 rounded-lg border-2 transition-all ${
-                        readerSettings.zoomMode === 'fit-width'
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="font-medium text-sm">Vừa chiều rộng</div>
-                      </div>
-                    </button>
-                    
-                    <button
-                      onClick={() => updateReaderSettings({ zoomMode: 'fit-height' })}
-                      className={`p-3 rounded-lg border-2 transition-all ${
-                        readerSettings.zoomMode === 'fit-height'
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="font-medium text-sm">Vừa chiều cao</div>
-                      </div>
-                    </button>
-                    
-                    <button
-                      onClick={() => updateReaderSettings({ zoomMode: 'original' })}
-                      className={`p-3 rounded-lg border-2 transition-all ${
-                        readerSettings.zoomMode === 'original'
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="font-medium text-sm">Kích thước gốc</div>
                       </div>
                     </button>
                   </div>
