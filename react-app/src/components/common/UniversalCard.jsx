@@ -57,24 +57,26 @@ const UniversalCard = ({
       };
     } else if (type === 'movie') {
       const isVideo = item.type === 'video' || item.type === 'file';
+      const ext = isVideo ? item.path?.split('.').pop()?.toLowerCase() : null;
       return {
         displayName: baseName,
         isReadable: isVideo,
         isFolder: item.type === 'folder',
         thumbnail: getThumbnailUrl(),
         typeIcon: isVideo ? FiPlay : FiFolder,
-        typeLabel: isVideo ? 'Video' : 'Thư mục'
+        typeLabel: isVideo ? `.${ext || 'video'}` : 'Thư mục'
       };
     } else if (type === 'music') {
       const isAudio = item.type === 'audio' || item.type === 'file';
       const isPlaylist = item.isPlaylist;
+      const ext = isAudio ? item.path?.split('.').pop()?.toLowerCase() : null;
       return {
         displayName: baseName,
         isReadable: isAudio || isPlaylist,
         isFolder: item.type === 'folder' && !isPlaylist,
         thumbnail: getThumbnailUrl(),
         typeIcon: isAudio || isPlaylist ? FiMusic : FiFolder,
-        typeLabel: isPlaylist ? 'Playlist' : isAudio ? 'Audio' : 'Thư mục'
+        typeLabel: isPlaylist ? 'Playlist' : isAudio ? `.${ext || 'audio'}` : 'Thư mục'
       };
     }
     
