@@ -53,10 +53,10 @@ const UniversalCard = ({
         isFolder: !item.images || item.images.length === 0,
         thumbnail: getThumbnailUrl(),
         typeIcon: item.images ? FiPlay : FiFolder,
-        typeLabel: item.images ? 'Đọc truyện' : 'Thư mục'
+        typeLabel: item.images ? 'Đọc truyện' : 'Folder'
       };
     } else if (type === 'movie') {
-      const isVideo = item.type === 'video' || item.type === 'file';
+      const isVideo = item.type === 'video' || item.type === 'File';
       const ext = isVideo ? item.path?.split('.').pop()?.toLowerCase() : null;
       return {
         displayName: baseName,
@@ -64,7 +64,7 @@ const UniversalCard = ({
         isFolder: item.type === 'folder',
         thumbnail: getThumbnailUrl(),
         typeIcon: isVideo ? FiPlay : FiFolder,
-        typeLabel: isVideo ? `.${ext || 'video'}` : 'Thư mục'
+        typeLabel: isVideo ? `${ext || 'video'}` : 'Folder'
       };
     } else if (type === 'music') {
       const isAudio = item.type === 'audio' || item.type === 'file';
@@ -76,7 +76,7 @@ const UniversalCard = ({
         isFolder: item.type === 'folder' && !isPlaylist,
         thumbnail: getThumbnailUrl(),
         typeIcon: isAudio || isPlaylist ? FiMusic : FiFolder,
-        typeLabel: isPlaylist ? 'Playlist' : isAudio ? `.${ext || 'audio'}` : 'Thư mục'
+        typeLabel: isPlaylist ? 'Playlist' : isAudio ? `${ext || 'audio'}` : 'Folder'
       };
     }
     

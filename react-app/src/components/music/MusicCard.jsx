@@ -79,9 +79,9 @@ const MusicCard = ({
     if (isPlaylist) return 'Playlist';
     if (isAudio) {
       const ext = item.path?.split('.').pop()?.toLowerCase();
-      return `.${ext || 'audio'}`;
+      return `${ext || 'audio'}`;
     }
-    return 'Thư mục';
+    return 'Folder';
   };
 
   return (

@@ -671,7 +671,7 @@ const MusicPlayer = () => {
         {/* Left: Library sidebar */}
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] flex flex-col" style={{ height: 'calc(100vh - 200px)' }}>
           <div className="px-4 py-3 text-xs uppercase tracking-wider text-white/60 border-b border-white/10 flex items-center justify-between">
-            <span>Thư viện</span>
+            <span>Playlist</span>
             <span className="text-white/40 text-[11px]">Playlists</span>
           </div>
           <div className="p-3">
@@ -817,7 +817,7 @@ const MusicPlayer = () => {
                   <div className="hidden md:block text-sm text-white/70 text-center">
                     {(() => {
                       const ext = track.path?.split('.').pop();
-                      return ext ? `.${ext.toLowerCase()}` : '—';
+                      return ext ? `${ext.toLowerCase()}` : '—';
                     })()}
                   </div>
 

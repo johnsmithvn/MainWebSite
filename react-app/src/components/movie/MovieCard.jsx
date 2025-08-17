@@ -50,7 +50,7 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
   const getTypeLabel = () => {
     if (isVideo) {
       const ext = item.path?.split('.').pop()?.toLowerCase();
-      return `.${ext || 'video'}`;
+      return `${ext || 'video'}`;
     }
     return 'Folder';
   };
