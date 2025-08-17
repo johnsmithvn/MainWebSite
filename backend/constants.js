@@ -57,8 +57,9 @@ const CONTENT_TYPES = {
 const SECURITY = {
   MAX_REQUEST_SIZE: '10mb',
   RATE_LIMIT: {
-    WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-    MAX_REQUESTS: 100
+    // Development: more generous limits for testing
+    WINDOW_MS: process.env.NODE_ENV === 'production' ? 15 * 60 * 1000 : 5 * 60 * 1000, // 5 min dev, 15 min prod
+    MAX_REQUESTS: process.env.NODE_ENV === 'production' ? 100 : 1000 // 1000 dev, 100 prod
   }
 };
 
