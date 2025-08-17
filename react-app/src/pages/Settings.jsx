@@ -8,6 +8,7 @@ import {
   Shield, User, Bell, Trash2, RotateCcw, Save
 } from 'lucide-react';
 import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore, useSharedSettingsStore } from '@/store';
+import { clearSourceCache, clearAllCache as clearAllCacheKeys, clearTypeCache, clearRecentViewCache, CACHE_PREFIXES } from '@/constants/cacheKeys';
 import Button from '@/components/common/Button';
 import { useModal } from '@/components/common/Modal';
 
@@ -50,8 +51,8 @@ const Settings = () => {
           <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg">
             <p className="font-semibold text-orange-800 dark:text-orange-200 mb-2">📋 What will be cleared:</p>
             <ul className="text-sm space-y-1 text-orange-700 dark:text-orange-300">
-              <li>• React folder cache: <strong>react-folderCache::{sourceKey || 'current'}::{rootFolder || 'current'}::*</strong></li>
-              <li>• Random cache: <strong>randomView::{sourceKey || 'current'}::{rootFolder || 'current'}::manga</strong></li>
+              <li>• React folder cache: <strong>{CACHE_PREFIXES.REACT_FOLDER_CACHE}::{sourceKey || 'current'}::{rootFolder || 'current'}::*</strong></li>
+              <li>• Random cache: <strong>{CACHE_PREFIXES.RANDOM_VIEW}::{sourceKey || 'current'}::{rootFolder || 'current'}::manga</strong></li>
               <li>• Source: <strong>{sourceKey || 'current'}</strong>, Root: <strong>{rootFolder || 'current'}</strong></li>
             </ul>
           </div>
@@ -60,20 +61,12 @@ const Settings = () => {
       confirmText: 'Clear Current Root',
       cancelText: 'Cancel',
       onConfirm: () => {
-        // Clear React manga folder cache for current root
-        const reactCachePrefix = `react-folderCache::${sourceKey}::${rootFolder}::`;
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith(reactCachePrefix)) {
-            localStorage.removeItem(key);
-          }
-        });
-        
-        // Clear random cache for current root
-        localStorage.removeItem(`randomView::${sourceKey}::${rootFolder}::manga`);
+        // Use centralized cache clearing for current root
+        const cleared = clearSourceCache(sourceKey, 'manga');
         
         successModal({
           title: '✅ Cleared!',
-          message: 'Current root manga cache cleared successfully.'
+          message: `Current root manga cache cleared successfully. (${cleared} keys removed)`
         });
       }
     });
@@ -99,20 +92,8 @@ const Settings = () => {
       confirmText: 'Clear Current Source',
       cancelText: 'Cancel',
       onConfirm: () => {
-        // Clear all React manga folder cache for current source
-        const reactCachePrefix = `react-folderCache::${sourceKey}::`;
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith(reactCachePrefix)) {
-            localStorage.removeItem(key);
-          }
-        });
-        
-        // Clear all random cache for current source (all roots)
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith(`randomView::${sourceKey}::`) && key.endsWith('::manga')) {
-            localStorage.removeItem(key);
-          }
-        });
+        // Clear cache for current manga source using centralized utility
+        clearSourceCache(sourceKey, 'manga');
         
         successModal({
           title: '✅ Cleared!',
@@ -148,14 +129,8 @@ const Settings = () => {
       confirmText: 'Clear Source + Storage',
       cancelText: 'Cancel',
       onConfirm: () => {
-        // Clear cache for current source
-        const reactCachePrefix = `react-folderCache::${sourceKey}::`;
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith(reactCachePrefix) || 
-              (key.startsWith(`randomView::${sourceKey}::`) && key.endsWith('::manga'))) {
-            localStorage.removeItem(key);
-          }
-        });
+        // Clear cache for current source using centralized utility
+        clearSourceCache(sourceKey, 'manga');
         
         // Clear manga storage
         clearMangaCache();
@@ -196,20 +171,8 @@ const Settings = () => {
       confirmText: '💥 Clear Everything',
       cancelText: 'Cancel',
       onConfirm: () => {
-        // Clear all manga-related cache
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('react-folderCache::') || 
-              (key.includes('randomView::') && key.endsWith('::manga')) ||
-              key === 'manga-storage' ||
-              key === 'manga.perPage' ||
-              key.startsWith('mangaCache::') ||
-              key.startsWith('folderCache::') ||
-              key.startsWith('recentViewed::') ||
-              key.includes('manga')) {
-            localStorage.removeItem(key);
-            console.log('🗑️ Removed:', key);
-          }
-        });
+        // Clear all manga-related cache using centralized utility
+        clearTypeCache('manga');
         
         // Clear manga storage from Zustand store
         clearMangaCache();
@@ -426,10 +389,8 @@ const Settings = () => {
       confirmText: 'Clear Current Source',
       cancelText: 'Cancel',
       onConfirm: () => {
-        // Clear movie cache for current source
-        localStorage.removeItem(`movie-folder-cache-${sourceKey}`);
-        localStorage.removeItem(`randomView::${sourceKey}::undefined::movie`);
-        localStorage.removeItem(`recentViewedVideo::${sourceKey}`);
+        // Clear movie cache for current source using centralized utility
+        clearSourceCache(sourceKey, 'movie');
         
         successModal({
           title: '✅ Cleared!',
@@ -465,10 +426,8 @@ const Settings = () => {
       confirmText: 'Clear Source + Storage',
       cancelText: 'Cancel',
       onConfirm: () => {
-        // Clear cache for current source
-        localStorage.removeItem(`movie-folder-cache-${sourceKey}`);
-        localStorage.removeItem(`randomView::${sourceKey}::undefined::movie`);
-        localStorage.removeItem(`recentViewedVideo::${sourceKey}`);
+        // Clear cache for current source using centralized utility
+        clearSourceCache(sourceKey, 'movie');
         
         // Clear movie storage
         clearMovieCache();
@@ -507,14 +466,8 @@ const Settings = () => {
       confirmText: '💥 Clear Everything',
       cancelText: 'Cancel',
       onConfirm: () => {
-        // Clear all movie-related cache
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('movie-folder-cache-') || 
-              key.startsWith('recentViewedVideo::') ||
-              (key.includes('randomView::') && key.endsWith('::undefined::movie'))) {
-            localStorage.removeItem(key);
-          }
-        });
+        // Clear all movie-related cache using centralized utility
+        clearTypeCache('movie');
         
         // Clear movie storage
         clearMovieCache();
@@ -703,10 +656,8 @@ const Settings = () => {
       confirmText: 'Clear Current Source',
       cancelText: 'Cancel',
       onConfirm: () => {
-        // Clear music cache for current source
-        localStorage.removeItem(`music-folder-cache-${sourceKey}`);
-        localStorage.removeItem(`randomView::${sourceKey}::undefined::music`);
-        localStorage.removeItem(`recentViewedMusic::${sourceKey}`);
+        // Clear music cache for current source using centralized utility
+        clearSourceCache(sourceKey, 'music');
         
         successModal({
           title: '✅ Cleared!',
@@ -742,10 +693,8 @@ const Settings = () => {
       confirmText: 'Clear Source + Storage',
       cancelText: 'Cancel',
       onConfirm: () => {
-        // Clear cache for current source
-        localStorage.removeItem(`music-folder-cache-${sourceKey}`);
-        localStorage.removeItem(`randomView::${sourceKey}::undefined::music`);
-        localStorage.removeItem(`recentViewedMusic::${sourceKey}`);
+        // Clear cache for current source using centralized utility
+        clearSourceCache(sourceKey, 'music');
         
         // Clear music storage
         clearMusicCache();
@@ -784,14 +733,8 @@ const Settings = () => {
       confirmText: '💥 Clear Everything',
       cancelText: 'Cancel',
       onConfirm: () => {
-        // Clear all music-related cache
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('music-folder-cache-') || 
-              key.startsWith('recentViewedMusic::') ||
-              (key.includes('randomView::') && key.endsWith('::undefined::music'))) {
-            localStorage.removeItem(key);
-          }
-        });
+        // Clear all music-related cache using centralized utility
+        clearTypeCache('music');
         
         // Clear music storage
         clearMusicCache();
@@ -1069,14 +1012,8 @@ const Settings = () => {
       confirmText: 'Xóa tất cả lịch sử',
       cancelText: 'Hủy',
       onConfirm: () => {
-        // Clear recent history cache patterns
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('recentViewed::') || 
-              key.startsWith('recentViewedVideo::') || 
-              key.startsWith('recentViewedMusic::')) {
-            localStorage.removeItem(key);
-          }
-        });
+        // Clear recent history cache patterns using centralized utility
+        clearRecentViewCache();
         
         // Clear shared recent history 
         sharedClearRecentHistory('manga');
@@ -1165,16 +1102,8 @@ const Settings = () => {
       confirmText: '💥 XÓA TẤT CẢ',
       cancelText: 'Hủy bỏ',
       onConfirm: () => {
-        // Clear all application caches first
-        sharedClearAllCache();
-        clearMangaCache();
-        clearMovieCache(); 
-        clearMusicCache();
-        
-        // Clear all cache patterns manually
-        Object.keys(localStorage).forEach(key => {
-          localStorage.removeItem(key);
-        });
+        // Clear all application caches using centralized utility
+        clearAllCacheKeys();
         
         // Clear sessionStorage
         sessionStorage.clear();

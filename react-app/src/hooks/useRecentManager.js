@@ -4,6 +4,7 @@
 import { useCallback } from 'react';
 import { useAuthStore, useMangaStore } from '@/store';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
+import { getRecentViewedCacheKey } from '@/constants/cacheKeys';
 
 /**
  * Hook để quản lý thêm items vào recent cache
@@ -18,15 +19,21 @@ export const useRecentManager = (type = 'manga') => {
 
   // Get cache key based on type
   const getCacheKey = useCallback(() => {
-    switch (type) {
-      case 'manga':
-        return `recentViewed::${rootFolder}::${rootFolder}`;
-      case 'movie':
-        return `recentViewedVideo::${sourceKey}`;
-      case 'music':
-        return `recentViewedMusic::${sourceKey}`;
-      default:
-        return `recentViewed::${type}::${sourceKey}`;
+    try {
+      return getRecentViewedCacheKey(type, sourceKey, type === 'manga' ? rootFolder : null);
+    } catch (error) {
+      console.warn('Error generating cache key:', error);
+      // Fallback to old pattern for compatibility
+      switch (type) {
+        case 'manga':
+          return `recentViewed::${rootFolder}::${rootFolder}`;
+        case 'movie':
+          return `recentViewedVideo::${sourceKey}`;
+        case 'music':
+          return `recentViewedMusic::${sourceKey}`;
+        default:
+          return `recentViewed::${type}::${sourceKey}`;
+      }
     }
   }, [type, sourceKey, rootFolder]);
 

@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import { processThumbnails } from '@/utils/thumbnailUtils';
+import { getRecentViewedCacheKey } from '@/constants/cacheKeys';
 
 /**
  * Hook để quản lý recent viewed items với localStorage cache
@@ -47,15 +48,21 @@ export const useRecentItems = (type, options = {}) => {
 
   // Generate cache key based on type, sourceKey, and rootFolder
   const getCacheKey = useCallback(() => {
-    switch (type) {
-      case 'manga':
-        return `recentViewed::${rootFolder}::${rootFolder}`;
-      case 'movie':
-        return `recentViewedVideo::${sourceKey}`;
-      case 'music':
-        return `recentViewedMusic::${sourceKey}`;
-      default:
-        return `recentViewed::${type}::${sourceKey}`;
+    try {
+      return getRecentViewedCacheKey(type, sourceKey, type === 'manga' ? rootFolder : null);
+    } catch (error) {
+      console.warn('Error generating cache key:', error);
+      // Fallback to old pattern for compatibility
+      switch (type) {
+        case 'manga':
+          return `recentViewed::${rootFolder}::${rootFolder}`;
+        case 'movie':
+          return `recentViewedVideo::${sourceKey}`;
+        case 'music':
+          return `recentViewedMusic::${sourceKey}`;
+        default:
+          return `recentViewed::${type}::${sourceKey}`;
+      }
     }
   }, [type, sourceKey, rootFolder]);
 
@@ -137,20 +144,25 @@ export const useRecentItems = (type, options = {}) => {
   useEffect(() => {
     if (sourceKey && (type !== 'manga' || rootFolder)) {
       try {
-        // Generate cache key inline to avoid callback dependency
+        // Use cache key utility with fallback
         let cacheKey;
-        switch (type) {
-          case 'manga':
-            cacheKey = `recentViewed::${rootFolder}::${rootFolder}`;
-            break;
-          case 'movie':
-            cacheKey = `recentViewedVideo::${sourceKey}`;
-            break;
-          case 'music':
-            cacheKey = `recentViewedMusic::${sourceKey}`;
-            break;
-          default:
-            cacheKey = `recentViewed::${type}::${sourceKey}`;
+        try {
+          cacheKey = getRecentViewedCacheKey(type, sourceKey, type === 'manga' ? rootFolder : null);
+        } catch (error) {
+          // Fallback to old pattern for compatibility
+          switch (type) {
+            case 'manga':
+              cacheKey = `recentViewed::${rootFolder}::${rootFolder}`;
+              break;
+            case 'movie':
+              cacheKey = `recentViewedVideo::${sourceKey}`;
+              break;
+            case 'music':
+              cacheKey = `recentViewedMusic::${sourceKey}`;
+              break;
+            default:
+              cacheKey = `recentViewed::${type}::${sourceKey}`;
+          }
         }
         
         const cached = localStorage.getItem(cacheKey);
@@ -183,20 +195,25 @@ export const useRecentItems = (type, options = {}) => {
   // Add item to recent list
   const addRecentItem = useCallback((item) => {
     try {
-      // Generate cache key inline
+      // Use cache key utility with fallback
       let cacheKey;
-      switch (type) {
-        case 'manga':
-          cacheKey = `recentViewed::${rootFolder}::${rootFolder}`;
-          break;
-        case 'movie':
-          cacheKey = `recentViewedVideo::${sourceKey}`;
-          break;
-        case 'music':
-          cacheKey = `recentViewedMusic::${sourceKey}`;
-          break;
-        default:
-          cacheKey = `recentViewed::${type}::${sourceKey}`;
+      try {
+        cacheKey = getRecentViewedCacheKey(type, sourceKey, type === 'manga' ? rootFolder : null);
+      } catch (error) {
+        // Fallback to old pattern for compatibility
+        switch (type) {
+          case 'manga':
+            cacheKey = `recentViewed::${rootFolder}::${rootFolder}`;
+            break;
+          case 'movie':
+            cacheKey = `recentViewedVideo::${sourceKey}`;
+            break;
+          case 'music':
+            cacheKey = `recentViewedMusic::${sourceKey}`;
+            break;
+          default:
+            cacheKey = `recentViewed::${type}::${sourceKey}`;
+        }
       }
       
       // Get cached data inline

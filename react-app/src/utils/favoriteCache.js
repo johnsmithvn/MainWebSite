@@ -1,6 +1,12 @@
 // 📁 src/utils/favoriteCache.js
 // 🔄 Utility để cập nhật favorite state trong cache
 
+import { 
+  getRandomViewCacheKey, 
+  getRecentViewedCacheKey,
+  CACHE_PREFIXES 
+} from '@/constants/cacheKeys';
+
 /**
  * Cập nhật isFavorite cho tất cả cache entries có path tương ứng
  * @param {string} sourceKey - Key của database (ROOT_*, V_*, etc.)
@@ -16,8 +22,8 @@ export const updateFavoriteInAllCaches = (sourceKey, itemPath, isFavorite, rootF
   // ✅ 1. Update React app random cache pattern (randomView::)
   if (rootFolder) {
     ['manga', 'movie', 'music'].forEach(type => {
-      const randomKey = `randomView::${sourceKey}::${rootFolder}::${type}`;
       try {
+        const randomKey = getRandomViewCacheKey(type, sourceKey, type === 'manga' ? rootFolder : null);
         const cached = localStorage.getItem(randomKey);
         if (!cached) return;
 
@@ -56,11 +62,26 @@ export const updateFavoriteInAllCaches = (sourceKey, itemPath, isFavorite, rootF
   }
 
   // ✅ 2. Update recentViewed cache patterns
-  const recentPatterns = [
-    `recentViewed::${rootFolder}::${rootFolder}`, // manga pattern
-    `recentViewedVideo::${sourceKey}`, // movie pattern  
-    `recentViewedMusic::${sourceKey}` // music pattern
-  ];
+  const recentPatterns = [];
+  
+  // Generate cache keys using utilities with fallback for different types
+  try {
+    recentPatterns.push(getRecentViewedCacheKey('manga', sourceKey, rootFolder));
+  } catch (error) {
+    recentPatterns.push(`recentViewed::${rootFolder}::${rootFolder}`);
+  }
+  
+  try {
+    recentPatterns.push(getRecentViewedCacheKey('movie', sourceKey));
+  } catch (error) {
+    recentPatterns.push(`recentViewedVideo::${sourceKey}`);
+  }
+  
+  try {
+    recentPatterns.push(getRecentViewedCacheKey('music', sourceKey));
+  } catch (error) {
+    recentPatterns.push(`recentViewedMusic::${sourceKey}`);
+  }
 
   console.log('🕒 Checking recent cache patterns:', recentPatterns);
 
@@ -103,7 +124,7 @@ export const updateFavoriteInAllCaches = (sourceKey, itemPath, isFavorite, rootF
   // ✅ 3. Update các cache patterns cũ (legacy compatibility)
   const cachePrefixes = [
     'randomItems',
-    'recentViewed', 
+    CACHE_PREFIXES.RECENT_VIEWED_MANGA, 
     'topViews',
     'mangaFolders'
   ];
@@ -150,7 +171,7 @@ export const updateFavoriteInAllCaches = (sourceKey, itemPath, isFavorite, rootF
   });
 
   // ✅ 4. Cập nhật mangaCache pattern từ old frontend
-  const mangaCachePrefix = `mangaCache::${sourceKey}::`;
+  const mangaCachePrefix = `${CACHE_PREFIXES.MANGA_CACHE}::${sourceKey}::`;
   Object.keys(localStorage).forEach(key => {
     if (key.startsWith(mangaCachePrefix)) {
       try {
@@ -179,7 +200,7 @@ export const updateFavoriteInAllCaches = (sourceKey, itemPath, isFavorite, rootF
   });
 
   // ✅ 5. Cập nhật Movie cache pattern (movieCache::)
-  const movieCachePrefix = `movieCache::${sourceKey}::`;
+  const movieCachePrefix = `${CACHE_PREFIXES.MOVIE_CACHE}::${sourceKey}::`;
   Object.keys(localStorage).forEach(key => {
     if (key.startsWith(movieCachePrefix)) {
       try {
@@ -236,7 +257,7 @@ export const updateFavoriteInAllCaches = (sourceKey, itemPath, isFavorite, rootF
   });
 
   // ✅ 7. Cập nhật React manga cache pattern (react-folderCache::) - GridView cache
-  const reactMangaCachePrefix = `react-folderCache::${sourceKey}::`;
+  const reactMangaCachePrefix = `${CACHE_PREFIXES.REACT_FOLDER_CACHE}::${sourceKey}::`;
   Object.keys(localStorage).forEach(key => {
     if (key.startsWith(reactMangaCachePrefix)) {
       try {

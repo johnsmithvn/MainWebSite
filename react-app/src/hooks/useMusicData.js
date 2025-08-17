@@ -4,6 +4,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store';
 import { apiService } from '@/utils/api';
+import { getRecentViewedCacheKey } from '@/constants/cacheKeys';
 import { processThumbnails } from '@/utils/thumbnailUtils';
 
 /**
@@ -93,7 +94,7 @@ export const useRecentMusic = (options = {}) => {
       if (!sourceKey) return [];
       
       try {
-        const cacheKey = `recentViewedMusic::${sourceKey}`;
+        const cacheKey = getRecentViewedCacheKey('music', sourceKey);
         const cached = localStorage.getItem(cacheKey);
         if (!cached) return [];
         
@@ -127,7 +128,7 @@ export const useRecentMusicManager = () => {
     if (!sourceKey || !item) return;
 
     try {
-      const cacheKey = `recentViewedMusic::${sourceKey}`;
+      const cacheKey = getRecentViewedCacheKey('music', sourceKey);
       const cached = localStorage.getItem(cacheKey);
       const existingItems = cached ? JSON.parse(cached) : [];
       

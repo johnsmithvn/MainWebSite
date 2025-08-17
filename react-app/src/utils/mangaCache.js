@@ -1,7 +1,8 @@
 // 📁 src/utils/mangaCache.js
 // 📦 Manga cache utilities
 
-import { MANGA } from '@/constants/cache';
+import { CACHE_CONFIG } from '@/constants/cacheKeys';
+import { getFolderCacheKey } from '@/constants/cacheKeys';
 
 /**
  * Tạo cache key cho manga folder
@@ -12,8 +13,13 @@ import { MANGA } from '@/constants/cache';
  */
 const getCacheKey = (sourceKey, rootFolder, path) => {
   if (!sourceKey || !rootFolder) return null;
-  // Thêm "react-" prefix để phân biệt với cache của frontend cũ
-  return `react-${MANGA.FOLDER_CACHE_PREFIX}${sourceKey}::${rootFolder}::${path || ''}`;
+  try {
+    return getFolderCacheKey('manga', sourceKey, rootFolder, path);
+  } catch (error) {
+    console.warn('Error generating manga cache key:', error);
+    // Fallback to old pattern for compatibility
+    return `react-${CACHE_CONFIG.MANGA.FOLDER_CACHE_PREFIX}${sourceKey}::${rootFolder}::${path || ''}`;
+  }
 };
 
 /**
@@ -34,7 +40,7 @@ export const getMangaCache = (sourceKey, rootFolder, path) => {
     const { timestamp, data } = JSON.parse(raw);
 
     // Cache hết hạn sau một khoảng thời gian
-    const isExpired = (Date.now() - timestamp) > MANGA.CACHE_EXPIRATION;
+    const isExpired = (Date.now() - timestamp) > CACHE_CONFIG.MANGA.CACHE_EXPIRATION;
     if (isExpired) {
       localStorage.removeItem(key);
       console.log(`📦 Cache expired and removed for key: ${key}`);
@@ -79,7 +85,7 @@ export const setMangaCache = (sourceKey, rootFolder, path, data) => {
 export const clearAllMangaCache = () => {
     try {
         Object.keys(localStorage).forEach(key => {
-            if (key.startsWith(`react-${MANGA.FOLDER_CACHE_PREFIX}`)) {
+            if (key.startsWith(`react-${CACHE_CONFIG.MANGA.FOLDER_CACHE_PREFIX}`)) {
                 localStorage.removeItem(key);
             }
         });

@@ -7,6 +7,7 @@ import { STORAGE_KEYS } from '../constants';
 import { apiService } from '../utils/api';
 import { getMangaCache, setMangaCache } from '@/utils/mangaCache';
 import { updateFavoriteInAllCaches } from '@/utils/favoriteCache';
+import { clearAllCache as clearAllCacheKeys, getRecentViewedCacheKey, CACHE_PREFIXES } from '@/constants/cacheKeys';
 
 // Dedup maps for in-flight fetches
 const musicFetchInFlight = new Map();
@@ -28,24 +29,9 @@ export const useSharedSettingsStore = create(
       // Common cache management
       clearAllCache: () => {
         try {
-          // Clear localStorage cache keys
-          const keysToRemove = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && (
-              key.includes('recentViewed') || 
-              key.includes('randomCache') || 
-              key.includes('randomView') ||
-              key.includes('topViewCache') ||
-              key.includes('folderCache') ||
-              key.includes('mangaCache') ||
-              key.startsWith('react-folderCache')
-            )) {
-              keysToRemove.push(key);
-            }
-          }
-          keysToRemove.forEach(key => localStorage.removeItem(key));
-          console.log('🗑️ Cleared all cache:', keysToRemove);
+          // Use centralized cache clearing utility
+          const clearedCount = clearAllCacheKeys();
+          console.log(`🗑️ Cleared all cache: ${clearedCount} keys`);
         } catch (error) {
           console.warn('Error clearing all cache:', error);
         }
@@ -55,18 +41,23 @@ export const useSharedSettingsStore = create(
       clearRecentHistory: (type, sourceKey, rootFolder) => {
         try {
           let cacheKey;
-          switch (type) {
-            case 'manga':
-              cacheKey = `recentViewed::${rootFolder}::${rootFolder}`;
-              break;
-            case 'movie':
-              cacheKey = `recentViewedVideo::${sourceKey}`;
-              break;
-            case 'music':
-              cacheKey = `recentViewedMusic::${sourceKey}`;
-              break;
-            default:
-              cacheKey = `recentViewed::${type}::${sourceKey}`;
+          try {
+            cacheKey = getRecentViewedCacheKey(type, sourceKey, type === 'manga' ? rootFolder : null);
+          } catch (error) {
+            // Fallback to old pattern for compatibility
+            switch (type) {
+              case 'manga':
+                cacheKey = `${CACHE_PREFIXES.RECENT_VIEWED_MANGA}::${rootFolder}::${rootFolder}`;
+                break;
+              case 'movie':
+                cacheKey = `${CACHE_PREFIXES.RECENT_VIEWED_VIDEO}::${sourceKey}`;
+                break;
+              case 'music':
+                cacheKey = `${CACHE_PREFIXES.RECENT_VIEWED_MUSIC}::${sourceKey}`;
+                break;
+              default:
+                cacheKey = `${CACHE_PREFIXES.RECENT_VIEWED_MANGA}::${type}::${sourceKey}`;
+            }
           }
           
           localStorage.removeItem(cacheKey);
@@ -723,7 +714,7 @@ export const useMovieStore = create(
       clearRecentHistory: () => {
         const { sourceKey } = useAuthStore.getState();
         try {
-          const cacheKey = `recentViewedVideo::${sourceKey}`;
+          const cacheKey = getRecentViewedCacheKey('movie', sourceKey);
           localStorage.removeItem(cacheKey);
           console.log('🎬 Movie recent history cleared');
         } catch (error) {
@@ -932,7 +923,7 @@ export const useMusicStore = create(
       clearRecentHistory: () => {
         const { sourceKey } = useAuthStore.getState();
         try {
-          const cacheKey = `recentViewedMusic::${sourceKey}`;
+          const cacheKey = getRecentViewedCacheKey('music', sourceKey);
           localStorage.removeItem(cacheKey);
           console.log('🎵 Music recent history cleared');
         } catch (error) {

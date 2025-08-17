@@ -56,6 +56,9 @@ export const CACHE = {
   ROOT_THUMB_CACHE_PREFIX: "rootThumb::"
 };
 
+// Export cache key utilities
+export * from './cacheKeys';
+
 /**
  * 🎵 Slider/Carousel Settings
  */

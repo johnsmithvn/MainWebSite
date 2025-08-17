@@ -1,11 +1,12 @@
 // 📁 src/utils/randomCache.js
 // 🔄 Utilities to ensure random cache exists before rendering sections
 
-import api from '@/utils/api';
+import api from './api';
+import { getRandomViewCacheKey } from '@/constants/cacheKeys';
 
 // Build the same cache key used by useRandomItems
 export const getRandomCacheKey = (type, sourceKey, rootFolder) => {
-  return `randomView::${sourceKey}::${rootFolder}::${type}`; // rootFolder may be undefined (string 'undefined')
+  return getRandomViewCacheKey(type, sourceKey, type === 'manga' ? rootFolder : null);
 };
 
 // Build endpoint consistent with useRandomItems

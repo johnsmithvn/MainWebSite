@@ -48,12 +48,12 @@ export const useTopViewItems = (type = 'manga', options = {}) => {
     if (currentTrigger > 0) {
       console.log(`🔄 TopViewItems: Favorites changed (trigger: ${currentTrigger}), invalidating top ${type} cache`);
       // Invalidate query to force refetch and merge favorite state
-      queryClient.invalidateQueries(['topViewItems', type, sourceKey, rootFolder]);
+      queryClient.invalidateQueries(['topViewItems', type, sourceKey, type === 'manga' ? rootFolder : null]);
     }
   }, [favoritesRefreshTrigger, movieStore.favoritesRefreshTrigger, type, queryClient, sourceKey, rootFolder]);
 
   return useQuery({
-    queryKey: ['topViewItems', type, sourceKey, rootFolder],
+    queryKey: ['topViewItems', type, sourceKey, type === 'manga' ? rootFolder : null],
     queryFn: async () => {
       if (!sourceKey) {
         throw new Error('No source key available');

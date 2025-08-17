@@ -4,6 +4,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store';
 import { apiService } from '@/utils/api';
+import { getRecentViewedCacheKey } from '@/constants/cacheKeys';
 
 /**
  * Hook to get random movies
@@ -85,7 +86,7 @@ export const useRecentMovies = (options = {}) => {
       if (!sourceKey) return [];
       
       try {
-        const cacheKey = `recentViewedVideo::${sourceKey}`;
+        const cacheKey = getRecentViewedCacheKey('movie', sourceKey);
         const cached = localStorage.getItem(cacheKey);
         if (!cached) return [];
         
@@ -120,7 +121,7 @@ export const useRecentMoviesManager = () => {
     if (!sourceKey || !item) return;
     
     try {
-      const cacheKey = `recentViewedVideo::${sourceKey}`;
+      const cacheKey = getRecentViewedCacheKey('movie', sourceKey);
       const existing = localStorage.getItem(cacheKey);
       let recentList = existing ? JSON.parse(existing) : [];
       

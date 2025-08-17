@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/utils/api';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import { processThumbnails } from '@/utils/thumbnailUtils';
+import { getRandomViewCacheKey } from '@/constants/cacheKeys';
 import toast from 'react-hot-toast';
 
 /**
@@ -64,9 +65,9 @@ export const useRandomItems = (type, options = {}) => {
     }
   }, [sourceKey, queryClient]);
 
-  // Generate cache key based on type, sourceKey, and rootFolder
-  const cacheKey = `randomView::${sourceKey}::${rootFolder}::${type}`;
-  const queryKey = ['randomItems', type, sourceKey, rootFolder];
+  // Generate cache key based on type, sourceKey, and rootFolder (only for manga)
+  const cacheKey = getRandomViewCacheKey(type, sourceKey, type === 'manga' ? rootFolder : null);
+  const queryKey = ['randomItems', type, sourceKey, type === 'manga' ? rootFolder : null];
 
   // Invalidate cache when favorites change - listen to all store triggers
   useEffect(() => {
@@ -88,7 +89,10 @@ export const useRandomItems = (type, options = {}) => {
 
   // Check for existing cache timestamp on mount only - run once per unique cache key
   useEffect(() => {
-    if (sourceKey && rootFolder) {
+    // Only check for cache if we have required keys
+    const hasRequiredKeys = sourceKey && (type !== 'manga' || rootFolder);
+    
+    if (hasRequiredKeys) {
       try {
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
