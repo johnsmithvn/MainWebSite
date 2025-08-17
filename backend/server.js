@@ -53,7 +53,7 @@ const isAudio = /\.(mp3|m4a|aac|ogg|flac|wav)$/i;
 const isVideo = /\.(mp4|m4v|webm|mov|mkv|ts|m3u8)$/i;
 
 // Nếu bạn ĐÃ hash tên file ảnh manga, bật immutable + TTL dài
-const MANGA_IMAGES_IMMUTABLE = True; // Nếu build có hash (Vite/Webpack/Next…): = True
+const MANGA_IMAGES_IMMUTABLE = true; // Nếu build có hash (Vite/Webpack/Next…): = True
 
 function setStaticHeaders(kind) {
   return (res, path) => {
