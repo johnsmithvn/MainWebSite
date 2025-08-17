@@ -35,7 +35,11 @@ export const useSharedSettingsStore = create(
             if (key && (
               key.includes('recentViewed') || 
               key.includes('randomCache') || 
-              key.includes('topViewCache')
+              key.includes('randomView') ||
+              key.includes('topViewCache') ||
+              key.includes('folderCache') ||
+              key.includes('mangaCache') ||
+              key.startsWith('react-folderCache')
             )) {
               keysToRemove.push(key);
             }
@@ -773,7 +777,6 @@ export const useMusicStore = create(
       setCurrentPath: (path) => set({ currentPath: path }),
       setMusicList: (musicList) => set({ musicList, allMusic: musicList }), // Keep both for compatibility
       setAllMusic: (music) => set({ allMusic: music, musicList: music }),
-      setFavorites: (favorites) => set({ favorites }),
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error }),
       setSearchTerm: (searchTerm) => set({ searchTerm }),

@@ -29,6 +29,8 @@ const Header = () => {
   const pathname = location.pathname;
   const showSearch = (/^\/(manga|movie|music)(?:\/|$)/.test(pathname)) && !/^\/manga\/select(?:\/|$)/.test(pathname);
   const homePath = '/';
+  const isHomePage = pathname === '/';
+  const isSelectPage = pathname === '/manga/select';
   
   const { 
     darkMode, 
@@ -105,14 +107,16 @@ const Header = () => {
           <div className="flex items-center justify-between h-16">
             {/* Left section */}
             <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleSidebar}
-                className=""
-              >
-                <FiMenu className="h-5 w-5" />
-              </Button>
+              {!isHomePage && !isSelectPage && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleSidebar}
+                  className=""
+                >
+                  <FiMenu className="h-5 w-5" />
+                </Button>
+              )}
 
               <Link 
                 to={homePath} 
@@ -189,7 +193,13 @@ const Header = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setSettingsModalOpen(true)}
+                onClick={() => {
+                  if (isHomePage || isSelectPage) {
+                    navigate('/settings');
+                  } else {
+                    setSettingsModalOpen(true);
+                  }
+                }}
               >
                 <FiSettings className="h-4 w-4" />
               </Button>

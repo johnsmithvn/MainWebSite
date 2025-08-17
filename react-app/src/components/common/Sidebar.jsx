@@ -67,10 +67,16 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
           });
           break;
         case 'movie':
-          await apiService.movie.resetDb({ key: sourceKey });
+          await apiService.movie.resetDb({ 
+            key: sourceKey, 
+            mode: 'delete' 
+          });
           break;
         case 'music':
-          await apiService.music.resetDb({ key: sourceKey });
+          await apiService.music.resetDb({ 
+            key: sourceKey, 
+            mode: 'delete' 
+          });
           break;
         default:
           throw new Error('Invalid type');
@@ -92,7 +98,7 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
     try {
       switch (type) {
         case 'manga':
-          await apiService.manga.scan({ key: sourceKey, root: rootFolder });
+          await apiService.manga.scan({ root: rootFolder, key: sourceKey });
           break;
         case 'movie':
           await apiService.movie.scan({ key: sourceKey });

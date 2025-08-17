@@ -37,8 +37,6 @@ const MusicPlayerV2 = () => {
     volume,
     shuffle,
     repeat,
-    toggleFavorite,
-    favorites,
     playTrack,
     pauseTrack,
     resumeTrack,
@@ -516,7 +514,7 @@ const MusicPlayerV2 = () => {
     const first = (currentPlaylist || [])[0];
     return first ? Number(first.viewCount ?? first.views ?? 0) : 0;
   })();
-  const isFav = currentTrack ? (favorites || []).some((f) => f.path === currentTrack.path) : false;
+  const isFav = false; // Music doesn't have favorites system
   const parentInfo = (() => {
     const full = (currentTrack?.path || effectivePath || '') || '';
     if (!full) return { parentPath: '', parentName: '' };
@@ -616,15 +614,6 @@ const MusicPlayerV2 = () => {
               >
                 {isPlaying ? 'Tạm dừng' : 'Phát tất cả'}
               </button>
-              {currentTrack && (
-                <button
-                  onClick={() => toggleFavorite(currentTrack)}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isFav ? 'bg-white/20 text-[#ffd1dc]' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}
-                  title={isFav ? 'Bỏ yêu thích' : 'Yêu thích'}
-                >
-                  <FiHeart className={`w-5 h-5 ${isFav ? 'fill-current' : ''}`} />
-                </button>
-              )}
               <button className="w-10 h-10 rounded-full bg-white/10 text-white/80 hover:bg-white/20 flex items-center justify-center" title="Khác">
                 <FiMoreHorizontal className="w-5 h-5" />
               </button>

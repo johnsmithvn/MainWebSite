@@ -74,7 +74,7 @@ export const useRandomItems = (type, options = {}) => {
     const triggers = {
       manga: favoritesRefreshTrigger,
       movie: movieStore.favoritesRefreshTrigger || 0,
-      music: musicStore.favoritesRefreshTrigger || 0
+      music: 0 // Music doesn't have favorites
     };
     
     const currentTrigger = triggers[type] || 0;
@@ -84,7 +84,7 @@ export const useRandomItems = (type, options = {}) => {
       // Invalidate query to force refetch and merge favorite state
       queryClient.invalidateQueries({ queryKey, exact: true });
     }
-  }, [favoritesRefreshTrigger, movieStore.favoritesRefreshTrigger, musicStore.favoritesRefreshTrigger, type, queryClient, queryKey]);
+  }, [favoritesRefreshTrigger, movieStore.favoritesRefreshTrigger, type, queryClient, queryKey]);
 
   // Check for existing cache timestamp on mount only - run once per unique cache key
   useEffect(() => {
@@ -119,17 +119,23 @@ export const useRandomItems = (type, options = {}) => {
           let processedData = processThumbnails(data, type);
           
           // Merge with current favorite state from stores
-          const favoriteStore = type === 'manga' ? mangaStore : 
-                               type === 'movie' ? movieStore : 
-                               type === 'music' ? musicStore : null;
-          
-          if (favoriteStore && Array.isArray(processedData)) {
-            const mergedData = processedData.map(item => {
-              const isFavorited = favoriteStore.favorites.some(f => f.path === item.path);
-              return { ...item, isFavorite: isFavorited };
-            });
-            console.log('🔄 RandomItems: Merged favorite state from cache');
+          if (type === 'music') {
+            // Music doesn't have favorites
+            const mergedData = processedData.map(item => ({ ...item, isFavorite: false }));
+            console.log('🔄 RandomItems: Set music items as non-favorite from cache');
             return mergedData;
+          } else {
+            const favoriteStore = type === 'manga' ? mangaStore : 
+                                 type === 'movie' ? movieStore : null;
+            
+            if (favoriteStore && favoriteStore.favorites && Array.isArray(processedData)) {
+              const mergedData = processedData.map(item => {
+                const isFavorited = favoriteStore.favorites.some(f => f.path === item.path);
+                return { ...item, isFavorite: isFavorited };
+              });
+              console.log('🔄 RandomItems: Merged favorite state from cache');
+              return mergedData;
+            }
           }
           
           return processedData;
@@ -208,16 +214,21 @@ export const useRandomItems = (type, options = {}) => {
       items = processThumbnails(items, type);
       
       // Merge with current favorite state from stores
-      const favoriteStore = type === 'manga' ? mangaStore : 
-                           type === 'movie' ? movieStore : 
-                           type === 'music' ? musicStore : null;
-      
-      if (favoriteStore) {
-        items = items.map(item => {
-          const isFavorited = favoriteStore.favorites.some(f => f.path === item.path);
-          return { ...item, isFavorite: isFavorited };
-        });
-        console.log('🔄 RandomItems: Merged favorite state from store');
+      // Music doesn't have favorites system
+      if (type === 'music') {
+        items = items.map(item => ({ ...item, isFavorite: false }));
+        console.log('🔄 RandomItems: Set music items as non-favorite');
+      } else {
+        const favoriteStore = type === 'manga' ? mangaStore : 
+                             type === 'movie' ? movieStore : null;
+        
+        if (favoriteStore && favoriteStore.favorites) {
+          items = items.map(item => {
+            const isFavorited = favoriteStore.favorites.some(f => f.path === item.path);
+            return { ...item, isFavorite: isFavorited };
+          });
+          console.log('🔄 RandomItems: Merged favorite state from store');
+        }
       }
       
       setCachedData(items);
@@ -357,12 +368,16 @@ const mergeWithFavoriteState = (data, type, mangaStore, movieStore, musicStore) 
     return data;
   }
   
+  // Music doesn't have favorites system
+  if (type === 'music') {
+    return data.map(item => ({ ...item, isFavorite: false }));
+  }
+  
   // Get the appropriate store based on type
   const favoriteStore = type === 'manga' ? mangaStore : 
-                       type === 'movie' ? movieStore : 
-                       type === 'music' ? musicStore : null;
+                       type === 'movie' ? movieStore : null;
   
-  if (favoriteStore) {
+  if (favoriteStore && favoriteStore.favorites) {
     return data.map(item => {
       const isFavorited = favoriteStore.favorites.some(f => f.path === item.path);
       return { ...item, isFavorite: isFavorited };

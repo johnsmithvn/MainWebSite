@@ -38,8 +38,6 @@ const MusicPlayer = () => {
     volume,
     shuffle,
     repeat,
-    toggleFavorite,
-    favorites,
     setCurrentTrack,
     playTrack,
     pauseTrack,
@@ -619,7 +617,7 @@ const MusicPlayer = () => {
   }, [volume]);
 
   // ======== Derived UI Data ========
-  const isFav = (t) => favorites.some((f) => f.path === t.path);
+  const isFav = (t) => false; // Music doesn't have favorites system
   const folderTitle = (() => {
     if (effectivePlaylist) {
       if (isPlaylistId(effectivePlaylist)) return playlistTitle || `Playlist #${effectivePlaylist}`;
@@ -747,11 +745,6 @@ const MusicPlayer = () => {
                 <button onClick={togglePlayPause} className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-lg" aria-label="Play">
                   {isPlaying ? <FiPause className="w-7 h-7" /> : <FiPlay className="w-7 h-7 ml-0.5" />}
                 </button>
-                {currentTrack && (
-                  <button onClick={() => toggleFavorite(currentTrack)} className={`p-3 rounded-full transition-colors ${isFav(currentTrack) ? 'text-green-400' : 'text-white/70 hover:text-white'}`}>
-                    <FiHeart className="w-6 h-6" />
-                  </button>
-                )}
                 <button className="p-3 rounded-full text-white/70 hover:text-white"><FiDownload className="w-6 h-6" /></button>
                 <button className="p-3 rounded-full text-white/70 hover:text-white"><FiMoreHorizontal className="w-6 h-6" /></button>
               </div>

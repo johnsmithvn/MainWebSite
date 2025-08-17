@@ -15,6 +15,8 @@ const Layout = () => {
   const { sidebarOpen, loading, setSidebarOpen } = useUIStore();
   const location = useLocation();
   const isMoviePlayer = location.pathname.startsWith('/movie/player');
+  const isHomePage = location.pathname === '/';
+  const isSelectPage = location.pathname === '/manga/select';
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-900 transition-colors duration-200">
@@ -22,7 +24,7 @@ const Layout = () => {
       
       <div className="flex">
         <AnimatePresence>
-          {sidebarOpen && !isMoviePlayer && (
+          {sidebarOpen && !isMoviePlayer && !isHomePage && !isSelectPage && (
             <>
               {/* Backdrop */}
               <motion.div

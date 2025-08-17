@@ -12,6 +12,7 @@ import {
   Globe,
   Palette,
   Database,
+  HardDrive,
   RotateCcw,
   Save
 } from 'lucide-react';
@@ -89,6 +90,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
       icon: Eye 
     },
     { id: 'player', label: 'Phát media', icon: Volume2 },
+    { id: 'cache', label: 'Bộ nhớ đệm', icon: HardDrive },
     { id: 'system', label: 'Hệ thống', icon: Database },
   ];
 
@@ -202,6 +204,81 @@ const SettingsModal = ({ isOpen, onClose }) => {
               </div>
             )}
 
+            {activeTab === 'cache' && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Quản lý bộ nhớ đệm
+                </h3>
+                
+                {/* Source Key Info */}
+                {sourceKey && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Globe className="w-5 h-5 text-blue-600" />
+                      <span className="font-medium text-blue-700 dark:text-blue-300">
+                        Source hiện tại: {sourceKey}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cache Management */}
+                <div>
+                  <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
+                    Xóa bộ nhớ đệm
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Xóa dữ liệu đã lưu trong bộ nhớ để giải phóng không gian và cập nhật nội dung mới.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    {/* Individual Cache Buttons */}
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Xóa cache từng loại</h5>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <button
+                          onClick={() => handleClearCache('manga')}
+                          className="flex items-center justify-center px-4 py-3 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg transition-colors"
+                        >
+                          <HardDrive className="w-4 h-4 mr-2" />
+                          Manga Cache
+                        </button>
+                        <button
+                          onClick={() => handleClearCache('movie')}
+                          className="flex items-center justify-center px-4 py-3 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg transition-colors"
+                        >
+                          <HardDrive className="w-4 h-4 mr-2" />
+                          Movie Cache
+                        </button>
+                        <button
+                          onClick={() => handleClearCache('music')}
+                          className="flex items-center justify-center px-4 py-3 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg transition-colors"
+                        >
+                          <HardDrive className="w-4 h-4 mr-2" />
+                          Music Cache
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* All Cache Button */}
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Xóa tất cả</h5>
+                      <button
+                        onClick={() => handleClearCache('all')}
+                        className="w-full flex items-center justify-center px-4 py-3 bg-red-100 hover:bg-red-200 dark:bg-red-800/30 dark:hover:bg-red-800/50 text-red-800 dark:text-red-200 rounded-lg transition-colors font-medium"
+                      >
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Xóa tất cả cache & dữ liệu
+                      </button>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        ⚠️ Thao tác này sẽ xóa toàn bộ lịch sử xem, random cache và top view cache.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'system' && (
               <div className="space-y-6">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -220,40 +297,26 @@ const SettingsModal = ({ isOpen, onClose }) => {
                   </div>
                 )}
 
-                {/* Clear Cache */}
+                {/* System Information */}
                 <div>
                   <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
-                    Xóa bộ nhớ đệm
+                    Thông tin hệ thống
                   </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => handleClearCache('manga')}
-                      className="flex items-center justify-center px-4 py-3 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg transition-colors"
-                    >
-                      <Database className="w-4 h-4 mr-2" />
-                      Xóa cache Manga
-                    </button>
-                    <button
-                      onClick={() => handleClearCache('movie')}
-                      className="flex items-center justify-center px-4 py-3 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg transition-colors"
-                    >
-                      <Database className="w-4 h-4 mr-2" />
-                      Xóa cache Movie
-                    </button>
-                    <button
-                      onClick={() => handleClearCache('music')}
-                      className="flex items-center justify-center px-4 py-3 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg transition-colors"
-                    >
-                      <Database className="w-4 h-4 mr-2" />
-                      Xóa cache Music
-                    </button>
-                    <button
-                      onClick={() => handleClearCache('all')}
-                      className="flex items-center justify-center px-4 py-3 bg-red-100 hover:bg-red-200 dark:bg-red-800/30 dark:hover:bg-red-800/50 text-red-800 dark:text-red-200 rounded-lg transition-colors font-medium"
-                    >
-                      <RotateCcw className="w-4 h-4 mr-2" />
-                      Xóa tất cả cache
-                    </button>
+                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Phiên bản:</span>
+                        <span className="text-gray-900 dark:text-white">React v5.0</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Trình duyệt:</span>
+                        <span className="text-gray-900 dark:text-white">{navigator.userAgent.split(' ').slice(-2).join(' ')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Ngôn ngữ:</span>
+                        <span className="text-gray-900 dark:text-white">{navigator.language}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
