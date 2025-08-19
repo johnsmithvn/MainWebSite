@@ -245,8 +245,10 @@
     touch-action: pinch-zoom;
   }
   
-  .scroll-img {
-    touch-action: pinch-zoom;
+  /* Allow vertical panning in scroll mode */
+  .reader.scroll-mode .zoom-wrapper,
+  .reader.scroll-mode .scroll-img {
+    touch-action: auto;
   }
 }
 
