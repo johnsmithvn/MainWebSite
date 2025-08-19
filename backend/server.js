@@ -1,5 +1,4 @@
-// 📁 backend/server-refactored.js
-// 🚀 Server với cấu trúc refactored (giữ nguyên logic cũ)
+// 📁 backend/server.js
 
 const express = require("express");
 const compression = require("compression");
