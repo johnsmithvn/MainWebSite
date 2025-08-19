@@ -14,8 +14,8 @@
 .embla__container {
   display: flex;
   align-items: flex-start;
-  gap: var(--slide-spacing, 0.75rem);
-  padding: 0 var(--slide-spacing, 0.75rem);
+  gap: var(--slide-spacing, 0.5rem);
+  padding: 0;
 }
 
 .embla__slide {
@@ -27,8 +27,8 @@
 /* Responsive slide widths */
 @media (max-width: 640px) {
   .embla__slide {
-    flex: 0 0 50%;
-    max-width: 50%;
+    flex: 0 0 calc(50% - var(--slide-spacing, 0.5rem) / 2);
+    max-width: calc(50% - var(--slide-spacing, 0.5rem) / 2);
   }
 }
 

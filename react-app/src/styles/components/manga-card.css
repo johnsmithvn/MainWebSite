@@ -159,7 +159,7 @@
 
 /* Slider variant */
 .manga-card.slider {
-  width: 160px;
+  width: min(45vw, 160px);
   flex-shrink: 0;
 }
 
@@ -202,21 +202,17 @@
 
 /* Mobile responsive */
 @media (max-width: 640px) {
-  .manga-card.slider {
-    width: 140px;
-  }
-  
   .manga-card-title {
     padding: 0.5rem;
     font-size: 0.75rem;
   }
-  
+
   .view-count-badge {
     font-size: 0.625rem;
     padding: 0.2rem 0.4rem;
     gap: 0.125rem;
   }
-  
+
   .view-count-badge svg {
     width: 0.625rem;
     height: 0.625rem;
