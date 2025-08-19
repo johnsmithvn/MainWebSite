@@ -371,7 +371,7 @@ const RecentSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64" />
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full aspect-[3/4]" />
                 </div>
               ))
             ) : (
@@ -397,7 +397,7 @@ const RecentSlider = ({
                       onToggleFavorite={async (toggleItem) => {
                         await handleToggleFavorite(toggleItem);
                       }}
-                      className="w-48"
+                      className="w-full"
                     />
                   </div>
                 </div>
