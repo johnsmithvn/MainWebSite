@@ -1,65 +1,34 @@
-#Hướng dẫn cài đặt và chạy dự án
+# MainWebSite Monorepo
 
-Dự án sử dụng Node.js để phục vụ nội dung tĩnh (manga, phim, nhạc) từ máy tính cá nhân. 
-Sau đây là các bước cài đặt cơ bản.
+Ứng dụng gồm **backend** (Express) và **React app** (Vite) được quản lý bằng [npm workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces).
 
-## Chuẩn bị môi trường
-
-1. Cài đặt **Node.js** (khuyến nghị >= v18).
-2. Tại thư mục `backend/` sao chép file `.env.example` thành `.env` và chỉnh sửa các đường dẫn:
-   ```bash
-   cp backend/.env.example backend/.env
-   # Mở backend/.env và thay đổi ROOT_*, V_*, M_* cho phù hợp
-   ```
-   - `ROOT_*`   : Thư mục chứa manga.
-   - `V_*`      : Thư mục chứa phim.
-   - `M_*`      : Thư mục chứa nhạc.
-   - `ALLOWED_HOSTNAMES` và `ALLOWED_IPS` dùng để giới hạn truy cập.
-   - `SECURITY` liệt kê các root key bảo vệ bằng mật khẩu, phân tách bằng dấu phẩy.
-  - `SECURITY_PASSWORD` mật khẩu dùng cho các root key ở biến `SECURITY`.
-  - Mật khẩu được lưu trong `sessionStorage` nên chỉ cần nhập một lần cho mỗi tab trình duyệt. Đóng tab sẽ phải đăng nhập lại.
-
-## Cài đặt phụ thuộc
+## Cài đặt
 
 ```bash
 npm install
 ```
 
-Lệnh trên sẽ cài đặt các gói cần thiết (bao gồm `esbuild` để đóng gói mã nguồn).
+Lệnh trên sẽ cài đặt phụ thuộc cho cả hai workspace.
 
-## Đóng gói mã nguồn tĩnh
+## Phát triển
+
+```bash
+npm run dev
+```
+
+- Backend chạy ở `http://localhost:3000`
+- React app chạy ở `http://localhost:3001`
+
+React tự động proxy các request `/api` tới backend.
+
+## Đóng gói
 
 ```bash
 npm run build
 ```
 
-Kết quả được đặt tại `frontend/public/dist` với các file `.js` và `.css` đã được minify.
+Lệnh build sẽ:
+- Đóng gói static assets cho backend
+- Build React app vào `react-app/dist`
 
-## Chạy server
-
-```bash
-npm start
-```
-
-Ứng dụng sẽ chạy mặc định tại `http://localhost:3000` (có thể thay đổi trong file `.env`).
-
-## Lưu ý
-
-- Nội dung tĩnh được nén gzip để giảm dung lượng tải xuống.
-- Truy cập qua mạng LAN hoặc 4G cần đảm bảo địa chỉ IP/hostname nằm trong danh sách `ALLOWED_HOSTNAMES` hoặc `ALLOWED_IPS` trong file `.env`.
-- File trong dist được tạo ra khi chạy build nó là cache không đc đẩy lên
-- nếu muốn k muốn chạy cache dist nữa thì bỏ comment  
-// bỏ cái này nếu muốn dùng static trong src nghĩa là k dùng trong dist
-
-``app.use("/src", express.static(path.join(__dirname, "../frontend/src")));  
-``
-
-- nó sẽ chạy thằng fronend trong src luôn
-lúc
-
-lúc trước trong html có style gọi thẳng css từ trong style 
-
-nhưng giờ sử dụng ``    <link rel="stylesheet" href="/dist/home.css" />
-`` được ạo khi build để giảm tải load
-
-
+Sau khi build có thể phục vụ React app tại đường dẫn `/app` từ backend.
