@@ -6,6 +6,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 import { FiChevronLeft, FiChevronRight, FiEye } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import UniversalCard from '@/components/common/UniversalCard';
 import Button from '@/components/common/Button';
 import { useTopViewItems } from '@/hooks/useTopViewItems';
@@ -47,14 +48,13 @@ const TopViewSlider = ({
   const movieStore = useMovieStore();
   const musicStore = useMusicStore();
   
-  const { toggleFavorite, favoritesRefreshTrigger = 0 } = 
-    type === 'movie' ? movieStore : 
-    type === 'music' ? musicStore : 
+  const { toggleFavorite } =
+    type === 'movie' ? movieStore :
+    type === 'music' ? musicStore :
     mangaStore;
   const { sourceKey, rootFolder } = useAuthStore();
 
-  // Local refresh trigger for forcing re-renders
-  const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
+  const queryClient = useQueryClient();
 
   // Top view items hook
   const { data: items, isLoading: loading, error } = useTopViewItems(type, {
@@ -62,13 +62,6 @@ const TopViewSlider = ({
     staleTime: 10 * 60 * 1000 // 10 minutes
   });
 
-  // Force refresh khi favorites thay đổi
-  useEffect(() => {
-    if (favoritesRefreshTrigger > 0 && items && items.length > 0) {
-      console.log('🔄 TopViewSlider: Favorites changed, updating display');
-      setLocalRefreshTrigger(prev => prev + 1);
-    }
-  }, [favoritesRefreshTrigger, items]);
 
   // Navigation functions
   const scrollPrev = useCallback(() => {
@@ -160,18 +153,25 @@ const TopViewSlider = ({
     }
   };
 
-  // Handle favorite toggle
-  // Handle favorite toggle với immediate UI update
+  // Handle favorite toggle with immediate UI update
   const handleToggleFavorite = async (item) => {
     try {
       console.log('❤️ TopViewSlider toggleFavorite:', { path: item.path, currentFavorite: item.isFavorite });
-      
-      // Gọi toggleFavorite từ store (đã có updateFavoriteInAllCaches)
+
+      const newFavoriteState = !item.isFavorite;
+
+      // Call toggleFavorite from store (updates backend and caches)
       await toggleFavorite(item);
-      
-      // Force refresh local component để hiển thị thay đổi ngay lập tức
-      setLocalRefreshTrigger(prev => prev + 1);
-      
+
+      // Optimistically update query cache for instant UI feedback
+      queryClient.setQueryData(
+        ['topViewItems', type, sourceKey, type === 'manga' ? rootFolder : null],
+        (old) =>
+          Array.isArray(old)
+            ? old.map(i => i.path === item.path ? { ...i, isFavorite: newFavoriteState } : i)
+            : old
+      );
+
       console.log('✅ TopViewSlider favorite toggle completed');
     } catch (error) {
       console.error('❌ Error toggling favorite in TopViewSlider:', error);
@@ -257,7 +257,7 @@ const TopViewSlider = ({
             ) : (
               // Actual items - sorted by view count
               items?.map((item, index) => (
-                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide">
+                <div key={item.path || index} className="embla__slide">
                   <div className="relative">
                     {/* Ranking badge */}
                     {index < 3 && (
