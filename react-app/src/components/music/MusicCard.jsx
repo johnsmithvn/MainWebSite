@@ -87,6 +87,7 @@ const MusicCard = ({
   return (
     <motion.div
       className={`
+        w-full
         relative cursor-pointer group overflow-hidden
         ${cardVariants[variant]}
         ${className}

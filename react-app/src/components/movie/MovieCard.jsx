@@ -58,8 +58,8 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
 
   return (
     <div
-      className="group relative bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl 
-                 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 
+      className="w-full group relative bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl
+                 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700
                  overflow-hidden"
       onClick={handleClick}
     >

@@ -453,10 +453,10 @@ const MusicHome = () => {
         ) : (
           <>
             <div className={`grid gap-4 ${
-              viewMode === 'grid' 
-                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6' 
+              viewMode === 'grid'
+                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
                 : 'grid-cols-1'
-            }`}>
+            } overflow-x-hidden`}>
               {currentMusic.map((music, index) => (
                 <MusicCard
                   key={music.path || index}
