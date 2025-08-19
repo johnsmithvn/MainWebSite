@@ -106,6 +106,12 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/public/home.html"));
 });
 
+// Serve React build at /app
+app.use("/app", express.static(path.join(__dirname, "../react-app/dist")));
+app.get(/^\/app\/.*$/, (_req, res) => {
+  res.sendFile(path.join(__dirname, "../react-app/dist/index.html"));
+});
+
 // ✅ URL decode middleware - giữ nguyên logic cũ
 app.use("/manga", (req, res, next) => {
   try {
@@ -191,8 +197,16 @@ app.get("/api/list-roots", (req, res) => {
 });
 
 // ✅ SPA fallback - giữ nguyên logic cũ
-app.get(/^\/(?!api|src|manga).*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/public/manga/index.html"));
+app.use((req, res, next) => {
+  if (
+    req.method === "GET" &&
+    !req.path.startsWith("/api") &&
+    !req.path.startsWith("/src") &&
+    !req.path.startsWith("/manga")
+  ) {
+    return res.sendFile(path.join(__dirname, "../frontend/public/manga/index.html"));
+  }
+  next();
 });
 
 // ✅ Config APIs - giữ nguyên logic cũ

@@ -5,6 +5,7 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
+  base: process.env.VITE_BASE || '/',
   server: {
     port: 3001,
     proxy: {
