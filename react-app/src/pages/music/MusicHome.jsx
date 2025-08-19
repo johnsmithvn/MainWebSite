@@ -364,7 +364,7 @@ const MusicHome = () => {
         </div>
 
         {/* Statistics cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
               <FiMusic className="w-8 h-8 text-blue-500 mr-3" />
@@ -452,9 +452,9 @@ const MusicHome = () => {
           </div>
         ) : (
           <>
-            <div className={`grid gap-4 ${
-              viewMode === 'grid' 
-                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6' 
+            <div className={`grid gap-4 sm:gap-6 ${
+              viewMode === 'grid'
+                ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
                 : 'grid-cols-1'
             }`}>
               {currentMusic.map((music, index) => (

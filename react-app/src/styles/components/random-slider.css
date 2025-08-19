@@ -140,10 +140,17 @@
   .random-slider .swiper-button-next {
     display: none !important;
   }
-  
+
   .random-slide {
     width: 140px !important;
     min-width: 140px;
+  }
+}
+
+@media (max-width: 480px) {
+  .random-slide {
+    width: 120px !important;
+    min-width: 120px;
   }
 }
 

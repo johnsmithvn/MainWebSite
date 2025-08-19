@@ -58,8 +58,8 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
 
   return (
     <div
-      className="group relative bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl 
-                 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700 
+      className="group relative flex flex-col w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl
+                 transition-all duration-200 cursor-pointer border border-gray-200 dark:border-gray-700
                  overflow-hidden"
       onClick={handleClick}
     >
@@ -119,8 +119,8 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
       </div>
 
       {/* Info */}
-      <div className="p-3">
-        <h3 
+      <div className="p-3 flex flex-col flex-grow">
+        <h3
           className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1"
           title={displayName}
         >

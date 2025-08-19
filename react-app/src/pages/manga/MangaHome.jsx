@@ -483,7 +483,7 @@ const MangaHome = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
             <BookOpen className="w-8 h-8 text-blue-500 mr-3" />
@@ -526,7 +526,7 @@ const MangaHome = () => {
         </div>
       ) : viewMode === 'grid' ? (
         <>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
           {pageItems.map((item, index) => (
             <MangaCard
               key={`${item.path || item.name || index}-${localRefreshTrigger}`}

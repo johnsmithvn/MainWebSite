@@ -166,10 +166,10 @@ const MovieFavorites = () => {
         
         <div className="p-6">
           <div className={`grid ${
-            viewMode === 'grid' 
-              ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' 
+            viewMode === 'grid'
+              ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
               : 'grid-cols-1'
-          } gap-6`}>
+          } gap-4 sm:gap-6`}>
             {items.map((item) => (
               <div key={item.path} className="relative">
                 <MovieCard

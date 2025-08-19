@@ -250,10 +250,10 @@ const MangaFavorites = () => {
         <>
           {/* Favorites Grid/List */}
           <div className={`grid ${
-            viewMode === 'grid' 
-              ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-6' 
+            viewMode === 'grid'
+              ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6'
               : 'grid-cols-1'
-          } gap-4 mb-8`}>
+          } gap-4 sm:gap-6 mb-8`}>
             {currentItems.map((manga, index) => (
             <div
               key={manga.id || manga.path || index}
