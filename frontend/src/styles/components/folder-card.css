@@ -101,24 +101,38 @@
   padding: 0 16px;
 }
 
-/* SLIDER – trên mobile vẫn cần resize */
 @media (max-width: 768px) {
-  .folder-section.slider .folder-card {
-    width: 140px;
-  }
-
-  .folder-section.slider .folder-thumb {
-    height: 200px;
+  .folder-section.grid .grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
   }
 }
 
 @media (max-width: 480px) {
+  .folder-section.grid .grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+  }
+}
+
+/* SLIDER – trên mobile vẫn cần resize */
+@media (max-width: 768px) {
   .folder-section.slider .folder-card {
     width: 120px;
   }
 
   .folder-section.slider .folder-thumb {
-    height: 180px;
+    height: 160px;
+  }
+}
+
+@media (max-width: 480px) {
+  .folder-section.slider .folder-card {
+    width: 90px;
+  }
+
+  .folder-section.slider .folder-thumb {
+    height: 120px;
   }
 }
 

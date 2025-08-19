@@ -217,22 +217,30 @@
   .nav-button.next-button {
     right: -5px;
   }
-  
+
   @media (max-width: 768px) {
-    .folder-card {
-      width: 140px;
+    .slider-wrapper {
+      gap: 12px;
+      padding: 8px 12px;
     }
-    .folder-thumb {
-      height: 200px;
-    }
-  }
-  
-  @media (max-width: 480px) {
     .folder-card {
       width: 120px;
     }
     .folder-thumb {
-      height: 180px;
+      height: 160px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .slider-wrapper {
+      gap: 8px;
+      padding: 8px;
+    }
+    .folder-card {
+      width: 90px;
+    }
+    .folder-thumb {
+      height: 120px;
     }
   }
 
