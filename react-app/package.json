@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^4.29.0",
-    "axios": "^1.4.0",
+    "axios": "^1.9.0",
     "clsx": "^1.2.1",
     "date-fns": "^4.1.0",
     "embla-carousel-autoplay": "^8.6.0",

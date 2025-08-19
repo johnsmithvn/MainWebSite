@@ -106,6 +106,12 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/public/home.html"));
 });
 
+// Serve React build at /app
+app.use("/app", express.static(path.join(__dirname, "../react-app/dist")));
+app.get("/app/*", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../react-app/dist/index.html"));
+});
+
 // ✅ URL decode middleware - giữ nguyên logic cũ
 app.use("/manga", (req, res, next) => {
   try {
