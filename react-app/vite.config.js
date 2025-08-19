@@ -3,12 +3,13 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig({
+  base: process.env.VITE_BASE || '/',
   plugins: [react()],
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
   server: {
     port: 3001,
     proxy: {
-      '/api': { target: 'http://localhost:3000', changeOrigin: true },
+      '/api': 'http://localhost:3000',
       '/manga': {
         target: 'http://localhost:3000',
         changeOrigin: true,
@@ -18,10 +19,10 @@ export default defineConfig({
           return null
         },
       },
-      '/video': { target: 'http://localhost:3000', changeOrigin: true },
-      '/audio': { target: 'http://localhost:3000', changeOrigin: true },
-      '/.thumbnail': { target: 'http://localhost:3000', changeOrigin: true },
-      '/default': { target: 'http://localhost:3000', changeOrigin: true },
+      '/video': 'http://localhost:3000',
+      '/audio': 'http://localhost:3000',
+      '/.thumbnail': 'http://localhost:3000',
+      '/default': 'http://localhost:3000',
     },
   },
   build: { outDir: 'dist', assetsDir: 'assets' },

@@ -102,6 +102,12 @@ for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
 app.use(express.static(path.join(__dirname, "../frontend/public")));
 app.use("/dist", express.static(path.join(__dirname, "../frontend/public/dist")));
 
+// Serve built React app at /app
+app.use("/app", express.static(path.join(__dirname, "../react-app/dist")));
+app.get("/app/*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../react-app/dist/index.html"));
+});
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/public/home.html"));
 });
