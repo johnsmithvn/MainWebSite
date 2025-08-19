@@ -26,13 +26,13 @@
 .random-collapse[open] summary::after {
   transform: rotate(180deg);
 }
-.random-collapse summary::-webkit-details-marker {
-  display: none;
-}
-.random-collapse[open] summary {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
+  .random-collapse summary::-webkit-details-marker {
+    display: none;
+  }
+  .random-collapse[open] summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
 
 /* ⭐ Highlight cho khu vực Playlist */
 #section-playlists .folder-section-header {
@@ -42,6 +42,16 @@
   margin-bottom: 8px;
 }
 
-#section-playlists .folder-section-title {
-  color: #1db954;
+  #section-playlists .folder-section-title {
+    color: #1db954;
+  }
+
+/* =============================
+   🔍 RESPONSIVE
+============================= */
+@media (max-width: 600px) {
+  .random-collapse summary {
+    padding: 8px 12px;
+    font-size: 1em;
+  }
 }

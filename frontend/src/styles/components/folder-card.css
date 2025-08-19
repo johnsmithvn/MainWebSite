@@ -75,8 +75,6 @@
   height: auto;
 }
 
-
-
 .grid-section {
   margin: 32px 0;
 }
@@ -122,4 +120,12 @@
   }
 }
 
+/* Responsive grid for small screens */
+@media (max-width: 480px) {
+  .folder-section.grid .grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}
+
 /*  */
+

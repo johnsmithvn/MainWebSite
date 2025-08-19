@@ -45,3 +45,30 @@ h1 {
 #toggle-secure-btn {
     font-size: 18px;
 }
+
+/* =============================
+   🔍 RESPONSIVE
+============================= */
+@media (max-width: 600px) {
+  body {
+    padding: 20px;
+    max-width: 100%;
+  }
+
+  .source-btn {
+    padding: 12px;
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 601px) {
+  .source-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .source-btn {
+    flex: 1 1 calc(50% - 12px);
+    text-align: center;
+  }
+}
