@@ -160,20 +160,27 @@ const TopViewSlider = ({
     }
   };
 
-  // Handle favorite toggle
   // Handle favorite toggle với immediate UI update
   const handleToggleFavorite = async (item) => {
+    // ⭐ Optimistically update item state to avoid UI flicker
+    const newFavState = !item.isFavorite;
+    item.isFavorite = newFavState;
+    setLocalRefreshTrigger((prev) => prev + 1);
+
     try {
-      console.log('❤️ TopViewSlider toggleFavorite:', { path: item.path, currentFavorite: item.isFavorite });
-      
+      console.log('❤️ TopViewSlider toggleFavorite:', {
+        path: item.path,
+        newFavorite: newFavState
+      });
+
       // Gọi toggleFavorite từ store (đã có updateFavoriteInAllCaches)
       await toggleFavorite(item);
-      
-      // Force refresh local component để hiển thị thay đổi ngay lập tức
-      setLocalRefreshTrigger(prev => prev + 1);
-      
+
       console.log('✅ TopViewSlider favorite toggle completed');
     } catch (error) {
+      // Nếu lỗi thì revert lại state cũ
+      item.isFavorite = !newFavState;
+      setLocalRefreshTrigger((prev) => prev + 1);
       console.error('❌ Error toggling favorite in TopViewSlider:', error);
     }
   };
