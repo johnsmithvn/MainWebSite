@@ -342,8 +342,8 @@ const MangaHome = () => {
   }
 
   return (
-    // 🛡️ overflow-x-hidden để ngăn card/slider kéo rộng ngoài màn hình
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 overflow-x-hidden">
+  // 🛡️ overflow-x-hidden để ngăn card/slider kéo rộng ngoài màn hình
+  <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-2 sm:p-6 overflow-x-hidden">
   {/* Random Sections - chỉ hiển thị ở root để giảm tải khi quay lại từ Reader */}
   {showRandomSection && <MangaRandomSection />}
       
@@ -526,9 +526,9 @@ const MangaHome = () => {
           </p>
         </div>
       ) : viewMode === 'grid' ? (
-        <>
-        {/* 🔒 Lưới chính: w-full + overflow-hidden để không kéo rộng trang */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 w-full overflow-hidden">
+  <>
+  {/* 🔒 Lưới chính: w-full + overflow-hidden để không kéo rộng trang */}
+  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl mx-auto overflow-x-hidden px-1 sm:px-0">
           {pageItems.map((item, index) => (
             <MangaCard
               key={`${item.path || item.name || index}-${localRefreshTrigger}`}
