@@ -280,7 +280,7 @@ const TopViewSlider = ({
                       isFavorite={Boolean(item.isFavorite)}
                       showViews={true}
                       onToggleFavorite={() => handleToggleFavorite(item)}
-                      variant="compact"
+                      variant="slider"
                       className="w-full" /* 📱 Card full width để responsive */
                       overlayMode={type === 'manga' ? 'views' : 'type'}
                     />

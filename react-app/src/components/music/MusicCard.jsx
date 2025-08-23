@@ -146,7 +146,7 @@ const MusicCard = ({
 
       {/* Content */}
       <div className="p-3">
-        <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1">
+        <h3 className="font-medium text-gray-900 dark:text-white text-base line-clamp-2 mb-1">
           {displayName}
         </h3>
         

@@ -318,7 +318,7 @@ const RandomSlider = ({
                     onToggleFavorite={async (toggleItem) => {
                       await handleToggleFavorite(toggleItem);
                     }}
-                    variant="compact"
+                    variant="slider"
                     className="w-full" /* 📱 Toàn bộ chiều rộng slide để responsive */
                   />
                 </div>

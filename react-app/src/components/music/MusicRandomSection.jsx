@@ -25,7 +25,7 @@ const MusicRandomSection = () => {
         autoplay={true}
         showRefresh={true}
         showTimestamp={true}
-        className="music-random-banner"
+        className="music-random-banner px-2 sm:px-0"
       />
       
       {/* Top View - using dedicated TopViewSlider */}
@@ -33,7 +33,7 @@ const MusicRandomSection = () => {
         type="music"
         title="🔥 Most Played"
         autoplay={false}
-        className="music-top-view"
+        className="music-top-view px-2 sm:px-0"
       />
 
       {/* Recent Viewed */}
@@ -44,7 +44,7 @@ const MusicRandomSection = () => {
         showRefresh={false}
         showTimestamp={true}
         maxItems={15}
-        className="music-recent-view"
+        className="music-recent-view px-2 sm:px-0"
       />
     </div>
   );
