@@ -251,7 +251,8 @@ const TopViewSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64" />
+                  {/* ⏳ Skeleton tỷ lệ 3:4 toàn chiều rộng slide */}
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full aspect-[3/4]" />
                 </div>
               ))
             ) : (
@@ -280,7 +281,7 @@ const TopViewSlider = ({
                       showViews={true}
                       onToggleFavorite={() => handleToggleFavorite(item)}
                       variant="compact"
-                      className="w-48"
+                      className="w-full" /* 📱 Card full width để responsive */
                       overlayMode={type === 'manga' ? 'views' : 'type'}
                     />
                   </div>

@@ -11,6 +11,7 @@
   width: 100%;
 }
 
+/* 📦 Container flex có khoảng cách giữa các slide và padding hai bên */
 .embla__container {
   display: flex;
   align-items: flex-start;
@@ -27,36 +28,41 @@
 /* Responsive slide widths */
 @media (max-width: 640px) {
   .embla__slide {
-    flex: 0 0 50%;
-    max-width: 50%;
+    /* 📱 Hai slide mỗi hàng, trừ khoảng cách để không tràn */
+    flex: 0 0 calc((100% - var(--slide-spacing, 0.75rem)) / 2);
+    max-width: calc((100% - var(--slide-spacing, 0.75rem)) / 2);
   }
 }
 
 @media (min-width: 641px) and (max-width: 768px) {
   .embla__slide {
-    flex: 0 0 33.333333%;
-    max-width: 33.333333%;
+    /* 📱 Ba slide mỗi hàng với gap cân đối */
+    flex: 0 0 calc((100% - 2 * var(--slide-spacing, 0.75rem)) / 3);
+    max-width: calc((100% - 2 * var(--slide-spacing, 0.75rem)) / 3);
   }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
   .embla__slide {
-    flex: 0 0 25%;
-    max-width: 25%;
+    /* 💻 Bốn slide mỗi hàng */
+    flex: 0 0 calc((100% - 3 * var(--slide-spacing, 0.75rem)) / 4);
+    max-width: calc((100% - 3 * var(--slide-spacing, 0.75rem)) / 4);
   }
 }
 
 @media (min-width: 1025px) and (max-width: 1280px) {
   .embla__slide {
-    flex: 0 0 20%;
-    max-width: 20%;
+    /* 🖥️ Năm slide mỗi hàng */
+    flex: 0 0 calc((100% - 4 * var(--slide-spacing, 0.75rem)) / 5);
+    max-width: calc((100% - 4 * var(--slide-spacing, 0.75rem)) / 5);
   }
 }
 
 @media (min-width: 1281px) {
   .embla__slide {
-    flex: 0 0 16.666667%;
-    max-width: 16.666667%;
+    /* 🖥️🖥️ Sáu slide mỗi hàng */
+    flex: 0 0 calc((100% - 5 * var(--slide-spacing, 0.75rem)) / 6);
+    max-width: calc((100% - 5 * var(--slide-spacing, 0.75rem)) / 6);
   }
 }
 
