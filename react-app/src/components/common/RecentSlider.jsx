@@ -371,7 +371,8 @@ const RecentSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64" />
+                  {/* Khung skeleton chiếm 100% chiều rộng slide để tương thích mobile */}
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full h-64" />
                 </div>
               ))
             ) : (
@@ -393,11 +394,11 @@ const RecentSlider = ({
                       type={type}
                       isFavorite={Boolean(item.isFavorite)}
                       variant="slider"
-                      showViews={false} // Recent items don't need view count
+                      showViews={false} // Recent items không cần hiển thị lượt xem
                       onToggleFavorite={async (toggleItem) => {
                         await handleToggleFavorite(toggleItem);
                       }}
-                      className="w-48"
+                      className="w-full" // Card chiếm toàn bộ chiều rộng slide cho responsive
                     />
                   </div>
                 </div>
