@@ -378,8 +378,8 @@ const RecentSlider = ({
             ) : (
               // Actual items - force key update để trigger re-render
               items?.map((item, index) => (
-                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide">
-                  <div className="relative">
+                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide w-full h-full flex items-stretch">
+                  <div className="relative w-full h-full">
                     {/* Last viewed badge */}
                     {item.lastViewed && (
                       <div className="absolute top-2 left-2 z-10">
@@ -388,17 +388,16 @@ const RecentSlider = ({
                         </div>
                       </div>
                     )}
-                    
                     <UniversalCard
                       item={item}
                       type={type}
                       isFavorite={Boolean(item.isFavorite)}
                       variant="slider"
-                      showViews={false} // Recent items không cần hiển thị lượt xem
+                      showViews={false}
                       onToggleFavorite={async (toggleItem) => {
                         await handleToggleFavorite(toggleItem);
                       }}
-                      className="w-full" // Card lấp đầy slide (50% màn hình trên mobile)
+                      className="w-full h-full"
                     />
                   </div>
                 </div>

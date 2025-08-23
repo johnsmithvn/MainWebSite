@@ -301,15 +301,14 @@ const RandomSlider = ({
             {loading ? (
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="embla__slide">
-                  {/* Khung skeleton chiếm toàn bộ slide giúp hiển thị 50% màn hình trên mobile */}
+                <div key={index} className="embla__slide w-full h-full flex items-stretch">
                   <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full h-64" />
                 </div>
               ))
             ) : (
               // Actual items - force key update để trigger re-render
               items?.map((item, index) => (
-                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide">
+                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide w-full h-full flex items-stretch">
                   <UniversalCard
                     item={item}
                     type={type}
@@ -319,7 +318,7 @@ const RandomSlider = ({
                       await handleToggleFavorite(toggleItem);
                     }}
                     variant="compact"
-                    className="w-full" // Card chiếm toàn bộ slide (50% màn hình trên mobile)
+                    className="w-full h-full" // Card chiếm toàn bộ slide
                   />
                 </div>
               ))

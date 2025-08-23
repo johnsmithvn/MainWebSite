@@ -84,19 +84,8 @@ const Header = () => {
     { path: homePath, to: homePath, icon: FiHome, label: 'Trang chủ', section: null },
     { path: '/manga', to: (lastMangaRootFolder && lastMangaRootFolder.length > 0) ? `/manga?root=${encodeURIComponent(lastMangaRootFolder)}` : '/manga/select', icon: FiBook, label: 'Manga', section: 'manga' },
     { path: '/movie', to: '/movie', icon: FiFilm, label: 'Movie', section: 'movie' },
-    { path: '/music', to: '/music', icon: FiMusic, label: 'Music', section: 'music' },
+    { path: '/music', to: '/music', icon: FiMusic, label: 'Music', section: 'music' }
   ];
-
-  const handleNav = (e, item) => {
-    // Ensure state changes apply before routing to avoid first-click bounce
-    if (item.section) {
-      e.preventDefault();
-      const canNavigate = handleSectionClick(item.section);
-      if (canNavigate) {
-        navigate(item.to || item.path);
-      }
-    }
-  };
 
   // Removed source key CTA and logout logic
 
@@ -202,17 +191,6 @@ const Header = () => {
                 }}
               >
                 <FiSettings className="h-4 w-4" />
-              </Button>
-
-              {/* Debug: Clear last keys button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDebugClear}
-                className="text-red-500 hover:text-red-600"
-                title="Debug: Clear all last keys"
-              >
-                🧹
               </Button>
 
               {/* Source key CTA removed */}
