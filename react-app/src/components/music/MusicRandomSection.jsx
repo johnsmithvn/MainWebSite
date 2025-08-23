@@ -16,8 +16,8 @@ const MusicRandomSection = () => {
   }
 
   return (
-    // 🛡️ Section bao quanh có w-full + overflow-hidden để không tạo scroll ngang
-    <div className="music-random-sections space-y-6 w-full overflow-hidden">
+    // 🛡️ Section bao quanh có w-full + overflow-hidden, thêm px-2 cho mobile để tránh tràn lề
+    <div className="music-random-sections space-y-6 w-full overflow-hidden px-2 sm:px-0">
       {/* Random Banner */}
       <RandomSlider
         type="music"
@@ -26,7 +26,7 @@ const MusicRandomSection = () => {
         autoplay={true}
         showRefresh={true}
         showTimestamp={true}
-        className="music-random-banner px-2 sm:px-0"
+        className="music-random-banner"
       />
       
       {/* Top View - using dedicated TopViewSlider */}
@@ -34,7 +34,7 @@ const MusicRandomSection = () => {
         type="music"
         title="🔥 Most Played"
         autoplay={false}
-        className="music-top-view px-2 sm:px-0"
+        className="music-top-view"
       />
 
       {/* Recent Viewed */}
@@ -45,7 +45,7 @@ const MusicRandomSection = () => {
         showRefresh={false}
         showTimestamp={true}
         maxItems={15}
-        className="music-recent-view px-2 sm:px-0"
+        className="music-recent-view"
       />
     </div>
   );
