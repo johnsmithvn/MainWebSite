@@ -15,7 +15,7 @@
   display: flex;
   align-items: flex-start;
   gap: var(--slide-spacing, 0.75rem);
-  padding: 0 var(--slide-spacing, 0.75rem);
+  padding: 0; /* Bỏ padding ngang để slider thẳng hàng với header */
 }
 
 .embla__slide {
