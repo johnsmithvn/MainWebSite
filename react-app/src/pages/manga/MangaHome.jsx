@@ -319,7 +319,7 @@ const MangaHome = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center overflow-x-hidden">
         <div className="text-center">
           <Loader className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">Đang tải danh sách manga...</p>
@@ -330,7 +330,7 @@ const MangaHome = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center overflow-x-hidden">
         <div className="text-center">
           <p className="text-red-500 mb-4">Lỗi: {error}</p>
           <Button onClick={() => fetchMangaFolders(currentPath)}>
@@ -342,7 +342,8 @@ const MangaHome = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    // 🛡️ overflow-x-hidden để ngăn card/slider kéo rộng ngoài màn hình
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 overflow-x-hidden">
   {/* Random Sections - chỉ hiển thị ở root để giảm tải khi quay lại từ Reader */}
   {showRandomSection && <MangaRandomSection />}
       
@@ -526,7 +527,8 @@ const MangaHome = () => {
         </div>
       ) : viewMode === 'grid' ? (
         <>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {/* 🔒 Lưới chính: w-full + overflow-hidden để không kéo rộng trang */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 w-full overflow-hidden">
           {pageItems.map((item, index) => (
             <MangaCard
               key={`${item.path || item.name || index}-${localRefreshTrigger}`}

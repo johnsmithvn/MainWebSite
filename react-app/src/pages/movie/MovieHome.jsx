@@ -208,7 +208,8 @@ const MovieHome = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    // 🛡️ Tránh slider/grid làm body rộng hơn bằng overflow-x-hidden
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
       {/* Random Sections - First */}
       <div className="bg-gray-50 dark:bg-gray-900 py-6">
         <div className="w-full px-6">
@@ -367,11 +368,14 @@ const MovieHome = () => {
         ) : (
           <>
             {/* Current page items (after filtering & sorting) */}
-            <div className={`grid ${
-              viewMode === 'grid' 
-                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' 
-                : 'grid-cols-1'
-            } gap-6 mb-8`}>
+            {/* 🔒 w-full + overflow-hidden để lưới phim không vượt quá màn hình */}
+            <div
+              className={`grid w-full overflow-hidden ${
+                viewMode === 'grid'
+                  ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+                  : 'grid-cols-1'
+              } gap-6 mb-8`}
+            >
               {currentMovies.map((movie) => (
                 <MovieCard
                   key={movie.path}

@@ -15,7 +15,8 @@ const MangaRandomSection = () => {
   }
 
   return (
-    <div className="manga-random-sections space-y-6">
+    // 🛡️ Bao các slider bằng w-full + overflow-hidden để tránh tràn
+    <div className="manga-random-sections space-y-6 w-full overflow-hidden">
       {/* Random Banner */}
       <RandomSlider
         type="manga"

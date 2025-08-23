@@ -232,7 +232,11 @@ const RandomSlider = ({
   }
 
   return (
-    <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6 ${className}`}>
+    // 🛡️ Wrapper w-full + overflow-hidden để tránh tràn ngang trên mobile
+    <div
+      ref={containerRef}
+      className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6 w-full overflow-hidden ${className}`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-6 pb-4">
         <div className="flex items-center space-x-3">

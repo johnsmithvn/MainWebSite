@@ -16,7 +16,8 @@ const MusicRandomSection = () => {
   }
 
   return (
-    <div className="music-random-sections space-y-6">
+    // 🛡️ Section bao quanh có w-full + overflow-hidden để không tạo scroll ngang
+    <div className="music-random-sections space-y-6 w-full overflow-hidden">
       {/* Random Banner */}
       <RandomSlider
         type="music"

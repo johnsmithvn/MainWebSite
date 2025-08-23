@@ -16,7 +16,8 @@ const MovieRandomSection = () => {
   }
 
   return (
-    <div className="movie-random-sections space-y-6">
+    // 🛡️ Đảm bảo vùng random không gây tràn ngang
+    <div className="movie-random-sections space-y-6 w-full overflow-hidden">
       {/* Random Banner */}
       <RandomSlider
         type="movie"

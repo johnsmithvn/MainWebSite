@@ -231,7 +231,8 @@ const MusicHome = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    // 🛡️ overflow-x-hidden để tránh các section kéo rộng body trên mobile
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
       {/* Random slider: always show (kept when navigating folders) */}
       <div className="mb-8">
         <MusicRandomSection />
@@ -452,11 +453,14 @@ const MusicHome = () => {
           </div>
         ) : (
           <>
-            <div className={`grid gap-4 ${
-              viewMode === 'grid' 
-                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6' 
-                : 'grid-cols-1'
-            }`}>
+            {/* 🔒 w-full + overflow-hidden tránh lưới tràn ngang */}
+            <div
+              className={`grid gap-4 w-full overflow-hidden ${
+                viewMode === 'grid'
+                  ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
+                  : 'grid-cols-1'
+              }`}
+            >
               {currentMusic.map((music, index) => (
                 <MusicCard
                   key={music.path || index}
