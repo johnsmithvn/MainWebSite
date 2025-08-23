@@ -231,7 +231,8 @@ const MusicHome = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    // 🛡️ overflow-x-hidden để tránh các section kéo rộng body trên mobile
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
       {/* Random slider: always show (kept when navigating folders) */}
       <div className="mb-8">
         <MusicRandomSection />
@@ -240,8 +241,10 @@ const MusicHome = () => {
       <div className="p-6">
         {/* Header with breadcrumb and controls */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-4">
+          {/* 🔧 Khối tiêu đề và breadcrumb, hỗ trợ responsive */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            {/* 👉 Nhóm trái: nút Back và breadcrumb */}
+            <div className="flex items-start gap-4 flex-1 min-w-0">
               {/* Back button */}
               <Button
                 variant="outline"
@@ -263,7 +266,8 @@ const MusicHome = () => {
               />
             </div>
 
-            <div className="flex items-center space-x-3">
+            {/* 👉 Nhóm phải: các nút tùy chỉnh có thể xuống dòng */}
+            <div className="flex flex-wrap items-center gap-3">
               {/* Per-page selector */}
               <div className="flex items-center gap-2 mr-2">
                 <span className="text-sm text-gray-600 dark:text-gray-300">Per page</span>
@@ -452,11 +456,14 @@ const MusicHome = () => {
           </div>
         ) : (
           <>
-            <div className={`grid gap-4 ${
-              viewMode === 'grid' 
-                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6' 
-                : 'grid-cols-1'
-            }`}>
+            {/* 🔒 w-full + overflow-hidden tránh lưới tràn ngang */}
+            <div
+              className={`grid gap-4 w-full overflow-hidden ${
+                viewMode === 'grid'
+                  ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
+                  : 'grid-cols-1'
+              }`}
+            >
               {currentMusic.map((music, index) => (
                 <MusicCard
                   key={music.path || index}

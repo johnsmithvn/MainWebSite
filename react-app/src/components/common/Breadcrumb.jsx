@@ -9,7 +9,11 @@ const Breadcrumb = ({ items = [], onNavigate, className = '' }) => {
   if (!items || items.length === 0) return null;
 
   return (
-    <nav className={`flex items-center space-x-2 text-sm ${className}`} aria-label="Breadcrumb">
+    {/* 🧭 Nav chứa breadcrumb với khả năng xuống dòng khi hẹp */}
+    <nav
+      className={`flex flex-wrap items-center gap-2 text-sm ${className}`}
+      aria-label="Breadcrumb"
+    >
       {items.map((item, index) => (
         <React.Fragment key={item.path || index}>
           {index > 0 && (

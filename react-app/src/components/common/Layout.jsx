@@ -51,7 +51,8 @@ const Layout = () => {
         </AnimatePresence>
 
         <main className="flex-1 transition-all duration-200">
-          <div className="container mx-auto px-4 py-6">
+          {/* 🛡️ Thêm overflow-x-hidden để tránh nội dung tràn ngang ngoài khung chính */}
+          <div className="container mx-auto px-4 py-6 overflow-x-hidden">
             <Outlet />
           </div>
         </main>

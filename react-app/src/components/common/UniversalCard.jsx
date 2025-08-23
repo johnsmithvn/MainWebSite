@@ -211,7 +211,7 @@ const UniversalCard = ({
   const cardVariants = {
     default: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
     compact: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
-    slider: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200'
+    slider: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 w-full max-w-[160px] sm:max-w-[200px]'
   };
 
   // Aspect ratio based on type
@@ -320,8 +320,12 @@ const UniversalCard = ({
       </div>
 
       {/* Content */}
-      <div className="p-3">
-        <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1">
+      <div className={variant === 'slider' ? 'p-2' : 'p-3'}>
+        <h3
+          className={`font-medium text-gray-900 dark:text-white line-clamp-2 mb-1 ${
+            type === 'music' ? 'text-base' : 'text-sm'
+          }`}
+        >
           {itemData.displayName}
         </h3>
         

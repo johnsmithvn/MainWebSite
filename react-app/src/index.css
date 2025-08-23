@@ -44,6 +44,8 @@
 
 html {
   scroll-behavior: smooth;
+  /* 🛡️ Ẩn tràn ngang toàn cục để slider/grid không làm rộng màn hình */
+  overflow-x: hidden;
 }
 
 body {
@@ -54,6 +56,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.2s ease-in-out;
+  /* 🛡️ Tiếp tục khóa tràn ngang ở body để tránh xuất hiện thanh scroll ngang */
+  overflow-x: hidden;
 }
 
 /* Dark mode */

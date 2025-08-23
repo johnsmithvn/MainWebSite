@@ -194,7 +194,11 @@ const TopViewSlider = ({
   }
 
   return (
-    <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6 ${className}`}>
+    // 🛡️ Gắn w-full và overflow-hidden để container không kéo rộng body
+    <div
+      ref={containerRef}
+      className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6 w-full overflow-hidden ${className}`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-6 pb-4">
         <div className="flex items-center space-x-3">
@@ -251,7 +255,8 @@ const TopViewSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64" />
+                  {/* ⏳ Skeleton tỷ lệ 3:4 toàn chiều rộng slide */}
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full aspect-[3/4]" />
                 </div>
               ))
             ) : (
@@ -279,8 +284,8 @@ const TopViewSlider = ({
                       isFavorite={Boolean(item.isFavorite)}
                       showViews={true}
                       onToggleFavorite={() => handleToggleFavorite(item)}
-                      variant="compact"
-                      className="w-48"
+                      variant="slider"
+                      className="w-full" /* 📱 Card full width để responsive */
                       overlayMode={type === 'manga' ? 'views' : 'type'}
                     />
                   </div>

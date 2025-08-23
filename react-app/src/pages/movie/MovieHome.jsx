@@ -208,7 +208,8 @@ const MovieHome = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    // 🛡️ Tránh slider/grid làm body rộng hơn bằng overflow-x-hidden
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 overflow-x-hidden">
       {/* Random Sections - First */}
       <div className="bg-gray-50 dark:bg-gray-900 py-6">
         <div className="w-full px-6">
@@ -219,8 +220,10 @@ const MovieHome = () => {
       {/* Header + Grid Section Combined */}
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 p-6">
         {/* Header Controls */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
+        {/* 🔧 Khối tiêu đề và breadcrumb, hỗ trợ responsive */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+          {/* 👉 Nhóm trái: nút Back và tiêu đề */}
+          <div className="flex items-start gap-4 flex-1 min-w-0">
             {currentPath && (
               <Button
                 variant="outline"
@@ -231,15 +234,16 @@ const MovieHome = () => {
                 Back
               </Button>
             )}
-            <div>
+            {/* 🎬 Tiêu đề và breadcrumb */}
+            <div className="min-w-0">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                 🎬 Movies
               </h1>
-              {/* Breadcrumb */}
-              <nav className="flex mt-2" aria-label="Breadcrumb">
-                <ol className="inline-flex items-center space-x-1 md:space-x-3">
+              {/* 🧭 Breadcrumb có thể xuống dòng khi hẹp */}
+              <nav className="mt-2" aria-label="Breadcrumb">
+                <ol className="flex flex-wrap items-center gap-1 md:gap-3">
                   {breadcrumbItems().map((item, index) => (
-                    <li key={index} className="inline-flex items-center">
+                    <li key={index} className="flex items-center">
                       {index > 0 && (
                         <svg className="w-6 h-6 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -263,7 +267,8 @@ const MovieHome = () => {
               </nav>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          {/* 👉 Nhóm phải: các nút tùy chỉnh có thể xuống dòng */}
+          <div className="flex flex-wrap items-center gap-3">
               {/* Per-page selector */}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600 dark:text-gray-300">Per page</span>
@@ -367,11 +372,14 @@ const MovieHome = () => {
         ) : (
           <>
             {/* Current page items (after filtering & sorting) */}
-            <div className={`grid ${
-              viewMode === 'grid' 
-                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' 
-                : 'grid-cols-1'
-            } gap-6 mb-8`}>
+            {/* 🔒 w-full + overflow-hidden để lưới phim không vượt quá màn hình */}
+            <div
+              className={`grid w-full overflow-hidden ${
+                viewMode === 'grid'
+                  ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+                  : 'grid-cols-1'
+              } gap-6 mb-8`}
+            >
               {currentMovies.map((movie) => (
                 <MovieCard
                   key={movie.path}

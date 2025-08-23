@@ -232,7 +232,11 @@ const RandomSlider = ({
   }
 
   return (
-    <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6 ${className}`}>
+    // 🛡️ Wrapper w-full + overflow-hidden để tránh tràn ngang trên mobile
+    <div
+      ref={containerRef}
+      className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6 w-full overflow-hidden ${className}`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-6 pb-4">
         <div className="flex items-center space-x-3">
@@ -302,7 +306,8 @@ const RandomSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64" />
+                  {/* 🔄 Khung chờ tỷ lệ 3:4 chiếm toàn bộ chiều rộng slide */}
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full aspect-[3/4]" />
                 </div>
               ))
             ) : (
@@ -317,8 +322,8 @@ const RandomSlider = ({
                     onToggleFavorite={async (toggleItem) => {
                       await handleToggleFavorite(toggleItem);
                     }}
-                    variant="compact"
-                    className="w-48"
+                    variant="slider"
+                    className="w-full" /* 📱 Toàn bộ chiều rộng slide để responsive */
                   />
                 </div>
               ))

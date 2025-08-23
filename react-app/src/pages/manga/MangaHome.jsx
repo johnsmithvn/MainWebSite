@@ -319,7 +319,7 @@ const MangaHome = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center overflow-x-hidden">
         <div className="text-center">
           <Loader className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">Đang tải danh sách manga...</p>
@@ -330,7 +330,7 @@ const MangaHome = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center overflow-x-hidden">
         <div className="text-center">
           <p className="text-red-500 mb-4">Lỗi: {error}</p>
           <Button onClick={() => fetchMangaFolders(currentPath)}>
@@ -342,14 +342,17 @@ const MangaHome = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    // 🛡️ overflow-x-hidden để ngăn card/slider kéo rộng ngoài màn hình
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 overflow-x-hidden">
   {/* Random Sections - chỉ hiển thị ở root để giảm tải khi quay lại từ Reader */}
   {showRandomSection && <MangaRandomSection />}
       
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
+        {/* 🔧 Khối tiêu đề và breadcrumb, sắp xếp linh hoạt trên mobile */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+          {/* 👉 Nhóm trái: nút Back và tiêu đề */}
+          <div className="flex items-start gap-4 flex-1 min-w-0">
             {currentPath && (
               <Button
                 variant="outline"
@@ -360,15 +363,16 @@ const MangaHome = () => {
                 Back
               </Button>
             )}
-            <div>
+            {/* 📚 Tiêu đề và breadcrumb */}
+            <div className="min-w-0">
               <h1 ref={headerRef} className="text-3xl font-bold text-gray-900 dark:text-white">
                 📚 Manga Library
               </h1>
-              {/* Breadcrumb UI like Movie */}
-              <nav className="flex mt-2" aria-label="Breadcrumb">
-                <ol className="inline-flex items-center space-x-1 md:space-x-3">
+              {/* 🧭 Breadcrumb có thể xuống dòng khi hẹp */}
+              <nav className="mt-2" aria-label="Breadcrumb">
+                <ol className="flex flex-wrap items-center gap-1 md:gap-3">
                   {breadcrumbItems().map((item, index) => (
-                    <li key={index} className="inline-flex items-center">
+                    <li key={index} className="flex items-center">
                       {index > 0 && (
                         <svg className="w-6 h-6 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -398,7 +402,8 @@ const MangaHome = () => {
               </nav>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          {/* 👉 Nhóm phải: các nút chức năng có thể xuống dòng */}
+          <div className="flex flex-wrap items-center gap-3">
             {/* Per-page selector */}
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600 dark:text-gray-300">Per page</span>
@@ -526,7 +531,8 @@ const MangaHome = () => {
         </div>
       ) : viewMode === 'grid' ? (
         <>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {/* 🔒 Lưới chính: w-full + overflow-hidden để không kéo rộng trang */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 w-full overflow-hidden">
           {pageItems.map((item, index) => (
             <MangaCard
               key={`${item.path || item.name || index}-${localRefreshTrigger}`}
