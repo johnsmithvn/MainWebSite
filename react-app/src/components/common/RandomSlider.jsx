@@ -302,8 +302,8 @@ const RandomSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  {/* Khung skeleton thu nhỏ còn 30% để đồng bộ kích thước với card */}
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-[30%] mx-auto h-64" />
+                  {/* Khung skeleton chiếm toàn bộ slide giúp hiển thị 50% màn hình trên mobile */}
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full h-64" />
                 </div>
               ))
             ) : (
@@ -319,7 +319,7 @@ const RandomSlider = ({
                       await handleToggleFavorite(toggleItem);
                     }}
                     variant="compact"
-                    className="w-[30%] mx-auto" // Card chỉ chiếm 30% chiều rộng slide cho nhỏ gọn
+                    className="w-full" // Card chiếm toàn bộ slide (50% màn hình trên mobile)
                   />
                 </div>
               ))
