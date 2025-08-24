@@ -193,6 +193,13 @@ const TopViewSlider = ({
     return null;
   }
 
+  // Determine skeleton aspect ratio based on type
+  const skeletonAspect = type === 'music'
+    ? 'aspect-square'
+    : type === 'movie'
+    ? 'aspect-video'
+    : 'aspect-[3/4]';
+
   return (
     <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6 ${className}`}>
       {/* Header */}
@@ -251,7 +258,7 @@ const TopViewSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64" />
+                  <div className={`bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full ${skeletonAspect}`} />
                 </div>
               ))
             ) : (
@@ -280,7 +287,7 @@ const TopViewSlider = ({
                       showViews={true}
                       onToggleFavorite={() => handleToggleFavorite(item)}
                       variant="compact"
-                      className="w-48"
+                      className="w-full"
                       overlayMode={type === 'manga' ? 'views' : 'type'}
                     />
                   </div>

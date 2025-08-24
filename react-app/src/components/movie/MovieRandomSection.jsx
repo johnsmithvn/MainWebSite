@@ -16,7 +16,7 @@ const MovieRandomSection = () => {
   }
 
   return (
-    <div className="movie-random-sections space-y-6">
+    <div className="movie-random-sections space-y-6 container mx-auto px-4">
       {/* Random Banner */}
       <RandomSlider
         type="movie"

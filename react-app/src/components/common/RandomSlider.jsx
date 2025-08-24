@@ -52,11 +52,11 @@ const RandomSlider = ({
   const movieStore = useMovieStore();
   const musicStore = useMusicStore();
   
-  const { toggleFavorite, favoritesRefreshTrigger = 0 } = 
-    type === 'movie' ? movieStore : 
-    type === 'music' ? musicStore : 
+  const { toggleFavorite, favoritesRefreshTrigger = 0 } =
+    type === 'movie' ? movieStore :
+    type === 'music' ? musicStore :
     mangaStore;
-  
+
   // Random items hook
   const { data: items, loading, error, refresh, lastUpdated } = useRandomItems(type, {
     enabled: isVisible,
@@ -231,6 +231,13 @@ const RandomSlider = ({
     );
   }
 
+  // Determine skeleton aspect ratio based on type
+  const skeletonAspect = type === 'music'
+    ? 'aspect-square'
+    : type === 'movie'
+    ? 'aspect-video'
+    : 'aspect-[3/4]';
+
   return (
     <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6 ${className}`}>
       {/* Header */}
@@ -302,7 +309,7 @@ const RandomSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64" />
+                  <div className={`bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full ${skeletonAspect}`} />
                 </div>
               ))
             ) : (
@@ -318,7 +325,7 @@ const RandomSlider = ({
                       await handleToggleFavorite(toggleItem);
                     }}
                     variant="compact"
-                    className="w-48"
+                    className="w-full"
                   />
                 </div>
               ))

@@ -16,7 +16,7 @@ const MusicRandomSection = () => {
   }
 
   return (
-    <div className="music-random-sections space-y-6">
+    <div className="music-random-sections space-y-6 container mx-auto px-4">
       {/* Random Banner */}
       <RandomSlider
         type="music"
