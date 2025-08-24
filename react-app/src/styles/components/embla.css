@@ -42,34 +42,11 @@
   }
 }
 
-@media (min-width: 641px) and (max-width: 768px) {
+/* All larger screens show 3 cards per view */
+@media (min-width: 641px) {
   .embla__slide {
     flex: 0 0 33.333333%;
     max-width: 33.333333%;
-    box-sizing: border-box;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-  .embla__slide {
-    flex: 0 0 25%;
-    max-width: 25%;
-    box-sizing: border-box;
-  }
-}
-
-@media (min-width: 1025px) and (max-width: 1280px) {
-  .embla__slide {
-    flex: 0 0 20%;
-    max-width: 20%;
-    box-sizing: border-box;
-  }
-}
-
-@media (min-width: 1281px) {
-  .embla__slide {
-    flex: 0 0 16.666667%;
-    max-width: 16.666667%;
     box-sizing: border-box;
   }
 }
