@@ -80,12 +80,7 @@ const Header = () => {
     return true;
   };
 
-  const navItems = [
-    { path: homePath, to: homePath, icon: FiHome, label: 'Trang chủ', section: null },
-    { path: '/manga', to: (lastMangaRootFolder && lastMangaRootFolder.length > 0) ? `/manga?root=${encodeURIComponent(lastMangaRootFolder)}` : '/manga/select', icon: FiBook, label: 'Manga', section: 'manga' },
-    { path: '/movie', to: '/movie', icon: FiFilm, label: 'Movie', section: 'movie' },
-    { path: '/music', to: '/music', icon: FiMusic, label: 'Music', section: 'music' }
-  ];
+  // Navigation items removed
 
   // Removed source key CTA and logout logic
 
@@ -116,39 +111,7 @@ const Header = () => {
               </Link>
             </div>
 
-            {/* Center navigation */}
-            <nav className="hidden md:flex items-center space-x-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path || 
-                  (item.path !== '/' && location.pathname.startsWith(item.path));
-                
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.to || item.path}
-                    onClick={(e) => handleNav(e, item)}
-                    className={`relative flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
-                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-700'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                    
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeTab"
-                        className="absolute inset-0 bg-primary-100 dark:bg-primary-900/30 rounded-lg -z-10"
-                        initial={false}
-                        transition={{ type: 'spring', duration: 0.5 }}
-                      />
-                    )}
-                  </Link>
-                );
-              })}
-            </nav>
+            {/* Center navigation removed */}
 
             {/* Right section */}
             <div className="flex items-center space-x-2">
@@ -198,32 +161,7 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Mobile navigation */}
-        <div className="md:hidden border-t border-gray-200 dark:border-dark-700">
-          <div className="flex">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path || 
-                (item.path !== '/' && location.pathname.startsWith(item.path));
-              
-              return (
-                <Link
-                  key={item.path}
-                  to={item.to || item.path}
-                  onClick={(e) => handleNav(e, item)}
-                  className={`flex-1 flex flex-col items-center justify-center py-2 text-xs ${
-                    isActive
-                      ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
-                      : 'text-gray-600 dark:text-gray-300'
-                  }`}
-                >
-                  <Icon className="h-4 w-4 mb-1" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+  {/* Mobile navigation removed */}
       </header>
 
       {/* Search Modal */}
