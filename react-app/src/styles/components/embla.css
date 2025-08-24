@@ -18,6 +18,13 @@
   padding: 0 var(--slide-spacing, 0.75rem);
 }
 
+/* Match header padding on small screens */
+@media (max-width: 640px) {
+  .embla__container {
+    padding: 0 1.5rem;
+  }
+}
+
 .embla__slide {
   flex: 0 0 auto;
   min-width: 0;
