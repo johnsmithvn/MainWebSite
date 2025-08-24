@@ -20,14 +20,53 @@ const securityMiddleware = require("./middleware/security");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const IS_DEV = (process.env.NODE_ENV || 'development') !== 'production';
 
-// ✅ CORS Configuration
-app.use(cors({
-  origin: ['http://localhost:3001', 'http://127.0.0.1:3001'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+// ✅ CORS Configuration (mở cho dev + Tailscale domain)
+const EXTRA_ORIGINS = (process.env.CORS_EXTRA_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const DEFAULT_DEV_ORIGINS = [
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+];
+
+const ALLOWED_ORIGINS = [...new Set([...DEFAULT_DEV_ORIGINS, ...EXTRA_ORIGINS])];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Không có origin (cURL, server-to-server) → cho phép
+      if (!origin) return callback(null, true);
+
+      // Dev mode: nới lỏng CORS để phục vụ React dev/Tailscale
+      if (IS_DEV) return callback(null, true);
+
+      // Whitelist tĩnh từ env + dev mặc định
+      if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+
+      // Cho phép domain Tailscale (*.ts.net)
+      try {
+        const u = new URL(origin);
+        const isTS = u.hostname.endsWith('.ts.net');
+        if (isTS) return callback(null, true);
+      } catch (_) {}
+
+      console.warn('CORS blocked origin:', origin);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    // Thêm 'x-secure-token' để preflight không bị chặn khi React gửi header này
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'x-secure-token',
+    ],
+  })
+);
 
 // ✅ Middleware cơ bản (giữ nguyên logic cũ)
 app.use(express.json());

@@ -15,12 +15,7 @@ const allowedIPs = (parsedEnv.ALLOWED_IPS || "").split(",").map(s => s.trim()).f
 function isAllowedClient(clientIP) {
   return true; // Bỏ comment nếu muốn cho phép toàn bộ nội bộ
   // return allowedIPs.includes(clientIP);
-  // ✅ Nếu IP là mạng LAN (192.168.x.x / 10.x.x.x / 172.16.x.x - 172.31.x.x) → cho qua
-  // const isLAN =
-  //   clientIP.startsWith("192.168.") ||
-  //   clientIP.startsWith("10.") ||
-  //   /^172\.(1[6-9]|2\d|3[0-1])\./.test(clientIP);
-  // return isLAN;
+  
 }
 
 // Middleware kiểm tra IP/hostname
