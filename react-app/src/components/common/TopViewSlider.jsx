@@ -251,14 +251,15 @@ const TopViewSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64" />
+                  {/* Skeleton full width giúp card chiếm 50% màn hình trên mobile */}
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full h-64" />
                 </div>
               ))
             ) : (
               // Actual items - sorted by view count
               items?.map((item, index) => (
-                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide">
-                  <div className="relative">
+                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide w-full h-full flex items-stretch">
+                  <div className="relative w-full h-full">
                     {/* Ranking badge */}
                     {index < 3 && (
                       <div className="absolute top-2 left-2 z-10">
@@ -272,7 +273,6 @@ const TopViewSlider = ({
                         </div>
                       </div>
                     )}
-                    
                     <UniversalCard
                       item={item}
                       type={type}
@@ -280,7 +280,7 @@ const TopViewSlider = ({
                       showViews={true}
                       onToggleFavorite={() => handleToggleFavorite(item)}
                       variant="compact"
-                      className="w-48"
+                      className="w-full h-full"
                       overlayMode={type === 'manga' ? 'views' : 'type'}
                     />
                   </div>

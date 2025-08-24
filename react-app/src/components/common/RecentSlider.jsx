@@ -371,14 +371,15 @@ const RecentSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-48 h-64" />
+                  {/* Khung skeleton full width để card hiển thị 50% màn hình trên mobile */}
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full h-64" />
                 </div>
               ))
             ) : (
               // Actual items - force key update để trigger re-render
               items?.map((item, index) => (
-                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide">
-                  <div className="relative">
+                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide w-full h-full flex items-stretch">
+                  <div className="relative w-full h-full">
                     {/* Last viewed badge */}
                     {item.lastViewed && (
                       <div className="absolute top-2 left-2 z-10">
@@ -387,17 +388,16 @@ const RecentSlider = ({
                         </div>
                       </div>
                     )}
-                    
                     <UniversalCard
                       item={item}
                       type={type}
                       isFavorite={Boolean(item.isFavorite)}
                       variant="slider"
-                      showViews={false} // Recent items don't need view count
+                      showViews={false}
                       onToggleFavorite={async (toggleItem) => {
                         await handleToggleFavorite(toggleItem);
                       }}
-                      className="w-48"
+                      className="w-full h-full"
                     />
                   </div>
                 </div>
