@@ -13,6 +13,7 @@
 .embla__viewport {
   overflow: hidden;
   width: 100%;
+  scroll-snap-type: x mandatory;
 }
 
 .embla__container {
@@ -27,6 +28,7 @@
   flex: 0 0 auto;
   min-width: 0;
   position: relative;
+  scroll-snap-align: start;
 }
 
 /* Responsive slide widths */

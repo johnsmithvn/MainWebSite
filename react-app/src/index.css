@@ -54,6 +54,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.2s ease-in-out;
+  overflow-x: hidden; /* Bleed-guard for sliders and grids */
 }
 
 /* Dark mode */

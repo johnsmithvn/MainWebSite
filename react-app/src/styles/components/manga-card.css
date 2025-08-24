@@ -159,26 +159,14 @@
 
 /* Slider variant */
 .manga-card.slider {
-  width: 160px;
+  width: 100%;
   flex-shrink: 0;
-}
-
-@media (min-width: 768px) {
-  .manga-card.slider {
-    width: 180px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .manga-card.slider {
-    width: 200px;
-  }
 }
 
 /* Grid variant */
 .manga-card.grid {
   width: 100%;
-  max-width: 240px;
+  max-width: 100%;
 }
 
 /* Loading state */
@@ -201,15 +189,11 @@
 }
 
 /* Mobile responsive */
-@media (max-width: 640px) {
-  .manga-card.slider {
-    width: 140px;
-  }
-  
-  .manga-card-title {
-    padding: 0.5rem;
-    font-size: 0.75rem;
-  }
+  @media (max-width: 640px) {
+    .manga-card-title {
+      padding: 0.5rem;
+      font-size: 0.75rem;
+    }
   
   .view-count-badge {
     font-size: 0.625rem;
