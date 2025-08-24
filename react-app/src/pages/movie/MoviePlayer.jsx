@@ -423,11 +423,12 @@ const MoviePlayer = () => {
   // Video gesture controls
   const handlePointerDown = (e) => {
     if (!videoRef.current) return;
-    
+
+    e.preventDefault();
     setDragStartX(e.clientX);
     setStartTime(videoRef.current.currentTime);
     setDragging(false);
-    
+
     if (gestureTargetRef.current) {
       gestureTargetRef.current.setPointerCapture(e.pointerId);
     }
@@ -450,17 +451,20 @@ const MoviePlayer = () => {
 
   const handlePointerUp = (e) => {
     if (dragStartX === null || !videoRef.current) return;
-    
+
     const diff = e.clientX - dragStartX;
     if (dragging) {
       e.preventDefault();
       const skipped = Math.floor(diff / PIXELS_PER_SECOND);
       // Removed toast for skip gesture
+    } else {
+      // Forward tap to the video element for native controls
+      videoRef.current.click();
     }
-    
+
     setDragStartX(null);
     setDragging(false);
-    
+
     if (gestureTargetRef.current) {
       gestureTargetRef.current.releasePointerCapture(e.pointerId);
     }
@@ -609,13 +613,13 @@ const MoviePlayer = () => {
               onDoubleClick={handleDoubleClick}
             />
             {/* Gesture overlay */}
-            <div 
+            <div
               ref={gestureTargetRef}
               className="absolute inset-0"
-              style={{ 
-                pointerEvents: dragging ? 'auto' : 'none',
+              style={{
                 background: 'transparent',
-                cursor: dragging ? 'grabbing' : 'default'
+                cursor: dragging ? 'grabbing' : 'grab',
+                touchAction: 'none'
               }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
