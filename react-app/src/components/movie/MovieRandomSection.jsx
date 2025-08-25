@@ -20,7 +20,7 @@ const MovieRandomSection = () => {
       {/* Random Banner */}
       <RandomSlider
         type="movie"
-        title="🎬 Phim ngẫu nhiên"
+        title="🎬 Random"
         showViews={true}
         autoplay={true}
         showRefresh={true}
@@ -31,7 +31,7 @@ const MovieRandomSection = () => {
       {/* Top View - using dedicated TopViewSlider */}
       <TopViewSlider
         type="movie"
-        title="🔥 Phim xem nhiều"
+        title="🔥 Top Views"
         autoplay={false}
         className="movie-top-view"
       />
@@ -39,7 +39,7 @@ const MovieRandomSection = () => {
       {/* Recent Viewed */}
       <RecentSlider
         type="movie"
-        title="🕒 Vừa xem"
+        title="🕒 Recently"
         autoplay={false}
         showRefresh={false}
         showTimestamp={true}

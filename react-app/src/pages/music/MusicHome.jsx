@@ -12,7 +12,6 @@ import {
   FiGrid, 
   FiList, 
   FiFilter,
-  FiRefreshCw,
   FiArrowLeft,
   FiHome,
   FiPlay,
@@ -151,12 +150,6 @@ const MusicHome = () => {
     return items;
   };
 
-  // Handle refresh
-  const handleRefresh = () => {
-    console.log('🔄 Refreshing music folder:', currentPath);
-    fetchMusicFolders(currentPath);
-  };
-
   // Normalize helper to make search accent-insensitive
   const normalize = (str = '') => str
     .toLowerCase()
@@ -238,8 +231,10 @@ const MusicHome = () => {
       </div>
 
       <div className="p-6">
-        {/* Header with breadcrumb and controls */}
-        <div className="mb-6">
+        {/* Main Content Container */}
+        <div className="music-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          {/* Header with breadcrumb and controls */}
+          <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-4">
               {/* Back button */}
@@ -266,7 +261,6 @@ const MusicHome = () => {
             <div className="flex items-center space-x-3">
               {/* Per-page selector */}
               <div className="flex items-center gap-2 mr-2">
-                <span className="text-sm text-gray-600 dark:text-gray-300">Per page</span>
                 <select
                   value={musicPerPage}
                   onChange={(e) => handlePerPageChange(e.target.value)}
@@ -301,20 +295,7 @@ const MusicHome = () => {
                 size="sm"
                 onClick={() => setShowFilters(!showFilters)}
                 icon={FiFilter}
-              >
-                Filters
-              </Button>
-
-              {/* Refresh */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                icon={FiRefreshCw}
-                disabled={loading}
-              >
-                Refresh
-              </Button>
+              />
             </div>
           </div>
 
@@ -414,14 +395,6 @@ const MusicHome = () => {
               <div className="text-red-600 dark:text-red-400">
                 <strong>Error:</strong> {error}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                className="ml-auto text-red-600 border-red-300 hover:bg-red-50"
-              >
-                Retry
-              </Button>
             </div>
           </div>
         )}
@@ -439,16 +412,6 @@ const MusicHome = () => {
                 : 'This folder appears to be empty or not yet scanned'
               }
             </p>
-            {!searchTerm && (
-              <Button
-                variant="primary"
-                onClick={handleRefresh}
-                className="mt-4"
-                icon={FiRefreshCw}
-              >
-                Refresh Folder
-              </Button>
-            )}
           </div>
         ) : (
           <>
@@ -486,6 +449,7 @@ const MusicHome = () => {
             )}
           </>
         )}
+        </div> {/* End of music-main-container */}
       </div>
     </div>
   );

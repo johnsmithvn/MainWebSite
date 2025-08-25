@@ -15,11 +15,11 @@ const MangaRandomSection = () => {
   }
 
   return (
-    <div className="manga-random-sections space-y-6 w-full max-w-full sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl mx-auto px-2 sm:px-0">
+    <div className="manga-random-sections space-y-6">
       {/* Random Banner */}
       <RandomSlider
         type="manga"
-        title="📚 Manga ngẫu nhiên"
+        title="📚 Random"
         showViews={true}
         autoplay={true}
         showRefresh={true}
@@ -30,7 +30,7 @@ const MangaRandomSection = () => {
       {/* Top View - using dedicated TopViewSlider */}
       <TopViewSlider
         type="manga"
-        title="🔥 Manga xem nhiều"
+        title="🔥 Top Views"
         autoplay={false}
         className="manga-top-view"
       />
@@ -38,7 +38,7 @@ const MangaRandomSection = () => {
       {/* Recent Viewed */}
       <RecentSlider
         type="manga"
-        title="🕒 Vừa đọc"
+        title="🕒 Recently"
         autoplay={false}
         showRefresh={false}
         showTimestamp={true}

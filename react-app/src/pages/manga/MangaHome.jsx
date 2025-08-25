@@ -2,10 +2,12 @@
 // 🏠 Trang chủ manga - hiển thị danh sách manga
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Heart, BookOpen, Grid, List, Filter, Loader, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Search, Heart, BookOpen, Grid, List, Filter, Loader, ArrowLeft } from 'lucide-react';
+import { FiArrowLeft, FiHome, FiGrid, FiList } from 'react-icons/fi';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMangaStore, useUIStore, useAuthStore } from '../../store';
 import Button from '../../components/common/Button';
+import Breadcrumb from '../../components/common/Breadcrumb';
 import MangaCard from '../../components/manga/MangaCard';
 import MangaRandomSection from '../../components/manga/MangaRandomSection';
 
@@ -198,22 +200,37 @@ const MangaHome = () => {
   navigate(`/manga${params.toString() ? `?${params.toString()}` : ''}`);
   };
 
-  // Generate breadcrumb items (same logic as Movie)
-  const breadcrumbItems = () => {
-    if (!currentPath) return [{ name: 'Manga', path: '' }];
-    const pathParts = currentPath.split('/').filter(Boolean);
-    const items = [{ name: 'Manga', path: '' }];
-    let currentBreadcrumbPath = '';
-    pathParts.forEach((part) => {
-      currentBreadcrumbPath += (currentBreadcrumbPath ? '/' : '') + part;
-      items.push({ name: part, path: currentBreadcrumbPath });
-    });
-    return items;
+  const handleGoBack = () => {
+    if (!currentPath) {
+      // If at root, navigate to home page
+      navigate('/');
+      return;
+    }
+    
+    handleBackClick();
   };
 
-  // Handle refresh like Movie
-  const handleRefresh = () => {
-    fetchMangaFolders(currentPath || '');
+  // Generate breadcrumb items
+  const breadcrumbItems = () => {
+    const items = [
+      { label: '📖 Manga', path: '' }
+    ];
+    
+    if (currentPath) {
+      const pathParts = currentPath.split('/').filter(Boolean);
+      let accumPath = '';
+      
+      pathParts.forEach((part, index) => {
+        accumPath += (accumPath ? '/' : '') + part;
+        items.push({
+          label: part,
+          path: accumPath,
+          isLast: index === pathParts.length - 1
+        });
+      });
+    }
+    
+    return items;
   };
 
   const handleToggleFavorite = async (item) => {
@@ -342,66 +359,50 @@ const MangaHome = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-  {/* Random Sections - chỉ hiển thị ở root để giảm tải khi quay lại từ Reader */}
-  {showRandomSection && <MangaRandomSection />}
-      
-      {/* Header */}
-      <div className="mb-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Random Sections - chỉ hiển thị ở root để giảm tải khi quay lại từ Reader */}
+      {showRandomSection && (
+        <div className="mb-8 px-6">
+          <MangaRandomSection />
+        </div>
+      )}
+
+      <div className="p-6">
+        {/* Main Content Container */}
+        <div className="manga-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          {/* Header */}
+          <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            {currentPath && (
+          <div className="flex items-center gap-4 flex-1">
+            <div className="flex items-center gap-3">
+              {/* Back button */}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleBackClick}
-                icon={ArrowLeft}
+                onClick={handleGoBack}
+                icon={currentPath ? FiArrowLeft : FiHome}
+                className="flex-shrink-0"
               >
-                Back
+                {currentPath ? 'Back' : 'Home'}
               </Button>
-            )}
-            <div>
-              <h1 ref={headerRef} className="text-3xl font-bold text-gray-900 dark:text-white">
-                📚 Manga Library
-              </h1>
-              {/* Breadcrumb UI like Movie */}
-              <nav className="flex mt-2" aria-label="Breadcrumb">
-                <ol className="inline-flex items-center space-x-1 md:space-x-3">
-                  {breadcrumbItems().map((item, index) => (
-                    <li key={index} className="inline-flex items-center">
-                      {index > 0 && (
-                        <svg className="w-6 h-6 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                      {index === breadcrumbItems().length - 1 ? (
-                        <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">
-                          {item.name}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            const params = new URLSearchParams();
-                            if (item.path) params.set('path', item.path);
-                            params.set('page', '1');
-                            params.set('size', String(sizeParam));
-                            navigate(`/manga${params.toString() ? `?${params.toString()}` : ''}`);
-                          }}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
-                        >
-                          {item.name}
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              </nav>
+
+              {/* Breadcrumb */}
+              <Breadcrumb
+                items={breadcrumbItems()}
+                onNavigate={(path) => {
+                  // Navigate with proper params
+                  const params = new URLSearchParams();
+                  if (path) params.set('path', path);
+                  params.set('page', '1');
+                  params.set('size', String(sizeParam));
+                  navigate(`/manga${params.toString() ? `?${params.toString()}` : ''}`);
+                }}
+              />
             </div>
           </div>
           <div className="flex items-center gap-3">
             {/* Per-page selector */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 dark:text-gray-300">Per page</span>
               <select
                 value={sizeParam}
                 onChange={(e) => changePageSize(e.target.value)}
@@ -415,32 +416,26 @@ const MangaHome = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleRefresh}
-              icon={RefreshCw}
-              disabled={loading}
-            >
-              Refresh
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={() => setShowFilters(!showFilters)}
               icon={Filter}
-            >
-              Filters
-            </Button>
-            <Button
-              variant={viewMode === 'grid' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-              icon={Grid}
             />
-            <Button
-              variant={viewMode === 'list' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-              icon={List}
-            />
+            {/* View mode toggle */}
+            <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'grid' ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                icon={FiGrid}
+                className="rounded-md"
+              />
+              <Button
+                variant={viewMode === 'list' ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                icon={FiList}
+                className="rounded-md"
+              />
+            </div>
           </div>
         </div>
 
@@ -526,48 +521,48 @@ const MangaHome = () => {
         </div>
       ) : viewMode === 'grid' ? (
         <>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {pageItems.map((item, index) => (
-            <MangaCard
-              key={`${item.path || item.name || index}-${localRefreshTrigger}`}
-              manga={item}
-              isFavorite={Boolean(item.isFavorite) || favorites.some(f => f.path === item.path)}
-              onToggleFavorite={() => 
-                handleToggleFavorite(item)
-              }
-              onClick={handleFolderClick}
-              showViews={false}
-              variant="grid"
-              className="w-full"
-            />
-          ))}
-        </div>
-        {/* Pagination Controls */}
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => goToPage(currentPage - 1)}
-            disabled={currentPage <= 1}
-          >
-            ⬅ Prev
-          </Button>
-          <button
-            onClick={() => setJumpOpen(true)}
-            className="px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-            title="Jump to page"
-          >
-            Page {currentPage} / {totalPages}
-          </button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => goToPage(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-          >
-            Next ➡
-          </Button>
-        </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {pageItems.map((item, index) => (
+              <MangaCard
+                key={`${item.path || item.name || index}-${localRefreshTrigger}`}
+                manga={item}
+                isFavorite={Boolean(item.isFavorite) || favorites.some(f => f.path === item.path)}
+                onToggleFavorite={() => 
+                  handleToggleFavorite(item)
+                }
+                onClick={handleFolderClick}
+                showViews={false}
+                variant="grid"
+                className="w-full"
+              />
+            ))}
+          </div>
+          {/* Pagination Controls */}
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+            >
+              ⬅ Prev
+            </Button>
+            <button
+              onClick={() => setJumpOpen(true)}
+              className="px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+              title="Jump to page"
+            >
+              Page {currentPage} / {totalPages}
+            </button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+            >
+              Next ➡
+            </Button>
+          </div>
         </>
       ) : (
         <div className="grid grid-cols-1 gap-4">
@@ -618,6 +613,8 @@ const MangaHome = () => {
         </div>
       )}
 
+        </div> {/* End of manga-main-container */}
+
       {/* Jump to page Modal */}
       {jumpOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -652,6 +649,7 @@ const MangaHome = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

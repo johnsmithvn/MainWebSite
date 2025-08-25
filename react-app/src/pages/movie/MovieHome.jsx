@@ -3,12 +3,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Play, Grid, List, Filter, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Search, Play, Grid, List, Filter, ArrowLeft } from 'lucide-react';
+import { FiArrowLeft, FiHome, FiGrid, FiList } from 'react-icons/fi';
 import { useMovieStore, useUIStore, useAuthStore } from '@/store';
 import Button from '@/components/common/Button';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import MovieCard from '@/components/movie/MovieCard';
 import Pagination from '@/components/common/Pagination';
+import Breadcrumb from '@/components/common/Breadcrumb';
 import MovieRandomSection from '@/components/movie/MovieRandomSection';
 import { PAGINATION } from '@/constants';
 
@@ -113,28 +115,42 @@ const MovieHome = () => {
     navigate(`/movie${newPath ? `?path=${encodeURIComponent(newPath)}` : ''}`);
   };
 
-  // Generate breadcrumb items
-  const breadcrumbItems = () => {
-    if (!currentPath) return [{ name: 'Movies', path: '' }];
+  const handleGoBack = () => {
+    if (!currentPath) {
+      // If at root, navigate to home page
+      navigate('/');
+      return;
+    }
     
     const pathParts = currentPath.split('/').filter(Boolean);
-    const items = [{ name: 'Movies', path: '' }];
+    pathParts.pop(); // Remove last part
+    const parentPath = pathParts.join('/');
     
-    let currentBreadcrumbPath = '';
-    pathParts.forEach((part, index) => {
-      currentBreadcrumbPath += (currentBreadcrumbPath ? '/' : '') + part;
-      items.push({
-        name: part,
-        path: currentBreadcrumbPath
-      });
-    });
-    
-    return items;
+    // Update URL and navigate
+    setSearchParams(parentPath ? { path: parentPath } : {});
   };
 
-  // Handle refresh
-  const handleRefresh = () => {
-    fetchMovieFolders(currentPath);
+  // Generate breadcrumb items
+  const breadcrumbItems = () => {
+    const items = [
+      { label: '🎬 Movies', path: '' }
+    ];
+    
+    if (currentPath) {
+      const pathParts = currentPath.split('/').filter(Boolean);
+      let accumPath = '';
+      
+      pathParts.forEach((part, index) => {
+        accumPath += (accumPath ? '/' : '') + part;
+        items.push({
+          label: part,
+          path: accumPath,
+          isLast: index === pathParts.length - 1
+        });
+      });
+    }
+    
+    return items;
   };
 
   // Helper to normalize text for more robust search (case & basic accents insensitive)
@@ -183,15 +199,6 @@ const MovieHome = () => {
     }
   }, [totalPages]);
 
-  // Handle navigation
-  const handleGoBack = () => {
-    if (currentPath) {
-      const pathParts = currentPath.split('/').filter(Boolean);
-      const parentPath = pathParts.slice(0, -1).join('/');
-      fetchMovieFolders(parentPath);
-    }
-  };
-
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -210,63 +217,41 @@ const MovieHome = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Random Sections - First */}
-      <div className="bg-gray-50 dark:bg-gray-900 py-6">
-        <div className="w-full px-6">
-          <MovieRandomSection />
-        </div>
+      <div className="mb-8 px-6">
+        <MovieRandomSection />
       </div>
 
-      {/* Header + Grid Section Combined */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 p-6">
+      {/* Main Content Container */}
+      <div className="p-6">
+        <div className="movie-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         {/* Header Controls */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            {currentPath && (
+          <div className="flex items-center gap-4 flex-1">
+            <div className="flex items-center gap-3">
+              {/* Back button */}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleBackClick}
-                icon={ArrowLeft}
+                onClick={handleGoBack}
+                icon={currentPath ? FiArrowLeft : FiHome}
+                className="flex-shrink-0"
               >
-                Back
+                {currentPath ? 'Back' : 'Home'}
               </Button>
-            )}
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                🎬 Movies
-              </h1>
+
               {/* Breadcrumb */}
-              <nav className="flex mt-2" aria-label="Breadcrumb">
-                <ol className="inline-flex items-center space-x-1 md:space-x-3">
-                  {breadcrumbItems().map((item, index) => (
-                    <li key={index} className="inline-flex items-center">
-                      {index > 0 && (
-                        <svg className="w-6 h-6 text-gray-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                      {index === breadcrumbItems().length - 1 ? (
-                        <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">
-                          {item.name}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => navigate(`/movie${item.path ? `?path=${encodeURIComponent(item.path)}` : ''}`)}
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
-                        >
-                          {item.name}
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              </nav>
+              <Breadcrumb
+                items={breadcrumbItems()}
+                onNavigate={(path) => {
+                  // Only update URL; fetching is handled by URL effect to avoid duplicate API calls
+                  setSearchParams(path ? { path } : {});
+                }}
+              />
             </div>
           </div>
           <div className="flex items-center gap-3">
               {/* Per-page selector */}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-300">Per page</span>
                 <select
                   value={moviesPerPage}
                   onChange={(e) => handlePerPageChange(e.target.value)}
@@ -277,35 +262,30 @@ const MovieHome = () => {
                   ))}
                 </select>
               </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              icon={RefreshCw}
-              disabled={loading}
-            >
-              Refresh
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              icon={Filter}
-            >
-              Filters
-            </Button>
-            <Button
-              variant={viewMode === 'grid' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-              icon={Grid}
-            />
-            <Button
-              variant={viewMode === 'list' ? 'primary' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-              icon={List}
-            />
+              {/* Filter button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                icon={Filter}
+              />
+              {/* View mode toggle */}
+              <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+                <Button
+                  variant={viewMode === 'grid' ? 'primary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  icon={FiGrid}
+                  className="rounded-md"
+                />
+                <Button
+                  variant={viewMode === 'list' ? 'primary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  icon={FiList}
+                  className="rounded-md"
+                />
+              </div>
           </div>
         </div>
 
@@ -321,6 +301,50 @@ const MovieHome = () => {
                      bg-white dark:bg-gray-800 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
+        </div>
+
+        {/* Statistics cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center">
+              <Play className="w-8 h-8 text-blue-500 mr-3" />
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{movieList.length}</p>
+                <p className="text-gray-600 dark:text-gray-400">Total Items</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center">
+              <Filter className="w-8 h-8 text-green-500 mr-3" />
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {movieList.filter(item => item.type === 'folder').length}
+                </p>
+                <p className="text-gray-600 dark:text-gray-400">Folders</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center">
+              <Play className="w-8 h-8 text-purple-500 mr-3" />
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {movieList.filter(item => item.type === 'video' || item.type === 'file').length}
+                </p>
+                <p className="text-gray-600 dark:text-gray-400">Video Files</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center">
+              <Search className="w-8 h-8 text-orange-500 mr-3" />
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{filteredMovies.length}</p>
+                <p className="text-gray-600 dark:text-gray-400">Search Results</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Filters */}
@@ -369,9 +393,9 @@ const MovieHome = () => {
             {/* Current page items (after filtering & sorting) */}
             <div className={`grid ${
               viewMode === 'grid' 
-                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' 
+                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6' 
                 : 'grid-cols-1'
-            } gap-6 mb-8`}>
+            } gap-4 mb-8`}>
               {currentMovies.map((movie) => (
                 <MovieCard
                   key={movie.path}
@@ -400,6 +424,7 @@ const MovieHome = () => {
             )}
           </>
         )}
+        </div> {/* End of movie-main-container */}
       </div>
     </div>
   );
