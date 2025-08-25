@@ -1,8 +1,11 @@
 {
   "name": "MainWebSite",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "private": true,
-  "workspaces": ["backend", "react-app"],
+  "workspaces": [
+    "backend",
+    "react-app"
+  ],
   "scripts": {
     "dev": "concurrently \"npm:dev:*\"",
     "dev:backend": "npm --workspace backend run dev",
