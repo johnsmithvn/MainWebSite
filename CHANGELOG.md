@@ -1,5 +1,21 @@
 # Changelog
 
+## 5.0.4 - 2025-08-26
+
+- React-app: Cải thiện responsive layout cho tất cả Home pages (Manga, Movie, Music) - Home/Back button chỉ hiển thị icon (ẩn text) trên mobile để tiết kiệm không gian.
+- React-app: Responsive controls layout - các controls (per-page selector, filter button, view mode toggle) xuống dòng riêng và align bên trái trên mobile, thêm label "Per page:" và "Filter" text trên desktop.
+- React-app: Header flex layout optimization - chuyển từ single row justify-between sang flex-col lg:flex-row để controls tự động wrap xuống dòng mới trên mobile devices.
+- React-app: Enhanced UX với tooltips cho view mode buttons và responsive text labels cho các controls để UI rõ ràng hơn.
+- React-app: Đồng nhất layout pattern across all modules - search bar được tách riêng và có width nhất quán, controls group có cùng spacing và alignment.
+- React-app: Standardized responsive breakpoints - sử dụng lg: breakpoint cho desktop layout, sm: cho tablet/mobile text labels.
+- React-app: Random sliders responsive improvements - ẩn navigation buttons (prev/next) trên mobile để UI cleaner, chỉ hiển thị từ sm breakpoint trở lên.
+- React-app: Internationalization cho sliders - chuyển time range từ tiếng Việt sang tiếng Anh ("just now", "minutes ago", "hours ago" thay vì "vừa xong", "phút trước", "giờ trước").
+- React-app: Loại bỏ Vietnamese locale từ date-fns imports để sử dụng English mặc định cho tất cả timestamp formatting trong sliders.
+- React-app: Text truncation cho slider headers - thêm `truncate` class cho titles, `flex-shrink-0` cho badges/timestamps, `whitespace-nowrap` cho timestamp text để tránh text overflow trên mobile.
+- React-app: Flexible header layout - sử dụng `min-w-0 flex-1` cho title container và `flex-shrink-0` cho control buttons để đảm bảo responsive layout tốt hơn.
+- React-app: Fix slider padding overflow - loại bỏ conflicting negative margins và thống nhất padding trong embla containers để tránh content tràn ra ngoài slider boundaries.
+- React-app: Consistent slider spacing - sử dụng `padding: 0 0.75rem` cho desktop và `padding: 0 0.5rem` cho mobile trong embla__container thay vì margin hacks.
+
 ## 5.0.3 - 2025-08-26
 
 - React-app: Đồng nhất wrapper styling giữa slider sections và main containers - tất cả slider components (RandomSlider, TopViewSlider, RecentSlider) giờ sử dụng `rounded-lg border border-gray-200 dark:border-gray-700` thay vì `rounded-xl shadow-sm` để match với main container styling.

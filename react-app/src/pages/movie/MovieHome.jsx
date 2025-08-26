@@ -226,7 +226,7 @@ const MovieHome = () => {
         <div className="movie-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-6">
         {/* Header Controls */}
         {/* First row: Navigation and breadcrumb */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
           <div className="flex items-center gap-4 flex-1 min-w-0">
             <div className="flex items-center gap-3">
               {/* Back button - responsive text */}
@@ -254,26 +254,9 @@ const MovieHome = () => {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Second row: Controls - responsive layout */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          {/* Search bar */}
-          <div className="relative max-w-md w-full sm:w-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search movies..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                       focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Controls - stack on mobile, inline on desktop */}
-          <div className="flex flex-wrap items-center gap-3 justify-end">
+          {/* Controls - responsive layout */}
+          <div className="flex items-center gap-3 lg:justify-end justify-start">
             {/* Per-page selector */}
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">Per page:</span>
@@ -294,7 +277,7 @@ const MovieHome = () => {
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
               icon={Filter}
-              className="shrink-0"
+              className="flex-shrink-0"
             >
               <span className="hidden sm:inline ml-2">Filter</span>
             </Button>
@@ -319,6 +302,20 @@ const MovieHome = () => {
               />
             </div>
           </div>
+        </div>
+
+        {/* Search bar */}
+        <div className="relative max-w-md mb-6">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search movies..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
         </div>
 
         {/* Statistics cards */}

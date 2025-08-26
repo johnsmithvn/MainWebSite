@@ -197,8 +197,8 @@ const TopViewSlider = ({
     <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between p-6 pb-4">
-        <div className="flex items-center space-x-3">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+        <div className="flex items-center space-x-3 min-w-0 flex-1">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">
             {title}
           </h2>
           
@@ -207,7 +207,7 @@ const TopViewSlider = ({
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-1 rounded-full text-xs font-medium"
+              className="flex items-center bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0"
             >
               <FiEye className="w-3 h-3 mr-1" />
               <span>{items.length}</span>
@@ -215,14 +215,14 @@ const TopViewSlider = ({
           )}
         </div>
 
-        <div className="flex items-center space-x-2">
-          {/* Navigation buttons */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          {/* Navigation buttons - hidden on mobile */}
           <Button
             variant="ghost"
             size="sm"
             onClick={scrollPrev}
             disabled={!canScrollPrev || loading}
-            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            className="hidden sm:flex text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
           >
             <FiChevronLeft className="w-5 h-5" />
           </Button>
@@ -232,7 +232,7 @@ const TopViewSlider = ({
             size="sm"
             onClick={scrollNext}
             disabled={!canScrollNext || loading}
-            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            className="hidden sm:flex text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
           >
             <FiChevronRight className="w-5 h-5" />
           </Button>

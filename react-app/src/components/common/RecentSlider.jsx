@@ -12,7 +12,6 @@ import { useModal } from '@/components/common/Modal';
 import { useRecentItems } from '@/hooks/useRecentItems';
 import { useMangaStore, useMovieStore } from '@/store';
 import { formatDistanceToNow } from 'date-fns';
-import { vi } from 'date-fns/locale';
 import '@/styles/components/embla.css';
 
 const RecentSlider = ({ 
@@ -225,8 +224,7 @@ const RecentSlider = ({
     
     try {
       return formatDistanceToNow(timestamp, {
-        addSuffix: true,
-        locale: vi
+        addSuffix: true
       });
     } catch (error) {
       return '';
@@ -242,13 +240,12 @@ const RecentSlider = ({
       const viewedDate = new Date(lastViewed);
       const diffInMinutes = Math.floor((now - viewedDate) / (1000 * 60));
       
-      if (diffInMinutes < 1) return 'vừa xong';
-      if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
-      if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} giờ trước`;
+      if (diffInMinutes < 1) return 'just now';
+      if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+      if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hours ago`;
       
       return formatDistanceToNow(viewedDate, {
-        addSuffix: true,
-        locale: vi
+        addSuffix: true
       });
     } catch (error) {
       return '';
@@ -278,8 +275,8 @@ const RecentSlider = ({
     <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between p-6 pb-4">
-        <div className="flex items-center space-x-3">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+        <div className="flex items-center space-x-3 min-w-0 flex-1">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">
             {title}
           </h2>
           
@@ -288,7 +285,7 @@ const RecentSlider = ({
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full text-xs font-medium"
+              className="flex items-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0"
             >
               <FiClock className="w-3 h-3 mr-1" />
               <span>{items.length}</span>
@@ -300,22 +297,22 @@ const RecentSlider = ({
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center text-sm text-gray-500 dark:text-gray-400"
+              className="flex items-center text-sm text-gray-500 dark:text-gray-400 flex-shrink-0"
             >
               <FiClock className="w-3 h-3 mr-1" />
-              <span>{formatTimestamp(lastUpdated)}</span>
+              <span className="whitespace-nowrap">{formatTimestamp(lastUpdated)}</span>
             </motion.div>
           )}
         </div>
 
-        <div className="flex items-center space-x-2">
-          {/* Navigation buttons */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          {/* Navigation buttons - hidden on mobile */}
           <Button
             variant="ghost"
             size="sm"
             onClick={scrollPrev}
             disabled={!canScrollPrev || loading}
-            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            className="hidden sm:flex text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
           >
             <FiChevronLeft className="w-5 h-5" />
           </Button>
@@ -325,7 +322,7 @@ const RecentSlider = ({
             size="sm"
             onClick={scrollNext}
             disabled={!canScrollNext || loading}
-            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            className="hidden sm:flex text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
           >
             <FiChevronRight className="w-5 h-5" />
           </Button>

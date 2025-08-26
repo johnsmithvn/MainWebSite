@@ -372,10 +372,10 @@ const MangaHome = () => {
         <div className="manga-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           {/* Header */}
           <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
           <div className="flex items-center gap-4 flex-1">
             <div className="flex items-center gap-3">
-              {/* Back button */}
+              {/* Back button - responsive text */}
               <Button
                 variant="outline"
                 size="sm"
@@ -383,7 +383,9 @@ const MangaHome = () => {
                 icon={currentPath ? FiArrowLeft : FiHome}
                 className="flex-shrink-0"
               >
-                {currentPath ? 'Back' : 'Home'}
+                <span className="hidden sm:inline">
+                  {currentPath ? 'Back' : 'Home'}
+                </span>
               </Button>
 
               {/* Breadcrumb */}
@@ -400,9 +402,12 @@ const MangaHome = () => {
               />
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          
+          {/* Controls - responsive layout */}
+          <div className="flex items-center gap-3 lg:justify-end justify-start">
             {/* Per-page selector */}
             <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">Per page:</span>
               <select
                 value={sizeParam}
                 onChange={(e) => changePageSize(e.target.value)}
@@ -413,12 +418,18 @@ const MangaHome = () => {
                 ))}
               </select>
             </div>
+            
+            {/* Filter button */}
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
               icon={Filter}
-            />
+              className="flex-shrink-0"
+            >
+              <span className="hidden sm:inline ml-2">Filter</span>
+            </Button>
+            
             {/* View mode toggle */}
             <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
               <Button
@@ -427,6 +438,7 @@ const MangaHome = () => {
                 onClick={() => setViewMode('grid')}
                 icon={FiGrid}
                 className="rounded-md"
+                title="Grid view"
               />
               <Button
                 variant={viewMode === 'list' ? 'primary' : 'ghost'}
@@ -434,6 +446,7 @@ const MangaHome = () => {
                 onClick={() => setViewMode('list')}
                 icon={FiList}
                 className="rounded-md"
+                title="List view"
               />
             </div>
           </div>

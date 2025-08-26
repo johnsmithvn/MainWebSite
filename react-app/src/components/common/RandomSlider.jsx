@@ -11,7 +11,6 @@ import Button from '@/components/common/Button';
 import { useRandomItems } from '@/hooks/useRandomItems';
 import { useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import { formatDistanceToNow } from 'date-fns';
-import { vi } from 'date-fns/locale';
 import '@/styles/components/embla.css';
 
 const RandomSlider = ({ 
@@ -203,14 +202,13 @@ const RandomSlider = ({
       const now = new Date();
       const diffInMinutes = Math.floor((now - timestamp) / (1000 * 60));
       
-      // Nếu dưới 1 phút thì hiển thị "vừa xong"
+      // If less than 1 minute show "just now"
       if (diffInMinutes < 1) {
-        return 'vừa xong';
+        return 'just now';
       }
       
       return formatDistanceToNow(timestamp, {
-        addSuffix: true,
-        locale: vi
+        addSuffix: true
       });
     } catch (error) {
       return '';
@@ -235,8 +233,8 @@ const RandomSlider = ({
     <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between p-3 sm:p-6 pb-2 sm:pb-4">
-        <div className="flex items-center space-x-3">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+        <div className="flex items-center space-x-3 min-w-0 flex-1">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">
             {title}
           </h2>
           
@@ -245,22 +243,22 @@ const RandomSlider = ({
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center text-sm text-gray-500 dark:text-gray-400"
+              className="flex items-center text-sm text-gray-500 dark:text-gray-400 flex-shrink-0"
             >
               <FiClock className="w-3 h-3 mr-1" />
-              <span>{formatTimestamp(lastUpdated)}</span>
+              <span className="whitespace-nowrap">{formatTimestamp(lastUpdated)}</span>
             </motion.div>
           )}
         </div>
 
-        <div className="flex items-center space-x-2">
-          {/* Navigation buttons */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
+          {/* Navigation buttons - hidden on mobile */}
           <Button
             variant="ghost"
             size="sm"
             onClick={scrollPrev}
             disabled={!canScrollPrev || loading}
-            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            className="hidden sm:flex text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
           >
             <FiChevronLeft className="w-5 h-5" />
           </Button>
@@ -270,7 +268,7 @@ const RandomSlider = ({
             size="sm"
             onClick={scrollNext}
             disabled={!canScrollNext || loading}
-            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            className="hidden sm:flex text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
           >
             <FiChevronRight className="w-5 h-5" />
           </Button>
