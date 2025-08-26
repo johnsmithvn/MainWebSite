@@ -217,18 +217,19 @@ const MovieHome = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Random Sections - First */}
-      <div className="mb-8 px-6">
+      <div className="p-3 sm:p-6 pb-0">
         <MovieRandomSection />
       </div>
 
       {/* Main Content Container */}
-      <div className="p-6">
-        <div className="movie-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <div className="p-3 sm:p-6">
+        <div className="movie-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-6">
         {/* Header Controls */}
+        {/* First row: Navigation and breadcrumb */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4 flex-1">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
             <div className="flex items-center gap-3">
-              {/* Back button */}
+              {/* Back button - responsive text */}
               <Button
                 variant="outline"
                 size="sm"
@@ -236,71 +237,88 @@ const MovieHome = () => {
                 icon={currentPath ? FiArrowLeft : FiHome}
                 className="flex-shrink-0"
               >
-                {currentPath ? 'Back' : 'Home'}
+                <span className="hidden sm:inline">
+                  {currentPath ? 'Back' : 'Home'}
+                </span>
               </Button>
 
               {/* Breadcrumb */}
-              <Breadcrumb
-                items={breadcrumbItems()}
-                onNavigate={(path) => {
-                  // Only update URL; fetching is handled by URL effect to avoid duplicate API calls
-                  setSearchParams(path ? { path } : {});
-                }}
-              />
+              <div className="min-w-0 flex-1">
+                <Breadcrumb
+                  items={breadcrumbItems()}
+                  onNavigate={(path) => {
+                    // Only update URL; fetching is handled by URL effect to avoid duplicate API calls
+                    setSearchParams(path ? { path } : {});
+                  }}
+                />
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-              {/* Per-page selector */}
-              <div className="flex items-center gap-2">
-                <select
-                  value={moviesPerPage}
-                  onChange={(e) => handlePerPageChange(e.target.value)}
-                  className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
-                >
-                  {moviePerPageOptions.map(n => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
-              </div>
-              {/* Filter button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                icon={Filter}
-              />
-              {/* View mode toggle */}
-              <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
-                <Button
-                  variant={viewMode === 'grid' ? 'primary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  icon={FiGrid}
-                  className="rounded-md"
-                />
-                <Button
-                  variant={viewMode === 'list' ? 'primary' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  icon={FiList}
-                  className="rounded-md"
-                />
-              </div>
           </div>
         </div>
 
-        {/* Search bar */}
-        <div className="relative max-w-md mb-6">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Search movies..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+        {/* Second row: Controls - responsive layout */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          {/* Search bar */}
+          <div className="relative max-w-md w-full sm:w-auto">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search movies..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                       bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                       focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Controls - stack on mobile, inline on desktop */}
+          <div className="flex flex-wrap items-center gap-3 justify-end">
+            {/* Per-page selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">Per page:</span>
+              <select
+                value={moviesPerPage}
+                onChange={(e) => handlePerPageChange(e.target.value)}
+                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
+              >
+                {moviePerPageOptions.map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Filter button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              icon={Filter}
+              className="shrink-0"
+            >
+              <span className="hidden sm:inline ml-2">Filter</span>
+            </Button>
+            
+            {/* View mode toggle */}
+            <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'grid' ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                icon={FiGrid}
+                className="rounded-md"
+                title="Grid view"
+              />
+              <Button
+                variant={viewMode === 'list' ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                icon={FiList}
+                className="rounded-md"
+                title="List view"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Statistics cards */}
@@ -393,9 +411,9 @@ const MovieHome = () => {
             {/* Current page items (after filtering & sorting) */}
             <div className={`grid ${
               viewMode === 'grid' 
-                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6' 
+                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6' 
                 : 'grid-cols-1'
-            } gap-4 mb-8`}>
+            } gap-2 sm:gap-4 mb-8`}>
               {currentMovies.map((movie) => (
                 <MovieCard
                   key={movie.path}

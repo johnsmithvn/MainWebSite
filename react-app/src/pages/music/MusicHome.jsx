@@ -226,41 +226,67 @@ const MusicHome = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Random slider: luôn hiển thị và căng ngang bằng header */}
-      <div className="mb-8 px-6">{/* Thêm padding ngang để khớp với header */}
+      <div className="p-3 sm:p-6 pb-0">{/* Thêm padding ngang để khớp với header */}
         <MusicRandomSection />{/* Section random cho music */}
       </div>
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         {/* Main Content Container */}
-        <div className="music-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div className="music-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-6">
           {/* Header with breadcrumb and controls */}
           <div className="mb-6">
+          {/* First row: Navigation and breadcrumb */}
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-4">
-              {/* Back button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleGoBack}
-                icon={currentPath ? FiArrowLeft : FiHome}
-                className="flex-shrink-0"
-              >
-                {currentPath ? 'Back' : 'Home'}
-              </Button>
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <div className="flex items-center gap-3">
+                {/* Back button - responsive text */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGoBack}
+                  icon={currentPath ? FiArrowLeft : FiHome}
+                  className="flex-shrink-0"
+                >
+                  <span className="hidden sm:inline">
+                    {currentPath ? 'Back' : 'Home'}
+                  </span>
+                </Button>
 
-              {/* Breadcrumb */}
-              <Breadcrumb
-                items={breadcrumbItems()}
-                onNavigate={(path) => {
-                  // Only update URL; fetching is handled by URL effect to avoid duplicate API calls
-                  setSearchParams(path ? { path } : {});
-                }}
+                {/* Breadcrumb */}
+                <div className="min-w-0 flex-1">
+                  <Breadcrumb
+                    items={breadcrumbItems()}
+                    onNavigate={(path) => {
+                      // Only update URL; fetching is handled by URL effect to avoid duplicate API calls
+                      setSearchParams(path ? { path } : {});
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Second row: Controls - responsive layout */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Search */}
+            <div className="relative max-w-md w-full sm:w-auto">
+              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search music, artists, albums..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                         bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                         focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
-            <div className="flex items-center space-x-3">
+            {/* Controls - stack on mobile, inline on desktop */}
+            <div className="flex flex-wrap items-center gap-3 justify-end">
               {/* Per-page selector */}
-              <div className="flex items-center gap-2 mr-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">Per page:</span>
                 <select
                   value={musicPerPage}
                   onChange={(e) => handlePerPageChange(e.target.value)}
@@ -271,6 +297,18 @@ const MusicHome = () => {
                   ))}
                 </select>
               </div>
+              
+              {/* Filters toggle */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                icon={FiFilter}
+                className="shrink-0"
+              >
+                <span className="hidden sm:inline ml-2">Filter</span>
+              </Button>
+              
               {/* View mode toggle */}
               <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
                 <Button
@@ -279,6 +317,7 @@ const MusicHome = () => {
                   onClick={() => setViewMode('grid')}
                   icon={FiGrid}
                   className="rounded-md"
+                  title="Grid view"
                 />
                 <Button
                   variant={viewMode === 'list' ? 'primary' : 'ghost'}
@@ -286,31 +325,10 @@ const MusicHome = () => {
                   onClick={() => setViewMode('list')}
                   icon={FiList}
                   className="rounded-md"
+                  title="List view"
                 />
               </div>
-
-              {/* Filters toggle */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                icon={FiFilter}
-              />
             </div>
-          </div>
-
-          {/* Search */}
-          <div className="relative max-w-md">
-            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search music, artists, albums..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                       focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
           </div>
 
           {/* Filters panel */}
@@ -345,7 +363,7 @@ const MusicHome = () => {
         </div>
 
         {/* Statistics cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
               <FiMusic className="w-8 h-8 text-blue-500 mr-3" />
@@ -415,9 +433,9 @@ const MusicHome = () => {
           </div>
         ) : (
           <>
-            <div className={`grid gap-4 ${
+            <div className={`grid gap-2 sm:gap-4 ${
               viewMode === 'grid' 
-                ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6' 
+                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6' 
                 : 'grid-cols-1'
             }`}>
               {currentMusic.map((music, index) => (
