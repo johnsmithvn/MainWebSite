@@ -1,36 +1,51 @@
-import { openDB } from 'idb';
-
 const DB_NAME = 'offline-manga';
 const STORE = 'chapters';
 
-async function getDB() {
-  return openDB(DB_NAME, 1, {
-    upgrade(db) {
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
       if (!db.objectStoreNames.contains(STORE)) {
         db.createObjectStore(STORE, { keyPath: 'id' });
       }
-    },
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
   });
 }
 
-export async function getChapters() {
-  const db = await getDB();
-  return db.getAll(STORE);
+async function withStore(type, callback) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, type);
+    const store = tx.objectStore(STORE);
+    let request;
+    try {
+      request = callback(store);
+    } catch (err) {
+      reject(err);
+      return;
+    }
+    tx.oncomplete = () => resolve(request?.result);
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
-export async function getChapter(id) {
-  const db = await getDB();
-  return db.get(STORE, id);
+export function getChapters() {
+  return withStore('readonly', (store) => store.getAll());
 }
 
-export async function saveChapter(chapter) {
-  const db = await getDB();
-  await db.put(STORE, chapter);
+export function getChapter(id) {
+  return withStore('readonly', (store) => store.get(id));
 }
 
-export async function deleteChapter(id) {
-  const db = await getDB();
-  await db.delete(STORE, id);
+export function saveChapter(chapter) {
+  return withStore('readwrite', (store) => store.put(chapter));
+}
+
+export function deleteChapter(id) {
+  return withStore('readwrite', (store) => store.delete(id));
 }
 
 export async function downloadChapter(meta) {
@@ -45,5 +60,11 @@ export async function downloadChapter(meta) {
       bytes += blob.size;
     } catch {}
   }
-  await saveChapter({ ...meta, bytes, totalPages: pageUrls.length, createdAt: Date.now(), updatedAt: Date.now() });
+  await saveChapter({
+    ...meta,
+    bytes,
+    totalPages: pageUrls.length,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  });
 }
