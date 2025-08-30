@@ -6,6 +6,7 @@ import { useRecentManager } from '../../hooks/useRecentManager';
 import { apiService } from '../../utils/api';
 import ReaderHeader from '../../components/manga/ReaderHeader';
 import toast from 'react-hot-toast';
+import { downloadChapter, getChapter } from '../../utils/offlineLibrary';
 import '../../styles/components/manga-reader.css';
 import '../../styles/components/reader-header.css';
 
@@ -76,6 +77,8 @@ const MangaReader = () => {
   const currentMangaPath = useMemo(() => {
     return searchParams.get('path') || folderId;
   }, [searchParams, folderId]);
+
+  const isOfflineMode = searchParams.get('offline') === '1';
 
   // Memoize stable auth keys to prevent effect reruns
   const stableAuthKeys = useMemo(() => ({
@@ -255,7 +258,21 @@ const MangaReader = () => {
           // Skip preloading first image intentionally
         } else {
           console.log('🔍 Loading folder data for path:', currentMangaPath);
-          loadFolderData(currentMangaPath);
+          if (isOfflineMode) {
+            (async () => {
+              const ch = await getChapter(currentMangaPath);
+              if (ch) {
+                setCurrentImages(ch.pageUrls);
+                setCurrentPath(currentMangaPath);
+                setLoading(false);
+              } else {
+                setError('Offline data not found');
+                setLoading(false);
+              }
+            })();
+          } else {
+            loadFolderData(currentMangaPath);
+          }
         }
       }
     }
@@ -271,10 +288,10 @@ const MangaReader = () => {
 
   // Increase view when path changes (debounced inside function)
   useEffect(() => {
-    if (currentMangaPath && stableAuthKeys.sourceKey && stableAuthKeys.rootFolder) {
+    if (!isOfflineMode && currentMangaPath && stableAuthKeys.sourceKey && stableAuthKeys.rootFolder) {
       increaseViewCount(currentMangaPath, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder);
     }
-  }, [currentMangaPath, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder, increaseViewCount]);
+  }, [isOfflineMode, currentMangaPath, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder, increaseViewCount]);
 
   // Debug reader settings changes
   useEffect(() => {
@@ -492,6 +509,22 @@ const MangaReader = () => {
     }
   };
 
+  const handleDownloadChapter = async () => {
+    if (!currentImages.length || !currentMangaPath) return;
+    try {
+      await downloadChapter({
+        id: currentMangaPath,
+        mangaTitle: currentMangaPath,
+        chapterTitle: currentMangaPath,
+        pageUrls: currentImages,
+      });
+      toast.success('Chapter available offline');
+    } catch (err) {
+      console.error('Download failed', err);
+      toast.error('Download failed');
+    }
+  };
+
   // ===== Derived pagination (vertical mode) - must be before any conditional returns for hook order stability =====
   const imagesPerScrollPage = readerSettings.scrollImagesPerPage || 200;
   const totalScrollPages = Math.ceil(currentImages.length / imagesPerScrollPage);
@@ -631,6 +664,7 @@ const MangaReader = () => {
           isFavorite={isFavorite}
           onToggleFavorite={handleToggleFavorite}
           onSetThumbnail={handleSetThumbnail}
+          onDownload={!isOfflineMode ? handleDownloadChapter : undefined}
         />
       )}
 

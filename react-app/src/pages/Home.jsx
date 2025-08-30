@@ -24,6 +24,18 @@ const Home = () => {
   
   const { setSourceKey, setSecureKeys, isSecureKey, isAuthenticated, token, logout } = useAuthStore();
   const { setLoading } = useUIStore();
+  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Force clear auth when landing on Home (fresh login required)
   useEffect(() => {
@@ -250,6 +262,11 @@ const Home = () => {
           type="music"
           icon="🎵"
         />
+        {!online && (
+          <div className="text-center">
+            <Button onClick={() => navigate('/offline')}>Open Offline Library</Button>
+          </div>
+        )}
       </div>
 
       {/* Login Modal */}

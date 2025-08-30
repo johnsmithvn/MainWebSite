@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Menu, Search, Settings, Heart, Image as ImageIcon, Home } from 'lucide-react';
+import { Menu, Search, Settings, Heart, Image as ImageIcon, Home, Download } from 'lucide-react';
 import SearchModal from '../common/SearchModal';
 import SettingsModal from '../common/SettingsModal';
 import { useAuthStore, useMangaStore, useUIStore } from '../../store';
@@ -14,7 +14,8 @@ const ReaderHeader = ({
   onToggleFavorite,
   isFavorite = false,
   onSetThumbnail,
-  className = '' 
+  className = '',
+  onDownload
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -191,13 +192,22 @@ const ReaderHeader = ({
               <Search size={18} />
             </button>
             
-            <button 
-              className="reader-header-btn settings-btn"
-              onClick={() => setSettingsModalOpen(true)}
-              title="Cài đặt"
+          <button
+            className="reader-header-btn settings-btn"
+            onClick={() => setSettingsModalOpen(true)}
+            title="Cài đặt"
+          >
+            <Settings size={18} />
+          </button>
+          {onDownload && (
+            <button
+              className="reader-header-btn download-btn"
+              onClick={onDownload}
+              title="Download offline"
             >
-              <Settings size={18} />
+              <Download size={18} />
             </button>
+          )}
           </div>
         </div>
       </header>
