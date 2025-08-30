@@ -1,5 +1,5 @@
 const CACHE_NAME = 'mainws-v1';
-const APP_SHELL = ['/', '/index.html', '/offline'];
+const APP_SHELL = ['/', '/index.html', '/offline', '/manifest.webmanifest'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
