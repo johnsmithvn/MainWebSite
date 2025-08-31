@@ -262,11 +262,12 @@ const Home = () => {
           type="music"
           icon="🎵"
         />
-        {!online && (
-          <div className="text-center">
-            <Button onClick={() => navigate('/offline')}>Open Offline Library</Button>
-          </div>
-        )}
+        <div className="text-center">
+          {!online && (
+            <p className="mb-2 text-sm text-red-500">Bạn đang offline</p>
+          )}
+          <Button onClick={() => navigate('/offline')}>Open Offline Library</Button>
+        </div>
       </div>
 
       {/* Login Modal */}

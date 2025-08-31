@@ -234,6 +234,8 @@ The React app is installable as a Progressive Web App. When online, you can down
 opening the reader and clicking **Download offline**. The chapter pages are stored in browser cache and metadata in IndexedDB. A new
 **Offline Library** (route `/offline`) lists downloaded chapters and allows reading or deleting them.
 
+An "Open Offline Library" button is available on the Home page for quick access to your downloaded chapters at any time.
+
 - Approximate storage limit: 500MB (varies by browser).
 - Delete single chapters or clear the browser data to free space.
 - To completely reset offline data, use the **Clear browsing data** option in your browser or delete all items from the Offline Library.
