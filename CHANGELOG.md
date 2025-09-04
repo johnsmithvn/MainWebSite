@@ -1,5 +1,19 @@
 # Changelog
 
+## 5.0.5 - 2025-09-04
+
+- React-app: Fix React duplicate key warning trong RandomSlider - thêm index vào key để đảm bảo uniqueness khi có duplicate items từ API.
+- Backend: Khắc phục duplicate entries trong random APIs - thêm `GROUP BY path` cho movie và music APIs để tránh trả về duplicate items với cùng path.
+- React-app: Khắc phục vấn đề Vite HMR ping requests liên tục - cấu hình timeout và pingTimeout để giảm tần suất requests từ WebSocket connection.
+- React-app: Thêm tùy chọn disable HMR hoàn toàn - environment variable `VITE_DISABLE_HMR=true` để tắt HMR và ngừng ping requests.
+- React-app: Thêm tùy chọn force localhost HMR - environment variable `VITE_FORCE_LOCALHOST_HMR=true` để HMR sử dụng localhost thay vì Tailscale domain khi truy cập từ localhost.
+- React-app: Tạo script `npm run dev:no-hmr` - chạy development server mà không có HMR cho testing production-like behavior.
+- React-app: Cấu hình HMR tối ưu cho Tailscale - timeout 60s, pingTimeout 30s để giảm network overhead khi truy cập qua Tailscale VPN.
+- React-app: Thêm file cấu hình `.env.example` - template cho local environment overrides với hướng dẫn disable HMR.
+- React-app: Cải thiện watch options - giảm polling interval và tối ưu file watching để giảm CPU usage.
+- React-app: Cập nhật documentation - thêm troubleshooting guide cho HMR ping issues và cách disable HMR trong README.
+- React-app: Alternative Vite config - tạo `vite.config.production.js` để chạy development server mà không có HMR cho testing.
+
 ## 5.0.4 - 2025-08-26
 
 - React-app: Cải thiện responsive layout cho tất cả Home pages (Manga, Movie, Music) - Home/Back button chỉ hiển thị icon (ẩn text) trên mobile để tiết kiệm không gian.

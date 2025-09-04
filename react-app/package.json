@@ -6,6 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
+    "dev:localhost": "cross-env VITE_FORCE_LOCALHOST_HMR=true vite --host",
+    "dev:tailscale": "cross-env VITE_FORCE_LOCALHOST_HMR=false vite --host",
+    "dev:no-hmr": "vite --host --config vite.config.production.js",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0"

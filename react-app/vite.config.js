@@ -9,6 +9,8 @@ export default defineConfig(({ mode }) => {
   const HMR_HOST = env.VITE_HMR_HOST || process.env.VITE_HMR_HOST // ví dụ: desktop-xxxx.ts.net
   const HMR_PORT = Number(env.VITE_HMR_PORT || process.env.VITE_HMR_PORT || 3001)
   const VITE_BASE = env.VITE_BASE || process.env.VITE_BASE || '/'
+  const DISABLE_HMR = env.VITE_DISABLE_HMR === 'true' || process.env.VITE_DISABLE_HMR === 'true'
+  const FORCE_LOCALHOST_HMR = env.VITE_FORCE_LOCALHOST_HMR === 'true' || process.env.VITE_FORCE_LOCALHOST_HMR === 'true'
   const extraHosts = (env.VITE_ALLOWED_HOSTS || process.env.VITE_ALLOWED_HOSTS || '')
     .split(',')
     .map((s) => s.trim())
@@ -33,9 +35,24 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       // Chỉ nhận chuỗi (không dùng regex) và loại bỏ giá trị rỗng
       allowedHosts,
-      hmr: HMR_HOST
-        ? { host: HMR_HOST, port: HMR_PORT, protocol: 'ws' }
-        : undefined,
+      // Giảm tần suất watch để tránh quá nhiều requests
+      watch: {
+        usePolling: false,
+        interval: 1000,
+      },
+      hmr: DISABLE_HMR ? false : 
+        // Nếu force localhost hoặc không có HMR_HOST, dùng default HMR
+        (FORCE_LOCALHOST_HMR || !HMR_HOST) ? {
+          timeout: 60000,
+          pingTimeout: 30000
+        } : {
+          // Chỉ dùng HMR_HOST khi không force localhost
+          host: HMR_HOST, 
+          port: HMR_PORT, 
+          protocol: 'ws',
+          timeout: 60000,
+          pingTimeout: 30000
+        },
       proxy: {
       '/api': { target: 'http://localhost:3000', changeOrigin: true },
       '/manga': {

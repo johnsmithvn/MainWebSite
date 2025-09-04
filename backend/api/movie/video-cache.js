@@ -30,6 +30,7 @@ router.get("/video-cache", async (req, res) => {
           .prepare(
             `SELECT name, path, thumbnail, isFavorite, type FROM folders
      WHERE type = 'file' OR type = 'video'
+     GROUP BY path
      ORDER BY RANDOM() LIMIT 30`
           )
           .all();
@@ -38,6 +39,7 @@ router.get("/video-cache", async (req, res) => {
           .prepare(
             `SELECT name, path, thumbnail, isFavorite, type FROM folders
      WHERE type IS NULL OR type = 'folder'
+     GROUP BY path
      ORDER BY RANDOM() LIMIT 30`
           )
           .all();
@@ -45,6 +47,7 @@ router.get("/video-cache", async (req, res) => {
         rows = db
           .prepare(
             `SELECT name, path, thumbnail, isFavorite, type FROM folders
+     GROUP BY path
      ORDER BY RANDOM() LIMIT 30`
           )
           .all();

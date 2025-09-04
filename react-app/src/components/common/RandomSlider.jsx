@@ -304,9 +304,9 @@ const RandomSlider = ({
                 </div>
               ))
             ) : (
-              // Actual items - force key update để trigger re-render
+              // Actual items - sử dụng unique key để tránh duplicate
               items?.map((item, index) => (
-                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide w-full h-full flex items-stretch">
+                <div key={`${item.path || item.id || index}-${index}-${localRefreshTrigger}`} className="embla__slide w-full h-full flex items-stretch">
                   <UniversalCard
                     item={item}
                     type={type}

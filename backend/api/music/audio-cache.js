@@ -21,18 +21,21 @@ router.get("/audio-cache", async (req, res) => {
         rows = db.prepare(`
           SELECT name, path, thumbnail, isFavorite, type FROM folders
           WHERE (type = 'audio' OR type = 'file') AND name != '.thumbnail'
+          GROUP BY path
           ORDER BY RANDOM() LIMIT 30
         `).all();
       } else if (type === "folder") {
         rows = db.prepare(`
           SELECT name, path, thumbnail, isFavorite, type FROM folders
           WHERE (type IS NULL OR type = 'folder') AND name != '.thumbnail'
+          GROUP BY path
           ORDER BY RANDOM() LIMIT 30
         `).all();
       } else {
         rows = db.prepare(`
           SELECT name, path, thumbnail, isFavorite, type FROM folders
           WHERE name != '.thumbnail'
+          GROUP BY path
           ORDER BY RANDOM() LIMIT 30
         `).all();
       }

@@ -138,9 +138,34 @@ react-app/
 ### Available Scripts
 
 - `npm run dev` - Start development server with hot reload
+- `npm run dev:no-hmr` - Start development server without HMR (no ping requests)
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build locally
 - `npm run lint` - Run ESLint for code quality
+
+### Troubleshooting HMR Ping Requests
+
+If you're experiencing frequent ping requests from Vite HMR (especially over Tailscale), you can:
+
+1. **Disable HMR temporarily**:
+   ```bash
+   npm run dev:no-hmr
+   ```
+
+2. **Or set environment variable**:
+   ```env
+   VITE_DISABLE_HMR=true
+   ```
+
+3. **Or adjust HMR timeout settings** in `vite.config.js`:
+   ```js
+   hmr: {
+     timeout: 60000,
+     pingTimeout: 30000
+   }
+   ```
+
+Note: Disabling HMR means you'll need to manually refresh the browser for changes.
 
 ## 🔧 Configuration
 
