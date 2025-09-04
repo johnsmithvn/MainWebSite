@@ -43,3 +43,12 @@ const AppTree = (
 ReactDOM.createRoot(document.getElementById('root')).render(
   disableStrict ? AppTree : <React.StrictMode>{AppTree}</React.StrictMode>
 );
+
+// Register service worker for PWA/offline support in production builds only
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.error('SW registration failed', err);
+    });
+  });
+}

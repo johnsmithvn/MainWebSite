@@ -39,6 +39,11 @@ A modern React-based media management application for manga, movies, and music. 
 - Toast notifications and loading states
 - Accessible modal dialogs and components
 
+### 📥 Offline Chapter Reader
+- Installable Progressive Web App
+- Download chapters for offline reading
+- Offline library with storage management and delete options
+
 ## 🛠️ Tech Stack
 
 ### Core Technologies
@@ -222,6 +227,18 @@ The app integrates with a Node.js backend providing:
 - Music playlist and metadata management
 - User authentication and authorization
 - File serving and streaming capabilities
+
+## 📥 Offline Mode
+
+The React app is installable as a Progressive Web App. When online, you can download an entire manga chapter for offline reading by
+opening the reader and clicking **Download offline**. The chapter pages are stored in browser cache and metadata in IndexedDB. A new
+**Offline Library** (route `/offline`) lists downloaded chapters and allows reading or deleting them.
+
+An "Open Offline Library" button is available on the Home page for quick access to your downloaded chapters at any time.
+
+- Approximate storage limit: 500MB (varies by browser).
+- Delete single chapters or clear the browser data to free space.
+- To completely reset offline data, use the **Clear browsing data** option in your browser or delete all items from the Offline Library.
 
 ## 🐛 Troubleshooting
 
