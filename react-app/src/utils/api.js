@@ -7,7 +7,7 @@ import { API } from '@/constants';
 // Create axios instance
 const api = axios.create({
   baseURL: '', // Use relative URLs to leverage Vite proxy
-  timeout: API.TIMEOUT,
+  timeout: API.TIMEOUT, // Keep default timeout for regular requests
   headers: {
     'Content-Type': 'application/json',
   },
@@ -139,8 +139,8 @@ export const apiService = {
       return req;
     },
     toggleFavorite: (dbkey, path, value) => api.post(`${API.ENDPOINTS.MANGA}/favorite`, { dbkey, path, value }),
-    resetCache: (params) => api.delete(`${API.ENDPOINTS.MANGA}/reset-cache`, { params }),
-    scan: (params) => api.post(`${API.ENDPOINTS.MANGA}/scan`, params),
+    resetCache: (params) => api.delete(`${API.ENDPOINTS.MANGA}/reset-cache`, { params, timeout: 0 }),
+    scan: (params) => api.post(`${API.ENDPOINTS.MANGA}/scan`, params, { timeout: 0 }),
     getRootThumbnail: (params) => api.get(`${API.ENDPOINTS.MANGA}/root-thumbnail`, { params }),
     setRootThumbnail: (data) => api.post(`${API.ENDPOINTS.MANGA}/root-thumbnail`, data),
   },
@@ -166,8 +166,8 @@ export const apiService = {
     toggleFavorite: (dbkey, path, value) => api.post(`${API.ENDPOINTS.MOVIE}/favorite-movie`, { dbkey, path, value }),
     extractThumbnail: (params) => api.post(`${API.ENDPOINTS.MOVIE}/extract-movie-thumbnail`, params),
     setThumbnail: (params) => api.post(`${API.ENDPOINTS.MOVIE}/set-thumbnail`, params),
-    resetDb: (params) => api.delete(`${API.ENDPOINTS.MOVIE}/reset-cache-movie`, { params }),
-    scan: (params) => api.post(`${API.ENDPOINTS.MOVIE}/scan-movie`, params),
+    resetDb: (params) => api.delete(`${API.ENDPOINTS.MOVIE}/reset-cache-movie`, { params, timeout: 0 }),
+    scan: (params) => api.post(`${API.ENDPOINTS.MOVIE}/scan-movie`, params, { timeout: 0 }),
     checkEmpty: (params) => api.get(`${API.ENDPOINTS.MOVIE}/movie-folder-empty`, { params }),
   },
 
@@ -197,8 +197,8 @@ export const apiService = {
     getMusicMeta: (params) => api.get(`${API.ENDPOINTS.MUSIC}/music-meta`, { params }),
     extractThumbnail: (params) => api.post(`${API.ENDPOINTS.MUSIC}/extract-thumbnail`, params),
     setThumbnail: (params) => api.post(`${API.ENDPOINTS.MUSIC}/set-thumbnail`, params),
-    resetDb: (params) => api.delete(`${API.ENDPOINTS.MUSIC}/reset-cache-music`, { params }),
-    scan: (params) => api.post(`${API.ENDPOINTS.MUSIC}/scan-music`, params),
+    resetDb: (params) => api.delete(`${API.ENDPOINTS.MUSIC}/reset-cache-music`, { params, timeout: 0 }),
+    scan: (params) => api.post(`${API.ENDPOINTS.MUSIC}/scan-music`, params, { timeout: 0 }),
   },
 
   // System APIs
