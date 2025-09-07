@@ -409,12 +409,13 @@ const MoviePlayer = () => {
 
   // Open with ExoPlayer (for Android webview)
   const handleOpenExoPlayer = () => {
-    const videoUrl = `/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(currentFile)}${
+   
+    const videoUrl = `${window.location.origin}/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(currentFile)}${
       token ? `&token=${encodeURIComponent(token)}` : ''
     }`;
-    
+   
     if (window.Android?.openExoPlayer) {
-      window.Android.openExoPlayer(`${location.origin}${videoUrl}`);
+      window.Android.openExoPlayer(videoUrl);
     } else {
       showToast('❌ Ứng dụng không hỗ trợ ExoPlayer', 'error');
     }
