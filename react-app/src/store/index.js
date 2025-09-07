@@ -285,7 +285,6 @@ export const useMangaStore = create(
           const response = await apiService.manga.getFolders(params);
           const data = response.data;
           
-          console.log('🔍 API Response:', data);
           
           const cleanImageUrl = (url) => {
             if (!url || typeof url !== 'string') return url;
@@ -330,7 +329,6 @@ export const useMangaStore = create(
             return;
           }
           
-          console.log('📁 Processed folders:', folders);
           
           if (folders.length === 0) {
             console.warn('⚠️ No folders found for path:', path);
@@ -520,7 +518,6 @@ export const useMovieStore = create(
             const response = await apiService.movie.getFolders(params);
             const data = response.data;
             
-            console.log('🎬 Movie API Response:', data);
             
             const folders = data.folders || [];
             
@@ -811,7 +808,6 @@ export const useMusicStore = create(
 
             const response = await apiService.music.getFolders(params);
             const data = response.data;
-            console.log('🎵 Music API Response:', data);
 
             const folders = data.folders || [];
             const processedFolders = folders.map(folder => {

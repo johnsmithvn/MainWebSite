@@ -109,7 +109,6 @@ const MangaHome = () => {
     // Handle URL path parameter
     const urlPath = searchParams.get('path') || '';
     const fetchKey = `${sourceKey || ''}|${urlPath}`;
-    console.log('� MangaHome: URL path changed to:', urlPath);
 
   if (sourceKey && sourceKey.startsWith('ROOT_')) {
       // Avoid duplicate fetch for same key (handles StrictMode double run)
@@ -128,11 +127,6 @@ const MangaHome = () => {
       }
     }
   }, [searchParams, fetchMangaFolders, fetchFavorites, sourceKey, mangaList.length, rootFolder]);
-
-  useEffect(() => {
-    // Debug: Log manga list when it changes
-    console.log('Manga list updated:', mangaList);
-  }, [mangaList]);
 
   // Persist per-page selection whenever it changes (including via URL)
   useEffect(() => {

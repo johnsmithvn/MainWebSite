@@ -223,6 +223,13 @@ export const apiService = {
     // Explicit methods
     increaseViewMovie: (params) => api.post(`/api/increase-view/movie`, params),
     increaseViewManga: (params) => api.post(`/api/increase-view`, params),
+    // Delete view methods
+    deleteViewManga: (params) => api.delete(`/api/increase-view`, { params }),
+    deleteAllViewsManga: (params) => api.delete(`/api/increase-view/all`, { params }),
+    deleteViewMovie: (params) => api.delete(`/api/increase-view/movie`, { params }),
+    deleteAllViewsMovie: (params) => api.delete(`/api/increase-view/movie/all`, { params }),
+    deleteViewMusic: (params) => api.delete(`/api/increase-view/music`, { params }),
+    deleteAllViewsMusic: (params) => api.delete(`/api/increase-view/music/all`, { params }),
   },
 };
 

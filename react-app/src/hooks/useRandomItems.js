@@ -211,8 +211,6 @@ export const useRandomItems = (type, options = {}) => {
     }
     
     if (items && Array.isArray(items)) {
-      console.log('✅ Random items fetched:', items.length, 'items');
-      console.log('📊 Sample item:', items[0]);
       
       // Process thumbnails first based on content type
       items = processThumbnails(items, type);
