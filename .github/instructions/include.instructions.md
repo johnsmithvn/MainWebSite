@@ -2,6 +2,28 @@
 applyTo: '**'
 ---
 #  Instructions for MainWebSite
+#### Quy trình bắt buộc:
+1. **Trước khi fix/sửa**: Ghi nhận vấn đề trong CHANGELOG.md dưới mục `[Unreleased]`
+2. **Sau khi fix/sửa**: Cập nhật CHANGELOG.md với chi tiết thay đổi
+3. **Khi release**: Di chuyển từ `[Unreleased]` sang version mới
+
+#### Format changelog entry:
+```markdown
+### Fixed
+- 🐛 [YYYY-MM-DD] Fixed [mô tả vấn đề] → [giải pháp]
+
+### Added  
+- ✨ [YYYY-MM-DD] Added [tính năng mới] - [mô tả chi tiết]
+
+### Changed
+- 🔄 [YYYY-MM-DD] Changed [thay đổi gì] - [lý do]
+
+### Removed
+- 🗑️ [YYYY-MM-DD] Removed [xóa gì] - [lý do]
+```
+**QUAN TRỌNG**: Không cần Kiểm tra terminal và dự án hiện tại có đang chạy hay không, vì server luôn chạy nền, không cần khởi động lại.
+**QUAN TRỌNG**: Mỗi khi thực hiện fix bug, thêm feature, hoặc sửa đổi code, PHẢI cập nhật CHANGELOG.md
+**QUAN TRỌNG**: user sẽ là người test, không được tự ý tạo file test, debug, backup , và luôn nhớ là sever đang chạy , k cần chạy lại
 
 ## Project Architecture Overview
 

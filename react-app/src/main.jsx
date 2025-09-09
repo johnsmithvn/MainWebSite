@@ -7,7 +7,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Modal from 'react-modal';
 import App from './App';
-import './index.css';
+import './styles.css';
 
 // Create a query client
 const queryClient = new QueryClient({

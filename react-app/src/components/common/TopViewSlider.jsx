@@ -4,12 +4,15 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
-import { FiChevronLeft, FiChevronRight, FiEye } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiEye, FiTrash2 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import UniversalCard from '@/components/common/UniversalCard';
 import Button from '@/components/common/Button';
+import { useModal } from '@/components/common/Modal';
 import { useTopViewItems } from '@/hooks/useTopViewItems';
-import { useMangaStore, useMovieStore, useMusicStore, useAuthStore } from '@/store';
+import { useMangaStore, useMovieStore, useMusicStore, useAuthStore, useUIStore } from '@/store';
+import { apiService } from '@/utils/api';
 import '@/styles/components/embla.css';
 
 const TopViewSlider = ({ 
@@ -52,6 +55,9 @@ const TopViewSlider = ({
     type === 'music' ? musicStore : 
     mangaStore;
   const { sourceKey, rootFolder } = useAuthStore();
+  const { showToast } = useUIStore();
+  const queryClient = useQueryClient();
+  const { confirmModal, Modal: ModalComponent } = useModal();
 
   // Local refresh trigger for forcing re-renders
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
@@ -178,6 +184,95 @@ const TopViewSlider = ({
     }
   };
 
+  // Handle delete single view
+  const handleDeleteView = async (item) => {
+    const confirmed = await confirmModal(
+      'Xác nhận xóa lượt xem',
+      `Bạn có chắc muốn xóa lượt xem của "${item.name || item.path?.split('/').pop()}"?`,
+      'warning'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      console.log('🗑️ TopViewSlider deleteView:', { path: item.path, type });
+      
+      let response;
+      if (type === 'manga') {
+        response = await apiService.system.deleteViewManga({
+          path: item.path,
+          dbkey: sourceKey,
+          rootKey: rootFolder
+        });
+      } else if (type === 'movie') {
+        response = await apiService.system.deleteViewMovie({
+          key: sourceKey,
+          path: item.path
+        });
+      } else if (type === 'music') {
+        response = await apiService.system.deleteViewMusic({
+          key: sourceKey,
+          path: item.path
+        });
+      }
+      
+      if (response?.data?.success) {
+        showToast('✅ Đã xóa lượt xem', 'success');
+        // Invalidate query để force refetch data mới
+        queryClient.invalidateQueries(['topViewItems', type, sourceKey, type === 'manga' ? rootFolder : null]);
+        setLocalRefreshTrigger(prev => prev + 1);
+      } else {
+        showToast('❌ Lỗi xóa lượt xem', 'error');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting view in TopViewSlider:', error);
+      showToast('❌ Lỗi xóa lượt xem', 'error');
+    }
+  };
+
+  // Handle delete all views
+  const handleDeleteAllViews = async () => {
+    const confirmed = await confirmModal(
+      'Xác nhận xóa tất cả',
+      `Bạn có chắc muốn xóa tất cả lượt xem ${type}? Hành động này không thể hoàn tác.`,
+      'warning'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      console.log('🗑️ TopViewSlider deleteAllViews:', { type });
+      
+      let response;
+      if (type === 'manga') {
+        response = await apiService.system.deleteAllViewsManga({
+          dbkey: sourceKey,
+          rootKey: rootFolder
+        });
+      } else if (type === 'movie') {
+        response = await apiService.system.deleteAllViewsMovie({
+          key: sourceKey
+        });
+      } else if (type === 'music') {
+        response = await apiService.system.deleteAllViewsMusic({
+          key: sourceKey
+        });
+      }
+      
+      if (response?.data?.success) {
+        showToast(`✅ Đã xóa tất cả lượt xem ${type}`, 'success');
+        // Invalidate query để force refetch data mới
+        queryClient.invalidateQueries(['topViewItems', type, sourceKey, type === 'manga' ? rootFolder : null]);
+        setLocalRefreshTrigger(prev => prev + 1);
+      } else {
+        showToast('❌ Lỗi xóa tất cả lượt xem', 'error');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting all views in TopViewSlider:', error);
+      showToast('❌ Lỗi xóa tất cả lượt xem', 'error');
+    }
+  };
+
   if (error) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-4 sm:mb-6">
@@ -216,6 +311,18 @@ const TopViewSlider = ({
         </div>
 
         <div className="flex items-center space-x-2 flex-shrink-0">
+          {/* Delete all views button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDeleteAllViews}
+            disabled={!items || items.length === 0 || loading}
+            className="hidden sm:flex text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+            title="Xóa tất cả lượt xem"
+          >
+            <FiTrash2 className="w-4 h-4" />
+          </Button>
+          
           {/* Navigation buttons - hidden on mobile */}
           <Button
             variant="ghost"
@@ -258,7 +365,7 @@ const TopViewSlider = ({
             ) : (
               // Actual items - sorted by view count
               items?.map((item, index) => (
-                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide w-full h-full flex items-stretch">
+                <div key={`topview-${type}-${index}-${item.path?.replace(/[^a-zA-Z0-9]/g, '_') || index}-${localRefreshTrigger}`} className="embla__slide w-full h-full flex items-stretch">
                   <div className="relative w-full h-full">
                     {/* Ranking badge */}
                     {index < 3 && (
@@ -278,7 +385,9 @@ const TopViewSlider = ({
                       type={type}
                       isFavorite={Boolean(item.isFavorite)}
                       showViews={true}
+                      showDeleteView={true}
                       onToggleFavorite={() => handleToggleFavorite(item)}
+                      onDeleteView={() => handleDeleteView(item)}
                       variant="compact"
                       className="w-full h-full"
                       overlayMode={type === 'manga' ? 'views' : 'type'}
@@ -319,6 +428,9 @@ const TopViewSlider = ({
 
       {/* Bottom padding */}
       <div className="pb-2" />
+
+      {/* Modal Component */}
+      <ModalComponent />
     </div>
   );
 };

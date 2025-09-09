@@ -375,7 +375,7 @@ const RecentSlider = ({
             ) : (
               // Actual items - force key update để trigger re-render
               items?.map((item, index) => (
-                <div key={`${item.path || index}-${localRefreshTrigger}`} className="embla__slide w-full h-full flex items-stretch">
+                <div key={`recent-${type}-${index}-${item.path?.replace(/[^a-zA-Z0-9]/g, '_') || index}-${localRefreshTrigger}`} className="embla__slide w-full h-full flex items-stretch">
                   <div className="relative w-full h-full">
                     {/* Last viewed badge */}
                     {item.lastViewed && (

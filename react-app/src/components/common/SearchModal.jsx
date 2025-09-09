@@ -287,7 +287,7 @@ const SearchModal = ({ isOpen, onClose }) => {
                         <div className="p-3 text-sm text-gray-500 dark:text-gray-400">Đang tìm kiếm…</div>
                       )}
                       {!loading && results.map((item, index) => (
-                        <SuggestionItem key={`${item.path}-${index}`} item={item} onClick={() => handleResultClick(item)} />
+                        <SuggestionItem key={`search-${index}-${item.path?.replace(/[^a-zA-Z0-9]/g, '_') || index}`} item={item} onClick={() => handleResultClick(item)} />
                       ))}
                       {loadingMore && (
                         <div className="p-3 text-center text-xs text-gray-500 dark:text-gray-400">Đang tải thêm…</div>

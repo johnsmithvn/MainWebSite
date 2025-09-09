@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlay, FiFolder, FiMusic, FiHeart, FiEye, FiClock, FiPlus } from 'react-icons/fi';
+import { FiPlay, FiFolder, FiMusic, FiHeart, FiEye, FiClock, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store';
 import { useRecentManager } from '@/hooks/useRecentManager';
@@ -15,7 +15,9 @@ const UniversalCard = ({
   type = 'manga', // 'manga', 'movie', 'music'
   isFavorite = false,
   showViews = false, 
+  showDeleteView = false, // New: show delete view button
   onToggleFavorite,
+  onDeleteView, // New: callback for delete view
   variant = 'default', // 'default', 'compact', 'slider'
   className = '',
   // New: control what appears in the bottom-left overlay: 'type' or 'views'
@@ -205,6 +207,19 @@ const UniversalCard = ({
     }
   };
 
+  const handleDeleteViewClick = async (e) => {
+    e.stopPropagation();
+    
+    if (!onDeleteView) return;
+    
+    try {
+      await onDeleteView(item);
+      console.log('✅ Delete view completed');
+    } catch (error) {
+      console.error('❌ Error deleting view:', error);
+    }
+  };
+
   const itemData = getItemData();
   const TypeIcon = itemData.typeIcon;
 
@@ -277,6 +292,19 @@ const UniversalCard = ({
           </motion.button>
         )}
 
+        {/* Delete view button */}
+        {showDeleteView && (
+          <motion.button
+            className="absolute bottom-2 right-2 p-2 rounded-full bg-gray-900/80 text-white hover:bg-red-600/80 backdrop-blur-sm transition-colors duration-200"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={handleDeleteViewClick}
+            title="Xóa lượt xem"
+          >
+            <FiTrash2 className="w-4 h-4" />
+          </motion.button>
+        )}
+
     {/* Add to playlist button (music only, top-right) */}
         {type === 'music' && (
           <motion.button
@@ -310,7 +338,7 @@ const UniversalCard = ({
 
         {/* View count (bottom-right). Hide if overlayMode already shows views to avoid duplication */}
         {showViews && overlayMode !== 'views' && (item?.views ?? item?.viewCount ?? item?.count) !== undefined && (
-          <div className="absolute bottom-2 right-2">
+          <div className={`absolute ${showDeleteView ? 'bottom-12 right-2' : 'bottom-2 right-2'}`}>
             <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
               <FiEye className="w-3 h-3" />
               <span>{item?.views ?? item?.viewCount ?? item?.count ?? 0}</span>

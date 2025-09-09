@@ -117,5 +117,144 @@ router.post("/increase-view/music", (req, res) => {
   }
 });
 
+// 🗑️ Xóa lượt xem cho một folder cụ thể (manga)
+router.delete("/increase-view", (req, res) => {
+  const { path, dbkey, rootKey } = req.query;
+  
+  if (!path || !dbkey) {
+    return res.status(400).json({ error: "Missing path or dbkey" });
+  }
+  
+  const rootPath = getRootPath(dbkey);
+  if (!rootPath) {
+    return res.status(400).json({ error: "Invalid dbkey" });
+  }
+  
+  try {
+    const db = getDB(dbkey);
+    const deleted = db.prepare(`DELETE FROM views WHERE root = ? AND path = ?`).run(rootKey, path);
+    
+    if (deleted.changes > 0) {
+      res.json({ success: true, message: "View count deleted" });
+    } else {
+      res.json({ success: true, message: "No view record found" });
+    }
+  } catch (err) {
+    console.error("❌ Error deleting view:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// 🗑️ Xóa tất cả lượt xem (manga)
+router.delete("/increase-view/all", (req, res) => {
+  const { dbkey, rootKey } = req.query;
+  
+  if (!dbkey) {
+    return res.status(400).json({ error: "Missing dbkey" });
+  }
+  
+  const rootPath = getRootPath(dbkey);
+  if (!rootPath) {
+    return res.status(400).json({ error: "Invalid dbkey" });
+  }
+  
+  try {
+    const db = getDB(dbkey);
+    const deleted = rootKey 
+      ? db.prepare(`DELETE FROM views WHERE root = ?`).run(rootKey)
+      : db.prepare(`DELETE FROM views`).run();
+    
+    res.json({ success: true, deletedCount: deleted.changes });
+  } catch (err) {
+    console.error("❌ Error deleting all views:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// 🗑️ Xóa lượt xem cho video cụ thể (movie)
+router.delete("/increase-view/movie", (req, res) => {
+  const { key, path } = req.query;
+  
+  if (!key || !path) {
+    return res.status(400).json({ error: "Missing key or path" });
+  }
+  
+  const db = getMovieDB(key);
+  
+  try {
+    const updated = db.prepare(`UPDATE folders SET viewCount = 0 WHERE path = ?`).run(path);
+    
+    if (updated.changes > 0) {
+      res.json({ success: true, message: "View count reset to 0" });
+    } else {
+      res.status(404).json({ error: "Path not found" });
+    }
+  } catch (err) {
+    console.error("❌ Error deleting movie view:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// 🗑️ Xóa tất cả lượt xem movie
+router.delete("/increase-view/movie/all", (req, res) => {
+  const { key } = req.query;
+  
+  if (!key) {
+    return res.status(400).json({ error: "Missing key" });
+  }
+  
+  const db = getMovieDB(key);
+  
+  try {
+    const updated = db.prepare(`UPDATE folders SET viewCount = 0`).run();
+    res.json({ success: true, resetCount: updated.changes });
+  } catch (err) {
+    console.error("❌ Error deleting all movie views:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// 🗑️ Xóa lượt xem cho bài hát cụ thể (music)
+router.delete("/increase-view/music", (req, res) => {
+  const { key, path } = req.query;
+  
+  if (!key || !path) {
+    return res.status(400).json({ error: "Missing key or path" });
+  }
+  
+  const db = getMusicDB(key);
+  
+  try {
+    const updated = db.prepare(`UPDATE folders SET viewCount = 0 WHERE path = ?`).run(path);
+    
+    if (updated.changes > 0) {
+      res.json({ success: true, message: "View count reset to 0" });
+    } else {
+      res.status(404).json({ error: "Path not found" });
+    }
+  } catch (err) {
+    console.error("❌ Error deleting music view:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// 🗑️ Xóa tất cả lượt xem music
+router.delete("/increase-view/music/all", (req, res) => {
+  const { key } = req.query;
+  
+  if (!key) {
+    return res.status(400).json({ error: "Missing key" });
+  }
+  
+  const db = getMusicDB(key);
+  
+  try {
+    const updated = db.prepare(`UPDATE folders SET viewCount = 0`).run();
+    res.json({ success: true, resetCount: updated.changes });
+  } catch (err) {
+    console.error("❌ Error deleting all music views:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 module.exports = router;

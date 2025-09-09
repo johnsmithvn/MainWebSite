@@ -221,6 +221,15 @@
 - **Type safety**: Improved prop validation cho download-related components
 - **Code organization**: Tách download logic thành reusable functions với error handling
 
+
+### Changed
+
+- 🔄 [2025-09-07] Changed icon xóa topview position từ top-left sang bottom-right corner của card - Cải thiện UX bằng cách đặt action button ở vị trí thông thường hơn, tự động điều chỉnh view count badge lên trên khi có icon xóa
+
+### Removed
+
+- 🗑️ [2025-09-07] Removed useEffect debug rỗng trong MangaHome.jsx - Loại bỏ code debug không cần thiết để clean up codebase
+
 ## 5.0.4 - 2025-08-26
 
 - React-app: Cải thiện responsive layout cho tất cả Home pages (Manga, Movie, Music) - Home/Back button chỉ hiển thị icon (ẩn text) trên mobile để tiết kiệm không gian.

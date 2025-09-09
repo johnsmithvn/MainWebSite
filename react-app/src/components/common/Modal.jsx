@@ -6,7 +6,7 @@ import { X, AlertTriangle, CheckCircle, Info, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from './Button';
 
-const Modal = ({
+const ModalBase = ({
   isOpen = false,
   onClose,
   onConfirm,
@@ -193,10 +193,21 @@ export const useModal = () => {
     }));
   };
 
-  const confirmModal = (config) => {
-    openModal({
-      type: 'confirm',
-      ...config
+  const confirmModal = (title, message, type = 'confirm') => {
+    return new Promise((resolve) => {
+      openModal({
+        type,
+        title,
+        message,
+        onConfirm: () => {
+          closeModal();
+          resolve(true);
+        },
+        onClose: () => {
+          closeModal();
+          resolve(false);
+        }
+      });
     });
   };
 
@@ -229,16 +240,18 @@ export const useModal = () => {
     alertModal,
     errorModal,
     successModal,
-    Modal: (props) => (
-      <Modal
-        {...modalState}
-        {...props}
-        isOpen={modalState.isOpen}
-        onClose={closeModal}
-        onConfirm={modalState.onConfirm}
-      />
-    )
+    Modal: (props) => {
+      return (
+        <ModalBase
+          {...modalState}
+          {...props}
+          isOpen={modalState.isOpen}
+          onClose={modalState.onClose || closeModal}
+          onConfirm={modalState.onConfirm}
+        />
+      );
+    }
   };
 };
 
-export default Modal;
+export default ModalBase;

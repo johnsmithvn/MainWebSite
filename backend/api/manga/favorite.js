@@ -9,7 +9,6 @@ const { getDB } = require("../../utils/db");
  * Body: { dbkey, path, value: true/false }
  */
 router.post("/favorite", (req, res) => {
-  console.log("🔍 POST /api/manga/favorite - Request body:", req.body);
   const { dbkey, path, value } = req.body;
   // --- Validate đầu vào ---
   if (!dbkey || !path || typeof value !== "boolean") {
