@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.0.10 - 2025-09-09
+
+### Fixed
+
+- 🐛 [2025-09-09] Fixed window.confirm usage in OfflineLibrary delete operations → Replaced with custom modal với chapter information và confirmation flow
+- 🐛 [2025-09-09] Fixed hardcoded threshold values trong StorageQuotaModal → Import constants từ storageQuota.js để maintain consistency
+- 🐛 [2025-09-09] Fixed error handling trong MangaReader storage quota check → Set proper error state cho modal display
+- 🐛 [2025-09-09] Fixed hardcoded database version trong offlineLibrary.js → Use DB_VERSION constant để easier schema migrations
+
+### Cleanup
+
+- 🗑️ [2025-09-09] Removed test-storage-quota.js file từ main codebase → Test files should be in separate testing directory
+
 ## 5.0.9 - 2025-09-09
 
 ### 🚀 Enhanced Service Worker Implementation

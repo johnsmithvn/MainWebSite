@@ -1,9 +1,13 @@
 const DB_NAME = 'offline-manga';
 const STORE = 'chapters';
+const DB_VERSION = 1;
+
+// Export for testing and maintenance
+export { DB_VERSION };
 
 function openDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE)) {

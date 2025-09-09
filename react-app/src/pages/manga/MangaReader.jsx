@@ -565,6 +565,17 @@ const MangaReader = () => {
     } catch (err) {
       console.error('❌ Error checking storage quota:', err);
       toast.error('❌ Lỗi kiểm tra dung lượng: ' + err.message);
+      
+      // Set error state for modal display
+      setStorageCheckResult({
+        canDownload: false,
+        warning: false,
+        error: true,
+        errorMessage: err.message || 'Unknown error',
+        quota: null,
+        required: currentImages ? currentImages.length * 0.5 : 0,
+      });
+      setShowStorageQuotaModal(true);
     }
   };
 

@@ -430,24 +430,6 @@ function getCacheType(cacheName) {
   return 'unknown';
 }
 
-// Performance monitoring
-self.addEventListener('fetch', (event) => {
-  // Log cache hit/miss rates for monitoring
-  if (event.request.method === 'GET') {
-    const start = performance.now();
-    
-    event.respondWith(
-      (async () => {
-        // Your existing fetch handling logic here
-        // Then add performance logging
-        const duration = performance.now() - start;
-        
-        if (duration > 1000) {
-          console.warn('⚠️ Slow request:', getResourceName(event.request.url), `${Math.round(duration)}ms`);
-        }
-      })()
-    );
-  }
-});
+// Performance monitoring logic moved to main fetch handler.
 
 console.log('🚀 Enhanced Service Worker v2.0.0 loaded');
