@@ -262,11 +262,25 @@ const Home = () => {
           type="music"
           icon="🎵"
         />
-        <div className="text-center">
+        <div className="text-center space-y-4">
           {!online && (
             <p className="mb-2 text-sm text-red-500">Bạn đang offline</p>
           )}
-          <Button onClick={() => navigate('/offline')}>Open Offline Library</Button>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <Button 
+              onClick={() => navigate('/offline')}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 text-lg font-medium"
+            >
+              📚 Mở Offline Library
+            </Button>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              Truy cập các chapter đã tải để đọc offline
+            </p>
+          </motion.div>
         </div>
       </div>
 

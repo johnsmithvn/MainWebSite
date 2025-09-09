@@ -1,5 +1,91 @@
 # Changelog
 
+## 5.0.7 - 2025-09-09
+
+### 🗑️ Enhanced Cache Cleanup Mechanism
+
+- **Complete deletion system**: Implement `deleteChapterCompletely()` function để xóa cả metadata (IndexedDB) và images (Cache Storage) thay vì chỉ xóa metadata
+- **Bulk cleanup utility**: Thêm `clearAllOfflineData()` function để xóa toàn bộ offline data với detailed progress reporting
+- **Storage analysis**: Implement `getStorageAnalysis()` để theo dõi storage usage, quota, và statistics chi tiết
+- **Enhanced OfflineLibrary UI**: Thêm storage statistics dashboard, storage quota bar, và Clear All button với confirmation modal
+- **Smart cleanup logic**: Xóa images theo từng URL trong chapter.pageUrls, handle orphan images, và recreate fresh cache storage
+- **Progress feedback**: Detailed success/error messages với stats về số images deleted, bytes freed, và failure counts
+
+### 📊 Storage Management Dashboard
+
+- **Storage statistics card**: Hiển thị chapters count, total images, storage size, và storage quota percentage
+- **Visual quota indicator**: Progress bar với color coding (green/yellow/red) based on usage percentage
+- **Available vs Used display**: Show used storage, available space, và total quota với human-readable formatting
+- **Real-time updates**: Statistics auto-refresh sau mỗi delete operation để reflect current state
+
+### 🎯 Cache Cleanup User Experience
+
+- **Confirmation dialogs**: Safe delete với preview của data sẽ bị xóa (chapters, images, storage size)
+- **Detailed toast messages**: Success toasts hiển thị exact numbers (deleted images, bytes freed, success rate)
+- **Loading states**: Proper loading indicators cho delete operations với toast notifications
+- **Error resilience**: Handle partial failures gracefully, continue deletion process even khi một số images fail
+- **Atomic operations**: Ensure data consistency khi delete metadata và cache storage
+
+### 🔧 Technical Implementation
+
+- **Hybrid storage cleanup**: Coordinated deletion across IndexedDB metadata và Cache Storage images
+- **Error handling**: Comprehensive try-catch với detailed error logging và user feedback
+- **Memory optimization**: Efficient batch processing cho large deletion operations
+- **Cache consistency**: Ensure no orphan images left behind sau khi delete chapters
+- **Storage estimation**: Accurate byte counting và progress tracking cho deletion operations
+
+### 🚀 Performance & Reliability
+
+- **Batch processing**: Efficient handling của large numbers of chapters và images
+- **Progress tracking**: Real-time progress reporting cho long-running deletion operations
+- **Fallback mechanisms**: Graceful degradation khi Storage Quota API không available
+- **Cleanup verification**: Post-deletion verification để ensure complete cleanup
+- **Resource management**: Proper cleanup của temporary objects và memory usage
+
+## 5.0.6 - 2025-09-09
+
+### 🎨 Offline Library UI Redesign
+
+- **Card-based layout**: Hoàn toàn redesign Offline Library với card layout tương tự Manga Favorites
+- **Cover image display**: Hiển thị ảnh bìa (trang đầu tiên) cho mỗi chapter downloaded
+- **Dual view modes**: Support cả Grid view và List view với toggle button
+- **Search functionality**: Client-side search theo tên manga/chapter
+- **Advanced sorting**: Sort theo ngày tải (mới nhất lên đầu), cũ nhất, và tên A-Z
+- **Enhanced metadata**: Lưu cover image, improved title extraction từ path
+- **Responsive design**: Optimized cho mobile với responsive grid layout
+
+### 📊 Enhanced Chapter Information
+
+- **Visual indicators**: Badge hiển thị số trang, file size, ngày tải
+- **Better title extraction**: Tách manga title (parent folder) và chapter title (current folder)
+- **Timestamp display**: Hiển thị ngày giờ tải với format Việt Nam
+- **Storage info**: Hiển thị file size ước tính (MB)
+- **Cover image fallback**: Default cover khi không có ảnh hoặc lỗi load
+
+### 🎯 User Experience Improvements
+
+- **Hover interactions**: Overlay buttons xuất hiện khi hover vào card
+- **Action buttons**: Read và Delete buttons với proper icons và tooltips
+- **Empty states**: Friendly messages khi chưa có chapter hoặc không tìm thấy
+- **Loading states**: Proper loading indicator khi tải danh sách
+- **Toast notifications**: Success/error messages cho các actions
+- **Auto-refresh**: Danh sách tự động cập nhật sau khi delete
+
+### 🔧 Technical Enhancements
+
+- **Memory optimization**: Efficient filtering và sorting với useMemo
+- **Error handling**: Improved error handling cho image loading và operations
+- **CSS utilities**: Thêm line-clamp utilities cho text truncation
+- **Component modularity**: Tách ChapterCard và ChapterListItem components
+- **Accessibility**: Proper alt texts, focus states, và keyboard navigation
+
+### 📱 Mobile Responsiveness
+
+- **Responsive grid**: 2-6 columns tùy screen size (2 mobile → 6 desktop)
+- **Touch-friendly**: Appropriately sized touch targets
+- **Mobile controls**: Optimized search bar và control layout cho mobile
+- **Compact list view**: Alternative view cho screens nhỏ
+
 ## 5.0.5 - 2025-09-09
 
 ### 📥 Offline Library & Download Improvements

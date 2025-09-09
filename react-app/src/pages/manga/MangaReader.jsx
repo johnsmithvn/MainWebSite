@@ -7,7 +7,7 @@ import { apiService } from '../../utils/api';
 import ReaderHeader from '../../components/manga/ReaderHeader';
 import { DownloadProgressModal } from '../../components/common';
 import toast from 'react-hot-toast';
-import { downloadChapter, getChapter, isChapterDownloaded } from '../../utils/offlineLibrary';
+import { downloadChapter, getChapter, isChapterDownloaded, checkStorageBeforeDownload, estimateChapterSize } from '../../utils/offlineLibrary';
 import '../../styles/components/manga-reader.css';
 import '../../styles/components/reader-header.css';
 
@@ -551,11 +551,21 @@ const MangaReader = () => {
         }
       };
       
+      // Enhanced metadata with better title extraction
+      const folderName = getFolderName();
+      const cleanPath = currentMangaPath.replace(/\/__self__$/, '');
+      const pathParts = cleanPath.split('/').filter(Boolean);
+      
+      const mangaTitle = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : folderName;
+      const chapterTitle = folderName;
+      
       await downloadChapter({
         id: currentMangaPath,
-        mangaTitle: currentMangaPath,
-        chapterTitle: currentMangaPath,
+        mangaTitle,
+        chapterTitle,
         pageUrls: currentImages,
+        sourceKey: stableAuthKeys.sourceKey,
+        rootFolder: stableAuthKeys.rootFolder,
       }, onProgress);
       
       // Update offline status

@@ -228,17 +228,48 @@ The app integrates with a Node.js backend providing:
 - User authentication and authorization
 - File serving and streaming capabilities
 
-## 📥 Offline Mode
+## 📥 Offline Mode & Storage Management
 
-The React app is installable as a Progressive Web App. When online, you can download an entire manga chapter for offline reading by
-opening the reader and clicking **Download offline**. The chapter pages are stored in browser cache and metadata in IndexedDB. A new
-**Offline Library** (route `/offline`) lists downloaded chapters and allows reading or deleting them.
+The React app is installable as a Progressive Web App with comprehensive offline capabilities.
 
-An "Open Offline Library" button is available on the Home page for quick access to your downloaded chapters at any time.
+### 📱 Offline Chapter Reading
+- **Download for offline**: Open any manga reader and click **Download offline** to save chapters locally
+- **Hybrid storage**: Chapter metadata stored in IndexedDB, images cached in browser Cache Storage API
+- **Service Worker integration**: Automatic cache-first serving of offline images
+- **Progress tracking**: Real-time download progress with detailed statistics
 
-- Approximate storage limit: 500MB (varies by browser).
-- Delete single chapters or clear the browser data to free space.
-- To completely reset offline data, use the **Clear browsing data** option in your browser or delete all items from the Offline Library.
+### 🗂️ Offline Library Management
+- **Dedicated library**: Access via route `/offline` or "Open Offline Library" button on Home page
+- **Storage analytics**: View total chapters, images count, storage size, and browser quota usage
+- **Visual indicators**: Storage quota bar with color-coded warnings (green/yellow/red)
+- **Search & filtering**: Find chapters by name with client-side search
+- **Dual view modes**: Grid cards and list view for optimal browsing
+
+### 🗑️ Advanced Cache Cleanup
+- **Individual deletion**: Smart cleanup that removes both metadata (IndexedDB) and images (Cache Storage)
+- **Bulk operations**: "Clear All" functionality with confirmation and detailed progress reporting
+- **Storage verification**: Post-deletion verification ensures complete cleanup with no orphan data
+- **Detailed feedback**: Success messages show exact numbers (images deleted, storage freed, failure counts)
+- **Error resilience**: Handles partial failures gracefully, continues cleanup process even if some images fail
+
+### 📊 Storage Statistics & Monitoring
+- **Real-time analytics**: Live tracking of chapters count, total images, storage usage, and browser quota
+- **Quota management**: Visual progress bars and warnings when approaching storage limits
+- **Storage breakdown**: Average storage per chapter, success rates, and detailed size formatting
+- **Automatic updates**: Statistics refresh after each operation to reflect current state
+
+### 🔧 Technical Implementation
+- **Approximate storage limit**: 500MB per origin (varies by browser and available space)
+- **Cleanup options**: Delete individual chapters, clear all data, or use browser's "Clear browsing data"
+- **Data persistence**: Offline data survives browser restarts and persists until manually deleted
+- **Performance optimization**: Efficient batch processing for large deletion operations
+- **Cache consistency**: Coordinated cleanup across IndexedDB and Cache Storage to prevent inconsistencies
+
+### 🚀 Progressive Web App Features
+- **Installable**: Add to home screen on mobile devices and desktop
+- **Offline-first**: Cached chapters work completely offline with no network dependency
+- **Service Worker**: Background processing for cache management and network interception
+- **Responsive design**: Optimized interface for all screen sizes and touch interactions
 
 ## 🐛 Troubleshooting
 

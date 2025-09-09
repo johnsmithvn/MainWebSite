@@ -399,6 +399,278 @@ VITE_BASE=/                    # Base URL
 VITE_DISABLE_STRICT_MODE=false # Development flag
 ```
 
+## 📥 Offline Storage Architecture
+
+### Progressive Web App (PWA) Storage Strategy
+
+The application implements a **hybrid storage model** for offline chapter reading capabilities:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Offline Storage Layer                    │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────┐              ┌─────────────────┐      │
+│  │   IndexedDB     │              │  Cache Storage  │      │
+│  │   (Metadata)    │ ←──────────→ │   (Images)      │      │
+│  │                 │              │                 │      │
+│  │ • Chapter info  │              │ • Page images   │      │
+│  │ • Page URLs     │              │ • Binary data   │      │
+│  │ • File sizes    │              │ • HTTP responses│      │
+│  │ • Timestamps    │              │ • Service Worker│      │
+│  │ • User metadata │              │   integration   │      │
+│  └─────────────────┘              └─────────────────┘      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Storage Architecture Components
+
+#### 1. IndexedDB (Structured Metadata Storage)
+```javascript
+// Database Schema
+const DB_NAME = 'offline-manga';
+const STORE = 'chapters';
+
+// Chapter Metadata Structure
+{
+  id: string,              // Unique chapter identifier
+  mangaTitle: string,      // Extracted manga title
+  chapterTitle: string,    // Chapter folder name
+  pageUrls: string[],      // Array of image URLs
+  bytes: number,           // Total storage size
+  totalPages: number,      // Page count
+  coverImage: string,      // First page URL for thumbnail
+  createdAt: number,       // Download timestamp
+  updatedAt: number,       // Last update timestamp
+  sourceKey: string,       // Source database key
+  rootFolder: string       // Root folder reference
+}
+```
+
+#### 2. Cache Storage API (Binary Image Storage)
+```javascript
+// Cache Storage Strategy
+const CACHE_NAME = 'chapter-images';
+
+// Storage Process
+1. Fetch image with CORS mode
+2. Clone response for size calculation
+3. Store in Cache Storage with original URL as key
+4. Track total bytes for metadata
+
+// Retrieval Process
+1. Service Worker intercepts image requests
+2. Check Cache Storage for cached response
+3. Serve from cache if available
+4. Fallback to network if not cached
+```
+
+#### 3. Service Worker Integration
+```javascript
+// Request Interception Pattern
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // Handle manga image requests
+  if (url.pathname.includes('/manga/') && isImageRequest(event.request)) {
+    event.respondWith(handleImageRequest(event.request));
+  }
+});
+
+// Cache-First Strategy for Images
+async function handleImageRequest(request) {
+  // 1. Check cache first
+  const cache = await caches.open('chapter-images');
+  const cachedResponse = await cache.match(request);
+  
+  if (cachedResponse) {
+    return cachedResponse; // Serve from cache
+  }
+  
+  // 2. Fallback to network
+  const networkResponse = await fetch(request);
+  
+  // 3. Cache for future use
+  if (networkResponse.ok) {
+    await cache.put(request, networkResponse.clone());
+  }
+  
+  return networkResponse;
+}
+```
+
+### Cache Management Architecture
+
+#### 1. Download Process Architecture
+```javascript
+// Download Flow
+User Action → Progress Tracking → Dual Storage → Completion Verification
+
+// Implementation Strategy
+1. User clicks download button
+2. Initialize progress tracking system
+3. Fetch images with CORS mode for size calculation
+4. Store images in Cache Storage
+5. Calculate and track storage usage
+6. Save comprehensive metadata to IndexedDB
+7. Provide real-time progress feedback
+8. Handle errors gracefully with retry logic
+```
+
+#### 2. Cache Cleanup Architecture
+```javascript
+// Cleanup Strategy Pattern
+Single Delete: Metadata Check → Image Deletion → IndexedDB Cleanup
+Bulk Delete: Batch Processing → Nuclear Cache Clear → Statistics
+
+// Complete Deletion Implementation
+deleteChapterCompletely: async (id) => {
+  // 1. Retrieve metadata for cleanup planning
+  const chapter = await getChapter(id);
+  
+  // 2. Delete images from Cache Storage
+  const cache = await caches.open('chapter-images');
+  for (const url of chapter.pageUrls) {
+    await cache.delete(url);
+  }
+  
+  // 3. Remove metadata from IndexedDB
+  await deleteChapter(id);
+  
+  // 4. Return detailed statistics
+  return { success, stats: { deletedImages, bytesFreed } };
+}
+```
+
+#### 3. Storage Analysis Architecture
+```javascript
+// Storage Monitoring Pattern
+Real-time Analysis → Quota Management → User Feedback
+
+// Storage Analysis Implementation
+getStorageAnalysis: async () => {
+  // 1. Analyze IndexedDB metadata
+  const chapters = await getChapters();
+  let totalBytes = 0, totalImages = 0;
+  
+  // 2. Calculate totals
+  chapters.forEach(chapter => {
+    totalBytes += chapter.bytes || 0;
+    totalImages += chapter.totalPages || 0;
+  });
+  
+  // 3. Get browser storage quota
+  const estimate = await navigator.storage.estimate();
+  
+  // 4. Return comprehensive analysis
+  return {
+    chapters: { count, totalBytes, totalImages },
+    quota: { usage, available, percentage },
+    formattedSize: formatBytes(totalBytes)
+  };
+}
+```
+
+### Offline Reading Architecture
+
+#### 1. Offline Mode Detection
+```javascript
+// URL Parameter Strategy
+const isOfflineMode = searchParams.get('offline') === '1';
+
+// Route Pattern
+/manga/reader/{chapterId}?offline=1
+```
+
+#### 2. Offline Data Loading
+```javascript
+// Offline Loading Flow
+Check Parameter → Load Metadata → Set Images → Service Worker Serves
+
+// Implementation
+if (isOfflineMode) {
+  const chapter = await getChapter(currentMangaPath);
+  if (chapter) {
+    setCurrentImages(chapter.pageUrls);
+    // Service Worker automatically serves images from cache
+  } else {
+    setError('Offline data not found');
+  }
+}
+```
+
+### Performance Optimization Architecture
+
+#### 1. Progressive Loading Strategy
+```javascript
+// Download Optimization
+1. Parallel image fetching with concurrency limits
+2. Progress tracking with debounced UI updates
+3. Error resilience with individual page failure handling
+4. Memory management with response cloning
+```
+
+#### 2. Storage Efficiency
+```javascript
+// Storage Optimization
+1. Deduplication: Same URL = same cache entry
+2. Compression: Native browser compression
+3. Cleanup: Complete removal prevents orphan data
+4. Monitoring: Real-time storage usage tracking
+```
+
+### Error Handling & Resilience
+
+#### 1. Download Error Handling
+```javascript
+// Resilient Download Strategy
+try {
+  // Download individual image
+} catch (err) {
+  // Log error but continue with next image
+  // Track failed downloads in metadata
+  // Provide detailed error reporting
+}
+```
+
+#### 2. Cache Corruption Recovery
+```javascript
+// Recovery Strategy
+1. Detect inconsistencies between IndexedDB and Cache Storage
+2. Provide repair utilities
+3. Nuclear reset options
+4. Graceful degradation to network mode
+```
+
+### Security Considerations
+
+#### 1. Storage Isolation
+- Origin-specific storage boundaries
+- No cross-origin cache pollution
+- Secure token handling in offline mode
+
+#### 2. Data Integrity
+- Checksum verification for critical metadata
+- Atomic operations for consistency
+- Rollback mechanisms for failed operations
+
+### Future Architecture Enhancements
+
+#### 1. Planned Improvements
+- **Background Sync**: Automatic download resumption
+- **Smart Prefetching**: Predictive chapter downloads
+- **Storage Compression**: Advanced compression strategies
+- **Sync Conflicts**: Multi-device synchronization
+
+#### 2. Scalability Considerations
+- **Storage Quotas**: Dynamic quota management
+- **Performance Metrics**: Detailed analytics
+- **User Preferences**: Configurable storage policies
+- **Cloud Backup**: Optional cloud synchronization
+
+This offline storage architecture provides a robust foundation for Progressive Web App capabilities while maintaining performance, reliability, and user experience standards.
+
 ## 🎯 Future Architecture Considerations
 
 ### 1. Potential Improvements

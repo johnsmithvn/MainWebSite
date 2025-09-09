@@ -48,6 +48,188 @@ export function deleteChapter(id) {
   return withStore('readwrite', (store) => store.delete(id));
 }
 
+// 🗑️ CACHE CLEANUP: Xóa chapter hoàn toàn (metadata + images)
+export async function deleteChapterCompletely(id) {
+  try {
+    console.log('🗑️ Starting complete deletion for chapter:', id);
+    
+    // 1. Lấy metadata để biết có những images nào cần xóa
+    const chapter = await getChapter(id);
+    if (!chapter) {
+      console.warn('⚠️ Chapter not found in IndexedDB:', id);
+      return { success: false, message: 'Chapter not found' };
+    }
+    
+    // 2. Xóa tất cả images từ Cache Storage
+    const cache = await caches.open('chapter-images');
+    let deletedImages = 0;
+    let failedImages = 0;
+    
+    if (chapter.pageUrls && chapter.pageUrls.length > 0) {
+      for (const url of chapter.pageUrls) {
+        try {
+          const deleted = await cache.delete(url);
+          if (deleted) {
+            deletedImages++;
+            console.log('✅ Deleted image from cache:', url.split('/').pop());
+          } else {
+            console.warn('⚠️ Image not found in cache:', url.split('/').pop());
+          }
+        } catch (err) {
+          failedImages++;
+          console.error('❌ Failed to delete image from cache:', url.split('/').pop(), err);
+        }
+      }
+    }
+    
+    // 3. Xóa metadata từ IndexedDB
+    await deleteChapter(id);
+    
+    const totalImages = chapter.pageUrls ? chapter.pageUrls.length : 0;
+    const message = `Deleted ${deletedImages}/${totalImages} images and metadata`;
+    
+    console.log('✅ Chapter deleted completely:', {
+      id,
+      totalImages,
+      deletedImages,
+      failedImages,
+      bytes: chapter.bytes || 0
+    });
+    
+    return { 
+      success: true, 
+      message,
+      stats: {
+        totalImages,
+        deletedImages,
+        failedImages,
+        bytesFreed: chapter.bytes || 0
+      }
+    };
+    
+  } catch (error) {
+    console.error('❌ Error deleting chapter completely:', error);
+    return { 
+      success: false, 
+      message: error.message,
+      error: error.name 
+    };
+  }
+}
+
+// 🧹 BULK CLEANUP: Xóa tất cả chapters và cache
+export async function clearAllOfflineData() {
+  try {
+    console.log('🧹 Starting complete cache cleanup...');
+    
+    // 1. Lấy danh sách tất cả chapters
+    const chapters = await getChapters();
+    console.log(`📊 Found ${chapters.length} chapters to delete`);
+    
+    let totalBytesFreed = 0;
+    let totalImagesDeleted = 0;
+    
+    // 2. Xóa từng chapter một cách an toàn
+    for (const chapter of chapters) {
+      const result = await deleteChapterCompletely(chapter.id);
+      if (result.success && result.stats) {
+        totalBytesFreed += result.stats.bytesFreed;
+        totalImagesDeleted += result.stats.deletedImages;
+      }
+    }
+    
+    // 3. Xóa toàn bộ Cache Storage (đảm bảo không còn orphan images)
+    try {
+      await caches.delete('chapter-images');
+      console.log('✅ Deleted entire chapter-images cache');
+    } catch (err) {
+      console.warn('⚠️ Failed to delete cache storage:', err);
+    }
+    
+    // 4. Recreate cache storage
+    await caches.open('chapter-images');
+    console.log('✅ Recreated fresh chapter-images cache');
+    
+    const summary = {
+      chaptersDeleted: chapters.length,
+      imagesDeleted: totalImagesDeleted,
+      bytesFreed: totalBytesFreed,
+      message: `Cleared ${chapters.length} chapters, ${totalImagesDeleted} images`
+    };
+    
+    console.log('🎉 Complete cleanup finished:', summary);
+    return { success: true, ...summary };
+    
+  } catch (error) {
+    console.error('❌ Error during complete cleanup:', error);
+    return { 
+      success: false, 
+      message: error.message,
+      error: error.name 
+    };
+  }
+}
+
+// 📊 STORAGE ANALYSIS: Phân tích storage usage
+export async function getStorageAnalysis() {
+  try {
+    const chapters = await getChapters();
+    const cache = await caches.open('chapter-images');
+    
+    let totalBytes = 0;
+    let totalImages = 0;
+    let totalChapters = chapters.length;
+    
+    // Tính tổng từ metadata
+    for (const chapter of chapters) {
+      totalBytes += chapter.bytes || 0;
+      totalImages += chapter.totalPages || 0;
+    }
+    
+    // Kiểm tra browser storage quota
+    let quotaInfo = null;
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+      try {
+        const estimate = await navigator.storage.estimate();
+        quotaInfo = {
+          quota: estimate.quota || 0,
+          usage: estimate.usage || 0,
+          available: (estimate.quota || 0) - (estimate.usage || 0),
+          percentage: estimate.quota ? Math.round((estimate.usage / estimate.quota) * 100) : 0
+        };
+      } catch (err) {
+        console.warn('⚠️ Failed to get storage estimate:', err);
+      }
+    }
+    
+    return {
+      chapters: {
+        count: totalChapters,
+        totalBytes,
+        totalImages,
+        averageBytesPerChapter: totalChapters > 0 ? Math.round(totalBytes / totalChapters) : 0,
+        averageImagesPerChapter: totalChapters > 0 ? Math.round(totalImages / totalChapters) : 0
+      },
+      quota: quotaInfo,
+      formattedSize: formatBytes(totalBytes),
+      cacheStoreName: 'chapter-images'
+    };
+    
+  } catch (error) {
+    console.error('❌ Error analyzing storage:', error);
+    return null;
+  }
+}
+
+// 🔧 Helper: Format bytes to human readable
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
 // Kiểm tra xem chapter đã được download hay chưa
 export async function isChapterDownloaded(id) {
   try {
@@ -70,6 +252,9 @@ export async function downloadChapter(meta, onProgress = null) {
   if (onProgress) {
     onProgress({ current: 0, total: totalPages, status: 'starting' });
   }
+  
+  // Get cover image (first page) for thumbnail
+  const coverImage = pageUrls.length > 0 ? pageUrls[0] : null;
   
   for (let i = 0; i < pageUrls.length; i++) {
     const url = pageUrls[i];
@@ -114,14 +299,21 @@ export async function downloadChapter(meta, onProgress = null) {
     }
   }
   
-  // Lưu metadata vào IndexedDB
-  await saveChapter({
+  // Enhanced metadata với cover image và title extraction
+  const enhancedMeta = {
     ...meta,
     bytes,
     totalPages: pageUrls.length,
+    coverImage,
+    // Cải thiện title extraction
+    mangaTitle: meta.mangaTitle || extractMangaTitle(meta.id),
+    chapterTitle: meta.chapterTitle || extractChapterTitle(meta.id),
     createdAt: Date.now(),
     updatedAt: Date.now(),
-  });
+  };
+  
+  // Lưu metadata vào IndexedDB
+  await saveChapter(enhancedMeta);
   
   // Báo cáo hoàn thành
   if (onProgress) {
@@ -134,4 +326,31 @@ export async function downloadChapter(meta, onProgress = null) {
   }
   
   return { success: true, bytes, totalPages };
+}
+
+// Helper functions để extract title từ path
+function extractMangaTitle(path) {
+  if (!path) return 'Unknown Manga';
+  
+  // Remove __self__ suffix if exists
+  const cleanPath = path.replace(/\/__self__$/, '');
+  const parts = cleanPath.split('/').filter(Boolean);
+  
+  if (parts.length >= 2) {
+    // Return parent folder as manga title
+    return parts[parts.length - 2] || 'Unknown Manga';
+  }
+  
+  return parts[parts.length - 1] || 'Unknown Manga';
+}
+
+function extractChapterTitle(path) {
+  if (!path) return 'Unknown Chapter';
+  
+  // Remove __self__ suffix if exists
+  const cleanPath = path.replace(/\/__self__$/, '');
+  const parts = cleanPath.split('/').filter(Boolean);
+  
+  // Return last folder as chapter title
+  return parts[parts.length - 1] || 'Unknown Chapter';
 }
