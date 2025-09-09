@@ -13,6 +13,8 @@ export default function OfflineLibrary() {
   const [loading, setLoading] = useState(true);
   const [storageStats, setStorageStats] = useState(null);
   const [showClearModal, setShowClearModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [chapterToDelete, setChapterToDelete] = useState(null);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -72,19 +74,27 @@ export default function OfflineLibrary() {
         return;
       }
 
-      // Confirm delete
-      const confirmed = window.confirm(
-        `Bạn có chắc muốn xóa chapter "${chapter.mangaTitle || chapter.chapterTitle || 'Unknown'}"?\n\n` +
-        `Sẽ xóa ${chapter.totalPages || 0} ảnh và ${chapter.bytes ? Math.round(chapter.bytes / (1024 * 1024) * 10) / 10 : 'Unknown'} MB dữ liệu.`
-      );
-      
-      if (!confirmed) return;
+      // Show delete confirmation modal
+      setChapterToDelete(chapter);
+      setShowDeleteModal(true);
+    } catch (err) {
+      console.error('Error preparing delete:', err);
+      toast.error('❌ Lỗi khi chuẩn bị xóa chapter');
+    }
+  };
 
+  // Actual delete function
+  const handleConfirmDelete = async () => {
+    if (!chapterToDelete) return;
+    
+    try {
+      setShowDeleteModal(false);
+      
       // Show loading state
       toast.loading('Đang xóa chapter...', { id: 'delete-chapter' });
 
       // Delete completely (metadata + images)
-      const result = await deleteChapterCompletely(id);
+      const result = await deleteChapterCompletely(chapterToDelete.id);
       
       if (result.success) {
         await load(); // Reload data
@@ -100,6 +110,8 @@ export default function OfflineLibrary() {
     } catch (err) {
       console.error('Error deleting chapter:', err);
       toast.error('❌ Lỗi khi xóa chapter', { id: 'delete-chapter' });
+    } finally {
+      setChapterToDelete(null);
     }
   };
 
@@ -420,6 +432,91 @@ export default function OfflineLibrary() {
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Xóa tất cả
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Chapter Confirmation Modal */}
+      {showDeleteModal && chapterToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Xóa chapter
+                </h3>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Bạn có chắc muốn xóa chapter này không?
+              </p>
+              
+              {/* Chapter Info */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <img 
+                    src={chapterToDelete.pageUrls?.[0] || '/default/default-cover.jpg'} 
+                    alt="Chapter cover"
+                    className="w-12 h-16 object-cover rounded border border-gray-200 dark:border-gray-600"
+                    onError={(e) => {
+                      e.target.src = '/default/default-cover.jpg';
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-gray-900 dark:text-white line-clamp-2 mb-1">
+                      {chapterToDelete.mangaTitle || chapterToDelete.chapterTitle || 'Unknown'}
+                    </h4>
+                    <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+                      <div>{chapterToDelete.totalPages || 0} trang</div>
+                      <div>
+                        {chapterToDelete.bytes 
+                          ? `${Math.round(chapterToDelete.bytes / (1024 * 1024) * 10) / 10} MB` 
+                          : 'Unknown size'
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">Sẽ xóa:</span>{' '}
+                    {chapterToDelete.totalPages || 0} ảnh và{' '}
+                    {chapterToDelete.bytes 
+                      ? `${Math.round(chapterToDelete.bytes / (1024 * 1024) * 10) / 10} MB` 
+                      : 'Unknown'
+                    } dữ liệu
+                  </p>
+                </div>
+              </div>
+              
+              <p className="text-sm text-red-600 dark:text-red-400 mt-4 font-medium">
+                ⚠️ Hành động này không thể hoàn tác!
+              </p>
+            </div>
+            
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setChapterToDelete(null);
+                }}
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={handleConfirmDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Xóa chapter
               </Button>
             </div>
           </div>
