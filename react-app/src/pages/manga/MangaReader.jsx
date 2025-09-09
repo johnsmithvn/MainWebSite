@@ -5,8 +5,9 @@ import { useMangaStore, useAuthStore } from '../../store';
 import { useRecentManager } from '../../hooks/useRecentManager';
 import { apiService } from '../../utils/api';
 import ReaderHeader from '../../components/manga/ReaderHeader';
+import { DownloadProgressModal } from '../../components/common';
 import toast from 'react-hot-toast';
-import { downloadChapter, getChapter } from '../../utils/offlineLibrary';
+import { downloadChapter, getChapter, isChapterDownloaded } from '../../utils/offlineLibrary';
 import '../../styles/components/manga-reader.css';
 import '../../styles/components/reader-header.css';
 
@@ -48,6 +49,12 @@ const MangaReader = () => {
   const [showJumpModal, setShowJumpModal] = useState(false);
   const [jumpInput, setJumpInput] = useState('');
   const [jumpContext, setJumpContext] = useState('vertical'); // 'vertical' | 'horizontal'
+  
+  // Download states
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0, status: 'idle' });
+  const [isChapterOfflineAvailable, setIsChapterOfflineAvailable] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
 
   // Debug cache status function
   const getCacheStatus = useCallback(() => {
@@ -111,6 +118,22 @@ const MangaReader = () => {
     const isFav = (favorites || []).some((f) => f.path === cleanPath);
     setIsFavorite(isFav);
   }, [favorites, currentPath]);
+
+  // Check if chapter is already downloaded
+  useEffect(() => {
+    const checkOfflineStatus = async () => {
+      if (!currentMangaPath) return;
+      try {
+        const isAvailable = await isChapterDownloaded(currentMangaPath);
+        setIsChapterOfflineAvailable(isAvailable);
+      } catch (err) {
+        console.error('Error checking offline status:', err);
+        setIsChapterOfflineAvailable(false);
+      }
+    };
+    
+    checkOfflineStatus();
+  }, [currentMangaPath]);
 
   // Enhanced preload using link preload for better browser cache integration
   const preloadImage = useCallback((src) => {
@@ -510,18 +533,46 @@ const MangaReader = () => {
   };
 
   const handleDownloadChapter = async () => {
-    if (!currentImages.length || !currentMangaPath) return;
+    if (!currentImages.length || !currentMangaPath || isDownloading) return;
+    
     try {
+      setIsDownloading(true);
+      setShowDownloadModal(true);
+      setDownloadProgress({ current: 0, total: currentImages.length, status: 'starting' });
+      
+      // Progress callback
+      const onProgress = (progress) => {
+        setDownloadProgress(progress);
+        
+        if (progress.status === 'downloading') {
+          // Show progress in console for debugging
+          const percentage = Math.round((progress.current / progress.total) * 100);
+          console.log(`⬇️ Downloading: ${percentage}% (${progress.current}/${progress.total})`);
+        }
+      };
+      
       await downloadChapter({
         id: currentMangaPath,
         mangaTitle: currentMangaPath,
         chapterTitle: currentMangaPath,
         pageUrls: currentImages,
-      });
-      toast.success('Chapter available offline');
+      }, onProgress);
+      
+      // Update offline status
+      setIsChapterOfflineAvailable(true);
+      toast.success('✅ Chapter downloaded successfully!');
+      
+      // Auto close modal after 3 seconds if completed
+      setTimeout(() => {
+        setShowDownloadModal(false);
+      }, 3000);
+      
     } catch (err) {
       console.error('Download failed', err);
-      toast.error('Download failed');
+      toast.error('❌ Download failed: ' + err.message);
+      setDownloadProgress(prev => ({ ...prev, status: 'error', error: err.message }));
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -579,6 +630,16 @@ const MangaReader = () => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [showJumpModal]);
+
+  // Helper function to get folder name from current path
+  const getFolderName = () => {
+    if (!currentPath) return 'Manga Reader';
+    
+    // Remove /__self__ suffix if exists
+    const cleanPath = currentPath.replace(/\/__self__$/, '');
+    const pathParts = cleanPath.split('/').filter(Boolean);
+    return pathParts[pathParts.length - 1] || 'Manga Reader';
+  };
 
   if (loading) {
     return (
@@ -665,6 +726,9 @@ const MangaReader = () => {
           onToggleFavorite={handleToggleFavorite}
           onSetThumbnail={handleSetThumbnail}
           onDownload={!isOfflineMode ? handleDownloadChapter : undefined}
+          isDownloading={isDownloading}
+          downloadProgress={downloadProgress}
+          isOfflineAvailable={isChapterOfflineAvailable}
         />
       )}
 
@@ -941,6 +1005,15 @@ const MangaReader = () => {
           </div>
         </div>
       )}
+      
+      {/* Download Progress Modal */}
+      <DownloadProgressModal
+        isOpen={showDownloadModal}
+        onClose={() => setShowDownloadModal(false)}
+        progress={downloadProgress}
+        isDownloading={isDownloading}
+        chapterTitle={getFolderName()}
+      />
     </div>
   );
 };

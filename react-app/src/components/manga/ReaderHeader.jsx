@@ -15,7 +15,10 @@ const ReaderHeader = ({
   isFavorite = false,
   onSetThumbnail,
   className = '',
-  onDownload
+  onDownload,
+  isDownloading = false,
+  downloadProgress = { current: 0, total: 0, status: 'idle' },
+  isOfflineAvailable = false
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -201,11 +204,32 @@ const ReaderHeader = ({
           </button>
           {onDownload && (
             <button
-              className="reader-header-btn download-btn"
+              className={`reader-header-btn download-btn ${isOfflineAvailable ? 'offline-available' : ''} ${isDownloading ? 'downloading' : ''}`}
               onClick={onDownload}
-              title="Download offline"
+              disabled={isDownloading}
+              title={
+                isDownloading 
+                  ? `Đang tải... ${downloadProgress.current}/${downloadProgress.total}`
+                  : isOfflineAvailable 
+                    ? "Chapter đã tải offline" 
+                    : "Download offline"
+              }
             >
-              <Download size={18} />
+              {isDownloading ? (
+                <div className="download-progress">
+                  <div className="spinner" />
+                  <span className="progress-text">
+                    {Math.round((downloadProgress.current / downloadProgress.total) * 100)}%
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <Download size={18} />
+                  {isOfflineAvailable && (
+                    <div className="offline-indicator">✓</div>
+                  )}
+                </>
+              )}
             </button>
           )}
           </div>

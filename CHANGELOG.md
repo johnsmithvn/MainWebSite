@@ -1,5 +1,46 @@
 # Changelog
 
+## 5.0.5 - 2025-09-09
+
+### 📥 Offline Library & Download Improvements
+
+- **Bug fixes**: Sửa lỗi trong service worker `cacheFirst` function - thêm `const resp = await fetch(request)` bị thiếu để xử lý network requests đúng cách.
+- **CORS improvements**: Đổi từ `mode: 'no-cors'` sang `mode: 'cors'` trong `offlineLibrary.js` để có thể đọc response body và tính toán blob size chính xác.
+- **Enhanced error handling**: Thêm proper error logging trong catch blocks thay vì để trống, cải thiện khả năng debug.
+- **Download progress tracking**: Thêm `isChapterDownloaded()` function để kiểm tra trạng thái chapter đã download.
+- **Progress callbacks**: Cải thiện `downloadChapter()` với progress callback để theo dõi tiến trình download real-time.
+- **Error resilience**: Download tiếp tục với page tiếp theo khi một page fail thay vì dừng hoàn toàn.
+
+### 🎨 Reader UI Enhancements
+
+- **Download button states**: Thêm visual indicators cho download button:
+  - Loading spinner với progress percentage khi đang download
+  - Green checkmark (✓) indicator khi chapter đã download offline
+  - Disabled state và opacity khi đang download
+- **Download progress modal**: Thêm `DownloadProgressModal` component hiển thị:
+  - Progress bar với percentage
+  - Realtime status (starting, downloading, completed, error)
+  - Current page info và file name
+  - Total pages và estimated size
+  - Auto-close sau 3 giây khi hoàn thành
+- **Reader header improvements**:
+  - Visual feedback cho offline-available chapters
+  - Responsive progress display trên mobile
+  - Tooltip cho các trạng thái download khác nhau
+
+### 🎯 Technical Improvements
+
+- **State management**: Thêm `isDownloading`, `downloadProgress`, `isChapterOfflineAvailable` states trong MangaReader
+- **Props enhancement**: Cập nhật ReaderHeader props để support download states và progress tracking
+- **CSS animations**: Thêm spinner animation và download button transitions
+- **Mobile optimization**: Responsive design cho download progress UI elements
+
+### 🔧 Developer Experience
+
+- **Better debugging**: Enhanced console logging cho download progress và cache status
+- **Type safety**: Improved prop validation cho download-related components
+- **Code organization**: Tách download logic thành reusable functions với error handling
+
 ## 5.0.4 - 2025-08-26
 
 - React-app: Cải thiện responsive layout cho tất cả Home pages (Manga, Movie, Music) - Home/Back button chỉ hiển thị icon (ẩn text) trên mobile để tiết kiệm không gian.

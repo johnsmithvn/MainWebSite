@@ -19,6 +19,8 @@ async function cacheFirst(request) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
   if (cached) return cached;
+  // Thiếu dòng này: fetch request từ network
+  const resp = await fetch(request);
   if (resp.ok) {
     cache.put(request, resp.clone());
   }
