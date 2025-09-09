@@ -4,6 +4,7 @@ import { BookOpen, PanelLeft } from 'lucide-react';
 import { useMangaStore, useAuthStore } from '../../store';
 import { useRecentManager } from '../../hooks/useRecentManager';
 import { apiService } from '../../utils/api';
+import { downloadChapter } from '../../utils/offlineLibrary';
 import ReaderHeader from '../../components/manga/ReaderHeader';
 import { DownloadProgressModal } from '../../components/common';
 import toast from 'react-hot-toast';
