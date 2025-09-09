@@ -7,7 +7,7 @@ import { apiService } from '../../utils/api';
 import ReaderHeader from '../../components/manga/ReaderHeader';
 import { DownloadProgressModal } from '../../components/common';
 import toast from 'react-hot-toast';
-import { downloadChapter, getChapter, isChapterDownloaded, checkStorageBeforeDownload, estimateChapterSize } from '../../utils/offlineLibrary';
+
 import '../../styles/components/manga-reader.css';
 import '../../styles/components/reader-header.css';
 
