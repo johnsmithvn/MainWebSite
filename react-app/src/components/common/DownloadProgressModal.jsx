@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { X, Download, CheckCircle, AlertCircle } from 'lucide-react';
+import { PROGRESS_COLORS } from '../../constants/colors';
 
 const DownloadProgressModal = ({
   isOpen,
@@ -78,9 +79,9 @@ const DownloadProgressModal = ({
             <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
               <div 
                 className={`h-full transition-all duration-300 ${
-                  progress.status === 'completed' ? 'bg-green-500' :
-                  progress.status === 'error' ? 'bg-red-500' :
-                  'bg-blue-500'
+                  progress.status === 'completed' ? PROGRESS_COLORS.completed :
+                  progress.status === 'error' ? PROGRESS_COLORS.error :
+                  PROGRESS_COLORS.downloading
                 }`}
                 style={{ width: `${progressPercentage}%` }}
               />

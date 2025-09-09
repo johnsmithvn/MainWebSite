@@ -8,6 +8,15 @@
 - 🐛 [2025-09-09] Fixed hardcoded threshold values trong StorageQuotaModal → Import constants từ storageQuota.js để maintain consistency
 - 🐛 [2025-09-09] Fixed error handling trong MangaReader storage quota check → Set proper error state cho modal display
 - 🐛 [2025-09-09] Fixed hardcoded database version trong offlineLibrary.js → Use DB_VERSION constant để easier schema migrations
+- 🐛 [2025-09-09] Fixed Service Worker context errors → Replace navigator/window objects với self.registration trong SW context
+- 🐛 [2025-09-09] Fixed hardcoded Tailwind colors trong DownloadProgressModal → Extract colors to constants file
+- 🐛 [2025-09-09] Fixed duplicate getFolderName logic → Extract to shared pathUtils utility
+- 🐛 [2025-09-09] Fixed React "Objects are not valid as a React child" error → Fix object rendering trong Modal title và confirmModal parameter handling
+
+### Added
+
+- ✨ [2025-09-09] Added colors.js constants file → Centralized UI color values cho consistent theming
+- ✨ [2025-09-09] Added pathUtils.js utility → Shared path manipulation functions để prevent code duplication
 
 ### Cleanup
 

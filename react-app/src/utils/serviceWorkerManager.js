@@ -278,7 +278,7 @@ class ServiceWorkerManager {
       registered: !!this.registration,
       controller: !!navigator.serviceWorker?.controller,
       online: this.isOnline,
-      backgroundSyncSupported: 'serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration?.prototype
+      backgroundSyncSupported: window.ServiceWorkerRegistration && 'sync' in window.ServiceWorkerRegistration.prototype
     };
   }
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { BookOpen, PanelLeft } from 'lucide-react';
 import { useMangaStore, useAuthStore } from '../../store';
 import { useRecentManager } from '../../hooks/useRecentManager';
+import { getFolderName } from '../../utils/pathUtils';
 import { apiService } from '../../utils/api';
 import { downloadChapter, isChapterDownloaded, getChapter } from '../../utils/offlineLibrary';
 import { checkStorageForDownload } from '../../utils/storageQuota';
@@ -599,7 +600,7 @@ const MangaReader = () => {
       };
       
       // Enhanced metadata with better title extraction
-      const folderName = getFolderName();
+      const folderName = getFolderName(currentPath);
       const cleanPath = currentMangaPath.replace(/\/__self__$/, '');
       const pathParts = cleanPath.split('/').filter(Boolean);
       
@@ -688,15 +689,8 @@ const MangaReader = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [showJumpModal]);
 
-  // Helper function to get folder name from current path
-  const getFolderName = () => {
-    if (!currentPath) return 'Manga Reader';
-    
-    // Remove /__self__ suffix if exists
-    const cleanPath = currentPath.replace(/\/__self__$/, '');
-    const pathParts = cleanPath.split('/').filter(Boolean);
-    return pathParts[pathParts.length - 1] || 'Manga Reader';
-  };
+  // Use shared utility instead of duplicate logic
+  const folderName = getFolderName(currentPath);
 
   if (loading) {
     return (
@@ -1069,7 +1063,7 @@ const MangaReader = () => {
         onClose={() => setShowDownloadModal(false)}
         progress={downloadProgress}
         isDownloading={isDownloading}
-        chapterTitle={getFolderName()}
+        chapterTitle={getFolderName(currentPath)}
       />
       
       {/* Storage Quota Modal */}
@@ -1081,7 +1075,7 @@ const MangaReader = () => {
         canDownload={storageCheckResult?.canDownload || false}
         message={storageCheckResult?.message || ''}
         warning={storageCheckResult?.warning || ''}
-        chapterTitle={getFolderName()}
+        chapterTitle={getFolderName(currentPath)}
         onConfirm={async () => {
           setShowStorageQuotaModal(false);
           await proceedWithDownload();

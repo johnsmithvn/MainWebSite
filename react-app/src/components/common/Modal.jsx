@@ -112,7 +112,7 @@ const ModalBase = ({
                     )}
                     {title && (
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {title}
+                        {typeof title === 'string' ? title : title.title || ''}
                       </h3>
                     )}
                   </div>
@@ -175,8 +175,7 @@ export const useModal = () => {
     type: 'default',
     title: '',
     message: '',
-    onConfirm: null,
-    ...{}
+    onConfirm: null
   });
 
   const openModal = (config) => {
@@ -193,14 +192,27 @@ export const useModal = () => {
     }));
   };
 
-  const confirmModal = (title, message, type = 'confirm') => {
+  const confirmModal = (config) => {
+    // Support both object config and legacy (title, message, type) params
+    let modalConfig;
+    
+    if (typeof config === 'string') {
+      // Legacy format: confirmModal(title, message, type)
+      const title = config;
+      const message = arguments[1];
+      const type = arguments[2] || 'confirm';
+      modalConfig = { title, message, type };
+    } else {
+      // New object format: confirmModal({ title, message, ... })
+      modalConfig = { type: 'confirm', ...config };
+    }
+    
     return new Promise((resolve) => {
       openModal({
-        type,
-        title,
-        message,
+        ...modalConfig,
         onConfirm: () => {
           closeModal();
+          if (modalConfig.onConfirm) modalConfig.onConfirm();
           resolve(true);
         },
         onClose: () => {

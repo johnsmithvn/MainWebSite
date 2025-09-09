@@ -367,7 +367,7 @@ self.addEventListener('message', (event) => {
       
     case 'REGISTER_BACKGROUND_SYNC':
       // Register background sync when offline
-      if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+      if (self.registration && self.registration.sync) {
         self.registration.sync.register('retry-failed-downloads');
       }
       break;
