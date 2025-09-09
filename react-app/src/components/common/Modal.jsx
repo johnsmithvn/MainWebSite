@@ -195,16 +195,15 @@ export const useModal = () => {
 
   const confirmModal = (title, message, type = 'confirm') => {
     return new Promise((resolve) => {
-      openModal({
+      setModalState({
+        isOpen: true,
         type,
         title,
         message,
         onConfirm: () => {
-          closeModal();
           resolve(true);
         },
         onClose: () => {
-          closeModal();
           resolve(false);
         }
       });
@@ -241,13 +240,23 @@ export const useModal = () => {
     errorModal,
     successModal,
     Modal: (props) => {
+      const handleConfirm = () => {
+        modalState.onConfirm?.();
+        closeModal();
+      };
+
+      const handleClose = () => {
+        modalState.onClose?.();
+        closeModal();
+      };
+
       return (
         <ModalBase
           {...modalState}
           {...props}
           isOpen={modalState.isOpen}
-          onClose={modalState.onClose || closeModal}
-          onConfirm={modalState.onConfirm}
+          onClose={handleClose}
+          onConfirm={modalState.onConfirm ? handleConfirm : undefined}
         />
       );
     }

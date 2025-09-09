@@ -46,147 +46,141 @@ const DatabaseActions = ({
   }
   
   // Handle scan operation
-  const handleScan = () => {
-    confirmModal({
-      title: `🔍 ${labels.scan}`,
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">{labels.scanDescription}</p>
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-blue-800 dark:text-blue-200 mb-2">📋 Thông tin:</p>
-            <ul className="text-sm space-y-1 text-blue-700 dark:text-blue-300">
-              <li>• Source: <strong>{currentSourceKey}</strong></li>
-              {currentContentType === 'manga' && (
-                <li>• Root: <strong>{currentRootFolder}</strong></li>
-              )}
-              <li>• Thao tác này sẽ KHÔNG xóa dữ liệu hiện có</li>
-              <li>• Chỉ thêm mới các folder/file được tìm thấy</li>
-            </ul>
-          </div>
+  const handleScan = async () => {
+    const confirmed = await confirmModal(
+      `🔍 ${labels.scan}`,
+      <div className="text-left space-y-3">
+        <p className="font-medium">{labels.scanDescription}</p>
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+          <p className="font-semibold text-blue-800 dark:text-blue-200 mb-2">📋 Thông tin:</p>
+          <ul className="text-sm space-y-1 text-blue-700 dark:text-blue-300">
+            <li>• Source: <strong>{currentSourceKey}</strong></li>
+            {currentContentType === 'manga' && (
+              <li>• Root: <strong>{currentRootFolder}</strong></li>
+            )}
+            <li>• Thao tác này sẽ KHÔNG xóa dữ liệu hiện có</li>
+            <li>• Chỉ thêm mới các folder/file được tìm thấy</li>
+          </ul>
         </div>
-      ),
-      confirmText: '🔍 Bắt đầu quét',
-      cancelText: 'Hủy',
-      onConfirm: () => {
-        performDatabaseScan(
-          currentContentType,
-          currentSourceKey,
-          currentRootFolder,
-          (data, message) => {
-            successModal({
-              title: '✅ Quét hoàn tất!',
-              message: `${message}${data.stats?.total ? ` - Tìm thấy ${data.stats.total} mục.` : ''}`
-            });
-          },
-          (error) => {
-            errorModal({
-              title: '❌ Lỗi quét',
-              message: error
-            });
-          }
-        );
-      }
-    });
+      </div>,
+      'confirm'
+    );
+    
+    if (confirmed) {
+      performDatabaseScan(
+        currentContentType,
+        currentSourceKey,
+        currentRootFolder,
+        (data, message) => {
+          successModal({
+            title: '✅ Quét hoàn tất!',
+            message: `${message}${data.stats?.total ? ` - Tìm thấy ${data.stats.total} mục.` : ''}`
+          });
+        },
+        (error) => {
+          errorModal({
+            title: '❌ Lỗi quét',
+            message: error
+          });
+        }
+      );
+    }
   };
   
   // Handle delete operation
-  const handleDelete = () => {
-    confirmModal({
-      title: `🗑️ ${labels.delete}`,
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">{labels.deleteDescription}</p>
-          <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-red-800 dark:text-red-200 mb-2">💀 Cảnh báo:</p>
-            <ul className="text-sm space-y-1 text-red-700 dark:text-red-300">
-              <li>• Source: <strong>{currentSourceKey}</strong></li>
-              {currentContentType === 'manga' && (
-                <li>• Root: <strong>{currentRootFolder}</strong></li>
-              )}
-              <li>• Tất cả dữ liệu database sẽ bị xóa</li>
-              <li>• Lượt xem và thống kê sẽ bị mất</li>
-              <li>• File thực tế sẽ KHÔNG bị ảnh hưởng</li>
-            </ul>
-          </div>
-          <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg border border-red-300 dark:border-red-700">
-            <p className="font-bold text-red-800 dark:text-red-200">
-              ❌ Hành động này không thể hoàn tác!
-            </p>
-          </div>
+  const handleDelete = async () => {
+    const confirmed = await confirmModal(
+      `🗑️ ${labels.delete}`,
+      <div className="text-left space-y-3">
+        <p className="font-medium">{labels.deleteDescription}</p>
+        <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+          <p className="font-semibold text-red-800 dark:text-red-200 mb-2">💀 Cảnh báo:</p>
+          <ul className="text-sm space-y-1 text-red-700 dark:text-red-300">
+            <li>• Source: <strong>{currentSourceKey}</strong></li>
+            {currentContentType === 'manga' && (
+              <li>• Root: <strong>{currentRootFolder}</strong></li>
+            )}
+            <li>• Tất cả dữ liệu database sẽ bị xóa</li>
+            <li>• Lượt xem và thống kê sẽ bị mất</li>
+            <li>• File thực tế sẽ KHÔNG bị ảnh hưởng</li>
+          </ul>
         </div>
-      ),
-      confirmText: '🗑️ Xóa Database',
-      cancelText: 'Hủy',
-      onConfirm: () => {
-        performDatabaseDelete(
-          currentContentType,
-          currentSourceKey,
-          currentRootFolder,
-          (data, message) => {
-            successModal({
-              title: '✅ Xóa hoàn tất!',
-              message: message
-            });
-          },
-          (error) => {
-            errorModal({
-              title: '❌ Lỗi xóa',
-              message: error
-            });
-          }
-        );
-      }
-    });
+        <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg border border-red-300 dark:border-red-700">
+          <p className="font-bold text-red-800 dark:text-red-200">
+            ❌ Hành động này không thể hoàn tác!
+          </p>
+        </div>
+      </div>,
+      'confirm'
+    );
+    
+    if (confirmed) {
+      performDatabaseDelete(
+        currentContentType,
+        currentSourceKey,
+        currentRootFolder,
+        (data, message) => {
+          successModal({
+            title: '✅ Xóa hoàn tất!',
+            message: message
+          });
+        },
+        (error) => {
+          errorModal({
+            title: '❌ Lỗi xóa',
+            message: error
+          });
+        }
+      );
+    }
   };
   
   // Handle reset operation
-  const handleReset = () => {
-    confirmModal({
-      title: `🔄 ${labels.reset}`,
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">{labels.resetDescription}</p>
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">🔄 Thao tác:</p>
-            <ul className="text-sm space-y-1 text-yellow-700 dark:text-yellow-300">
-              <li>• Source: <strong>{currentSourceKey}</strong></li>
-              {currentContentType === 'manga' && (
-                <li>• Root: <strong>{currentRootFolder}</strong></li>
-              )}
-              <li>• 1. Xóa tất cả dữ liệu database hiện có</li>
-              <li>• 2. Quét lại và tạo database mới</li>
-              <li>• 3. Tất cả lượt xem sẽ về 0</li>
-            </ul>
-          </div>
-          <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg border border-yellow-300 dark:border-yellow-700">
-            <p className="font-bold text-yellow-800 dark:text-yellow-200">
-              ⚠️ Tất cả thống kê và lượt xem sẽ bị reset!
-            </p>
-          </div>
+  const handleReset = async () => {
+    const confirmed = await confirmModal(
+      `🔄 ${labels.reset}`,
+      <div className="text-left space-y-3">
+        <p className="font-medium">{labels.resetDescription}</p>
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+          <p className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">🔄 Thao tác:</p>
+          <ul className="text-sm space-y-1 text-yellow-700 dark:text-yellow-300">
+            <li>• Source: <strong>{currentSourceKey}</strong></li>
+            {currentContentType === 'manga' && (
+              <li>• Root: <strong>{currentRootFolder}</strong></li>
+            )}
+            <li>• 1. Xóa tất cả dữ liệu database hiện có</li>
+            <li>• 2. Quét lại và tạo database mới</li>
+            <li>• 3. Tất cả lượt xem sẽ về 0</li>
+          </ul>
         </div>
-      ),
-      confirmText: '🔄 Reset & Quét',
-      cancelText: 'Hủy',
-      onConfirm: () => {
-        performDatabaseReset(
-          currentContentType,
-          currentSourceKey,
-          currentRootFolder,
-          (data, message) => {
-            successModal({
-              title: '✅ Reset hoàn tất!',
-              message: message
-            });
-          },
-          (error) => {
-            errorModal({
-              title: '❌ Lỗi reset',
-              message: error
-            });
-          }
-        );
-      }
-    });
+        <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg border border-yellow-300 dark:border-yellow-700">
+          <p className="font-bold text-yellow-800 dark:text-yellow-200">
+            ⚠️ Tất cả thống kê và lượt xem sẽ bị reset!
+          </p>
+        </div>
+      </div>,
+      'confirm'
+    );
+    
+    if (confirmed) {
+      performDatabaseReset(
+        currentContentType,
+        currentSourceKey,
+        currentRootFolder,
+        (data, message) => {
+          successModal({
+            title: '✅ Reset hoàn tất!',
+            message: message
+          });
+        },
+        (error) => {
+          errorModal({
+            title: '❌ Lỗi reset',
+            message: error
+          });
+        }
+      );
+    }
   };
   
   // Button configurations

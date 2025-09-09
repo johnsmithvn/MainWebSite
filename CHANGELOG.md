@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛 [2025-09-07] Fixed React error "Objects are not valid as a React child" trong Modal component → Sửa cách sử dụng confirmModal từ object config sang parameter sequence (title, message, type), cập nhật DatabaseActions để sử dụng async/await pattern thay vì callback pattern
+
 ### Changed
 
 - 🔄 [2025-09-07] Di chuyển icon xóa topview xuống bottom-right corner của card thay vì top-left - Cải thiện UX bằng cách đặt action button ở vị trí thông thường hơn, tự động điều chỉnh view count badge lên trên khi có icon xóa
