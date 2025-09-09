@@ -4,9 +4,10 @@ import { BookOpen, PanelLeft } from 'lucide-react';
 import { useMangaStore, useAuthStore } from '../../store';
 import { useRecentManager } from '../../hooks/useRecentManager';
 import { apiService } from '../../utils/api';
-import { downloadChapter } from '../../utils/offlineLibrary';
+import { downloadChapter, isChapterDownloaded, getChapter } from '../../utils/offlineLibrary';
+import { checkStorageForDownload } from '../../utils/storageQuota';
 import ReaderHeader from '../../components/manga/ReaderHeader';
-import { DownloadProgressModal } from '../../components/common';
+import { DownloadProgressModal, StorageQuotaModal } from '../../components/common';
 import toast from 'react-hot-toast';
 
 import '../../styles/components/manga-reader.css';
@@ -56,6 +57,10 @@ const MangaReader = () => {
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0, status: 'idle' });
   const [isChapterOfflineAvailable, setIsChapterOfflineAvailable] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  
+  // Storage quota states
+  const [showStorageQuotaModal, setShowStorageQuotaModal] = useState(false);
+  const [storageCheckResult, setStorageCheckResult] = useState(null);
 
   // Debug cache status function
   const getCacheStatus = useCallback(() => {
@@ -534,6 +539,36 @@ const MangaReader = () => {
   };
 
   const handleDownloadChapter = async () => {
+    if (!currentImages.length || !currentMangaPath || isDownloading) return;
+    
+    try {
+      // 1. Kiểm tra storage quota trước
+      console.log('🔍 Checking storage quota before download...');
+      const checkResult = await checkStorageForDownload(currentImages);
+      setStorageCheckResult(checkResult);
+      
+      if (!checkResult.canDownload) {
+        // Hiển thị modal thông báo lỗi storage
+        setShowStorageQuotaModal(true);
+        return;
+      }
+      
+      // 2. Nếu có warning, hiển thị modal xác nhận
+      if (checkResult.warning) {
+        setShowStorageQuotaModal(true);
+        return; // Chờ user xác nhận trong modal
+      }
+      
+      // 3. Tiếp tục download nếu quota OK
+      await proceedWithDownload();
+      
+    } catch (err) {
+      console.error('❌ Error checking storage quota:', err);
+      toast.error('❌ Lỗi kiểm tra dung lượng: ' + err.message);
+    }
+  };
+
+  const proceedWithDownload = async () => {
     if (!currentImages.length || !currentMangaPath || isDownloading) return;
     
     try {
@@ -1024,6 +1059,23 @@ const MangaReader = () => {
         progress={downloadProgress}
         isDownloading={isDownloading}
         chapterTitle={getFolderName()}
+      />
+      
+      {/* Storage Quota Modal */}
+      <StorageQuotaModal
+        isOpen={showStorageQuotaModal}
+        onClose={() => setShowStorageQuotaModal(false)}
+        storageInfo={storageCheckResult?.storageInfo || {}}
+        estimatedSize={storageCheckResult?.estimatedSize || 0}
+        canDownload={storageCheckResult?.canDownload || false}
+        message={storageCheckResult?.message || ''}
+        warning={storageCheckResult?.warning || ''}
+        chapterTitle={getFolderName()}
+        onConfirm={async () => {
+          setShowStorageQuotaModal(false);
+          await proceedWithDownload();
+        }}
+        onCancel={() => setShowStorageQuotaModal(false)}
       />
     </div>
   );

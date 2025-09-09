@@ -1,5 +1,49 @@
 # Changelog
 
+## 5.0.8 - 2025-09-09
+
+### 📊 Storage Quota Management System
+
+- **Pre-download quota check**: Implement `checkStorageForDownload()` để kiểm tra storage quota trước khi download chapter
+- **Storage estimation**: Tự động ước tính dung lượng cần thiết bằng cách lấy mẫu từ 3 trang đầu
+- **Multi-threshold warnings**: Support warning threshold (90%) và critical threshold (95%) với các mức độ cảnh báo khác nhau
+- **Minimum buffer space**: Đảm bảo luôn còn lại ít nhất 50MB free space sau khi download
+- **Intelligent fallback**: Fallback estimate 500KB/page khi không thể fetch Content-Length headers
+
+### 🚨 Storage Quota Modal Interface
+
+- **Visual quota display**: StorageQuotaModal với progress bar màu code theo mức độ sử dụng storage
+- **Detailed breakdown**: Hiển thị used/available/total storage với human-readable formatting
+- **Estimated size preview**: Show estimated download size trước khi user confirm
+- **Smart status indicators**: Color-coded icons (green/yellow/red) với contextual messages
+- **Confirmation flow**: User có thể xem chi tiết và xác nhận có muốn tiếp tục download hay không
+
+### 🎯 Enhanced Download Protection
+
+- **Pre-flight validation**: Kiểm tra storage quota, estimated size, và available space trước khi bắt đầu download
+- **Progressive warnings**: Cảnh báo từ sớm khi storage gần đầy (90%) nhưng vẫn cho phép download
+- **Critical prevention**: Ngăn chặn download khi storage > 95% hoặc không đủ buffer space
+- **User-friendly messages**: Thông báo lỗi rõ ràng với hướng dẫn cụ thể (xóa bớt data offline)
+- **Graceful degradation**: Vẫn hoạt động bình thường trên browser không hỗ trợ Storage API
+
+### 🔧 Storage Utilities
+
+- **`storageQuota.js` utility**: Comprehensive storage management với các functions:
+  - `checkStorageQuota()`: Lấy thông tin quota hiện tại
+  - `estimateChapterSize()`: Ước tính size của chapter based on sample pages
+  - `checkStorageForDownload()`: Main validation function trước download
+- **Browser compatibility**: Support cho Storage API với fallback cho browser cũ
+- **Performance optimized**: HEAD requests để lấy Content-Length thay vì download full images
+- **Error resilient**: Handle network errors và continue với estimate fallback
+
+### 💡 User Experience Improvements
+
+- **Progressive disclosure**: Hiển thị thông tin storage theo mức độ chi tiết phù hợp
+- **Visual feedback**: Progress bars, color coding, và icons để communicate storage status
+- **Actionable messages**: Thông báo cụ thể về việc cần xóa bao nhiêu data để có thể download
+- **Non-blocking warnings**: Warning không block download, chỉ inform user về tình trạng storage
+- **Quick access**: Modal có thể close/open dễ dàng mà không lose download progress
+
 ## 5.0.7 - 2025-09-09
 
 ### 🗑️ Enhanced Cache Cleanup Mechanism
