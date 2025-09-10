@@ -44,11 +44,16 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   disableStrict ? AppTree : <React.StrictMode>{AppTree}</React.StrictMode>
 );
 
-// Register service worker for PWA/offline support in production builds only
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// Register service worker for PWA/offline support 
+// Temporarily enabled in dev mode for offline testing
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((err) => {
-      console.error('SW registration failed', err);
-    });
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('✅ SW registered:', registration);
+      })
+      .catch((err) => {
+        console.error('❌ SW registration failed:', err);
+      });
   });
 }

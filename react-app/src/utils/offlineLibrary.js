@@ -6,6 +6,7 @@ const { NAME: DB_NAME, STORE, VERSION: DB_VERSION } = DATABASE.OFFLINE_MANGA;
 
 // Import shared utilities
 import { formatBytes } from './formatters';
+import { isCachesAPISupported, getUnsupportedMessage, logBrowserSupport } from './browserSupport';
 
 // Export for testing and maintenance
 export { DB_VERSION };
@@ -69,7 +70,24 @@ export async function deleteChapterCompletely(id) {
       return { success: false, message: 'Chapter not found' };
     }
     
-    // 2. Xóa tất cả images từ Cache Storage
+    // 2. Kiểm tra Caches API có sẵn không trước khi sử dụng
+    if (!isCachesAPISupported()) {
+      console.warn('⚠️ Caches API not available, skipping cache cleanup');
+      // Chỉ xóa metadata từ IndexedDB
+      await deleteChapter(id);
+      return { 
+        success: true, 
+        message: 'Chapter metadata deleted (cache API not available)',
+        stats: {
+          totalImages: chapter.pageUrls ? chapter.pageUrls.length : 0,
+          deletedImages: 0,
+          failedImages: 0,
+          bytesFreed: chapter.bytes || 0
+        }
+      };
+    }
+    
+    // 3. Xóa tất cả images từ Cache Storage
     const cache = await caches.open('chapter-images');
     let deletedImages = 0;
     let failedImages = 0;
@@ -91,7 +109,7 @@ export async function deleteChapterCompletely(id) {
       }
     }
     
-    // 3. Xóa metadata từ IndexedDB
+    // 4. Xóa metadata từ IndexedDB
     await deleteChapter(id);
     
     const totalImages = chapter.pageUrls ? chapter.pageUrls.length : 0;
@@ -147,17 +165,22 @@ export async function clearAllOfflineData() {
       }
     }
     
-    // 3. Xóa toàn bộ Cache Storage (đảm bảo không còn orphan images)
-    try {
-      await caches.delete('chapter-images');
-      console.log('✅ Deleted entire chapter-images cache');
-    } catch (err) {
-      console.warn('⚠️ Failed to delete cache storage:', err);
+    // 3. Kiểm tra Caches API có sẵn không
+    if (isCachesAPISupported()) {
+      // 4. Xóa toàn bộ Cache Storage (đảm bảo không còn orphan images)
+      try {
+        await caches.delete('chapter-images');
+        console.log('✅ Deleted entire chapter-images cache');
+      } catch (err) {
+        console.warn('⚠️ Failed to delete cache storage:', err);
+      }
+      
+      // 5. Recreate cache storage
+      await caches.open('chapter-images');
+      console.log('✅ Recreated fresh chapter-images cache');
+    } else {
+      console.warn('⚠️ Caches API not available, skipping cache operations');
     }
-    
-    // 4. Recreate cache storage
-    await caches.open('chapter-images');
-    console.log('✅ Recreated fresh chapter-images cache');
     
     const summary = {
       chaptersDeleted: chapters.length,
@@ -244,6 +267,14 @@ export async function isChapterDownloaded(id) {
 // Download chapter với progress callback
 export async function downloadChapter(meta, onProgress = null) {
   const { id, pageUrls } = meta;
+  
+  // Kiểm tra Caches API có sẵn không
+  if (!isCachesAPISupported()) {
+    const errorMsg = getUnsupportedMessage('Offline chapter download');
+    console.error('❌ Caches API not available:', errorMsg);
+    throw new Error(errorMsg);
+  }
+  
   const cache = await caches.open('chapter-images');
   let bytes = 0;
   const totalPages = pageUrls.length;

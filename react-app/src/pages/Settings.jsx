@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore, useSharedSettingsStore } from '@/store';
 import { clearSourceCache, clearAllCache as clearAllCacheKeys, clearTypeCache, clearRecentViewCache, CACHE_PREFIXES } from '@/constants/cacheKeys';
+import { isCachesAPISupported } from '@/utils/browserSupport';
 import { getContentTypeFromSourceKey } from '@/utils/databaseOperations';
 import Button from '@/components/common/Button';
 import DatabaseActions from '@/components/common/DatabaseActions';
@@ -196,7 +197,7 @@ const Settings = () => {
         
         // Also clear browser cache-related manga data if possible
         try {
-          if ('caches' in window) {
+          if (isCachesAPISupported()) {
             caches.keys().then(cacheNames => {
               cacheNames.forEach(cacheName => {
                 if (cacheName.includes('manga') || cacheName.includes('folder')) {
@@ -205,6 +206,8 @@ const Settings = () => {
                 }
               });
             });
+          } else {
+            console.warn('⚠️ Caches API not available - skipping cache cleanup');
           }
         } catch (error) {
           console.warn('Error clearing browser caches:', error);

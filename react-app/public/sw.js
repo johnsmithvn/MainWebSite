@@ -17,16 +17,20 @@ const STATIC_CACHE = `manga-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `manga-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'chapter-images'; // Keep existing name for compatibility
 
-// Critical app shell resources
+// Critical app shell resources  
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
+  // Default images
   DEFAULT_IMAGES.favicon,
   DEFAULT_IMAGES.cover,
   DEFAULT_IMAGES.folder,
   DEFAULT_IMAGES.music,
-  DEFAULT_IMAGES.video
+  DEFAULT_IMAGES.video,
+  // Vite build assets (will be generated at build time)
+  '/assets/index.css',
+  '/assets/index.js'
 ];
 
 // Network timeout for better UX
@@ -41,12 +45,62 @@ self.addEventListener('install', (event) => {
   
   event.waitUntil(
     caches.open(STATIC_CACHE)
-      .then((cache) => {
+      .then(async (cache) => {
         console.log('📦 Caching app shell...');
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .then(() => {
-        console.log('✅ App shell cached');
+        
+        // Cache essential resources first
+        const essentialAssets = [
+          '/',
+          '/index.html',
+          '/offline.html',  // Add offline fallback page
+          DEFAULT_IMAGES.favicon,
+          DEFAULT_IMAGES.cover,
+          DEFAULT_IMAGES.folder,
+          DEFAULT_IMAGES.music,
+          DEFAULT_IMAGES.video
+        ];
+        
+        // Try to cache all essential assets
+        try {
+          await cache.addAll(essentialAssets);
+          console.log('✅ Essential assets cached');
+        } catch (error) {
+          console.warn('⚠️ Some essential assets failed to cache:', error);
+        }
+        
+        // Cache Vite dev assets if available
+        const viteDevAssets = [
+          '/src/main.jsx',
+          '/src/App.jsx',
+          '/src/index.css',
+          '/@vite/client'
+        ];
+        
+        for (const asset of viteDevAssets) {
+          try {
+            await cache.add(asset);
+            console.log('✅ Cached Vite dev asset:', asset);
+          } catch (error) {
+            console.warn('⚠️ Failed to cache Vite dev asset:', asset);
+          }
+        }
+        
+        // Try to cache optional production assets
+        const optionalAssets = [
+          '/manifest.webmanifest',
+          '/assets/index.css',
+          '/assets/index.js'
+        ];
+        
+        for (const asset of optionalAssets) {
+          try {
+            await cache.add(asset);
+            console.log('✅ Cached production asset:', asset);
+          } catch (error) {
+            console.warn('⚠️ Failed to cache production asset:', asset);
+          }
+        }
+        
         return self.skipWaiting();
       })
       .catch((error) => {
@@ -243,21 +297,53 @@ async function navigationStrategy(request) {
     const networkResponse = await fetch(request);
     return networkResponse;
   } catch (error) {
-    console.log('📦 Offline navigation, serving app');
+    console.log('📦 Offline navigation, serving app shell');
+    
+    // Get cache instance
     let cache = cacheInstances.get(STATIC_CACHE);
     if (!cache) {
       cache = await caches.open(STATIC_CACHE);
       cacheInstances.set(STATIC_CACHE, cache);
     }
-    const appShell = await cache.match('/index.html');
+    
+    // Try to serve React app first
+    const appShell = await cache.match('/index.html') || await cache.match('/');
     
     if (appShell) {
+      console.log('✅ Serving React app shell for offline navigation');
       return appShell;
     }
     
-    return new Response('App not available offline', {
-      status: 503,
-      statusText: 'Service Unavailable'
+    // If React app not available, serve offline page
+    const offlinePage = await cache.match('/offline.html');
+    if (offlinePage) {
+      console.log('✅ Serving offline fallback page');
+      return offlinePage;
+    }
+    
+    // Final fallback with inline HTML
+    return new Response(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Offline - MainWebSite</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: system-ui; text-align: center; padding: 50px; }
+            h1 { color: #333; }
+            button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+          </style>
+        </head>
+        <body>
+          <h1>📱 App đang offline</h1>
+          <p>Không thể kết nối server. Vui lòng kiểm tra kết nối mạng.</p>
+          <button onclick="window.location.reload()">🔄 Thử lại</button>
+        </body>
+      </html>
+    `, {
+      status: 200,
+      statusText: 'OK',
+      headers: { 'Content-Type': 'text/html' }
     });
   }
 }
@@ -267,6 +353,8 @@ function isStaticAsset(request) {
   const url = request.url;
   return url.includes('/static/') || 
          url.includes('/assets/') ||
+         url.includes('/src/') ||  // Vite dev mode
+         url.includes('/@vite/') || // Vite client
          url.includes('/manifest.webmanifest') ||
          url.includes('/default/') ||
          url.includes('favicon');

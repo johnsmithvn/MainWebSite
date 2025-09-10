@@ -8,7 +8,7 @@ import { apiService } from '../../utils/api';
 import { downloadChapter, isChapterDownloaded, getChapter } from '../../utils/offlineLibrary';
 import { checkStorageForDownload } from '../../utils/storageQuota';
 import ReaderHeader from '../../components/manga/ReaderHeader';
-import { DownloadProgressModal, StorageQuotaModal } from '../../components/common';
+import { DownloadProgressModal, StorageQuotaModal, OfflineCompatibilityBanner } from '../../components/common';
 import toast from 'react-hot-toast';
 
 import '../../styles/components/manga-reader.css';
@@ -89,10 +89,21 @@ const MangaReader = () => {
 
   // Memoize current path to avoid unnecessary effect reruns
   const currentMangaPath = useMemo(() => {
-    return searchParams.get('path') || folderId;
+    const path = searchParams.get('path') || folderId;
+    console.log('📁 currentMangaPath computed:', path);
+    return path;
   }, [searchParams, folderId]);
 
   const isOfflineMode = searchParams.get('offline') === '1';
+
+  // 🐛 DEBUG: Log component initialization
+  console.log('🎯 MangaReader Component Init:', {
+    folderId,
+    isOfflineMode,
+    searchParams: Object.fromEntries(searchParams),
+    sourceKey,
+    rootFolder
+  });
 
   // Memoize stable auth keys to prevent effect reruns
   const stableAuthKeys = useMemo(() => ({
@@ -290,13 +301,24 @@ const MangaReader = () => {
           console.log('🔍 Loading folder data for path:', currentMangaPath);
           if (isOfflineMode) {
             (async () => {
-              const ch = await getChapter(currentMangaPath);
-              if (ch) {
-                setCurrentImages(ch.pageUrls);
-                setCurrentPath(currentMangaPath);
-                setLoading(false);
-              } else {
-                setError('Offline data not found');
+              console.log('📱 Offline mode detected, loading from IndexedDB...');
+              try {
+                const ch = await getChapter(currentMangaPath);
+                console.log('📦 Chapter data from IndexedDB:', ch);
+                
+                if (ch) {
+                  console.log(`✅ Found ${ch.pageUrls?.length || 0} pages in offline chapter`);
+                  setCurrentImages(ch.pageUrls);
+                  setCurrentPath(currentMangaPath);
+                  setLoading(false);
+                } else {
+                  console.error('❌ No offline chapter found for path:', currentMangaPath);
+                  setError('Offline data not found');
+                  setLoading(false);
+                }
+              } catch (error) {
+                console.error('❌ Error loading offline chapter:', error);
+                setError('Error loading offline data: ' + error.message);
                 setLoading(false);
               }
             })();
@@ -542,6 +564,27 @@ const MangaReader = () => {
   const handleDownloadChapter = async () => {
     if (!currentImages.length || !currentMangaPath || isDownloading) return;
     
+    // Import browser support check
+    const { isCachesAPISupported, getUnsupportedMessage } = await import('@/utils/browserSupport');
+    
+    // Kiểm tra Caches API có sẵn không
+    if (!isCachesAPISupported()) {
+      toast.error('❌ ' + getUnsupportedMessage('Offline download'));
+      
+      // Hiển thị modal với thông tin browser support
+      setStorageCheckResult({
+        canDownload: false,
+        warning: false, 
+        error: true,
+        errorMessage: getUnsupportedMessage('Offline download'),
+        message: 'Browser không hỗ trợ offline download',
+        quota: null,
+        required: currentImages ? currentImages.length * 0.5 : 0,
+      });
+      setShowStorageQuotaModal(true);
+      return;
+    }
+    
     try {
       // 1. Kiểm tra storage quota trước
       console.log('🔍 Checking storage quota before download...');
@@ -769,6 +812,9 @@ const MangaReader = () => {
 
   return (
     <div className={`manga-reader ${readerSettings.readingMode === 'vertical' ? 'scroll-mode-active' : ''}`}>
+      {/* Offline Compatibility Banner */}
+      <OfflineCompatibilityBanner />
+      
       {/* Reader Header */}
       {showControls && (
         <ReaderHeader

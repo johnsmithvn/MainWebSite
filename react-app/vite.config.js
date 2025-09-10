@@ -31,9 +31,13 @@ export default defineConfig(({ mode }) => {
       host: true, // lắng nghe 0.0.0.0 để Tailscale có thể truy cập
       port: 3001,
       strictPort: true,
+      // Enable HTTPS for PWA features to work across network
+      https: env.VITE_ENABLE_HTTPS === 'true' || env.NODE_ENV === 'production',
       // Chỉ nhận chuỗi (không dùng regex) và loại bỏ giá trị rỗng
       allowedHosts,
-      hmr: HMR_HOST
+      hmr: env.VITE_DISABLE_HMR === 'true' 
+        ? false // Disable HMR for offline testing
+        : HMR_HOST
         ? { host: HMR_HOST, port: HMR_PORT, protocol: 'ws' }
         : undefined,
       proxy: {

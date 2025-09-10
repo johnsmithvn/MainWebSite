@@ -1,8 +1,25 @@
 # Changelog
 
-## 5.0.10 - 2025-09-09
+## [Unreleased]
 
 ### Fixed
+
+## [Unreleased]
+
+### Fixed
+
+- 🐛 [2025-09-10] Fixed "caches is not defined" error khi truy cập từ máy khác trong network → Thêm kiểm tra browser support và fallback cho Caches API không khả dụng
+
+### Added
+
+- ✨ [2025-09-10] Added browser support utilities và compatibility checking → Kiểm tra HTTPS, Caches API, Service Worker, IndexedDB support
+- ✨ [2025-09-10] Added OfflineCompatibilityBanner component → Hiển thị cảnh báo khi browser không hỗ trợ offline features  
+- ✨ [2025-09-10] Added BrowserSupportStatus component → Hiển thị chi tiết technical support status
+- ✨ [2025-09-10] Added graceful fallback cho offline features → App vẫn hoạt động khi Caches API không có
+
+## 5.0.10 - 2025-09-09
+
+### Bug Fixes
 
 - 🐛 [2025-09-09] Fixed window.confirm usage in OfflineLibrary delete operations → Replaced with custom modal với chapter information và confirmation flow
 - 🐛 [2025-09-09] Fixed hardcoded threshold values trong StorageQuotaModal → Import constants từ storageQuota.js để maintain consistency
@@ -19,6 +36,8 @@
 - 🐛 [2025-09-10] Fixed Service Worker cache performance → Implemented cache instance management và globalThis compatibility
 - 🐛 [2025-09-10] Fixed duplicate formatBytes function trong storageQuota.js → Removed duplicate implementation, use shared formatters utility
 - 🐛 [2025-09-10] Fixed database constants centralization → Moved DB_NAME, STORE, DB_VERSION from offlineLibrary.js to constants/index.js
+- 🐛 [2025-09-10] Fixed offline navigation white screen → Enhanced navigationStrategy để serve app shell khi server tắt
+- 🐛 [2025-09-10] Fixed Service Worker asset caching → Improved install event với proper error handling cho Vite assets
 - 🐛 [2025-09-09] Fixed duplicate export statements trong storageQuota.js → Consolidate thành single export cho storage threshold constants
 - 🐛 [2025-09-09] Fixed ServiceWorkerRegistration window object usage → Use globalThis for better cross-context compatibility
 - 🔄 [2025-09-09] Optimized Service Worker cache management → Cache opened cache instances to reduce overhead
