@@ -1,6 +1,8 @@
-const DB_NAME = 'offline-manga';
-const STORE = 'chapters';
-const DB_VERSION = 1;
+// Import database constants
+import { DATABASE } from '../constants/index.js';
+
+// Use centralized database configuration
+const { NAME: DB_NAME, STORE, VERSION: DB_VERSION } = DATABASE.OFFLINE_MANGA;
 
 // Import shared utilities
 import { formatBytes } from './formatters';

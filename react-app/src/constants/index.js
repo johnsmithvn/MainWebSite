@@ -153,7 +153,18 @@ export const CSS_CLASSES = {
 };
 
 /**
- * 📋 Storage Keys
+ * � Database Configuration
+ */
+export const DATABASE = {
+  OFFLINE_MANGA: {
+    NAME: 'offline-manga',
+    STORE: 'chapters',
+    VERSION: 1
+  }
+};
+
+/**
+ * �📋 Storage Keys
  */
 export const STORAGE_KEYS = {
   SOURCE_KEY: "sourceKey",
