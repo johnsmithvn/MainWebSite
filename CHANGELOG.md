@@ -19,6 +19,7 @@
 - 🐛 [2025-09-09] Fixed ServiceWorkerRegistration existence check → Proper environment compatibility check
 - 🐛 [2025-09-09] Fixed magic number 75 trong StorageQuotaModal → Extract to STORAGE_INFO_THRESHOLD constant
 - 🐛 [2025-09-09] Fixed duplicate utility functions trong OfflineLibrary → Extract formatDate/formatSize to shared formatters
+- 🐛 [2025-09-09] Fixed duplicate export statements trong storageQuota.js → Consolidate thành single export cho storage threshold constants
 
 ### Added
 
