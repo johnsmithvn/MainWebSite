@@ -2,6 +2,9 @@ const DB_NAME = 'offline-manga';
 const STORE = 'chapters';
 const DB_VERSION = 1;
 
+// Import shared utilities
+import { formatBytes } from './formatters';
+
 // Export for testing and maintenance
 export { DB_VERSION };
 
@@ -223,15 +226,6 @@ export async function getStorageAnalysis() {
     console.error('❌ Error analyzing storage:', error);
     return null;
   }
-}
-
-// 🔧 Helper: Format bytes to human readable
-function formatBytes(bytes) {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 // Kiểm tra xem chapter đã được download hay chưa

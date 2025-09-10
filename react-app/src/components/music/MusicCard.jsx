@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiPlay, FiFolder, FiMusic, FiPlus } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { useMusicStore, useAuthStore } from '@/store';
+import { DEFAULT_IMAGES } from '@/constants';
 
 const MusicCard = ({ 
   item, 
@@ -33,12 +34,12 @@ const MusicCard = ({
     
     // Fallback thumbnails cho music
     if (isAudio) {
-      return '/default/music-thumb.png';
+      return DEFAULT_IMAGES.music;
     } else if (isFolder) {
-      return '/default/folder-thumb.png';
+      return DEFAULT_IMAGES.folder;
     }
     
-    return '/default/default-cover.jpg';
+    return DEFAULT_IMAGES.cover;
   };
 
   const handleClick = () => {
@@ -103,7 +104,7 @@ const MusicCard = ({
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
           onError={(e) => {
-            e.target.src = isAudio ? '/default/music-thumb.png' : '/default/folder-thumb.png';
+            e.target.src = isAudio ? DEFAULT_IMAGES.music : DEFAULT_IMAGES.folder;
           }}
         />
         

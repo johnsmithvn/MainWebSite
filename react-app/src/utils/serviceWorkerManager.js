@@ -132,7 +132,13 @@ class ServiceWorkerManager {
    * Register background sync for failed downloads
    */
   async registerBackgroundSync() {
-    if (!('serviceWorker' in navigator) || !('sync' in window.ServiceWorkerRegistration.prototype)) {
+    if (
+      !('serviceWorker' in navigator) || 
+      !(
+        typeof window.ServiceWorkerRegistration !== 'undefined' && 
+        'sync' in window.ServiceWorkerRegistration.prototype
+      )
+    ) {
       console.warn('⚠️ Background sync not supported');
       return false;
     }

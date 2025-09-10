@@ -3,11 +3,16 @@
  * Kiểm tra và quản lý dung lượng storage trước khi download
  */
 
+import { formatBytes } from './formatters';
+
 // Ngưỡng cảnh báo storage (90% quota được sử dụng)
 const STORAGE_WARNING_THRESHOLD = 0.9;
 
 // Ngưỡng ngăn chặn download (95% quota được sử dụng)  
 const STORAGE_CRITICAL_THRESHOLD = 0.95;
+
+// Ngưỡng thông tin (75% quota được sử dụng)
+const STORAGE_INFO_THRESHOLD = 0.75;
 
 // Minimum free space required (50MB)
 const MIN_REQUIRED_SPACE = 50 * 1024 * 1024; // 50MB in bytes
@@ -298,5 +303,8 @@ export function createStorageInfoModal(storageInfo) {
     percentage: Math.round(percentage * 100)
   };
 }
+
+// Export all thresholds
+export { STORAGE_WARNING_THRESHOLD, STORAGE_CRITICAL_THRESHOLD, STORAGE_INFO_THRESHOLD };
 
 export { STORAGE_WARNING_THRESHOLD, STORAGE_CRITICAL_THRESHOLD, MIN_REQUIRED_SPACE };

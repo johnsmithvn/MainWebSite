@@ -11,6 +11,7 @@ import { apiService } from '../../utils/api';
 import { useAuthStore } from '../../store';
 import Button from './Button';
 import { buildThumbnailUrl } from '../../utils/thumbnailUtils';
+import { DEFAULT_IMAGES } from '../../constants';
 
 // Supported search type options: all, folder, file/audio/video (normalized per section)
 const TYPE_OPTIONS = [
@@ -340,7 +341,7 @@ const SuggestionItem = ({ item, onClick }) => {
   // Best-effort infer section from path prefix; fall back to generic
   const mediaType = item?.type === 'audio' ? 'music' : (item?.type === 'video' ? 'movie' : 'manga');
   const src = buildThumbnailUrl(item, mediaType);
-  const fallback = mediaType === 'music' ? '/default/music-thumb.png' : (mediaType === 'movie' ? '/default/video-thumb.png' : '/default/folder-thumb.png');
+  const fallback = mediaType === 'music' ? DEFAULT_IMAGES.music : (mediaType === 'movie' ? DEFAULT_IMAGES.video : DEFAULT_IMAGES.folder);
   return (
     <div
       className="flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-dark-700 cursor-pointer"

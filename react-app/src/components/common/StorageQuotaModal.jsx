@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, HardDrive, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
-import { STORAGE_CRITICAL_THRESHOLD, STORAGE_WARNING_THRESHOLD } from '../../utils/storageQuota';
+import { STORAGE_CRITICAL_THRESHOLD, STORAGE_WARNING_THRESHOLD, STORAGE_INFO_THRESHOLD } from '../../utils/storageQuota';
 
 const StorageQuotaModal = ({ 
   isOpen, 
@@ -32,7 +32,7 @@ const StorageQuotaModal = ({
     const percentage = storageInfo.percentage * 100;
     if (percentage >= STORAGE_CRITICAL_THRESHOLD * 100) return 'bg-red-500';
     if (percentage >= STORAGE_WARNING_THRESHOLD * 100) return 'bg-yellow-500';
-    if (percentage >= 75) return 'bg-blue-500';
+    if (percentage >= STORAGE_INFO_THRESHOLD * 100) return 'bg-blue-500';
     return 'bg-green-500';
   };
 

@@ -6,6 +6,7 @@ import { Heart, Play, Folder, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMovieStore } from '@/store';
 import { useRecentMoviesManager } from '@/hooks/useMovieData';
+import { DEFAULT_IMAGES } from '@/constants';
 
 const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
   const navigate = useNavigate();
@@ -66,11 +67,11 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
       {/* Thumbnail */}
       <div className="relative aspect-video bg-gray-200 dark:bg-gray-700 overflow-hidden">
         <img
-          src={item.thumbnail || (isVideo ? '/default/video-thumb.png' : '/default/folder-thumb.png')}
+          src={item.thumbnail || (isVideo ? DEFAULT_IMAGES.video : DEFAULT_IMAGES.folder)}
           alt={displayName}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           onError={(e) => {
-            e.target.src = isVideo ? '/default/video-thumb.png' : '/default/folder-thumb.png';
+            e.target.src = isVideo ? DEFAULT_IMAGES.video : DEFAULT_IMAGES.folder;
           }}
         />
         

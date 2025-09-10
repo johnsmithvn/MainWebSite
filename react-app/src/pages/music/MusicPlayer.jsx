@@ -14,6 +14,7 @@ import {
   FiSearch
 } from 'react-icons/fi';
 import { useAuthStore, useMusicStore, useUIStore } from '@/store';
+import { DEFAULT_IMAGES } from '@/constants';
 import { useRecentMusicManager } from '@/hooks/useMusicData';
 import { useDebounceValue } from '@/hooks';
 import { apiService } from '@/utils/api';
@@ -632,7 +633,7 @@ const MusicPlayer = () => {
   })();
   const headerArt = (currentTrack || currentPlaylist[0])
     ? buildThumbnailUrl(currentTrack || currentPlaylist[0], 'music')
-    : '/default/music-thumb.png';
+    : DEFAULT_IMAGES.music;
 
   const normalizedFilter = '';
   const visiblePlaylist = currentPlaylist;
@@ -697,7 +698,7 @@ const MusicPlayer = () => {
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-left ${activePlaylistId === pl.id ? 'bg-white/10' : ''}`}
                     title={pl.name}
                   >
-                    <img src={pl.thumbnail || '/default/music-thumb.png'} onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')} alt={pl.name} className="w-9 h-9 rounded object-cover" />
+                    <img src={pl.thumbnail || DEFAULT_IMAGES.music} onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)} alt={pl.name} className="w-9 h-9 rounded object-cover" />
                     <div className="min-w-0">
                       <div className="text-sm text-white truncate">{pl.name}</div>
                       <div className="text-[11px] text-white/60 truncate">{new Date(pl.updatedAt || Date.now()).toLocaleDateString()}</div>
@@ -714,7 +715,7 @@ const MusicPlayer = () => {
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#50306e] via-transparent to-transparent opacity-60" />
           <div className="bg-gradient-to-b from-[#121212] via-[#121212]/95 to-transparent -mx-4 px-4 pt-1 pb-3">
             <div className="flex flex-col md:flex-row md:items-end gap-6">
-            <motion.img initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} src={headerArt} alt={(currentTrack?.name || currentPlaylist[0]?.name || folderTitle) || 'Cover'} onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')} className="w-48 h-48 md:w-56 md:h-56 object-cover rounded shadow-2xl" />
+            <motion.img initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} src={headerArt} alt={(currentTrack?.name || currentPlaylist[0]?.name || folderTitle) || 'Cover'} onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)} className="w-48 h-48 md:w-56 md:h-56 object-cover rounded shadow-2xl" />
             <div className="flex-1">
               <h2
                 className="text-3xl md:text-5xl font-extrabold tracking-tight mt-2 leading-tight"
@@ -783,7 +784,7 @@ const MusicPlayer = () => {
                   </div>
 
                   <div className="min-w-0 flex items-center gap-3">
-                    <img src={buildThumbnailUrl(track, 'music')} onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')} alt={track.name} className="w-10 h-10 rounded object-cover flex-none" />
+                    <img src={buildThumbnailUrl(track, 'music')} onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)} alt={track.name} className="w-10 h-10 rounded object-cover flex-none" />
                     <div className="min-w-0">
                       <div className={`${index === currentIndex ? 'text-green-400' : 'text-white'} truncate`}>{track.name}</div>
                       <div className="text-xs text-white/60 truncate">{track.artist || 'Unknown Artist'}</div>

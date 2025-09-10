@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store';
 import { apiService } from '@/utils/api';
 import { getRecentViewedCacheKey } from '@/constants/cacheKeys';
+import { DEFAULT_IMAGES } from '@/constants';
 
 /**
  * Hook to get random movies
@@ -96,7 +97,7 @@ export const useRecentMovies = (options = {}) => {
           .slice(0, maxItems)
           .map(item => ({
             ...item,
-            thumbnail: item.thumbnail || '/default/video-thumb.png'
+            thumbnail: item.thumbnail || DEFAULT_IMAGES.video
           }));
       } catch (error) {
         console.warn('Error loading recent movies:', error);

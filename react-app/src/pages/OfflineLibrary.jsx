@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Trash2, Calendar, Eye, Grid, List } from 'lucide-react';
+import { DEFAULT_IMAGES } from '../constants';
 import Button from '../components/common/Button';
 import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis } from '../utils/offlineLibrary';
+import { formatDate, formatSize } from '../utils/formatters';
 import toast from 'react-hot-toast';
 
 export default function OfflineLibrary() {
@@ -150,24 +152,6 @@ export default function OfflineLibrary() {
 
   const handleRead = (chapter) => {
     navigate(`/manga/reader/${encodeURIComponent(chapter.id)}?offline=1`);
-  };
-
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'Unknown';
-    const date = new Date(timestamp);
-    return date.toLocaleDateString('vi-VN', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatSize = (bytes) => {
-    if (!bytes) return 'Unknown';
-    const mb = bytes / (1024 * 1024);
-    return `${mb.toFixed(1)} MB`;
   };
 
   if (loading) {
@@ -462,11 +446,11 @@ export default function OfflineLibrary() {
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-3">
                 <div className="flex items-start gap-3">
                   <img 
-                    src={chapterToDelete.pageUrls?.[0] || '/default/default-cover.jpg'} 
+                    src={chapterToDelete.pageUrls?.[0] || DEFAULT_IMAGES.cover} 
                     alt="Chapter cover"
                     className="w-12 h-16 object-cover rounded border border-gray-200 dark:border-gray-600"
                     onError={(e) => {
-                      e.target.src = '/default/default-cover.jpg';
+                      e.target.src = DEFAULT_IMAGES.cover;
                     }}
                   />
                   <div className="flex-1 min-w-0">
@@ -528,7 +512,7 @@ export default function OfflineLibrary() {
 
 // Chapter Card Component
 const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
-  const coverImage = chapter.pageUrls?.[0] || '/default/default-cover.jpg';
+  const coverImage = chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover;
   const title = chapter.mangaTitle || chapter.chapterTitle || chapter.id || 'Unknown';
   
   return (
@@ -541,7 +525,7 @@ const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
           className="w-full h-full object-cover"
           loading="lazy"
           onError={(e) => {
-            e.target.src = '/default/default-cover.jpg';
+            e.target.src = DEFAULT_IMAGES.cover;
           }}
         />
         
@@ -594,7 +578,7 @@ const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
 
 // Chapter List Item Component
 const ChapterListItem = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
-  const coverImage = chapter.pageUrls?.[0] || '/default/default-cover.jpg';
+  const coverImage = chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover;
   const title = chapter.mangaTitle || chapter.chapterTitle || chapter.id || 'Unknown';
   
   return (
@@ -608,7 +592,7 @@ const ChapterListItem = ({ chapter, onRead, onDelete, formatDate, formatSize }) 
             className="w-full h-full object-cover"
             loading="lazy"
             onError={(e) => {
-              e.target.src = '/default/default-cover.jpg';
+              e.target.src = DEFAULT_IMAGES.cover;
             }}
           />
         </div>

@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fi';
 import { useMusicStore } from '@/store';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
+import { DEFAULT_IMAGES } from '@/constants';
 
 const PlayerFooter = ({ 
   audioRef, 
@@ -138,8 +139,8 @@ const PlayerFooter = ({
           {currentTrack ? (
             <>
               <img
-                src={buildThumbnailUrl(currentTrack, 'music') || '/default/music-thumb.png'}
-                onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')}
+                src={buildThumbnailUrl(currentTrack, 'music') || DEFAULT_IMAGES.music}
+                onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)}
                 alt={currentTrack.name}
                 className="w-12 h-12 rounded object-cover"
               />

@@ -3,7 +3,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { STORAGE_KEYS } from '../constants';
+import { STORAGE_KEYS, DEFAULT_IMAGES } from '../constants';
 import { apiService } from '../utils/api';
 import { getMangaCache, setMangaCache } from '@/utils/mangaCache';
 import { updateFavoriteInAllCaches } from '@/utils/favoriteCache';
@@ -557,8 +557,8 @@ export const useMovieStore = create(
               } else {
                 // Fallback to default thumbnails
                 thumbnailUrl = (folder.type === 'video' || folder.type === 'file') 
-                  ? '/default/video-thumb.png' 
-                  : '/default/folder-thumb.png';
+                  ? DEFAULT_IMAGES.video 
+                  : DEFAULT_IMAGES.folder;
               }
 
               return {
@@ -627,7 +627,7 @@ export const useMovieStore = create(
                 thumbnailUrl = `/video/${safeFolderPrefix}${safeThumbnail.replace(/\\/g, '/')}`;
               }
             } else {
-              thumbnailUrl = (item.type === 'video' || item.type === 'file' ? '/default/video-thumb.png' : '/default/folder-thumb.png');
+              thumbnailUrl = (item.type === 'video' || item.type === 'file' ? DEFAULT_IMAGES.video : DEFAULT_IMAGES.folder);
             }
             
             return {
@@ -834,8 +834,8 @@ export const useMusicStore = create(
                 }
               } else {
                 thumbnailUrl = (folder.type === 'audio' || folder.type === 'file') 
-                  ? '/default/music-thumb.png' 
-                  : '/default/folder-thumb.png';
+                  ? DEFAULT_IMAGES.music 
+                  : DEFAULT_IMAGES.folder;
               }
               return { ...folder, thumbnail: thumbnailUrl, isFavorite: !!folder.isFavorite };
             });

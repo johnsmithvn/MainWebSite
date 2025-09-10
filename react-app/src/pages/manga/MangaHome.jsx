@@ -10,6 +10,7 @@ import Button from '../../components/common/Button';
 import Breadcrumb from '../../components/common/Breadcrumb';
 import MangaCard from '../../components/manga/MangaCard';
 import MangaRandomSection from '../../components/manga/MangaRandomSection';
+import { DEFAULT_IMAGES } from '../../constants';
 
 const MangaHome = () => {
   const navigate = useNavigate();
@@ -587,7 +588,7 @@ const MangaHome = () => {
                     <div className="text-4xl">📁</div>
                   ) : (
                     <img
-                      src={item.thumbnail || '/default/default-cover.jpg'}
+                      src={item.thumbnail || DEFAULT_IMAGES.cover}
                       alt={item.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {

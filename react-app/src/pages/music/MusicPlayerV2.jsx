@@ -14,6 +14,7 @@ import {
 import { useAuthStore, useMusicStore, useUIStore } from '@/store';
 import { useRecentMusicManager } from '@/hooks/useMusicData';
 import { apiService } from '@/utils/api';
+import { DEFAULT_IMAGES } from '@/constants';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import PlayerFooter from '../../components/music/PlayerFooter';
@@ -502,7 +503,7 @@ const MusicPlayerV2 = () => {
 
   const coverArt = (currentTrack || currentPlaylist[0])
     ? buildThumbnailUrl(currentTrack || currentPlaylist[0], 'music')
-    : '/default/music-thumb.png';
+    : DEFAULT_IMAGES.music;
 
   // Derived meta for header
   const albumName = currentTrack?.album || currentPlaylist[0]?.album || folderTitle;
@@ -576,7 +577,7 @@ const MusicPlayerV2 = () => {
                 transition={{ duration: 0.3 }}
                 src={coverArt}
                 alt={currentTrack?.name || folderTitle}
-                onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')}
+                onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)}
                 className="w-64 h-64 md:w-72 md:h-72 rounded-xl object-cover shadow-2xl"
               />
               {/* Center play overlay like Zing */}
@@ -669,7 +670,7 @@ const MusicPlayerV2 = () => {
                   </div>
 
                   <div className="min-w-0 flex items-center gap-3">
-                    <img src={buildThumbnailUrl(track, 'music')} onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')} alt={track.name} className="w-10 h-10 rounded object-cover flex-none" />
+                    <img src={buildThumbnailUrl(track, 'music')} onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)} alt={track.name} className="w-10 h-10 rounded object-cover flex-none" />
                     <div className="min-w-0">
                       <div className={`${index === currentIndex ? 'text-[#b58dff]' : 'text-white'} truncate`}>{track.name}</div>
                       <div className="text-xs text-white/60 truncate">{track.artist || 'Unknown Artist'}</div>
@@ -750,7 +751,7 @@ const MusicPlayerV2 = () => {
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-left ${activePlaylistId === pl.id ? 'bg-white/10' : ''}`}
                       title={pl.name}
                     >
-                      <img src={pl.thumbnail || '/default/music-thumb.png'} onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')} alt={pl.name} className="w-9 h-9 rounded object-cover" />
+                      <img src={pl.thumbnail || DEFAULT_IMAGES.music} onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)} alt={pl.name} className="w-9 h-9 rounded object-cover" />
                       <div className="min-w-0">
                         <div className="text-sm text-white truncate">{pl.name}</div>
                         <div className="text-[11px] text-white/60 truncate">{new Date(pl.updatedAt || Date.now()).toLocaleDateString()}</div>

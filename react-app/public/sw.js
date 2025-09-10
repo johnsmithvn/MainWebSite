@@ -3,6 +3,15 @@
  * Provides intelligent caching, offline functionality, and storage management
  */
 
+// Import default images constants
+const DEFAULT_IMAGES = {
+  cover: '/default/default-cover.jpg',
+  folder: '/default/folder-thumb.png',
+  music: '/default/music-thumb.png',
+  video: '/default/video-thumb.png',
+  favicon: '/default/favicon.png'
+};
+
 const CACHE_VERSION = 'v2.0.0';
 const STATIC_CACHE = `manga-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `manga-dynamic-${CACHE_VERSION}`;
@@ -13,11 +22,11 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/default/favicon.png',
-  '/default/default-cover.jpg',
-  '/default/folder-thumb.png',
-  '/default/music-thumb.png',
-  '/default/video-thumb.png'
+  DEFAULT_IMAGES.favicon,
+  DEFAULT_IMAGES.cover,
+  DEFAULT_IMAGES.folder,
+  DEFAULT_IMAGES.music,
+  DEFAULT_IMAGES.video
 ];
 
 // Network timeout for better UX
@@ -267,7 +276,7 @@ async function updateCacheInBackground(request, cache) {
 async function getFallbackImage() {
   try {
     const cache = await caches.open(STATIC_CACHE);
-    const fallback = await cache.match('/default/default-cover.jpg');
+    const fallback = await cache.match(DEFAULT_IMAGES.cover);
     
     if (fallback) {
       return fallback;

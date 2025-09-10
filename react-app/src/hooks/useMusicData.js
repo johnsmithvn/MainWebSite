@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store';
 import { apiService } from '@/utils/api';
 import { getRecentViewedCacheKey } from '@/constants/cacheKeys';
 import { processThumbnails } from '@/utils/thumbnailUtils';
+import { DEFAULT_IMAGES } from '@/constants';
 
 /**
  * Hook to get random music
@@ -139,7 +140,7 @@ export const useRecentMusicManager = () => {
       const newItem = {
         ...item,
         timestamp: Date.now(),
-        thumbnail: item.thumbnail || '/default/music-thumb.png'
+        thumbnail: item.thumbnail || DEFAULT_IMAGES.music
       };
       
       const updatedItems = [newItem, ...filtered].slice(0, 50); // Keep max 50 items
