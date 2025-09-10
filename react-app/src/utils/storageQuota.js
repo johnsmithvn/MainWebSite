@@ -212,24 +212,6 @@ export async function checkStorageForDownload(pageUrls) {
     estimatedSizeFormatted: formatBytes(estimatedSize)
   };
 }
-
-/**
- * Format bytes thành chuỗi dễ đọc
- * @param {number} bytes 
- * @returns {string}
- */
-function formatBytes(bytes) {
-  if (!bytes || bytes === 0) return '0 B';
-  
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
-  if (i === 0) return bytes + ' B';
-  
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
 /**
  * Hiển thị modal xác nhận download với thông tin storage
  * @param {Object} checkResult - Kết quả từ checkStorageForDownload

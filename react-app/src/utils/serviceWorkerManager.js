@@ -135,8 +135,8 @@ class ServiceWorkerManager {
     if (
       !('serviceWorker' in navigator) || 
       !(
-        typeof window.ServiceWorkerRegistration !== 'undefined' && 
-        'sync' in window.ServiceWorkerRegistration.prototype
+        typeof globalThis.ServiceWorkerRegistration !== 'undefined' && 
+        'sync' in globalThis.ServiceWorkerRegistration.prototype
       )
     ) {
       console.warn('⚠️ Background sync not supported');

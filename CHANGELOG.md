@@ -16,10 +16,11 @@
 - 🐛 [2025-09-09] Fixed duplicated formatBytes function → Consolidate to shared formatters utility
 - 🐛 [2025-09-09] Fixed duplicated path manipulation logic → Use existing pathUtils for consistency
 - 🐛 [2025-09-09] Replaced all hardcoded '/default' paths với DEFAULT_IMAGES constants across components
-- 🐛 [2025-09-09] Fixed ServiceWorkerRegistration existence check → Proper environment compatibility check
-- 🐛 [2025-09-09] Fixed magic number 75 trong StorageQuotaModal → Extract to STORAGE_INFO_THRESHOLD constant
-- 🐛 [2025-09-09] Fixed duplicate utility functions trong OfflineLibrary → Extract formatDate/formatSize to shared formatters
+- 🐛 [2025-09-09] Fixed Service Worker cache performance → Implemented cache instance management và globalThis compatibility
+- 🐛 [2025-09-09] Fixed duplicate formatBytes function trong storageQuota.js → Removed duplicate implementation, use shared formatters utility
 - 🐛 [2025-09-09] Fixed duplicate export statements trong storageQuota.js → Consolidate thành single export cho storage threshold constants
+- 🐛 [2025-09-09] Fixed ServiceWorkerRegistration window object usage → Use globalThis for better cross-context compatibility
+- 🔄 [2025-09-09] Optimized Service Worker cache management → Cache opened cache instances to reduce overhead
 
 ### Added
 

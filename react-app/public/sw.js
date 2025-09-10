@@ -32,6 +32,9 @@ const STATIC_ASSETS = [
 // Network timeout for better UX
 const NETWORK_TIMEOUT = 5000;
 
+// Cache instances management
+const cacheInstances = new Map();
+
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
   console.log('🔧 SW installing v2.0.0...');
@@ -67,6 +70,8 @@ self.addEventListener('activate', (event) => {
                 cacheName !== IMAGE_CACHE &&
                 (cacheName.includes('manga-') || cacheName.includes('mainws-'))) {
               console.log('🗑️ Deleting old cache:', cacheName);
+              // Remove from cache instances map too
+              cacheInstances.delete(cacheName);
               return caches.delete(cacheName);
             }
           })
@@ -118,10 +123,16 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Cache-first strategy for static assets
+// Cache-first strategy for static assets with cache instance management
 async function cacheFirstStrategy(request, cacheName) {
   try {
-    const cache = await caches.open(cacheName);
+    // Get or create cache instance
+    let cache = cacheInstances.get(cacheName);
+    if (!cache) {
+      cache = await caches.open(cacheName);
+      cacheInstances.set(cacheName, cache);
+    }
+    
     const cachedResponse = await cache.match(request);
     
     if (cachedResponse) {
@@ -163,7 +174,12 @@ async function networkFirstWithTimeout(request, cacheName) {
     const networkResponse = await Promise.race([networkPromise, timeoutPromise]);
     
     if (networkResponse.ok) {
-      const cache = await caches.open(cacheName);
+      // Use cached cache instance
+      let cache = cacheInstances.get(cacheName);
+      if (!cache) {
+        cache = await caches.open(cacheName);
+        cacheInstances.set(cacheName, cache);
+      }
       cache.put(request, networkResponse.clone());
     }
     
@@ -171,7 +187,12 @@ async function networkFirstWithTimeout(request, cacheName) {
   } catch (error) {
     console.log('📦 Network failed, trying cache:', getResourceName(request.url));
     
-    const cache = await caches.open(cacheName);
+    // Use cached cache instance
+    let cache = cacheInstances.get(cacheName);
+    if (!cache) {
+      cache = await caches.open(cacheName);
+      cacheInstances.set(cacheName, cache);
+    }
     const cachedResponse = await cache.match(request);
     
     if (cachedResponse) {
@@ -186,8 +207,12 @@ async function networkFirstWithTimeout(request, cacheName) {
 // Special strategy for manga images
 async function mangaImageStrategy(request) {
   try {
-    // Check our offline chapter cache first
-    const chapterCache = await caches.open(IMAGE_CACHE);
+    // Check our offline chapter cache first using cached instance
+    let chapterCache = cacheInstances.get(IMAGE_CACHE);
+    if (!chapterCache) {
+      chapterCache = await caches.open(IMAGE_CACHE);
+      cacheInstances.set(IMAGE_CACHE, chapterCache);
+    }
     const cachedImage = await chapterCache.match(request);
     
     if (cachedImage) {
@@ -219,7 +244,11 @@ async function navigationStrategy(request) {
     return networkResponse;
   } catch (error) {
     console.log('📦 Offline navigation, serving app');
-    const cache = await caches.open(STATIC_CACHE);
+    let cache = cacheInstances.get(STATIC_CACHE);
+    if (!cache) {
+      cache = await caches.open(STATIC_CACHE);
+      cacheInstances.set(STATIC_CACHE, cache);
+    }
     const appShell = await cache.match('/index.html');
     
     if (appShell) {
@@ -275,7 +304,11 @@ async function updateCacheInBackground(request, cache) {
 
 async function getFallbackImage() {
   try {
-    const cache = await caches.open(STATIC_CACHE);
+    let cache = cacheInstances.get(STATIC_CACHE);
+    if (!cache) {
+      cache = await caches.open(STATIC_CACHE);
+      cacheInstances.set(STATIC_CACHE, cache);
+    }
     const fallback = await cache.match(DEFAULT_IMAGES.cover);
     
     if (fallback) {
