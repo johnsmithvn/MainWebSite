@@ -284,7 +284,7 @@ Bạn có muốn tiếp tục download?`;
           message: errorMessage,
           type: 'error',
           confirmText: 'Đã hiểu',
-          cancelText: null // Hide cancel button for error modal
+          hideCancel: true // Explicitly hide cancel button for error modal
         }).then(() => resolve(false));
       } else {
         // Fallback to browser alert
