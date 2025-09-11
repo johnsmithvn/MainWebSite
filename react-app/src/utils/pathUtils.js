@@ -44,3 +44,21 @@ export const isRootLevel = (currentPath) => {
   const pathParts = cleanPath.split('/').filter(Boolean);
   return pathParts.length <= 1;
 };
+
+/**
+ * Extract manga and chapter titles from path
+ * @param {string} mangaPath - The manga path
+ * @returns {Object} - Object containing mangaTitle and chapterTitle
+ */
+export const extractTitlesFromPath = (mangaPath) => {
+  if (!mangaPath) return { mangaTitle: '', chapterTitle: '' };
+  
+  const folderName = getFolderName(mangaPath);
+  const cleanPath = mangaPath.replace(/\/__self__$/, '');
+  const pathParts = cleanPath.split('/').filter(Boolean);
+  
+  const mangaTitle = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : folderName;
+  const chapterTitle = folderName;
+  
+  return { mangaTitle, chapterTitle };
+};

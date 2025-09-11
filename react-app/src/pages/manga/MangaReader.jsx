@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { BookOpen, PanelLeft } from 'lucide-react';
 import { useMangaStore, useAuthStore } from '../../store';
 import { useRecentManager } from '../../hooks/useRecentManager';
-import { getFolderName } from '../../utils/pathUtils';
+import { getFolderName, extractTitlesFromPath } from '../../utils/pathUtils';
 import { apiService } from '../../utils/api';
 import { downloadChapter, isChapterDownloaded, getChapter } from '../../utils/offlineLibrary';
 import { checkStorageForDownload } from '../../utils/storageQuota';
@@ -641,12 +641,7 @@ const MangaReader = () => {
       };
       
       // Enhanced metadata with better title extraction
-      const folderName = getFolderName(currentPath);
-      const cleanPath = currentMangaPath.replace(/\/__self__$/, '');
-      const pathParts = cleanPath.split('/').filter(Boolean);
-      
-      const mangaTitle = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : folderName;
-      const chapterTitle = folderName;
+      const { mangaTitle, chapterTitle } = extractTitlesFromPath(currentMangaPath);
       
       await downloadChapter({
         id: currentMangaPath,

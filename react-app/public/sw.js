@@ -181,14 +181,27 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Cache-first strategy for static assets with cache instance management
+// Cache instance management with Promise-based protection against race conditions
+const cachePromises = new Map(); // Track pending cache.open() promises
+
+// Cache-first strategy for static assets with race condition protection
 async function cacheFirstStrategy(request, cacheName) {
   try {
-    // Get or create cache instance
+    // Get or create cache instance with race condition protection
     let cache = cacheInstances.get(cacheName);
     if (!cache) {
-      cache = await caches.open(cacheName);
+      // Check if there's already a pending cache.open() for this cacheName
+      let cachePromise = cachePromises.get(cacheName);
+      if (!cachePromise) {
+        // Create new cache.open() promise
+        cachePromise = caches.open(cacheName);
+        cachePromises.set(cacheName, cachePromise);
+      }
+      
+      // Wait for the cache to be opened
+      cache = await cachePromise;
       cacheInstances.set(cacheName, cache);
+      cachePromises.delete(cacheName); // Clean up the promise
     }
     
     const cachedResponse = await cache.match(request);

@@ -8,6 +8,44 @@ const { NAME: DB_NAME, STORE, VERSION: DB_VERSION } = DATABASE.OFFLINE_MANGA;
 import { formatBytes } from './formatters';
 import { isCachesAPISupported, getUnsupportedMessage, logBrowserSupport } from './browserSupport';
 
+// Domain-level CORS capability cache to avoid double requests
+const corsCapabilityCache = new Map();
+
+/**
+ * Check if domain supports CORS (cached to avoid repeated requests)
+ */
+const checkCorsSupport = async (url) => {
+  try {
+    const domain = new URL(url).origin;
+    
+    // Return cached result if available
+    if (corsCapabilityCache.has(domain)) {
+      return corsCapabilityCache.get(domain);
+    }
+    
+    // Test CORS with a lightweight HEAD request (shorter timeout)
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
+      
+      await fetch(url, { 
+        method: 'HEAD', 
+        mode: 'cors',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      corsCapabilityCache.set(domain, true);
+      return true;
+    } catch {
+      corsCapabilityCache.set(domain, false);
+      return false;
+    }
+  } catch {
+    return false; // Invalid URL
+  }
+};
+
 // Export for testing and maintenance
 export { DB_VERSION };
 
@@ -301,21 +339,18 @@ export async function downloadChapter(meta, onProgress = null) {
         });
       }
       
-      // Sử dụng cors mode để có thể đọc response body, nhưng có fallback cho CORS errors
+      // Check CORS support for this domain (cached)
+      const supportsCors = await checkCorsSupport(url);
       let resp;
       let isNoCorsMode = false;
       
-      try {
+      if (supportsCors) {
+        // Domain supports CORS, use cors mode
         resp = await fetch(url, { mode: 'cors' });
-      } catch (corsError) {
-        console.warn(`CORS failed for ${url}, trying no-cors:`, corsError);
-        try {
-          // Fallback to no-cors mode - won't be able to read response body for size calculation
-          resp = await fetch(url, { mode: 'no-cors' });
-          isNoCorsMode = true;
-        } catch (noCorsError) {
-          throw new Error(`Failed to fetch ${url} with both CORS and no-cors modes: ${noCorsError.message}`);
-        }
+      } else {
+        // Domain doesn't support CORS, use no-cors mode directly
+        resp = await fetch(url, { mode: 'no-cors' });
+        isNoCorsMode = true;
       }
       
       // Check response status only for CORS mode (no-cors responses are always opaque)

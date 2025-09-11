@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, HardDrive, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { formatBytes } from '../../utils/formatters';
 import { STORAGE_CRITICAL_THRESHOLD, STORAGE_WARNING_THRESHOLD, STORAGE_INFO_THRESHOLD } from '../../utils/storageQuota';
 
 const StorageQuotaModal = ({ 
@@ -34,15 +35,6 @@ const StorageQuotaModal = ({
     if (percentage >= STORAGE_WARNING_THRESHOLD * 100) return 'bg-yellow-500';
     if (percentage >= STORAGE_INFO_THRESHOLD * 100) return 'bg-blue-500';
     return 'bg-green-500';
-  };
-
-  const formatBytes = (bytes) => {
-    if (!bytes || bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    if (i === 0) return bytes + ' B';
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (

@@ -7,6 +7,15 @@
 - 🐛 [2025-09-11] Fixed CORS fallback logic in offlineLibrary.js → Improved error handling for no-cors mode và opaque responses
 - 🐛 [2025-09-11] Fixed window.confirm() và alert() usage in storageQuota.js → Support modern modal component với fallback to browser dialogs
 - 🐛 [2025-09-11] Fixed multi-line assignment formatting in serviceWorkerManager.js → Improved code readability và consistency
+- 🐛 [2025-09-11] Fixed path manipulation logic duplication in MangaReader.jsx → Centralized path utilities in pathUtils.js với extractTitlesFromPath function
+- 🐛 [2025-09-11] Fixed HMR configuration logic in vite.config.js → Corrected conditional logic for VITE_DISABLE_HMR
+- 🐛 [2025-09-11] Fixed Service Worker context compatibility → Use globalThis.ServiceWorkerRegistration for better cross-context support
+- 🐛 [2025-09-11] Fixed cache race conditions in sw.js → Added Promise-based cache opening với concurrent request protection
+- 🐛 [2025-09-11] Fixed formatBytes duplication in StorageQuotaModal.jsx → Import from centralized formatters.js utility
+
+### Added
+
+- ✨ [2025-09-11] Added domain-level CORS capability caching → Prevent double requests for failing domains with 2s timeout optimization
 
 - 🐛 [2025-09-10] Fixed "caches is not defined" error khi truy cập từ máy khác trong network → Thêm kiểm tra browser support và fallback cho Caches API không khả dụng
 - 🐛 [2025-09-10] Fixed import paths consistency → Sử dụng relative paths thay vì absolute paths cho better consistency 

@@ -36,10 +36,10 @@ export default defineConfig(({ mode }) => {
       // Chỉ nhận chuỗi (không dùng regex) và loại bỏ giá trị rỗng
       allowedHosts,
       hmr: env.VITE_DISABLE_HMR === 'true' 
-        ? false // Disable HMR for offline testing
+        ? false // Disable HMR completely when disabled
         : HMR_HOST
         ? { host: HMR_HOST, port: HMR_PORT, protocol: 'ws' }
-        : undefined,
+        : true, // Enable HMR with default settings
       proxy: {
       '/api': { target: 'http://localhost:3000', changeOrigin: true },
       '/manga': {
