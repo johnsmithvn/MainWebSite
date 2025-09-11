@@ -14,8 +14,33 @@ const STORAGE_CRITICAL_THRESHOLD = 0.95;
 // Ngưỡng thông tin (75% quota được sử dụng)
 const STORAGE_INFO_THRESHOLD = 0.75;
 
-// Minimum free space required (50MB)
-const MIN_REQUIRED_SPACE = 50 * 1024 * 1024; // 50MB in bytes
+/**
+ * Get device-appropriate minimum required space
+ * Configurable based on device capabilities and user settings
+ */
+const getMinRequiredSpace = () => {
+  // Check if mobile device (rough estimation)
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  // Base requirement
+  let baseRequirement = 50 * 1024 * 1024; // 50MB default
+  
+  // Adjust based on device type
+  if (isMobile) {
+    baseRequirement = 25 * 1024 * 1024; // 25MB for mobile
+  }
+  
+  // Allow environment override
+  const envOverride = process.env.VITE_MIN_STORAGE_SPACE;
+  if (envOverride && !isNaN(envOverride)) {
+    return parseInt(envOverride) * 1024 * 1024; // Convert MB to bytes
+  }
+  
+  return baseRequirement;
+};
+
+// Minimum free space required (device-responsive)
+const MIN_REQUIRED_SPACE = getMinRequiredSpace();
 
 /**
  * Kiểm tra storage quota hiện tại

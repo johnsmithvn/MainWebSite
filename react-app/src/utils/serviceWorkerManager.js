@@ -3,6 +3,8 @@
  * Handles SW registration, updates, and communication with main app
  */
 
+import { isServiceWorkerSupported, isBackgroundSyncSupported } from './browserSupport';
+
 class ServiceWorkerManager {
   constructor() {
     this.registration = null;
@@ -132,14 +134,8 @@ class ServiceWorkerManager {
    * Register background sync for failed downloads
    */
   async registerBackgroundSync() {
-    // Better cross-context compatibility check
-    const ServiceWorkerReg = globalThis.ServiceWorkerRegistration || 
-                            (typeof window !== 'undefined' ? window.ServiceWorkerRegistration : null);
-    
-    if (
-      !('serviceWorker' in navigator) || 
-      !(ServiceWorkerReg && 'sync' in ServiceWorkerReg.prototype)
-    ) {
+    // Use centralized browser support check
+    if (!isServiceWorkerSupported() || !isBackgroundSyncSupported()) {
       console.warn('⚠️ Background sync not supported');
       return false;
     }
@@ -281,12 +277,11 @@ class ServiceWorkerManager {
    */
   getStatus() {
     return {
-      supported: 'serviceWorker' in navigator,
+      supported: isServiceWorkerSupported(),
       registered: !!this.registration,
       controller: !!navigator.serviceWorker?.controller,
       online: this.isOnline,
-      backgroundSyncSupported: 
-        window.ServiceWorkerRegistration && 'sync' in window.ServiceWorkerRegistration.prototype
+      backgroundSyncSupported: isBackgroundSyncSupported()
     };
   }
 

@@ -20,6 +20,27 @@ export function isServiceWorkerSupported() {
 }
 
 /**
+ * Kiểm tra Background Sync có được hỗ trợ không (cross-context compatible)
+ * @returns {boolean} true nếu Background Sync có sẵn
+ */
+export function isBackgroundSyncSupported() {
+  // Cross-context compatibility check
+  const ServiceWorkerReg = globalThis.ServiceWorkerRegistration || 
+                          (typeof window !== 'undefined' ? window.ServiceWorkerRegistration : null);
+  
+  return !!(ServiceWorkerReg && 'sync' in ServiceWorkerReg.prototype);
+}
+
+/**
+ * Kiểm tra Service Worker Registration có được hỗ trợ không (cross-context)
+ * @returns {object|null} ServiceWorkerRegistration constructor hoặc null
+ */
+export function getServiceWorkerRegistration() {
+  return globalThis.ServiceWorkerRegistration || 
+         (typeof window !== 'undefined' ? window.ServiceWorkerRegistration : null);
+}
+
+/**
  * Kiểm tra IndexedDB có được hỗ trợ không
  * @returns {boolean} true nếu IndexedDB có sẵn
  */

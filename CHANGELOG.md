@@ -12,10 +12,16 @@
 - 🐛 [2025-09-11] Fixed Service Worker context compatibility → Use globalThis.ServiceWorkerRegistration for better cross-context support
 - 🐛 [2025-09-11] Fixed cache race conditions in sw.js → Added Promise-based cache opening với concurrent request protection
 - 🐛 [2025-09-11] Fixed formatBytes duplication in StorageQuotaModal.jsx → Import from centralized formatters.js utility
+- 🐛 [2025-09-11] Fixed cache access duplication across sw.js → Centralized getCacheInstance() function to eliminate race condition logic duplication
+- 🐛 [2025-09-11] Fixed hardcoded storage requirements in storageQuota.js → Device-responsive configuration với environment override support
+- 🐛 [2025-09-11] Fixed complex cross-context checks in serviceWorkerManager.js → Extract to browserSupport utility for consistency
 
 ### Added
 
 - ✨ [2025-09-11] Added domain-level CORS capability caching → Prevent double requests for failing domains with 2s timeout optimization
+- ✨ [2025-09-11] Added centralized cache instance management → getCacheInstance() function in sw.js for consistent race condition protection
+- ✨ [2025-09-11] Added device-responsive storage requirements → Mobile-friendly storage thresholds with configurable overrides
+- ✨ [2025-09-11] Added cross-context browser feature detection → isBackgroundSyncSupported() và getServiceWorkerRegistration() utilities
 
 - 🐛 [2025-09-10] Fixed "caches is not defined" error khi truy cập từ máy khác trong network → Thêm kiểm tra browser support và fallback cho Caches API không khả dụng
 - 🐛 [2025-09-10] Fixed import paths consistency → Sử dụng relative paths thay vì absolute paths cho better consistency 

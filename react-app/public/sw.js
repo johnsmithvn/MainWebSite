@@ -184,25 +184,38 @@ self.addEventListener('fetch', (event) => {
 // Cache instance management with Promise-based protection against race conditions
 const cachePromises = new Map(); // Track pending cache.open() promises
 
+/**
+ * Get cache instance with race condition protection
+ * Centralized function to avoid duplication across cache access points
+ */
+async function getCacheInstance(cacheName) {
+  // Get existing cache instance
+  let cache = cacheInstances.get(cacheName);
+  if (cache) {
+    return cache;
+  }
+
+  // Check if there's already a pending cache.open() for this cacheName
+  let cachePromise = cachePromises.get(cacheName);
+  if (!cachePromise) {
+    // Create new cache.open() promise
+    cachePromise = caches.open(cacheName);
+    cachePromises.set(cacheName, cachePromise);
+  }
+  
+  // Wait for the cache to be opened
+  cache = await cachePromise;
+  cacheInstances.set(cacheName, cache);
+  cachePromises.delete(cacheName); // Clean up the promise
+  
+  return cache;
+}
+
 // Cache-first strategy for static assets with race condition protection
 async function cacheFirstStrategy(request, cacheName) {
   try {
-    // Get or create cache instance with race condition protection
-    let cache = cacheInstances.get(cacheName);
-    if (!cache) {
-      // Check if there's already a pending cache.open() for this cacheName
-      let cachePromise = cachePromises.get(cacheName);
-      if (!cachePromise) {
-        // Create new cache.open() promise
-        cachePromise = caches.open(cacheName);
-        cachePromises.set(cacheName, cachePromise);
-      }
-      
-      // Wait for the cache to be opened
-      cache = await cachePromise;
-      cacheInstances.set(cacheName, cache);
-      cachePromises.delete(cacheName); // Clean up the promise
-    }
+    // Use centralized cache instance getter
+    const cache = await getCacheInstance(cacheName);
     
     const cachedResponse = await cache.match(request);
     
@@ -245,12 +258,8 @@ async function networkFirstWithTimeout(request, cacheName) {
     const networkResponse = await Promise.race([networkPromise, timeoutPromise]);
     
     if (networkResponse.ok) {
-      // Use cached cache instance
-      let cache = cacheInstances.get(cacheName);
-      if (!cache) {
-        cache = await caches.open(cacheName);
-        cacheInstances.set(cacheName, cache);
-      }
+      // Use centralized cache instance getter
+      const cache = await getCacheInstance(cacheName);
       cache.put(request, networkResponse.clone());
     }
     
@@ -258,12 +267,8 @@ async function networkFirstWithTimeout(request, cacheName) {
   } catch (error) {
     console.log('📦 Network failed, trying cache:', getResourceName(request.url));
     
-    // Use cached cache instance
-    let cache = cacheInstances.get(cacheName);
-    if (!cache) {
-      cache = await caches.open(cacheName);
-      cacheInstances.set(cacheName, cache);
-    }
+    // Use centralized cache instance getter
+    const cache = await getCacheInstance(cacheName);
     const cachedResponse = await cache.match(request);
     
     if (cachedResponse) {
@@ -278,12 +283,8 @@ async function networkFirstWithTimeout(request, cacheName) {
 // Special strategy for manga images
 async function mangaImageStrategy(request) {
   try {
-    // Check our offline chapter cache first using cached instance
-    let chapterCache = cacheInstances.get(IMAGE_CACHE);
-    if (!chapterCache) {
-      chapterCache = await caches.open(IMAGE_CACHE);
-      cacheInstances.set(IMAGE_CACHE, chapterCache);
-    }
+    // Check our offline chapter cache first using centralized cache getter
+    const chapterCache = await getCacheInstance(IMAGE_CACHE);
     const cachedImage = await chapterCache.match(request);
     
     if (cachedImage) {
@@ -316,12 +317,8 @@ async function navigationStrategy(request) {
   } catch (error) {
     console.log('📦 Offline navigation, serving app shell');
     
-    // Get cache instance
-    let cache = cacheInstances.get(STATIC_CACHE);
-    if (!cache) {
-      cache = await caches.open(STATIC_CACHE);
-      cacheInstances.set(STATIC_CACHE, cache);
-    }
+    // Get cache instance using centralized getter
+    const cache = await getCacheInstance(STATIC_CACHE);
     
     // Try to serve React app first
     const appShell = await cache.match('/index.html') || await cache.match('/');
@@ -409,11 +406,8 @@ async function updateCacheInBackground(request, cache) {
 
 async function getFallbackImage() {
   try {
-    let cache = cacheInstances.get(STATIC_CACHE);
-    if (!cache) {
-      cache = await caches.open(STATIC_CACHE);
-      cacheInstances.set(STATIC_CACHE, cache);
-    }
+    // Use centralized cache getter
+    const cache = await getCacheInstance(STATIC_CACHE);
     const fallback = await cache.match(DEFAULT_IMAGES.cover);
     
     if (fallback) {
