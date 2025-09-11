@@ -303,27 +303,41 @@ export async function downloadChapter(meta, onProgress = null) {
       
       // Sử dụng cors mode để có thể đọc response body, nhưng có fallback cho CORS errors
       let resp;
+      let isNoCorsMode = false;
+      
       try {
         resp = await fetch(url, { mode: 'cors' });
       } catch (corsError) {
         console.warn(`CORS failed for ${url}, trying no-cors:`, corsError);
-        // Fallback to no-cors mode - won't be able to read response body for size calculation
-        resp = await fetch(url, { mode: 'no-cors' });
+        try {
+          // Fallback to no-cors mode - won't be able to read response body for size calculation
+          resp = await fetch(url, { mode: 'no-cors' });
+          isNoCorsMode = true;
+        } catch (noCorsError) {
+          throw new Error(`Failed to fetch ${url} with both CORS and no-cors modes: ${noCorsError.message}`);
+        }
       }
       
-      if (!resp.ok) {
+      // Check response status only for CORS mode (no-cors responses are always opaque)
+      if (!isNoCorsMode && !resp.ok) {
         throw new Error(`Failed to fetch ${url}: ${resp.status}`);
       }
       
       await cache.put(url, resp.clone());
       
-      try {
-        const blob = await resp.blob();
-        bytes += blob.size;
-      } catch (err) {
-        console.warn(`Failed to calculate blob size for ${url}:`, err);
-        // If we can't read the response body (no-cors mode), estimate size
+      // Calculate size only if we can read the response body
+      if (isNoCorsMode || resp.type === 'opaque') {
+        // No-cors mode or opaque response - can't read body, use estimate
+        console.warn(`Using size estimate for ${url} (no-cors/opaque response)`);
         bytes += 500 * 1024; // 500KB fallback estimate per image
+      } else {
+        try {
+          const blob = await resp.blob();
+          bytes += blob.size;
+        } catch (err) {
+          console.warn(`Failed to calculate blob size for ${url}:`, err);
+          bytes += 500 * 1024; // 500KB fallback estimate per image
+        }
       }
     } catch (err) {
       console.error(`Error downloading page ${i + 1}:`, err);

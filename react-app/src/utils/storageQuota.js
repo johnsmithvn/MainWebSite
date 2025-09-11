@@ -215,9 +215,10 @@ export async function checkStorageForDownload(pageUrls) {
 /**
  * Hiển thị modal xác nhận download với thông tin storage
  * @param {Object} checkResult - Kết quả từ checkStorageForDownload
+ * @param {Function} modalConfirm - Modal confirm function from useModal hook
  * @returns {Promise<boolean>} User confirmation
  */
-export function showStorageConfirmDialog(checkResult) {
+export function showStorageConfirmDialog(checkResult, modalConfirm = null) {
   return new Promise((resolve) => {
     const { canDownload, message, warning, estimatedSizeFormatted, storageInfo } = checkResult;
     
@@ -227,15 +228,44 @@ export function showStorageConfirmDialog(checkResult) {
     }
     
     if (canDownload) {
-      dialogMessage += `\n\nDung lượng ước tính: ${estimatedSizeFormatted}`;
-      dialogMessage += `\nStorage hiện tại: ${storageInfo.usageFormatted} / ${storageInfo.quotaFormatted} (${storageInfo.percentageFormatted})`;
-      dialogMessage += '\n\nBạn có muốn tiếp tục download?';
+      const detailMessage = `${dialogMessage}
+
+Dung lượng ước tính: ${estimatedSizeFormatted}
+Storage hiện tại: ${storageInfo.usageFormatted} / ${storageInfo.quotaFormatted} (${storageInfo.percentageFormatted})
+
+Bạn có muốn tiếp tục download?`;
       
-      const confirmed = window.confirm(dialogMessage);
-      resolve(confirmed);
+      if (modalConfirm) {
+        // Use modern modal if provided
+        modalConfirm({
+          title: 'Xác nhận Download',
+          message: detailMessage,
+          type: 'confirm',
+          confirmText: 'Tiếp tục',
+          cancelText: 'Hủy'
+        }).then(resolve);
+      } else {
+        // Fallback to browser confirm if no modal provided
+        const confirmed = window.confirm(detailMessage);
+        resolve(confirmed);
+      }
     } else {
-      alert('❌ ' + dialogMessage);
-      resolve(false);
+      const errorMessage = '❌ ' + dialogMessage;
+      
+      if (modalConfirm) {
+        // Use modern modal for error
+        modalConfirm({
+          title: 'Không thể Download',
+          message: errorMessage,
+          type: 'error',
+          confirmText: 'Đã hiểu',
+          cancelText: null // Hide cancel button for error modal
+        }).then(() => resolve(false));
+      } else {
+        // Fallback to browser alert
+        alert(errorMessage);
+        resolve(false);
+      }
     }
   });
 }

@@ -4,9 +4,9 @@
 
 ### Fixed
 
-## [Unreleased]
-
-### Fixed
+- 🐛 [2025-09-11] Fixed CORS fallback logic in offlineLibrary.js → Improved error handling for no-cors mode và opaque responses
+- 🐛 [2025-09-11] Fixed window.confirm() và alert() usage in storageQuota.js → Support modern modal component với fallback to browser dialogs
+- 🐛 [2025-09-11] Fixed multi-line assignment formatting in serviceWorkerManager.js → Improved code readability và consistency
 
 - 🐛 [2025-09-10] Fixed "caches is not defined" error khi truy cập từ máy khác trong network → Thêm kiểm tra browser support và fallback cho Caches API không khả dụng
 - 🐛 [2025-09-10] Fixed import paths consistency → Sử dụng relative paths thay vì absolute paths cho better consistency 
