@@ -141,10 +141,14 @@ self.addEventListener('activate', (event) => {
       // Notify all clients about SW activation
       return self.clients.matchAll().then(clients => {
         clients.forEach(client => {
-          client.postMessage({
-            type: 'SW_ACTIVATED',
-            version: CACHE_VERSION
-          });
+          try {
+            client.postMessage({
+              type: 'SW_ACTIVATED',
+              version: CACHE_VERSION
+            });
+          } catch (error) {
+            console.warn('Failed to notify client about SW activation:', error);
+          }
         });
       });
     })
@@ -454,10 +458,14 @@ async function handleBackgroundSync() {
     // Notify main app about sync opportunity
     const clients = await self.clients.matchAll();
     clients.forEach(client => {
-      client.postMessage({
-        type: 'BACKGROUND_SYNC',
-        tag: 'retry-failed-downloads'
-      });
+      try {
+        client.postMessage({
+          type: 'BACKGROUND_SYNC',
+          tag: 'retry-failed-downloads'
+        });
+      } catch (error) {
+        console.warn('Failed to notify client about background sync:', error);
+      }
     });
     
     console.log('✅ Background sync completed');

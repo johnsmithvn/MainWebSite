@@ -1,5 +1,5 @@
 /**
- * Storage Quota Management Utilities
+ * Storage Quota Management
  * Kiểm tra và quản lý dung lượng storage trước khi download
  */
 

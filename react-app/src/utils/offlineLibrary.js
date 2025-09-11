@@ -301,8 +301,15 @@ export async function downloadChapter(meta, onProgress = null) {
         });
       }
       
-      // Sử dụng cors mode thay vì no-cors để có thể đọc response body
-      const resp = await fetch(url, { mode: 'cors' });
+      // Sử dụng cors mode để có thể đọc response body, nhưng có fallback cho CORS errors
+      let resp;
+      try {
+        resp = await fetch(url, { mode: 'cors' });
+      } catch (corsError) {
+        console.warn(`CORS failed for ${url}, trying no-cors:`, corsError);
+        // Fallback to no-cors mode - won't be able to read response body for size calculation
+        resp = await fetch(url, { mode: 'no-cors' });
+      }
       
       if (!resp.ok) {
         throw new Error(`Failed to fetch ${url}: ${resp.status}`);
@@ -314,7 +321,9 @@ export async function downloadChapter(meta, onProgress = null) {
         const blob = await resp.blob();
         bytes += blob.size;
       } catch (err) {
-        console.error(`Failed to calculate blob size for ${url}:`, err);
+        console.warn(`Failed to calculate blob size for ${url}:`, err);
+        // If we can't read the response body (no-cors mode), estimate size
+        bytes += 500 * 1024; // 500KB fallback estimate per image
       }
     } catch (err) {
       console.error(`Error downloading page ${i + 1}:`, err);

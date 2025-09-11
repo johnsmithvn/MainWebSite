@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { X, Download, CheckCircle, AlertCircle } from 'lucide-react';
-import { PROGRESS_COLORS } from '../../constants/colors';
+import { PROGRESS_COLORS } from '@/constants/colors';
 
 const DownloadProgressModal = ({
   isOpen,

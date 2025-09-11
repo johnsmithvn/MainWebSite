@@ -7,6 +7,7 @@ import { getFolderName } from '../../utils/pathUtils';
 import { apiService } from '../../utils/api';
 import { downloadChapter, isChapterDownloaded, getChapter } from '../../utils/offlineLibrary';
 import { checkStorageForDownload } from '../../utils/storageQuota';
+import { isCachesAPISupported, getUnsupportedMessage } from '../../utils/browserSupport';
 import ReaderHeader from '../../components/manga/ReaderHeader';
 import { DownloadProgressModal, StorageQuotaModal, OfflineCompatibilityBanner } from '../../components/common';
 import toast from 'react-hot-toast';
@@ -563,9 +564,6 @@ const MangaReader = () => {
 
   const handleDownloadChapter = async () => {
     if (!currentImages.length || !currentMangaPath || isDownloading) return;
-    
-    // Import browser support check
-    const { isCachesAPISupported, getUnsupportedMessage } = await import('@/utils/browserSupport');
     
     // Kiểm tra Caches API có sẵn không
     if (!isCachesAPISupported()) {

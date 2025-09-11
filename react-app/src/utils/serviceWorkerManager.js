@@ -135,8 +135,8 @@ class ServiceWorkerManager {
     if (
       !('serviceWorker' in navigator) || 
       !(
-        typeof globalThis.ServiceWorkerRegistration !== 'undefined' && 
-        'sync' in globalThis.ServiceWorkerRegistration.prototype
+        typeof window.ServiceWorkerRegistration !== 'undefined' && 
+        'sync' in window.ServiceWorkerRegistration.prototype
       )
     ) {
       console.warn('⚠️ Background sync not supported');
@@ -284,7 +284,8 @@ class ServiceWorkerManager {
       registered: !!this.registration,
       controller: !!navigator.serviceWorker?.controller,
       online: this.isOnline,
-      backgroundSyncSupported: window.ServiceWorkerRegistration && 'sync' in window.ServiceWorkerRegistration.prototype
+              backgroundSyncSupported: window.ServiceWorkerRegistration && 'sync' in 
+window.ServiceWorkerRegistration.prototype
     };
   }
 

@@ -9,6 +9,11 @@
 ### Fixed
 
 - 🐛 [2025-09-10] Fixed "caches is not defined" error khi truy cập từ máy khác trong network → Thêm kiểm tra browser support và fallback cho Caches API không khả dụng
+- 🐛 [2025-09-10] Fixed import paths consistency → Sử dụng relative paths thay vì absolute paths cho better consistency 
+- 🐛 [2025-09-10] Fixed ServiceWorker reference inconsistency → Sử dụng window.ServiceWorkerRegistration thay vì globalThis
+- 🐛 [2025-09-10] Fixed CORS fetch fallback strategy → Thêm fallback to no-cors mode khi CORS fails
+- 🐛 [2025-09-10] Fixed Service Worker postMessage error handling → Thêm try-catch cho client.postMessage calls
+- 🐛 [2025-09-10] Fixed dynamic import performance issue → Move browserSupport import to module level
 
 ### Added
 
