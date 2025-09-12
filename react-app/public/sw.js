@@ -66,38 +66,43 @@ self.addEventListener('install', (event) => {
           console.log('✅ Essential assets cached');
         } catch (error) {
           console.warn('⚠️ Some essential assets failed to cache:', error);
-        }
-        
-        // Cache Vite dev assets if available
-        const viteDevAssets = [
-          '/src/main.jsx',
-          '/src/App.jsx',
-          '/src/index.css',
-          '/@vite/client'
-        ];
-        
-        for (const asset of viteDevAssets) {
-          try {
-            await cache.add(asset);
-            console.log('✅ Cached Vite dev asset:', asset);
-          } catch (error) {
-            console.warn('⚠️ Failed to cache Vite dev asset:', asset);
+          // Fallback to individual caching for essential assets
+          for (const asset of essentialAssets) {
+            try {
+              await cache.add(asset);
+            } catch (individualError) {
+              console.warn('⚠️ Failed to cache essential asset:', asset);
+            }
           }
         }
         
-        // Try to cache optional production assets
-        const optionalAssets = [
-          '/manifest.webmanifest',
-          '/assets/index.css',
-          '/assets/index.js'
+        // Cache optional assets groups with better error handling
+        const assetGroups = [
+          {
+            name: 'Vite dev assets',
+            assets: ['/src/main.jsx', '/src/App.jsx', '/src/index.css', '/@vite/client']
+          },
+          {
+            name: 'Production assets', 
+            assets: ['/manifest.webmanifest', '/assets/index.css', '/assets/index.js']
+          }
         ];
         
-        for (const asset of optionalAssets) {
+        for (const group of assetGroups) {
           try {
-            await cache.add(asset);
-            console.log('✅ Cached production asset:', asset);
+            await cache.addAll(group.assets);
+            console.log(`✅ ${group.name} cached successfully`);
           } catch (error) {
-            console.warn('⚠️ Failed to cache production asset:', asset);
+            console.warn(`⚠️ Failed to cache ${group.name} as group, trying individually...`);
+            // Fallback to individual caching
+            for (const asset of group.assets) {
+              try {
+                await cache.add(asset);
+                console.log(`✅ Cached ${group.name.toLowerCase()}:`, asset);
+              } catch (individualError) {
+                console.warn(`⚠️ Failed to cache ${group.name.toLowerCase()}:`, asset);
+              }
+            }
           }
         }
         

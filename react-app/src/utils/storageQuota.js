@@ -238,6 +238,48 @@ export async function checkStorageForDownload(pageUrls) {
   };
 }
 /**
+ * Tạo modal config cho confirm download
+ */
+function createConfirmModal(checkResult) {
+  const { canDownload, message, warning, estimatedSizeFormatted, storageInfo } = checkResult;
+  
+  let dialogMessage = message;
+  if (warning) {
+    dialogMessage += '\n\n⚠️ ' + warning;
+  }
+
+  const detailMessage = `${dialogMessage}
+
+Dung lượng ước tính: ${estimatedSizeFormatted}
+Storage hiện tại: ${storageInfo.usageFormatted} / ${storageInfo.quotaFormatted} (${storageInfo.percentageFormatted})
+
+Bạn có muốn tiếp tục download?`;
+
+  return {
+    title: 'Xác nhận Download',
+    message: detailMessage,
+    type: 'confirm',
+    confirmText: 'Tiếp tục',
+    cancelText: 'Hủy'
+  };
+}
+
+/**
+ * Tạo modal config cho error message
+ */
+function createErrorModal(checkResult) {
+  const { message } = checkResult;
+  
+  return {
+    title: 'Không thể Download',
+    message: '❌ ' + message,
+    type: 'error',
+    confirmText: 'Đã hiểu',
+    hideCancel: true
+  };
+}
+
+/**
  * Hiển thị modal xác nhận download với thông tin storage
  * @param {Object} checkResult - Kết quả từ checkStorageForDownload
  * @param {Function} modalConfirm - Modal confirm function from useModal hook
@@ -245,49 +287,23 @@ export async function checkStorageForDownload(pageUrls) {
  */
 export function showStorageConfirmDialog(checkResult, modalConfirm = null) {
   return new Promise((resolve) => {
-    const { canDownload, message, warning, estimatedSizeFormatted, storageInfo } = checkResult;
-    
-    let dialogMessage = message;
-    if (warning) {
-      dialogMessage += '\n\n⚠️ ' + warning;
-    }
+    const { canDownload } = checkResult;
     
     if (canDownload) {
-      const detailMessage = `${dialogMessage}
-
-Dung lượng ước tính: ${estimatedSizeFormatted}
-Storage hiện tại: ${storageInfo.usageFormatted} / ${storageInfo.quotaFormatted} (${storageInfo.percentageFormatted})
-
-Bạn có muốn tiếp tục download?`;
-      
       if (modalConfirm) {
-        // Use modern modal if provided
-        modalConfirm({
-          title: 'Xác nhận Download',
-          message: detailMessage,
-          type: 'confirm',
-          confirmText: 'Tiếp tục',
-          cancelText: 'Hủy'
-        }).then(resolve);
+        modalConfirm(createConfirmModal(checkResult)).then(resolve);
       } else {
         // Fallback to browser confirm if no modal provided
+        const detailMessage = createConfirmModal(checkResult).message;
         const confirmed = window.confirm(detailMessage);
         resolve(confirmed);
       }
     } else {
-      const errorMessage = '❌ ' + dialogMessage;
-      
       if (modalConfirm) {
-        // Use modern modal for error
-        modalConfirm({
-          title: 'Không thể Download',
-          message: errorMessage,
-          type: 'error',
-          confirmText: 'Đã hiểu',
-          hideCancel: true // Explicitly hide cancel button for error modal
-        }).then(() => resolve(false));
+        modalConfirm(createErrorModal(checkResult)).then(() => resolve(false));
       } else {
         // Fallback to browser alert
+        const errorMessage = createErrorModal(checkResult).message;
         alert(errorMessage);
         resolve(false);
       }

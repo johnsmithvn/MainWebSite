@@ -341,17 +341,9 @@ export async function downloadChapter(meta, onProgress = null) {
       
       // Check CORS support for this domain (cached)
       const supportsCors = await checkCorsSupport(url);
-      let resp;
-      let isNoCorsMode = false;
-      
-      if (supportsCors) {
-        // Domain supports CORS, use cors mode
-        resp = await fetch(url, { mode: 'cors' });
-      } else {
-        // Domain doesn't support CORS, use no-cors mode directly
-        resp = await fetch(url, { mode: 'no-cors' });
-        isNoCorsMode = true;
-      }
+      const fetchOptions = { mode: supportsCors ? 'cors' : 'no-cors' };
+      const resp = await fetch(url, fetchOptions);
+      const isNoCorsMode = !supportsCors;
       
       // Check response status only for CORS mode (no-cors responses are always opaque)
       if (!isNoCorsMode && !resp.ok) {

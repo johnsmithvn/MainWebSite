@@ -4,6 +4,9 @@
 
 ### Fixed
 
+- 🐛 [2025-09-13] Fixed Service Worker caching strategy → Improved cache.addAll() with group batching and individual fallback for better reliability
+- 🐛 [2025-09-13] Fixed modal configuration duplication in storageQuota.js → Extracted createConfirmModal() và createErrorModal() functions for better maintainability
+- 🐛 [2025-09-13] Fixed fetch options complexity in offlineLibrary.js → Simplified with const fetchOptions variable to reduce code duplication
 - 🐛 [2025-09-11] Fixed CORS fallback logic in offlineLibrary.js → Improved error handling for no-cors mode và opaque responses
 - 🐛 [2025-09-11] Fixed window.confirm() và alert() usage in storageQuota.js → Support modern modal component với fallback to browser dialogs
 - 🐛 [2025-09-11] Fixed multi-line assignment formatting in serviceWorkerManager.js → Improved code readability và consistency
