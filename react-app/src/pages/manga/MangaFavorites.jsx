@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Heart, Search, Grid, List, Trash2, BookOpen, Download, RefreshCw } from 'lucide-react';
 import { useMangaStore, useUIStore } from '@/store';
 import Button from '@/components/common/Button';
+import { DEFAULT_IMAGES } from '@/constants';
 
 const MangaFavorites = () => {
   const { favorites, fetchFavorites, toggleFavorite, loading: mangaLoading } = useMangaStore();
@@ -270,7 +271,7 @@ const MangaFavorites = () => {
                       // inner click delegated to parent
                     >
                       <img
-                        src={manga.thumbnail || '/default/default-cover.jpg'}
+                        src={manga.thumbnail || DEFAULT_IMAGES.cover}
                         alt={manga.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
@@ -331,7 +332,7 @@ const MangaFavorites = () => {
                     onClick={() => handleNavigate(manga)}
                   >
                     <img
-                      src={manga.thumbnail || '/default/default-cover.jpg'}
+                      src={manga.thumbnail || DEFAULT_IMAGES.cover}
                       alt={manga.title}
                       className="w-full h-full object-cover"
                     />

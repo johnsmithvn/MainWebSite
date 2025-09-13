@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store';
 import { useRecentManager } from '@/hooks/useRecentManager';
 import { apiService } from '@/utils/api';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
+import { DEFAULT_IMAGES } from '@/constants';
 
 const UniversalCard = ({ 
   item, 
@@ -257,12 +258,12 @@ const UniversalCard = ({
           onError={(e) => {
             if (type === 'movie') {
               const isVideo = item.type === 'video' || item.type === 'file';
-              e.target.src = isVideo ? '/default/video-thumb.png' : '/default/folder-thumb.png';
+              e.target.src = isVideo ? DEFAULT_IMAGES.video : DEFAULT_IMAGES.folder;
             } else if (type === 'music') {
               const isAudio = item.type === 'audio' || item.type === 'file';
-              e.target.src = isAudio ? '/default/music-thumb.png' : '/default/folder-thumb.png';
+              e.target.src = isAudio ? DEFAULT_IMAGES.music : DEFAULT_IMAGES.folder;
             } else {
-              e.target.src = '/default/default-cover.jpg';
+              e.target.src = DEFAULT_IMAGES.cover;
             }
           }}
         />

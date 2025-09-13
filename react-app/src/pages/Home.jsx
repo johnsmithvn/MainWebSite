@@ -24,6 +24,18 @@ const Home = () => {
   
   const { setSourceKey, setSecureKeys, isSecureKey, isAuthenticated, token, logout } = useAuthStore();
   const { setLoading } = useUIStore();
+  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Force clear auth when landing on Home (fresh login required)
   useEffect(() => {
@@ -250,6 +262,26 @@ const Home = () => {
           type="music"
           icon="🎵"
         />
+        <div className="text-center space-y-4">
+          {!online && (
+            <p className="mb-2 text-sm text-red-500">Bạn đang offline</p>
+          )}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+          >
+            <Button 
+              onClick={() => navigate('/offline')}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 text-lg font-medium"
+            >
+              📚 Mở Offline Library
+            </Button>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              Truy cập các chapter đã tải để đọc offline
+            </p>
+          </motion.div>
+        </div>
       </div>
 
       {/* Login Modal */}

@@ -2,6 +2,23 @@
 // 🔧 Formatting utilities
 
 /**
+ * Format bytes thành chuỗi dễ đọc
+ * @param {number} bytes 
+ * @returns {string}
+ */
+export const formatBytes = (bytes) => {
+  if (!bytes || bytes === 0) return '0 B';
+  
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  if (i === 0) return bytes + ' B';
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+/**
  * Format view count number to readable format
  * @param {number} count - The view count
  * @returns {string} Formatted string
@@ -101,4 +118,32 @@ export const isVideoFile = (filename) => {
 export const isAudioFile = (filename) => {
   const audioExtensions = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma'];
   return audioExtensions.includes(getFileExtension(filename));
+};
+
+/**
+ * Format timestamp to localized date string  
+ * @param {number} timestamp - Unix timestamp
+ * @returns {string} Formatted date string
+ */
+export const formatDate = (timestamp) => {
+  if (!timestamp) return 'Unknown';
+  const date = new Date(timestamp);
+  return date.toLocaleDateString('vi-VN', {
+    year: 'numeric',
+    month: 'short', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+/**
+ * Format bytes to MB format specifically
+ * @param {number} bytes
+ * @returns {string} Size in MB
+ */
+export const formatSize = (bytes) => {
+  if (!bytes) return 'Unknown';
+  const mb = bytes / (1024 * 1024);
+  return `${mb.toFixed(1)} MB`;
 };

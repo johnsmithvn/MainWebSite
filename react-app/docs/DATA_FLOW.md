@@ -692,4 +692,248 @@ const useLazyLoading = (items) => {
 };
 ```
 
+## 📥 Offline Storage & Cache Management
+
+### Offline Chapter Storage Architecture
+```javascript
+// Hybrid Storage Model for Offline Chapters
+┌─────────────────────────────────────────────────────────────┐
+│                    Offline Storage Layer                    │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐    ┌─────────────────┐               │
+│  │   IndexedDB     │    │  Cache Storage  │               │
+│  │   (Metadata)    │    │   (Images)      │               │
+│  │                 │    │                 │               │
+│  │ • Chapter info  │    │ • Page images   │               │
+│  │ • Page URLs     │    │ • Binary data   │               │
+│  │ • Timestamps    │    │ • Network cache │               │
+│  │ • Size stats    │    │ • Service Worker│               │
+│  └─────────────────┘    └─────────────────┘               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Offline Download Data Flow
+```javascript
+// Download Chapter Flow
+User Click Download → Progress Tracking → Dual Storage → Completion
+
+// Detailed Flow
+downloadChapter: async (meta, onProgress) => {
+  // 1. Initialize progress tracking
+  onProgress({ current: 0, total: pageUrls.length, status: 'starting' });
+  
+  // 2. Open Cache Storage for images
+  const cache = await caches.open('chapter-images');
+  
+  // 3. Download each image with progress
+  for (let i = 0; i < pageUrls.length; i++) {
+    const url = pageUrls[i];
+    
+    // 4. Fetch with CORS mode for blob size calculation
+    const resp = await fetch(url, { mode: 'cors' });
+    
+    // 5. Store in Cache Storage
+    await cache.put(url, resp.clone());
+    
+    // 6. Calculate storage usage
+    const blob = await resp.blob();
+    bytes += blob.size;
+    
+    // 7. Report progress
+    onProgress({ 
+      current: i + 1, 
+      total: pageUrls.length, 
+      status: 'downloading',
+      bytes 
+    });
+  }
+  
+  // 8. Save metadata to IndexedDB
+  const enhancedMeta = {
+    ...meta,
+    bytes,
+    totalPages: pageUrls.length,
+    coverImage: pageUrls[0],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+  await saveChapter(enhancedMeta);
+  
+  // 9. Complete with final stats
+  onProgress({ 
+    current: totalPages, 
+    total: totalPages, 
+    status: 'completed',
+    totalBytes: bytes 
+  });
+}
+```
+
+### Cache Cleanup Data Flow
+```javascript
+// Complete Chapter Deletion Flow
+User Delete → Confirmation → Cleanup Process → Cache Verification → UI Update
+
+// Delete Implementation
+deleteChapterCompletely: async (id) => {
+  try {
+    // 1. Retrieve metadata for cleanup information
+    const chapter = await getChapter(id);
+    if (!chapter) return { success: false, message: 'Chapter not found' };
+    
+    // 2. Delete images from Cache Storage
+    const cache = await caches.open('chapter-images');
+    let deletedImages = 0;
+    let failedImages = 0;
+    
+    for (const url of chapter.pageUrls) {
+      try {
+        const deleted = await cache.delete(url);
+        if (deleted) {
+          deletedImages++;
+        }
+      } catch (err) {
+        failedImages++;
+        console.error('Failed to delete image:', url, err);
+      }
+    }
+    
+    // 3. Delete metadata from IndexedDB
+    await deleteChapter(id);
+    
+    // 4. Return cleanup statistics
+    return { 
+      success: true, 
+      stats: {
+        totalImages: chapter.pageUrls.length,
+        deletedImages,
+        failedImages,
+        bytesFreed: chapter.bytes || 0
+      }
+    };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+}
+```
+
+### Bulk Storage Cleanup Data Flow
+```javascript
+// Clear All Offline Data Flow
+User Clear All → Confirmation Modal → Batch Processing → Complete Cleanup → Statistics
+
+// Clear All Implementation
+clearAllOfflineData: async () => {
+  try {
+    // 1. Get all chapters for processing
+    const chapters = await getChapters();
+    
+    let totalBytesFreed = 0;
+    let totalImagesDeleted = 0;
+    
+    // 2. Delete each chapter individually for detailed tracking
+    for (const chapter of chapters) {
+      const result = await deleteChapterCompletely(chapter.id);
+      if (result.success && result.stats) {
+        totalBytesFreed += result.stats.bytesFreed;
+        totalImagesDeleted += result.stats.deletedImages;
+      }
+    }
+    
+    // 3. Nuclear cleanup: delete entire cache storage
+    await caches.delete('chapter-images');
+    
+    // 4. Recreate fresh cache storage
+    await caches.open('chapter-images');
+    
+    // 5. Return comprehensive statistics
+    return {
+      success: true,
+      chaptersDeleted: chapters.length,
+      imagesDeleted: totalImagesDeleted,
+      bytesFreed: totalBytesFreed,
+      message: `Cleared ${chapters.length} chapters, ${totalImagesDeleted} images`
+    };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+}
+```
+
+### Storage Analysis Data Flow
+```javascript
+// Storage Statistics and Quota Management
+Component Mount → Analyze Storage → Display Statistics → Real-time Updates
+
+// Storage Analysis Implementation
+getStorageAnalysis: async () => {
+  try {
+    // 1. Collect chapter metadata
+    const chapters = await getChapters();
+    
+    let totalBytes = 0;
+    let totalImages = 0;
+    
+    // 2. Calculate totals from metadata
+    for (const chapter of chapters) {
+      totalBytes += chapter.bytes || 0;
+      totalImages += chapter.totalPages || 0;
+    }
+    
+    // 3. Get browser storage quota information
+    let quotaInfo = null;
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+      const estimate = await navigator.storage.estimate();
+      quotaInfo = {
+        quota: estimate.quota || 0,
+        usage: estimate.usage || 0,
+        available: (estimate.quota || 0) - (estimate.usage || 0),
+        percentage: estimate.quota ? Math.round((estimate.usage / estimate.quota) * 100) : 0
+      };
+    }
+    
+    // 4. Return comprehensive analysis
+    return {
+      chapters: {
+        count: chapters.length,
+        totalBytes,
+        totalImages,
+        averageBytesPerChapter: chapters.length > 0 ? Math.round(totalBytes / chapters.length) : 0,
+        averageImagesPerChapter: chapters.length > 0 ? Math.round(totalImages / chapters.length) : 0
+      },
+      quota: quotaInfo,
+      formattedSize: formatBytes(totalBytes),
+      cacheStoreName: 'chapter-images'
+    };
+  } catch (error) {
+    console.error('Error analyzing storage:', error);
+    return null;
+  }
+}
+```
+
+### Offline Reading Data Flow
+```javascript
+// Offline Reading Access Pattern
+User Access Offline → Check Availability → Load from Cache → Render Content
+
+// Offline Reading Implementation
+// 1. Check if chapter is available offline
+const isAvailable = await isChapterDownloaded(currentMangaPath);
+
+// 2. Load chapter metadata from IndexedDB
+if (isOfflineMode) {
+  const chapter = await getChapter(currentMangaPath);
+  if (chapter) {
+    // 3. Set page URLs from metadata
+    setCurrentImages(chapter.pageUrls);
+    
+    // 4. Service Worker serves images from Cache Storage
+    // Images automatically served from cache when requested
+  } else {
+    setError('Offline data not found');
+  }
+}
+```
+
 This data flow documentation provides a comprehensive understanding of how data moves through the MainWebSite React application, enabling developers to maintain consistency and implement new features effectively while following established patterns.

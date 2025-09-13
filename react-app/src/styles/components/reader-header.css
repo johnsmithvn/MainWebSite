@@ -175,3 +175,88 @@
   transform: translateY(0);
   opacity: 1;
 }
+
+/* Download button styles */
+.download-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.download-btn.downloading {
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.download-btn.offline-available {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.download-btn.offline-available:hover {
+  background: rgba(34, 197, 94, 0.3);
+}
+
+.download-progress {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.progress-text {
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.offline-indicator {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background: #22c55e;
+  border-radius: 50%;
+  color: white;
+  font-size: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Mobile adjustments for download button */
+@media (max-width: 768px) {
+  .download-progress {
+    font-size: 9px;
+  }
+  
+  .spinner {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .progress-text {
+    font-size: 8px;
+  }
+  
+  .offline-indicator {
+    width: 10px;
+    height: 10px;
+    font-size: 7px;
+  }
+}

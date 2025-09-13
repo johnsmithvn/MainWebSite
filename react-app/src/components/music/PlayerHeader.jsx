@@ -14,6 +14,7 @@ import {
 import { useMusicStore, useAuthStore } from '@/store';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import { useDebounceValue } from '@/hooks';
+import { DEFAULT_IMAGES } from '@/constants';
 import { apiService } from '@/utils/api';
 
 const PlayerHeader = ({ 
@@ -236,7 +237,7 @@ const PlayerHeader = ({
                     >
                       <img
                         src={buildThumbnailUrl(item, 'music')}
-                        onError={(e) => (e.currentTarget.src = '/default/music-thumb.png')}
+                        onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)}
                         alt={item.name}
                         className="w-8 h-8 rounded object-cover flex-none"
                       />

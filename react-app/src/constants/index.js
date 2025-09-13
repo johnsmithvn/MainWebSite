@@ -4,6 +4,16 @@
 /**
  * 📊 Pagination Settings
  */
+// Default image paths
+export const DEFAULT_IMAGES = {
+  cover: '/default/default-cover.jpg',
+  folder: '/default/folder-thumb.png',
+  music: '/default/music-thumb.png',
+  video: '/default/video-thumb.png',
+  favicon: '/default/favicon.png'
+};
+
+// Pagination
 export const PAGINATION = {
   FOLDERS_PER_PAGE: 24,
   MANGA_FAVORITES_PER_PAGE: 20,
@@ -53,7 +63,9 @@ export const CACHE = {
   FOLDER_CACHE_PREFIX: "folderCache::",
   MOVIE_CACHE_PREFIX: "movieCache::",
   MUSIC_CACHE_PREFIX: "musicCache::",
-  ROOT_THUMB_CACHE_PREFIX: "rootThumb::"
+  ROOT_THUMB_CACHE_PREFIX: "rootThumb::",
+  // Offline chapter cache settings
+  FALLBACK_IMAGE_SIZE_BYTES: 500 * 1024, // 500KB fallback estimate per image
 };
 
 // Export cache key utilities
@@ -143,7 +155,18 @@ export const CSS_CLASSES = {
 };
 
 /**
- * 📋 Storage Keys
+ * � Database Configuration
+ */
+export const DATABASE = {
+  OFFLINE_MANGA: {
+    NAME: 'offline-manga',
+    STORE: 'chapters',
+    VERSION: 1
+  }
+};
+
+/**
+ * �📋 Storage Keys
  */
 export const STORAGE_KEYS = {
   SOURCE_KEY: "sourceKey",

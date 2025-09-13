@@ -3,9 +3,15 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { BookOpen, PanelLeft } from 'lucide-react';
 import { useMangaStore, useAuthStore } from '../../store';
 import { useRecentManager } from '../../hooks/useRecentManager';
+import { getFolderName, extractTitlesFromPath } from '../../utils/pathUtils';
 import { apiService } from '../../utils/api';
+import { downloadChapter, isChapterDownloaded, getChapter } from '../../utils/offlineLibrary';
+import { checkStorageForDownload } from '../../utils/storageQuota';
+import { isCachesAPISupported, getUnsupportedMessage } from '../../utils/browserSupport';
 import ReaderHeader from '../../components/manga/ReaderHeader';
+import { DownloadProgressModal, StorageQuotaModal, OfflineCompatibilityBanner } from '../../components/common';
 import toast from 'react-hot-toast';
+
 import '../../styles/components/manga-reader.css';
 import '../../styles/components/reader-header.css';
 
@@ -47,6 +53,16 @@ const MangaReader = () => {
   const [showJumpModal, setShowJumpModal] = useState(false);
   const [jumpInput, setJumpInput] = useState('');
   const [jumpContext, setJumpContext] = useState('vertical'); // 'vertical' | 'horizontal'
+  
+  // Download states
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0, status: 'idle' });
+  const [isChapterOfflineAvailable, setIsChapterOfflineAvailable] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  
+  // Storage quota states
+  const [showStorageQuotaModal, setShowStorageQuotaModal] = useState(false);
+  const [storageCheckResult, setStorageCheckResult] = useState(null);
 
   // Debug cache status function
   const getCacheStatus = useCallback(() => {
@@ -74,8 +90,21 @@ const MangaReader = () => {
 
   // Memoize current path to avoid unnecessary effect reruns
   const currentMangaPath = useMemo(() => {
-    return searchParams.get('path') || folderId;
+    const path = searchParams.get('path') || folderId;
+    console.log('📁 currentMangaPath computed:', path);
+    return path;
   }, [searchParams, folderId]);
+
+  const isOfflineMode = searchParams.get('offline') === '1';
+
+  // 🐛 DEBUG: Log component initialization
+  console.log('🎯 MangaReader Component Init:', {
+    folderId,
+    isOfflineMode,
+    searchParams: Object.fromEntries(searchParams),
+    sourceKey,
+    rootFolder
+  });
 
   // Memoize stable auth keys to prevent effect reruns
   const stableAuthKeys = useMemo(() => ({
@@ -108,6 +137,22 @@ const MangaReader = () => {
     const isFav = (favorites || []).some((f) => f.path === cleanPath);
     setIsFavorite(isFav);
   }, [favorites, currentPath]);
+
+  // Check if chapter is already downloaded
+  useEffect(() => {
+    const checkOfflineStatus = async () => {
+      if (!currentMangaPath) return;
+      try {
+        const isAvailable = await isChapterDownloaded(currentMangaPath);
+        setIsChapterOfflineAvailable(isAvailable);
+      } catch (err) {
+        console.error('Error checking offline status:', err);
+        setIsChapterOfflineAvailable(false);
+      }
+    };
+    
+    checkOfflineStatus();
+  }, [currentMangaPath]);
 
   // Enhanced preload using link preload for better browser cache integration
   const preloadImage = useCallback((src) => {
@@ -255,7 +300,32 @@ const MangaReader = () => {
           // Skip preloading first image intentionally
         } else {
           console.log('🔍 Loading folder data for path:', currentMangaPath);
-          loadFolderData(currentMangaPath);
+          if (isOfflineMode) {
+            (async () => {
+              console.log('📱 Offline mode detected, loading from IndexedDB...');
+              try {
+                const ch = await getChapter(currentMangaPath);
+                console.log('📦 Chapter data from IndexedDB:', ch);
+                
+                if (ch) {
+                  console.log(`✅ Found ${ch.pageUrls?.length || 0} pages in offline chapter`);
+                  setCurrentImages(ch.pageUrls);
+                  setCurrentPath(currentMangaPath);
+                  setLoading(false);
+                } else {
+                  console.error('❌ No offline chapter found for path:', currentMangaPath);
+                  setError('Offline data not found');
+                  setLoading(false);
+                }
+              } catch (error) {
+                console.error('❌ Error loading offline chapter:', error);
+                setError('Error loading offline data: ' + error.message);
+                setLoading(false);
+              }
+            })();
+          } else {
+            loadFolderData(currentMangaPath);
+          }
         }
       }
     }
@@ -271,10 +341,10 @@ const MangaReader = () => {
 
   // Increase view when path changes (debounced inside function)
   useEffect(() => {
-    if (currentMangaPath && stableAuthKeys.sourceKey && stableAuthKeys.rootFolder) {
+    if (!isOfflineMode && currentMangaPath && stableAuthKeys.sourceKey && stableAuthKeys.rootFolder) {
       increaseViewCount(currentMangaPath, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder);
     }
-  }, [currentMangaPath, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder, increaseViewCount]);
+  }, [isOfflineMode, currentMangaPath, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder, increaseViewCount]);
 
   // Debug reader settings changes
   useEffect(() => {
@@ -492,6 +562,114 @@ const MangaReader = () => {
     }
   };
 
+  const handleDownloadChapter = async () => {
+    if (!currentImages.length || !currentMangaPath || isDownloading) return;
+    
+    // Kiểm tra Caches API có sẵn không
+    if (!isCachesAPISupported()) {
+      toast.error('❌ ' + getUnsupportedMessage('Offline download'));
+      
+      // Hiển thị modal với thông tin browser support
+      setStorageCheckResult({
+        canDownload: false,
+        warning: false, 
+        error: true,
+        errorMessage: getUnsupportedMessage('Offline download'),
+        message: 'Browser không hỗ trợ offline download',
+        quota: null,
+        required: currentImages ? currentImages.length * 0.5 : 0,
+      });
+      setShowStorageQuotaModal(true);
+      return;
+    }
+    
+    try {
+      // 1. Kiểm tra storage quota trước
+      console.log('🔍 Checking storage quota before download...');
+      const checkResult = await checkStorageForDownload(currentImages);
+      setStorageCheckResult(checkResult);
+      
+      if (!checkResult.canDownload) {
+        // Hiển thị modal thông báo lỗi storage
+        setShowStorageQuotaModal(true);
+        return;
+      }
+      
+      // 2. Nếu có warning, hiển thị modal xác nhận
+      if (checkResult.warning) {
+        setShowStorageQuotaModal(true);
+        return; // Chờ user xác nhận trong modal
+      }
+      
+      // 3. Tiếp tục download nếu quota OK
+      await proceedWithDownload();
+      
+    } catch (err) {
+      console.error('❌ Error checking storage quota:', err);
+      toast.error('❌ Lỗi kiểm tra dung lượng: ' + err.message);
+      
+      // Set error state for modal display
+      setStorageCheckResult({
+        canDownload: false,
+        warning: false,
+        error: true,
+        errorMessage: err.message || 'Unknown error',
+        quota: null,
+        required: currentImages ? currentImages.length * 0.5 : 0,
+      });
+      setShowStorageQuotaModal(true);
+    }
+  };
+
+  const proceedWithDownload = async () => {
+    if (!currentImages.length || !currentMangaPath || isDownloading) return;
+    
+    try {
+      setIsDownloading(true);
+      setShowDownloadModal(true);
+      setDownloadProgress({ current: 0, total: currentImages.length, status: 'starting' });
+      
+      // Progress callback
+      const onProgress = (progress) => {
+        setDownloadProgress(progress);
+        
+        if (progress.status === 'downloading') {
+          // Show progress in console for debugging
+          const percentage = Math.round((progress.current / progress.total) * 100);
+          console.log(`⬇️ Downloading: ${percentage}% (${progress.current}/${progress.total})`);
+        }
+      };
+      
+      // Enhanced metadata with better title extraction
+      const { mangaTitle, chapterTitle } = extractTitlesFromPath(currentMangaPath);
+      
+      await downloadChapter({
+        id: currentMangaPath,
+        mangaTitle,
+        chapterTitle,
+        pageUrls: currentImages,
+        sourceKey: stableAuthKeys.sourceKey,
+        rootFolder: stableAuthKeys.rootFolder,
+      }, onProgress);
+      
+      // Update offline status
+      setIsChapterOfflineAvailable(true);
+      toast.success('✅ Chapter downloaded successfully!');
+      
+      // Auto close modal after 3 seconds if completed
+      setTimeout(() => {
+        setShowDownloadModal(false);
+      }, 3000);
+      
+    } catch (err) {
+      console.error('Download failed', err);
+      toast.error('❌ Download failed: ' + err.message);
+      setDownloadProgress(prev => ({ ...prev, status: 'error', error: err.message }));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   // ===== Derived pagination (vertical mode) - must be before any conditional returns for hook order stability =====
   const imagesPerScrollPage = readerSettings.scrollImagesPerPage || 200;
   const totalScrollPages = Math.ceil(currentImages.length / imagesPerScrollPage);
@@ -546,6 +724,9 @@ const MangaReader = () => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [showJumpModal]);
+
+  // Use shared utility instead of duplicate logic
+  const folderName = getFolderName(currentPath);
 
   if (loading) {
     return (
@@ -624,6 +805,9 @@ const MangaReader = () => {
 
   return (
     <div className={`manga-reader ${readerSettings.readingMode === 'vertical' ? 'scroll-mode-active' : ''}`}>
+      {/* Offline Compatibility Banner */}
+      <OfflineCompatibilityBanner />
+      
       {/* Reader Header */}
       {showControls && (
         <ReaderHeader
@@ -631,6 +815,10 @@ const MangaReader = () => {
           isFavorite={isFavorite}
           onToggleFavorite={handleToggleFavorite}
           onSetThumbnail={handleSetThumbnail}
+          onDownload={!isOfflineMode ? handleDownloadChapter : undefined}
+          isDownloading={isDownloading}
+          downloadProgress={downloadProgress}
+          isOfflineAvailable={isChapterOfflineAvailable}
         />
       )}
 
@@ -907,6 +1095,32 @@ const MangaReader = () => {
           </div>
         </div>
       )}
+      
+      {/* Download Progress Modal */}
+      <DownloadProgressModal
+        isOpen={showDownloadModal}
+        onClose={() => setShowDownloadModal(false)}
+        progress={downloadProgress}
+        isDownloading={isDownloading}
+        chapterTitle={getFolderName(currentPath)}
+      />
+      
+      {/* Storage Quota Modal */}
+      <StorageQuotaModal
+        isOpen={showStorageQuotaModal}
+        onClose={() => setShowStorageQuotaModal(false)}
+        storageInfo={storageCheckResult?.storageInfo || {}}
+        estimatedSize={storageCheckResult?.estimatedSize || 0}
+        canDownload={storageCheckResult?.canDownload || false}
+        message={storageCheckResult?.message || ''}
+        warning={storageCheckResult?.warning || ''}
+        chapterTitle={getFolderName(currentPath)}
+        onConfirm={async () => {
+          setShowStorageQuotaModal(false);
+          await proceedWithDownload();
+        }}
+        onCancel={() => setShowStorageQuotaModal(false)}
+      />
     </div>
   );
 };

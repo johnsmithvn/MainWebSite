@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Menu, Search, Settings, Heart, Image as ImageIcon, Home } from 'lucide-react';
+import { Menu, Search, Settings, Heart, Image as ImageIcon, Home, Download } from 'lucide-react';
 import SearchModal from '../common/SearchModal';
 import SettingsModal from '../common/SettingsModal';
 import { useAuthStore, useMangaStore, useUIStore } from '../../store';
@@ -14,7 +14,11 @@ const ReaderHeader = ({
   onToggleFavorite,
   isFavorite = false,
   onSetThumbnail,
-  className = '' 
+  className = '',
+  onDownload,
+  isDownloading = false,
+  downloadProgress = { current: 0, total: 0, status: 'idle' },
+  isOfflineAvailable = false
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -191,13 +195,43 @@ const ReaderHeader = ({
               <Search size={18} />
             </button>
             
-            <button 
-              className="reader-header-btn settings-btn"
-              onClick={() => setSettingsModalOpen(true)}
-              title="Cài đặt"
+          <button
+            className="reader-header-btn settings-btn"
+            onClick={() => setSettingsModalOpen(true)}
+            title="Cài đặt"
+          >
+            <Settings size={18} />
+          </button>
+          {onDownload && (
+            <button
+              className={`reader-header-btn download-btn ${isOfflineAvailable ? 'offline-available' : ''} ${isDownloading ? 'downloading' : ''}`}
+              onClick={onDownload}
+              disabled={isDownloading}
+              title={
+                isDownloading 
+                  ? `Đang tải... ${downloadProgress.current}/${downloadProgress.total}`
+                  : isOfflineAvailable 
+                    ? "Chapter đã tải offline" 
+                    : "Download offline"
+              }
             >
-              <Settings size={18} />
+              {isDownloading ? (
+                <div className="download-progress">
+                  <div className="spinner" />
+                  <span className="progress-text">
+                    {Math.round((downloadProgress.current / downloadProgress.total) * 100)}%
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <Download size={18} />
+                  {isOfflineAvailable && (
+                    <div className="offline-indicator">✓</div>
+                  )}
+                </>
+              )}
             </button>
+          )}
           </div>
         </div>
       </header>

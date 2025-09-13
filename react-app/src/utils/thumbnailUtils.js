@@ -1,6 +1,8 @@
 // 📁 src/utils/thumbnailUtils.js
 // 🖼️ Utility functions for building thumbnail URLs
 
+import { DEFAULT_IMAGES } from '../constants/index.js';
+
 /**
  * Build thumbnail URL cho movie/music với xử lý ký tự đặc biệt
  * Tương tự như buildThumbnailUrl trong frontend cũ
@@ -10,17 +12,17 @@
  */
 export function buildThumbnailUrl(item, mediaType = 'movie') {
   let prefix = '/video/';
-  let defaultFile = '/default/video-thumb.png';
-  let defaultFolder = '/default/folder-thumb.png';
+  let defaultFile = DEFAULT_IMAGES.video;
+  let defaultFolder = DEFAULT_IMAGES.folder;
   
   if (mediaType === 'music') {
     prefix = '/audio/';
-    defaultFile = '/default/music-thumb.png';
-    defaultFolder = '/default/folder-thumb.png';
+    defaultFile = DEFAULT_IMAGES.music;
+    defaultFolder = DEFAULT_IMAGES.folder;
   } else if (mediaType === 'manga' || mediaType === 'comic') {
     prefix = '/manga/';
-    defaultFile = '/default/manga-thumb.png';
-    defaultFolder = '/default/folder-thumb.png';
+    defaultFile = DEFAULT_IMAGES.cover;
+    defaultFolder = DEFAULT_IMAGES.folder;
   }
 
   // Phân biệt folder/file để lấy prefix đúng

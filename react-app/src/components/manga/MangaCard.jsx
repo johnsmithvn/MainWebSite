@@ -5,6 +5,7 @@ import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { useRecentManager } from '@/hooks/useRecentManager';
 import { formatViewCount } from '@/utils/formatters';
+import { DEFAULT_IMAGES } from '@/constants';
 
 const MangaCard = ({ 
   manga, 
@@ -90,7 +91,7 @@ const MangaCard = ({
       <div className="manga-card-thumbnail">
         <LazyLoadImage
           alt={displayName}
-          src={manga.thumbnail || '/default/default-cover.jpg'}
+          src={manga.thumbnail || DEFAULT_IMAGES.cover}
           effect="blur"
           className="manga-card-image"
           wrapperClassName="manga-card-image-wrapper"
