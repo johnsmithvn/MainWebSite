@@ -4,6 +4,10 @@
 
 ### Fixed
 
+- 🐛 [2025-09-13] Fixed code review issues → Improved codebase quality and maintainability
+  - Fixed environment variable access in storageQuota.js → Use import.meta.env.VITE_MIN_STORAGE_SPACE instead of process.env for Vite compatibility
+  - Fixed inline calculation in DownloadProgressModal.jsx → Use formatBytes utility function from '@/utils/formatters'
+  - Fixed hardcoded 500KB fallback in offlineLibrary.js → Use CACHE.FALLBACK_IMAGE_SIZE_BYTES constant
 - 🐛 [2025-09-13] Fixed Service Worker caching strategy → Improved cache.addAll() with group batching and individual fallback for better reliability
 - 🐛 [2025-09-13] Fixed modal configuration duplication in storageQuota.js → Extracted createConfirmModal() và createErrorModal() functions for better maintainability
 - 🐛 [2025-09-13] Fixed fetch options complexity in offlineLibrary.js → Simplified with const fetchOptions variable to reduce code duplication

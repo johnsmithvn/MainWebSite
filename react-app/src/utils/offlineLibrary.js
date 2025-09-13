@@ -1,5 +1,5 @@
 // Import database constants
-import { DATABASE } from '../constants/index.js';
+import { DATABASE, CACHE } from '../constants/index.js';
 
 // Use centralized database configuration
 const { NAME: DB_NAME, STORE, VERSION: DB_VERSION } = DATABASE.OFFLINE_MANGA;
@@ -356,14 +356,14 @@ export async function downloadChapter(meta, onProgress = null) {
       if (isNoCorsMode || resp.type === 'opaque') {
         // No-cors mode or opaque response - can't read body, use estimate
         console.warn(`Using size estimate for ${url} (no-cors/opaque response)`);
-        bytes += 500 * 1024; // 500KB fallback estimate per image
+        bytes += CACHE.FALLBACK_IMAGE_SIZE_BYTES; // Use constant instead of hardcoded value
       } else {
         try {
           const blob = await resp.blob();
           bytes += blob.size;
         } catch (err) {
           console.warn(`Failed to calculate blob size for ${url}:`, err);
-          bytes += 500 * 1024; // 500KB fallback estimate per image
+          bytes += CACHE.FALLBACK_IMAGE_SIZE_BYTES; // Use constant instead of hardcoded value
         }
       }
     } catch (err) {

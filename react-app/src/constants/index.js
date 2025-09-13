@@ -63,7 +63,9 @@ export const CACHE = {
   FOLDER_CACHE_PREFIX: "folderCache::",
   MOVIE_CACHE_PREFIX: "movieCache::",
   MUSIC_CACHE_PREFIX: "musicCache::",
-  ROOT_THUMB_CACHE_PREFIX: "rootThumb::"
+  ROOT_THUMB_CACHE_PREFIX: "rootThumb::",
+  // Offline chapter cache settings
+  FALLBACK_IMAGE_SIZE_BYTES: 500 * 1024, // 500KB fallback estimate per image
 };
 
 // Export cache key utilities

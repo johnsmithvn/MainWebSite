@@ -4,6 +4,7 @@
 import React from 'react';
 import { X, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import { PROGRESS_COLORS } from '@/constants/colors';
+import { formatBytes } from '@/utils/formatters';
 
 const DownloadProgressModal = ({
   isOpen,
@@ -114,7 +115,7 @@ const DownloadProgressModal = ({
             <div className="bg-green-900/20 border border-green-500/20 rounded-lg p-3">
               <p className="text-sm text-green-400">
                 Đã tải thành công {progress.total} trang 
-                {progress.totalBytes && ` (${(progress.totalBytes / 1024 / 1024).toFixed(1)} MB)`}
+                {progress.totalBytes && ` (${formatBytes(progress.totalBytes)})`}
               </p>
             </div>
           )}
