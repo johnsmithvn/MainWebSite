@@ -266,14 +266,14 @@ const MusicHome = () => {
             </div>
 
             {/* Controls - responsive layout */}
-            <div className="flex items-center gap-3 lg:justify-end justify-start">
+            <div className="flex items-center gap-2 sm:gap-3 lg:justify-end justify-start">
               {/* Per-page selector */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">Per page:</span>
                 <select
                   value={musicPerPage}
                   onChange={(e) => handlePerPageChange(e.target.value)}
-                  className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
+                  className="px-1.5 py-1 sm:px-2 sm:py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-xs sm:text-sm text-gray-900 dark:text-white"
                 >
                   {musicPerPageOptions.map(n => (
                     <option key={n} value={n}>{n}</option>
@@ -293,7 +293,7 @@ const MusicHome = () => {
               </Button>
               
               {/* View mode toggle */}
-              <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+              <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-0.5 sm:p-1">
                 <Button
                   variant={viewMode === 'grid' ? 'primary' : 'ghost'}
                   size="sm"
@@ -315,15 +315,15 @@ const MusicHome = () => {
           </div>
 
           {/* Search bar */}
-          <div className="relative max-w-md mb-4">
-            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <div className="relative max-w-md mb-3 sm:mb-4">
+            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
             <input
               type="text"
               placeholder="Search music, artists, albums..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+              className="w-full pl-8 sm:pl-10 pr-4 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                       bg-white dark:bg-gray-800 text-sm sm:text-base text-gray-900 dark:text-white
                        focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -360,44 +360,44 @@ const MusicHome = () => {
         </div>
 
         {/* Statistics cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6 md:mb-8">
+          <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <FiMusic className="w-8 h-8 text-blue-500 mr-3" />
+              <FiMusic className="w-5 h-5 sm:w-8 sm:h-8 text-blue-500 mr-2 sm:mr-3" />
               <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{musicList.length}</p>
-                <p className="text-gray-600 dark:text-gray-400">Total Items</p>
+                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{musicList.length}</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Items</p>
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <FiFolder className="w-8 h-8 text-green-500 mr-3" />
+              <FiFolder className="w-5 h-5 sm:w-8 sm:h-8 text-green-500 mr-2 sm:mr-3" />
               <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                   {musicList.filter(item => item.type === 'folder').length}
                 </p>
-                <p className="text-gray-600 dark:text-gray-400">Folders</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Folders</p>
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <FiPlay className="w-8 h-8 text-purple-500 mr-3" />
+              <FiPlay className="w-5 h-5 sm:w-8 sm:h-8 text-purple-500 mr-2 sm:mr-3" />
               <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
                   {musicList.filter(item => item.type === 'audio' || item.type === 'file').length}
                 </p>
-                <p className="text-gray-600 dark:text-gray-400">Audio Files</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Audio Files</p>
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <FiSearch className="w-8 h-8 text-orange-500 mr-3" />
+              <FiSearch className="w-5 h-5 sm:w-8 sm:h-8 text-orange-500 mr-2 sm:mr-3" />
               <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{filteredMusic.length}</p>
-                <p className="text-gray-600 dark:text-gray-400">Search Results</p>
+                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{filteredMusic.length}</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Search Results</p>
               </div>
             </div>
           </div>
@@ -432,7 +432,7 @@ const MusicHome = () => {
           <>
             <div className={`grid gap-2 sm:gap-4 ${
               viewMode === 'grid' 
-                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6' 
+                ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8' 
                 : 'grid-cols-1'
             }`}>
               {currentMusic.map((music, index) => (

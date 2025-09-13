@@ -274,9 +274,9 @@ const RecentSlider = ({
   return (
     <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-6 pb-4">
-        <div className="flex items-center space-x-3 min-w-0 flex-1">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">
+      <div className="flex items-center justify-between p-3 sm:p-6 pb-2 sm:pb-4">
+        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+          <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white truncate">
             {title}
           </h2>
           
@@ -285,9 +285,9 @@ const RecentSlider = ({
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0"
+              className="flex items-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium flex-shrink-0"
             >
-              <FiClock className="w-3 h-3 mr-1" />
+              <FiClock className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
               <span>{items.length}</span>
             </motion.div>
           )}
@@ -297,9 +297,9 @@ const RecentSlider = ({
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center text-sm text-gray-500 dark:text-gray-400 flex-shrink-0"
+              className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0"
             >
-              <FiClock className="w-3 h-3 mr-1" />
+              <FiClock className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
               <span className="whitespace-nowrap">{formatTimestamp(lastUpdated)}</span>
             </motion.div>
           )}

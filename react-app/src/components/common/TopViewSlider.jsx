@@ -291,9 +291,9 @@ const TopViewSlider = ({
   return (
     <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-6 pb-4">
-        <div className="flex items-center space-x-3 min-w-0 flex-1">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">
+      <div className="flex items-center justify-between p-3 sm:p-6 pb-2 sm:pb-4">
+        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+          <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white truncate">
             {title}
           </h2>
           
@@ -302,15 +302,15 @@ const TopViewSlider = ({
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0"
+              className="flex items-center bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium flex-shrink-0"
             >
-              <FiEye className="w-3 h-3 mr-1" />
+              <FiEye className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
               <span>{items.length}</span>
             </motion.div>
           )}
         </div>
 
-        <div className="flex items-center space-x-2 flex-shrink-0">
+        <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
           {/* Delete all views button */}
           <Button
             variant="ghost"
@@ -369,14 +369,14 @@ const TopViewSlider = ({
                   <div className="relative w-full h-full">
                     {/* Ranking badge */}
                     {index < 3 && (
-                      <div className="absolute top-2 left-2 z-10">
+                      <div className="absolute top-1 sm:top-2 left-1 sm:left-2 z-10">
                         <div className={`
-                          w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white
+                          w-4 h-4 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-bold text-white
                           ${index === 0 ? 'bg-yellow-500' : ''}
                           ${index === 1 ? 'bg-gray-400' : ''}
                           ${index === 2 ? 'bg-amber-600' : ''}
                         `}>
-                          {index + 1}
+                          <span className="text-xs sm:text-xs">{index + 1}</span>
                         </div>
                       </div>
                     )}

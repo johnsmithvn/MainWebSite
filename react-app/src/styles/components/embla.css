@@ -40,8 +40,8 @@
 /* Responsive slide widths */
 @media (max-width: 640px) {
   .embla__slide {
-    flex: 0 0 40%;
-    max-width: 40%;
+    flex: 0 0 32%; /* Reduced from 40% to show more cards */
+    max-width: 32%;
     box-sizing: border-box;
   }
   .embla {

@@ -362,14 +362,14 @@ const MangaHome = () => {
         </div>
       )}
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         {/* Main Content Container */}
-        <div className="manga-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div className="manga-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-6">
           {/* Header */}
-          <div className="mb-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
-          <div className="flex items-center gap-4 flex-1">
-            <div className="flex items-center gap-3">
+          <div className="mb-4 sm:mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
+          <div className="flex items-center gap-2 sm:gap-4 flex-1">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* Back button - responsive text */}
               <Button
                 variant="outline"
@@ -399,14 +399,14 @@ const MangaHome = () => {
           </div>
           
           {/* Controls - responsive layout */}
-          <div className="flex items-center gap-3 lg:justify-end justify-start">
+          <div className="flex items-center gap-2 sm:gap-3 lg:justify-end justify-start">
             {/* Per-page selector */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">Per page:</span>
               <select
                 value={sizeParam}
                 onChange={(e) => changePageSize(e.target.value)}
-                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
+                className="px-1.5 py-1 sm:px-2 sm:py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-xs sm:text-sm text-gray-900 dark:text-white"
               >
                 {[12, 24, 30, 48, 60, 96].map(n => (
                   <option key={n} value={n}>{n}</option>
@@ -426,7 +426,7 @@ const MangaHome = () => {
             </Button>
             
             {/* View mode toggle */}
-            <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+            <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-0.5 sm:p-1">
               <Button
                 variant={viewMode === 'grid' ? 'primary' : 'ghost'}
                 size="sm"
@@ -449,14 +449,14 @@ const MangaHome = () => {
 
         {/* Search bar */}
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
           <input
             type="text"
             placeholder="Tìm kiếm manga..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+            className="w-full pl-8 sm:pl-10 pr-4 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                     bg-white dark:bg-gray-800 text-sm sm:text-base text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
@@ -486,31 +486,31 @@ const MangaHome = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
+        <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
-            <BookOpen className="w-8 h-8 text-blue-500 mr-3" />
+            <BookOpen className="w-5 h-5 sm:w-8 sm:h-8 text-blue-500 mr-2 sm:mr-3" />
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{mangaList.length}</p>
-              <p className="text-gray-600 dark:text-gray-400">Total Items</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{mangaList.length}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Items</p>
             </div>
           </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
-            <Heart className="w-8 h-8 text-red-500 mr-3" />
+            <Heart className="w-5 h-5 sm:w-8 sm:h-8 text-red-500 mr-2 sm:mr-3" />
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{favorites.length}</p>
-              <p className="text-gray-600 dark:text-gray-400">Favorites</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{favorites.length}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Favorites</p>
             </div>
           </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
-            <Search className="w-8 h-8 text-green-500 mr-3" />
+            <Search className="w-5 h-5 sm:w-8 sm:h-8 text-green-500 mr-2 sm:mr-3" />
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{filteredManga.length}</p>
-              <p className="text-gray-600 dark:text-gray-400">Search Results</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{filteredManga.length}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Search Results</p>
             </div>
           </div>
         </div>
@@ -529,7 +529,7 @@ const MangaHome = () => {
         </div>
       ) : viewMode === 'grid' ? (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 md:gap-4">
             {pageItems.map((item, index) => (
               <MangaCard
                 key={`${item.path || item.name || index}-${localRefreshTrigger}`}
@@ -546,46 +546,48 @@ const MangaHome = () => {
             ))}
           </div>
           {/* Pagination Controls */}
-          <div className="mt-6 flex items-center justify-center gap-3">
+          <div className="mt-4 sm:mt-6 flex items-center justify-center gap-2 sm:gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage <= 1}
+              className="text-xs sm:text-sm px-2 sm:px-3"
             >
               ⬅ Prev
             </Button>
             <button
               onClick={() => setJumpOpen(true)}
-              className="px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+              className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs sm:text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition"
               title="Jump to page"
             >
-              Page {currentPage} / {totalPages}
+              <span className="hidden sm:inline">Page </span>{currentPage} / {totalPages}
             </button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage >= totalPages}
+              className="text-xs sm:text-sm px-2 sm:px-3"
             >
               Next ➡
             </Button>
           </div>
         </>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-2 sm:gap-4">
           {pageItems.map((item, index) => (
             <div
               key={`${item.path || item.name || index}`}
               onClick={() => handleFolderClick(item)}
               className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg 
-                        transition-all duration-200 cursor-pointer group flex items-center p-4"
+                        transition-all duration-200 cursor-pointer group flex items-center p-2 sm:p-4"
             >
-              <div className="flex items-center gap-4 w-full">
-                <div className="w-16 h-20 bg-gray-200 dark:bg-gray-700 rounded-md 
+              <div className="flex items-center gap-2 sm:gap-4 w-full">
+                <div className="w-12 h-16 sm:w-16 sm:h-20 bg-gray-200 dark:bg-gray-700 rounded-md 
                               flex-shrink-0 overflow-hidden flex items-center justify-center">
                   {item.isDirectory ? (
-                    <div className="text-4xl">📁</div>
+                    <div className="text-2xl sm:text-4xl">📁</div>
                   ) : (
                     <img
                       src={item.thumbnail || DEFAULT_IMAGES.cover}
@@ -599,18 +601,18 @@ const MangaHome = () => {
                       }}
                     />
                   )}
-                  <div className="text-4xl hidden">📖</div>
+                  <div className="text-2xl sm:text-4xl hidden">📖</div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1" title={item.name || item.path || 'Unknown'}>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white mb-1 truncate" title={item.name || item.path || 'Unknown'}>
                     {item.name && item.name !== '()' ? item.name : (item.path || 'Unknown Item')}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1 sm:mb-2">
                     {item.isDirectory ? 'Folder' : 'File'}
                     {item.size && ` • ${(item.size / 1024 / 1024).toFixed(1)} MB`}
                   </p>
                   {item.lastModified && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 hidden sm:block">
                       Modified: {new Date(item.lastModified).toLocaleDateString()}
                     </p>
                   )}
