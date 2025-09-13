@@ -17,7 +17,7 @@
   --slide-gap-desktop: 0.5rem;
 
   /* Slides per view ở từng breakpoint (dễ chỉnh trong tương lai) */
-  --slides-per-view-mobile: 4; /* tăng 3 -> 4 để giảm kích thước card */
+  --slides-per-view-mobile: 3; /* giảm từ 4 xuống 3 để card to hơn */
   --slides-per-view-tablet: 4;
   --slides-per-view-desktop: 5;
   --slides-per-view-large: 6;
@@ -66,25 +66,25 @@
 }
 
 /* Responsive slide widths - Quay lại dùng CSS variables để dễ quản lý */
-/* Điều chỉnh width slide theo breakpoint */
+/* Điều chỉnh width slide theo breakpoint - tăng kích thước cho movie cards */
 @media (max-width: 389px) {
   .embla__slide {
-    flex-basis: 80px !important; 
-    max-width: 80px !important;
+    flex-basis: 90px !important; 
+    max-width: 90px !important;
   }
 }
 
 @media (min-width: 390px) and (max-width: 479px) {
   .embla__slide {
-    flex-basis: 90px !important;
-    max-width: 90px !important;
+    flex-basis: 105px !important;
+    max-width: 105px !important;
   }
 }
 
 @media (min-width: 480px) and (max-width: 640px) {
   .embla__slide {
-    flex-basis: 100px !important;
-    max-width: 100px !important;
+    flex-basis: 120px !important;
+    max-width: 120px !important;
   }
 }
 
@@ -93,8 +93,8 @@
     /* Đơn giản hóa width calculation bằng flex-basis cố định */
     flex: 0 0 auto !important;
     width: auto !important; /* reset width */
-    flex-basis: 100px !important; /* width cố định chính xác */
-    max-width: 100px !important;
+    flex-basis: 120px !important; /* tăng từ 100px lên 120px cho movie cards */
+    max-width: 120px !important;
     box-sizing: border-box;
   }
   .embla__slide [class*="aspect-[3/4]"] { aspect-ratio: 2/3; }

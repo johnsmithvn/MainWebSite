@@ -339,15 +339,7 @@ const UniversalCard = ({
           )}
         </div>
 
-        {/* View count (bottom-right). Hide if overlayMode already shows views to avoid duplication */}
-        {showViews && overlayMode !== 'views' && (item?.views ?? item?.viewCount ?? item?.count) !== undefined && (
-          <div className={`absolute ${showDeleteView ? 'bottom-10 sm:bottom-12 right-2' : 'bottom-2 right-2'}`}>
-            <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full text-[10px] sm:text-xs">
-              <FiEye className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-              <span>{item?.views ?? item?.viewCount ?? item?.count ?? 0}</span>
-            </div>
-          </div>
-        )}
+        {/* View count moved to bottom info section */}
       </div>
 
       {/* Content */}
@@ -358,12 +350,18 @@ const UniversalCard = ({
         {/* Additional info */}
         <div className={`flex items-center justify-between ${variant === 'compact-slider' ? 'text-[10px]' : 'text-xs'} text-gray-500 dark:text-gray-400`}>
           <span className="truncate max-w-[60%]">{itemData.typeLabel}</span>
-          {item.size && (
-            <span className="text-xs">{formatSize(item.size)}</span>
-          )}
-          {item.duration && (
-            <span className="text-xs">{formatDuration(item.duration)}</span>
-          )}
+          
+          {/* Priority: View count > Duration > Size */}
+          {showViews && overlayMode !== 'views' && (item?.views ?? item?.viewCount ?? item?.count) !== undefined ? (
+            <span className="flex items-center gap-0.5 sm:gap-1">
+              <FiEye className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
+              <span>{item?.views ?? item?.viewCount ?? item?.count ?? 0}</span>
+            </span>
+          ) : item.duration ? (
+            <span>{formatDuration(item.duration)}</span>
+          ) : item.size ? (
+            <span>{formatSize(item.size)}</span>
+          ) : null}
         </div>
       </div>
     </motion.div>

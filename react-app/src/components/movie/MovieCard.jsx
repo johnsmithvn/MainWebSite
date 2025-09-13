@@ -108,15 +108,8 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
           </span>
         </div>
 
-        {/* Views count */}
-        {showViews && item.views !== undefined && (
-          <div className="absolute bottom-1 sm:bottom-2 right-1 sm:right-2">
-            <span className="bg-black bg-opacity-75 text-white text-[9px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded flex items-center gap-0.5 sm:gap-1">
-              <Clock className="w-2 h-2 sm:w-3 sm:h-3" />
-              {item.views?.toLocaleString() || 0}
-            </span>
-          </div>
-        )}
+        {/* Views count - removed from overlay, moved to info section below */}
+        {/* Views count moved to bottom info section */}
       </div>
 
       {/* Info */}
@@ -135,9 +128,15 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
             {typeLabel}
           </span>
           
-          {item.size && (
+          {/* Views count moved here from overlay */}
+          {showViews && item.views !== undefined ? (
+            <span className="flex items-center gap-0.5 sm:gap-1">
+              <Clock className="w-2 h-2 sm:w-3 sm:h-3" />
+              {item.views?.toLocaleString() || 0}
+            </span>
+          ) : item.size ? (
             <span>{item.size}</span>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

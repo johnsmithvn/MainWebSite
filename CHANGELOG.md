@@ -3,6 +3,19 @@
 ### Fixed (New)
 
 - 🔄 [2025-09-13] Điều chỉnh kích thước UI elements trên mobile view
+  - Tăng kích thước card trong slider trên mobile (từ 100px lên 120px)
+  - Điều chỉnh slides per view từ 4 xuống 3 để card có kích thước phù hợp hơn
+  - Cải thiện kích thước card trên các breakpoint mobile khác nhau
+  - Di chuyển view count từ overlay xuống phần thông tin dưới tên card (MovieCard, MusicCard, UniversalCard)
+  - View count giờ hiển thị đối diện với loại file trong phần Additional info
+  - Loại bỏ view count badge khỏi overlay để UI gọn gàng hơn
+  - View count ưu tiên hiển thị hơn duration/size khi có showViews=true
+  - Áp dụng thống nhất cho tất cả card component (Universal, Movie, Music)
+  - Di chuyển view icon trong MusicCard từ góc phải dưới sang góc trái dưới
+  - Cải thiện tỷ lệ và spacing cho tất cả các icon trong MusicCard
+  - Giảm kích thước nút Add to playlist từ h-9 w-9 xuống h-6 w-6 trên mobile
+  - Giảm kích thước font trong badge xuống text-[9px] và spacing xuống 0.5
+  - Giảm padding từ p-3 xuống p-2 trên mobile trong MusicCard
   - Cải thiện tỷ lệ và spacing cho MovieCard trong grid view
   - Giảm kích thước icon trong MovieCard từ 4x4 xuống 3x3 trên mobile và 2x2 cho icon nhỏ
   - Điều chỉnh padding của card xuống còn p-2 trên mobile thay vì p-3

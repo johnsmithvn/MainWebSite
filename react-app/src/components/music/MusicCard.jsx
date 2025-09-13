@@ -111,52 +111,51 @@ const MusicCard = ({
         {/* Play overlay for audio */}
         {(isAudio || isPlaylist) && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            <FiPlay className="w-12 h-12 text-white drop-shadow-lg" />
+            <FiPlay className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white drop-shadow-lg" />
           </div>
         )}
 
         {/* Add to playlist button (top-right, outlined translucent) */}
         <motion.button
-          className="absolute top-2 right-2 h-9 w-9 flex items-center justify-center rounded-full border-2 border-white/80 text-white bg-black/30 hover:bg-black/40 backdrop-blur-sm shadow-md transition-all"
+          className="absolute top-1 sm:top-2 right-1 sm:right-2 h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border-[1.5px] sm:border-2 border-white/80 text-white bg-black/30 hover:bg-black/40 backdrop-blur-sm shadow-md transition-all"
           onClick={handleAddToPlaylist}
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           aria-label="Thêm vào playlist"
         >
-          <FiPlus className="w-4 h-4" />
+          <FiPlus className="w-3 h-3 sm:w-4 sm:h-4" />
         </motion.button>
 
   {/* Type indicator - top-left */}
-        <div className="absolute top-2 left-2">
-          <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
+        <div className="absolute top-1 sm:top-2 left-1 sm:left-2">
+          <div className="flex items-center space-x-0.5 sm:space-x-1 bg-black/60 backdrop-blur-sm text-white px-1 sm:px-2 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs">
             {getTypeIcon()}
             <span>{getTypeLabel()}</span>
           </div>
         </div>
 
-        {/* View count or duration */}
-        {showViews && item.views && (
-          <div className="absolute bottom-2 right-2">
-            <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
-              <FiMusic className="w-3 h-3" />
-              <span>{item.views}</span>
-            </div>
-          </div>
-        )}
+        {/* View count moved to bottom info section */}
       </div>
 
       {/* Content */}
-      <div className="p-3">
-        <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1">
+      <div className="p-2 sm:p-3">
+        <h3 className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm line-clamp-2 mb-0.5 sm:mb-1">
           {displayName}
         </h3>
         
         {/* Additional info */}
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-between text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">
           <span>{getTypeLabel()}</span>
-          {item.duration && (
-            <span className="text-xs">{formatDuration(item.duration)}</span>
-          )}
+          
+          {/* Views count moved here from overlay, or duration */}
+          {showViews && item.views ? (
+            <span className="flex items-center gap-0.5 sm:gap-1">
+              <FiMusic className="w-2 h-2 sm:w-3 sm:h-3" />
+              {item.views}
+            </span>
+          ) : item.duration ? (
+            <span>{formatDuration(item.duration)}</span>
+          ) : null}
         </div>
       </div>
     </motion.div>
