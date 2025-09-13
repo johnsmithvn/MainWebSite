@@ -4,6 +4,12 @@
 
 ### Fixed
 
+- 🐛 [2025-09-13] Improved CSS maintainability with custom properties → Applied Copilot suggestions for better code organization
+  - Extracted repetitive calc() expressions to CSS custom properties for slide widths
+  - Applied consistent gap values (0.17rem) across all breakpoints instead of mixing 0.25rem and 0.5rem
+  - Created reusable CSS variables: --slide-width-mobile, --slide-width-tablet, --slide-width-desktop, --slide-width-large
+  - Eliminated code duplication and improved maintainability as suggested by Copilot AI
+
 - � [2025-09-13] Fixed slider viewport overflow issue → Applied Copilot suggestions for better CSS maintainability
   - Reverted complex flex calculations that caused slider to overflow beyond viewport
   - Simplified slide width calculations using basic CSS instead of complex calc() expressions  
