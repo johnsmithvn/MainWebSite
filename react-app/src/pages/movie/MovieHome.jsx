@@ -408,7 +408,7 @@ const MovieHome = () => {
             {/* Current page items (after filtering & sorting) */}
             <div className={`grid ${
               viewMode === 'grid' 
-                ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8' 
+                ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-6' 
                 : 'grid-cols-1'
             } gap-2 sm:gap-4 mb-6 sm:mb-8`}>
               {currentMovies.map((movie) => (

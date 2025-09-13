@@ -4,7 +4,20 @@
 
 ### Fixed
 
-- 📱 [2025-09-13] Optimized mobile UI header text and spacing → Improved readability and touch interaction
+- � [2025-09-13] Fixed slider viewport overflow issue → Applied Copilot suggestions for better CSS maintainability
+  - Reverted complex flex calculations that caused slider to overflow beyond viewport
+  - Simplified slide width calculations using basic CSS instead of complex calc() expressions  
+  - Removed problematic `!important` declarations for better CSS maintainability
+  - Fixed embla container and viewport sizing to prevent horizontal scrolling
+  - Applied consistent responsive slide widths: 33.33% mobile, 25% tablet, 20% desktop, max 16.67% large screens
+
+- 📱 [2025-09-13] Limited grid columns to maximum 6 for better usability → Improved consistency across all media types
+  - MangaHome: Changed xl:grid-cols-8 to xl:grid-cols-6 to prevent cards from becoming too small
+  - MovieHome: Applied same grid-cols-6 limit for consistent card sizing  
+  - MusicHome: Updated to use consistent 6-column maximum layout
+  - Ensures cards remain interactive and readable on large screens as per Copilot recommendations
+
+- �📱 [2025-09-13] Optimized mobile UI header text and spacing → Improved readability and touch interaction
   - TopViewSlider header: Reduced padding from p-6 to p-3 on mobile, title text from text-xl to text-base
   - RecentSlider header: Applied responsive padding and text sizing for mobile optimization  
   - RandomSlider header: Updated title and timestamp text sizes for better mobile display

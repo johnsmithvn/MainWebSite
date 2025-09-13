@@ -432,7 +432,7 @@ const MusicHome = () => {
           <>
             <div className={`grid gap-2 sm:gap-4 ${
               viewMode === 'grid' 
-                ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8' 
+                ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-6' 
                 : 'grid-cols-1'
             }`}>
               {currentMusic.map((music, index) => (

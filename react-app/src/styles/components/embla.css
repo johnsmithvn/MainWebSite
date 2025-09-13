@@ -13,12 +13,13 @@
 .embla__viewport {
   overflow: hidden;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .embla__container {
   display: flex;
   align-items: flex-start;
-  gap: var(--slide-spacing, 0.5rem);
+  gap: 0.5rem;
   padding: 0 0.75rem;
   box-sizing: border-box;
 }
@@ -40,12 +41,12 @@
 /* Responsive slide widths */
 @media (max-width: 640px) {
   .embla__slide {
-    flex: 0 0 32%; /* Reduced from 40% to show more cards */
-    max-width: 32%;
+    /* Simple approach - show 3 slides */
+    width: calc(33.333% - 0.25rem);
+    flex: 0 0 calc(33.333% - 0.25rem);
+    max-width: calc(33.333% - 0.25rem);
     box-sizing: border-box;
-  }
-  .embla {
-    padding: 0 0.5rem;
+    min-width: 0;
   }
   /* Limit card height on mobile - use more specific selectors */
   .embla__slide [class*="aspect-[3/4]"] {
@@ -61,33 +62,41 @@
 
 @media (min-width: 641px) and (max-width: 768px) {
   .embla__slide {
-    flex: 0 0 28%;
-    max-width: 28%;
+    width: calc(25% - 0.5rem);
+    flex: 0 0 calc(25% - 0.5rem);
+    max-width: calc(25% - 0.5rem);
     box-sizing: border-box;
+    min-width: 0;
   }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
   .embla__slide {
-    flex: 0 0 25%;
-    max-width: 25%;
+    width: calc(20% - 0.5rem);
+    flex: 0 0 calc(20% - 0.5rem);
+    max-width: calc(20% - 0.5rem);
     box-sizing: border-box;
+    min-width: 0;
   }
 }
 
 @media (min-width: 1025px) and (max-width: 1280px) {
   .embla__slide {
-    flex: 0 0 20%;
-    max-width: 20%;
+    width: calc(16.666667% - 0.5rem);
+    flex: 0 0 calc(16.666667% - 0.5rem);
+    max-width: calc(16.666667% - 0.5rem);
     box-sizing: border-box;
+    min-width: 0;
   }
 }
 
 @media (min-width: 1281px) {
   .embla__slide {
-    flex: 0 0 16.666667%;
-    max-width: 16.666667%;
+    width: calc(16.666667% - 0.5rem);
+    flex: 0 0 calc(16.666667% - 0.5rem);
+    max-width: calc(16.666667% - 0.5rem);
     box-sizing: border-box;
+    min-width: 0;
   }
 }
 

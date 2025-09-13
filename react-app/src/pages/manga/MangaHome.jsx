@@ -529,7 +529,7 @@ const MangaHome = () => {
         </div>
       ) : viewMode === 'grid' ? (
         <>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-3 md:gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
             {pageItems.map((item, index) => (
               <MangaCard
                 key={`${item.path || item.name || index}-${localRefreshTrigger}`}
