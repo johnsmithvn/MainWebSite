@@ -12,6 +12,7 @@ import { useModal } from '@/components/common/Modal';
 import { useRecentItems } from '@/hooks/useRecentItems';
 import { useMangaStore, useMovieStore } from '@/store';
 import { formatDistanceToNow } from 'date-fns';
+import { TIME } from '@/constants';
 import '@/styles/components/embla.css';
 
 const RecentSlider = ({ 
@@ -239,7 +240,7 @@ const RecentSlider = ({
       const now = new Date();
       const viewedDate = new Date(lastViewed);
       const diffInSeconds = Math.floor((now - viewedDate) / 1000);
-      const diffInMinutes = Math.floor(diffInSeconds / 60);
+      const diffInMinutes = Math.floor(diffInSeconds / TIME.SECONDS_PER_MINUTE);
       const isMobile = window.innerWidth < 640;
       
       // Luôn hiển thị "just now" cho thời gian dưới 1 phút
@@ -247,15 +248,15 @@ const RecentSlider = ({
       
       // Rút gọn hơn cho mobile
       if (isMobile) {
-        if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-        if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-        if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}d ago`;
-        return `${Math.floor(diffInMinutes / 10080)}w ago`;
+        if (diffInMinutes < TIME.MINUTES_PER_HOUR) return `${diffInMinutes}m ago`;
+        if (diffInMinutes < TIME.MINUTES_PER_DAY) return `${Math.floor(diffInMinutes / TIME.MINUTES_PER_HOUR)}h ago`;
+        if (diffInMinutes < TIME.MINUTES_PER_WEEK) return `${Math.floor(diffInMinutes / TIME.MINUTES_PER_DAY)}d ago`;
+        return `${Math.floor(diffInMinutes / TIME.MINUTES_PER_WEEK)}w ago`;
       } 
       
       // Phiên bản đầy đủ cho desktop
-      if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
-      if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hours ago`;
+      if (diffInMinutes < TIME.MINUTES_PER_HOUR) return `${diffInMinutes} minutes ago`;
+      if (diffInMinutes < TIME.MINUTES_PER_DAY) return `${Math.floor(diffInMinutes / TIME.MINUTES_PER_HOUR)} hours ago`;
       
       // Ghi đè kết quả từ formatDistanceToNow nếu là "less than a minute ago"
       const formattedTime = formatDistanceToNow(viewedDate, {

@@ -2,6 +2,39 @@
 
 ### Fixed (New)
 
+- 🔄 [2025-01-01] Cải thiện code quality theo gợi ý Copilot → Áp dụng best practices cho maintainability và performance
+  - **RecentSlider.jsx**: Extracted magic numbers thành named constants (MINUTES_PER_HOUR = 60, MINUTES_PER_DAY = 1440, MINUTES_PER_WEEK = 10080) cho time calculation logic
+  - **UniversalCard.jsx**: Replaced horizontal scaling animations với vertical feedback
+    - Main card: `whileTap={{ scale: 0.97 }}` → `whileTap={{ y: 2 }}` để tránh layout overflow
+    - Favorite button: `scale: 1.1/0.9` → `scale: 1.05/y: 1` để giảm aggressive scaling
+    - Delete button: `scale: 1.1/0.9` → `scale: 1.05/y: 1` để consistent animation behavior
+  - Tất cả thay đổi giữ nguyên functionality, chỉ cải thiện code quality và animation smoothness
+  - Giảm risk overflow trên mobile devices với subtle vertical movement thay vì horizontal scaling
+
+- 🏗️ [2025-01-01] Refactor constants để dễ quản lý và maintain → Centralized styling và values
+  - **Created uiStyles.js**: Centralized tất cả UI-related constants
+    - `CARD_VARIANTS`: Base styling cho different card layouts (default, compact, slider, compact-slider)
+    - `IMAGE_STYLES`: Standardized image và overlay styling
+    - `BUTTON_STYLES`: Consistent button styling (favorite, deleteView, addPlaylist)
+    - `BADGE_STYLES`: Unified badge styling cho view count và type indicators
+    - `TEXT_STYLES`: Typography styles cho title và metadata với responsive variants
+    - `LAYOUT`: Container layout và spacing constants
+    - `ANIMATIONS`: Framer Motion animation configurations
+    - `ICON_SIZES`: Standardized icon sizes (playOverlay, small, extraSmall, tiny, addPlaylist)
+    - `ASPECT_RATIOS`: Responsive aspect ratios cho different media types
+  - **Created timeFormats.js**: Time calculation và formatting constants
+    - `TIME`: Time unit constants (MINUTES_PER_HOUR, MINUTES_PER_DAY, MINUTES_PER_WEEK, etc.)
+    - `DATE_FORMATS`: Standardized date formatting options
+    - `LOCALE`: Locale settings cho consistent timestamp display
+    - `RELATIVE_TIME`: Thresholds và mobile abbreviations cho relative time
+  - **Updated UniversalCard.jsx**: Refactored để sử dụng centralized constants
+    - Replaced inline hardcoded CSS classes với constants từ uiStyles.js
+    - Improved maintainability và consistency across components
+    - Easier customization và theming trong tương lai
+  - **Updated RecentSlider.jsx**: Sử dụng TIME constants thay vì magic numbers
+  - **Updated index.js**: Export tất cả constants từ centralized location
+  - **Benefits**: Dễ maintain, consistent styling, easier theming, reduced code duplication
+
 - 🔄 [2025-09-13] Điều chỉnh kích thước UI elements trên mobile view
   - Tăng kích thước card trong slider trên mobile (từ 100px lên 120px)
   - Điều chỉnh slides per view từ 4 xuống 3 để card có kích thước phù hợp hơn
