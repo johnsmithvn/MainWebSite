@@ -2,9 +2,41 @@
 
 ## [Unreleased]
 
+### Fixed (New)
+
+- 🔄 [2025-09-13] Giảm chiều cao tổng thể sliders (Random/Recent/TopView) – áp dụng variant `compact-slider` & loại bỏ padding đáy
+  - Áp dụng variant mới `compact-slider` (padding nhỏ, font-size giảm, metadata tối giản) cho cả 3 slider thay cho `compact`/`slider`
+  - Loại bỏ `<div className="pb-2" />` đáy các slider (thừa sau khi tinh chỉnh dots & spacing) giúp giảm ~16px chiều cao mỗi section
+  - Giảm chiều cao card => wrapper bớt "dài", tăng mật độ thông tin trên màn hình nhỏ
+  - Không thay đổi logic dữ liệu; chỉ tác động presentation nên rủi ro thấp
+  - Chuẩn bị cho bước tiếp theo nếu cần thêm `density` prop tuỳ biến trong tương lai
+  - Bổ sung chống tràn 1px: bỏ padding ngang trong `.embla`, ép overflow-hidden trên Recent/TopView wrapper & trừ 0.2px trong công thức width để khử rounding dư
+
+- 🐛 [2025-09-13] Reverted slider width calculation to use CSS variables for better maintainability and fixed overflow
+  - Quay lại dùng công thức `calc((100% - (n-1)*gap)/n)` với biến `--slides-per-view-*` để dễ quản lý
+  - Trả lại padding cho `.embla` wrapper (0.5rem mobile, 0.75rem desktop) để có spacing nhất quán
+  - Giữ nguyên các breakpoint mobile: <390px (4 cột), 390-479px (5 cột), 480-640px (6 cột)
+  - Giữ nguyên max-width cho slides (150px mobile, 180-220px desktop)
+  - Loại bỏ `max-w-full` class không cần thiết khỏi RandomSlider
+  - Vấn đề tràn viewport được giải quyết bằng cách đảm bảo `embla` container có padding và `embla__container` không có padding, tránh double-spacing.025-09-13] Slider overflow (triệt để) – chuẩn hóa tính toán chiều rộng Embla
+  - Thay công thức width cũ `calc(% - gap)` (gây sai số + overflow) bằng công thức phân bố: `(100% - (n-1)*gap)/n` với biến `--slides-per-view-*`
+  - Di chuyển horizontal padding từ `.embla__container` lên `.embla` để không cộng dồn vào tổng chiều rộng flex container
+  - Chuẩn hóa biến: `--slides-per-view-mobile|tablet|desktop|large` giúp điều chỉnh số cột dễ dàng về sau
+  - Tăng gap rõ ràng (0.25rem mobile / 0.5rem desktop) đồng nhất thay vì trừ thủ công trong width
+  - Loại bỏ hover scale trực tiếp trên slide (chuyển sang translateY nhẹ) tránh làm “nhô” ra ngoài ở slide cuối
+  - Giảm transform lan truyền gây sub‑pixel rounding khi `dragFree + trimSnaps` hoạt động
+  - Thêm `will-change: transform` cho ảnh trong `UniversalCard` tối ưu hiệu ứng nhưng không nở rộng layout
+  - Kết quả: Không còn viền tràn 1–2px ở cạnh phải trên mobile/desktop, snap ổn định hơn, dễ bảo trì
+  - Điều chỉnh bổ sung: tăng `--slides-per-view-mobile` 3→4, giới hạn `max-width` slide (180px mobile, 220px desktop lớn) để tránh card phóng quá khổ khi màn hình hẹp nhưng density thấp
+  - Tối ưu sizing lần 2 (2025-09-13):
+    - Mobile dynamic density:  <390px = 4 cột, ≥390px = 5 cột, ≥480px = 6 cột
+    - Giảm tiếp max-width: 150px mobile, 200px desktop lớn
+    - Bỏ `max-width:100vw` → dùng `100%` tránh kéo theo scrollbar width
+    - Thêm `overflow-x:hidden` toàn cục chặn rounding leak
+
 ### Fixed
 
-- 🐛 [2025-09-13] Improved CSS maintainability with custom properties → Applied Copilot suggestions for better code organization
+- �🐛 [2025-09-13] Improved CSS maintainability with custom properties → Applied Copilot suggestions for better code organization
   - Extracted repetitive calc() expressions to CSS custom properties for slide widths
   - Applied consistent gap values (0.17rem) across all breakpoints instead of mixing 0.25rem and 0.5rem
   - Created reusable CSS variables: --slide-width-mobile, --slide-width-tablet, --slide-width-desktop, --slide-width-large
@@ -33,7 +65,15 @@
 
 ### Changed
 
-- 📱 [2025-09-13] Optimized mobile UI layout → Improved responsive design for better mobile experience
+- � [2025-09-13] Giảm chiều cao tổng thể sliders (Random/Recent/TopView) – áp dụng variant `compact-slider` & loại bỏ padding đáy
+  - Áp dụng variant mới `compact-slider` (padding nhỏ, font-size giảm, metadata tối giản) cho cả 3 slider thay cho `compact`/`slider`
+  - Loại bỏ `<div className="pb-2" />` đáy các slider (thừa sau khi tinh chỉnh dots & spacing) giúp giảm ~16px chiều cao mỗi section
+  - Giảm chiều cao card => wrapper bớt “dài”, tăng mật độ thông tin trên màn hình nhỏ
+  - Không thay đổi logic dữ liệu; chỉ tác động presentation nên rủi ro thấp
+  - Chuẩn bị cho bước tiếp theo nếu cần thêm `density` prop tuỳ biến trong tương lai
+  - Bổ sung chống tràn 1px: bỏ padding ngang trong `.embla`, ép overflow-hidden trên Recent/TopView wrapper & trừ 0.2px trong công thức width để khử rounding dư
+
+- �📱 [2025-09-13] Optimized mobile UI layout → Improved responsive design for better mobile experience
   - Increased grid columns on mobile: Grid view now shows 3 columns instead of 2 on small screens for all media types
   - Reduced card sizes and spacing: Smaller manga/movie/music cards, tighter padding, and smaller badges for mobile
   - Optimized stats cards: Better layout with responsive columns on mobile, smaller icons and text
@@ -76,7 +116,7 @@
 - 🐛 [2025-09-11] Fixed hardcoded storage requirements in storageQuota.js → Device-responsive configuration với environment override support
 - 🐛 [2025-09-11] Fixed complex cross-context checks in serviceWorkerManager.js → Extract to browserSupport utility for consistency
 
-### Added
+### Added (Set 1)
 
 - ✨ [2025-09-11] Added domain-level CORS capability caching → Prevent double requests for failing domains with 2s timeout optimization
 - ✨ [2025-09-11] Added centralized cache instance management → getCacheInstance() function in sw.js for consistent race condition protection
@@ -90,7 +130,7 @@
 - 🐛 [2025-09-10] Fixed Service Worker postMessage error handling → Thêm try-catch cho client.postMessage calls
 - 🐛 [2025-09-10] Fixed dynamic import performance issue → Move browserSupport import to module level
 
-### Added
+### Added (Set 2)
 
 - ✨ [2025-09-10] Added browser support utilities và compatibility checking → Kiểm tra HTTPS, Caches API, Service Worker, IndexedDB support
 - ✨ [2025-09-10] Added OfflineCompatibilityBanner component → Hiển thị cảnh báo khi browser không hỗ trợ offline features  

@@ -230,7 +230,7 @@ const RandomSlider = ({
   }
 
   return (
-    <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 overflow-hidden ${className}`}>
+    <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 overflow-hidden w-full ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between p-3 sm:p-6 pb-2 sm:pb-4">
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
@@ -315,8 +315,8 @@ const RandomSlider = ({
                     onToggleFavorite={async (toggleItem) => {
                       await handleToggleFavorite(toggleItem);
                     }}
-                    variant="compact"
-                    className="w-full h-full" // Card chiếm toàn bộ slide
+                    variant="compact-slider" // Dùng variant siêu gọn để giảm chiều cao slider
+                    className="w-full h-full"
                   />
                 </div>
               ))
@@ -351,8 +351,7 @@ const RandomSlider = ({
         </div>
       )}
 
-      {/* Bottom padding */}
-      <div className="pb-2" />
+  {/* Đã bỏ padding đáy thừa để giảm tổng chiều cao wrapper */}
     </div>
   );
 };

@@ -227,7 +227,8 @@ const UniversalCard = ({
   const cardVariants = {
     default: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
     compact: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
-    slider: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200'
+    slider: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
+    'compact-slider': 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200'
   };
 
   // Aspect ratio based on type
@@ -244,8 +245,9 @@ const UniversalCard = ({
         ${cardVariants[variant]}
         ${className}
       `}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      /* Tránh scale ngang gây lệch width tổng: dùng translateY nhẹ cho feedback */
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.97 }}
       onClick={handleClick}
     >
       {/* Thumbnail */}
@@ -253,7 +255,7 @@ const UniversalCard = ({
         <img
           src={itemData.thumbnail}
           alt={itemData.displayName}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className="w-full h-full object-cover will-change-transform transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
           onError={(e) => {
             if (type === 'movie') {
@@ -349,14 +351,13 @@ const UniversalCard = ({
       </div>
 
       {/* Content */}
-      <div className="p-3">
-        <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1">
+      <div className={variant === 'compact-slider' ? 'p-2' : 'p-3'}>
+        <h3 className={`font-medium text-gray-900 dark:text-white ${variant === 'compact-slider' ? 'text-[11px] leading-tight line-clamp-2 mb-0.5' : 'text-sm line-clamp-2 mb-1'}`}>
           {itemData.displayName}
         </h3>
-        
         {/* Additional info */}
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-          <span>{itemData.typeLabel}</span>
+        <div className={`flex items-center justify-between ${variant === 'compact-slider' ? 'text-[10px]' : 'text-xs'} text-gray-500 dark:text-gray-400`}>
+          <span className="truncate max-w-[60%]">{itemData.typeLabel}</span>
           {item.size && (
             <span className="text-xs">{formatSize(item.size)}</span>
           )}

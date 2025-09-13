@@ -289,7 +289,7 @@ const TopViewSlider = ({
   }
 
   return (
-    <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 ${className}`}>
+  <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 overflow-hidden ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between p-3 sm:p-6 pb-2 sm:pb-4">
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
@@ -388,7 +388,7 @@ const TopViewSlider = ({
                       showDeleteView={true}
                       onToggleFavorite={() => handleToggleFavorite(item)}
                       onDeleteView={() => handleDeleteView(item)}
-                      variant="compact"
+                      variant="compact-slider" // sử dụng phiên bản cực gọn
                       className="w-full h-full"
                       overlayMode={type === 'manga' ? 'views' : 'type'}
                     />
@@ -426,8 +426,7 @@ const TopViewSlider = ({
         </div>
       )}
 
-      {/* Bottom padding */}
-      <div className="pb-2" />
+  {/* Bỏ phần padding đáy không cần thiết */}
 
       {/* Modal Component */}
       <ModalComponent />
