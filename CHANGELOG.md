@@ -12,13 +12,13 @@
   - Chuẩn bị cho bước tiếp theo nếu cần thêm `density` prop tuỳ biến trong tương lai
   - Bổ sung chống tràn 1px: bỏ padding ngang trong `.embla`, ép overflow-hidden trên Recent/TopView wrapper & trừ 0.2px trong công thức width để khử rounding dư
 
-- 🐛 [2025-09-13] Reverted slider width calculation to use CSS variables for better maintainability and fixed overflow
-  - Quay lại dùng công thức `calc((100% - (n-1)*gap)/n)` với biến `--slides-per-view-*` để dễ quản lý
-  - Trả lại padding cho `.embla` wrapper (0.5rem mobile, 0.75rem desktop) để có spacing nhất quán
-  - Giữ nguyên các breakpoint mobile: <390px (4 cột), 390-479px (5 cột), 480-640px (6 cột)
-  - Giữ nguyên max-width cho slides (150px mobile, 180-220px desktop)
-  - Loại bỏ `max-w-full` class không cần thiết khỏi RandomSlider
-  - Vấn đề tràn viewport được giải quyết bằng cách đảm bảo `embla` container có padding và `embla__container` không có padding, tránh double-spacing.025-09-13] Slider overflow (triệt để) – chuẩn hóa tính toán chiều rộng Embla
+- 🐛 [2025-09-13] Fixed slider hiển thị vượt viewport gây scroll ngang – áp dụng giải pháp triệt để theo phân tích cấu trúc:
+  - Xác định nguyên nhân gốc: width tổng chính xác trong container, flex gap, card layout overflow
+  - Áp dụng container width `calc(100vw - 32px)` với margin thay padding để đảm bảo không tràn
+  - Chặn scroll `overflow-hidden` và force `w-full` trên tất cả container
+  - Giảm breakpoint max-width slides xuống (nhỏ hơn 135px mobile), tăng padding
+  - Loại bỏ translate 3D và GPU accelerated classes không cần thiết
+  - Thêm `w-full` cho tất cả container slider để fit parent container
   - Thay công thức width cũ `calc(% - gap)` (gây sai số + overflow) bằng công thức phân bố: `(100% - (n-1)*gap)/n` với biến `--slides-per-view-*`
   - Di chuyển horizontal padding từ `.embla__container` lên `.embla` để không cộng dồn vào tổng chiều rộng flex container
   - Chuẩn hóa biến: `--slides-per-view-mobile|tablet|desktop|large` giúp điều chỉnh số cột dễ dàng về sau
