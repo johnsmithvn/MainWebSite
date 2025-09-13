@@ -1,8 +1,53 @@
-# Changelog
+# ## [Unreleased]
+
+### Fixed (New)
+
+- 🔄 [2025-09-13] Điều chỉnh kích thước UI elements trên mobile view
+  - Cải thiện tỷ lệ và spacing cho MovieCard trong grid view
+  - Giảm kích thước icon trong MovieCard từ 4x4 xuống 3x3 trên mobile và 2x2 cho icon nhỏ
+  - Điều chỉnh padding của card xuống còn p-2 trên mobile thay vì p-3
+  - Giảm kích thước font chữ trong MovieCard xuống text-xs và text-[9px]
+  - Giảm font size title trong MovieCard xuống text-xs trên mobile
+  - Giảm kích thước icon Play trong overlay khi hover xuống 8x8 trên mobile
+  - Thu gọn spacing trong statistics card cho phù hợp với mobile view
+  - Điều chỉnh grid-cols xuống còn 2 cột trên mobile thay vì 3 cột
+  - Thay đổi hiển thị "less than a minute ago" thành "just now" cho gọn gàng hơn
+  - Giảm kích thước badge "time ago" trong RecentSlider (18 minutes ago -> 18m ago)
+  - Giảm font size của timestamp từ text-xs xuống text-[9px] trên mobile
+  - Thu gọn định dạng thời gian (minutes -> m, hours -> h, days -> d) trên mobile
+  - Giảm padding và vị trí của badge timestamp để phù hợp với không gian
+  - Giảm độ đậm của background color badge (thêm 90% opacity)
+  - Giảm kích thước icon phù hợp với mobile view
+  - Giảm kích thước icon media type (mp4, audio) trong badge từ 3x3 xuống 2.5x2.5 trên mobile
+  - Giảm kích thước nút xóa lượt xem (trash icon) và làm nhỏ padding
+  - Điều chỉnh nút favorite heart nhỏ hơn trên mobile view
+  - Giảm kích thước icon Play trong overlay khi hover card
+  - Áp dụng responsive size cho tất cả icon từ mobile đến desktop
+  - Tăng tính nhất quán UI và cải thiện trải nghiệm trên màn hình nhỏ
+
+- 🐛 [2025-09-13] Sửa lỗi import trong RecentSlider.jsx bị hỏngelog
 
 ## [Unreleased]
 
 ### Fixed (New)
+
+- � [2025-09-13] Sửa lỗi import trong RecentSlider.jsx bị hỏng
+  - Sửa lỗi import `embla-carousel-autoplay` bị hỏng gây lỗi khi khởi chạy ứng dụng
+  - Dòng import có chứa JSX của component nằm trong tên module bị import
+
+- �🔄 [2025-09-13] Tối ưu khoảng cách giữa các thành phần UI - giảm khoảng trống
+  - Giảm padding tổng thể của trang xuống còn p-1 sm:p-2 thay vì p-3 sm:p-6
+  - Giảm khoảng cách giữa các slider từ space-y-6 xuống space-y-1
+  - Giảm margin-bottom của các container slider xuống mb-1 sm:mb-1
+  - Giảm padding nội dung của các container xuống p-2 sm:p-3
+  - Tinh chỉnh padding của header trong slider xuống p-2 sm:p-3 pb-1 sm:pb-2
+  - Tăng không gian hiển thị nội dung bằng cách tối ưu khoảng trắng
+
+- 🔄 [2025-09-13] Đồng bộ hóa width giữa slider và grid view - cân bằng UI
+  - Áp dụng padding thống nhất cho container chứa MangaRandomSection và grid view
+  - Xóa bỏ margin 0.5rem thừa trong .embla CSS để đảm bảo cân bằng với grid view
+  - Đồng bộ max-width giữa slider và grid view
+  - Cải thiện tính nhất quán của UI giữa các phần
 
 - 🔄 [2025-09-13] Giảm chiều cao tổng thể sliders (Random/Recent/TopView) – áp dụng variant `compact-slider` & loại bỏ padding đáy
   - Áp dụng variant mới `compact-slider` (padding nhỏ, font-size giảm, metadata tối giản) cho cả 3 slider thay cho `compact`/`slider`

@@ -238,15 +238,31 @@ const RecentSlider = ({
     try {
       const now = new Date();
       const viewedDate = new Date(lastViewed);
-      const diffInMinutes = Math.floor((now - viewedDate) / (1000 * 60));
+      const diffInSeconds = Math.floor((now - viewedDate) / 1000);
+      const diffInMinutes = Math.floor(diffInSeconds / 60);
+      const isMobile = window.innerWidth < 640;
       
+      // Luôn hiển thị "just now" cho thời gian dưới 1 phút
       if (diffInMinutes < 1) return 'just now';
+      
+      // Rút gọn hơn cho mobile
+      if (isMobile) {
+        if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+        if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+        if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}d ago`;
+        return `${Math.floor(diffInMinutes / 10080)}w ago`;
+      } 
+      
+      // Phiên bản đầy đủ cho desktop
       if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
       if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hours ago`;
       
-      return formatDistanceToNow(viewedDate, {
+      // Ghi đè kết quả từ formatDistanceToNow nếu là "less than a minute ago"
+      const formattedTime = formatDistanceToNow(viewedDate, {
         addSuffix: true
       });
+      
+      return formattedTime === 'less than a minute ago' ? 'just now' : formattedTime;
     } catch (error) {
       return '';
     }
@@ -274,7 +290,7 @@ const RecentSlider = ({
   return (
   <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 overflow-hidden w-full ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-3 sm:p-6 pb-2 sm:pb-4">
+      <div className="flex items-center justify-between p-2 sm:p-3 pb-1 sm:pb-2">
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
           <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white truncate">
             {title}
@@ -379,8 +395,8 @@ const RecentSlider = ({
                   <div className="relative w-full h-full">
                     {/* Last viewed badge */}
                     {item.lastViewed && (
-                      <div className="absolute top-2 left-2 z-10">
-                        <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                      <div className="absolute top-1 left-1 sm:top-2 sm:left-2 z-10">
+                        <div className="bg-blue-500/90 text-white text-[9px] sm:text-xs px-1 py-0.5 sm:px-2 sm:py-1 rounded-full shadow-sm">
                           {formatLastViewed(item.lastViewed)}
                         </div>
                       </div>

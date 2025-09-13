@@ -319,44 +319,44 @@ const MovieHome = () => {
         </div>
 
         {/* Statistics cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-8">
-          <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <Play className="w-5 h-5 sm:w-8 sm:h-8 text-blue-500 mr-2 sm:mr-3" />
+              <Play className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-blue-500 mr-1.5 sm:mr-2" />
               <div>
-                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{movieList.length}</p>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Items</p>
+                <p className="text-base sm:text-lg md:text-xl font-bold text-gray-900 dark:text-white">{movieList.length}</p>
+                <p className="text-[9px] sm:text-xs text-gray-600 dark:text-gray-400">Total Items</p>
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <Filter className="w-5 h-5 sm:w-8 sm:h-8 text-green-500 mr-2 sm:mr-3" />
+              <Filter className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-green-500 mr-1.5 sm:mr-2" />
               <div>
-                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-base sm:text-lg md:text-xl font-bold text-gray-900 dark:text-white">
                   {movieList.filter(item => item.type === 'folder').length}
                 </p>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Folders</p>
+                <p className="text-[9px] sm:text-xs text-gray-600 dark:text-gray-400">Folders</p>
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <Play className="w-5 h-5 sm:w-8 sm:h-8 text-purple-500 mr-2 sm:mr-3" />
+              <Play className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-purple-500 mr-1.5 sm:mr-2" />
               <div>
-                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-base sm:text-lg md:text-xl font-bold text-gray-900 dark:text-white">
                   {movieList.filter(item => item.type === 'video' || item.type === 'file').length}
                 </p>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Video Files</p>
+                <p className="text-[9px] sm:text-xs text-gray-600 dark:text-gray-400">Video Files</p>
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 p-2 sm:p-3 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
-              <Search className="w-5 h-5 sm:w-8 sm:h-8 text-orange-500 mr-2 sm:mr-3" />
+              <Search className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-orange-500 mr-1.5 sm:mr-2" />
               <div>
-                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">{filteredMovies.length}</p>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Search Results</p>
+                <p className="text-base sm:text-lg md:text-xl font-bold text-gray-900 dark:text-white">{filteredMovies.length}</p>
+                <p className="text-[9px] sm:text-xs text-gray-600 dark:text-gray-400">Search Results</p>
               </div>
             </div>
           </div>
@@ -408,9 +408,9 @@ const MovieHome = () => {
             {/* Current page items (after filtering & sorting) */}
             <div className={`grid ${
               viewMode === 'grid' 
-                ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-6' 
+                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6' 
                 : 'grid-cols-1'
-            } gap-2 sm:gap-4 mb-6 sm:mb-8`}>
+            } gap-2 sm:gap-4 mb-4 sm:mb-6`}>
               {currentMovies.map((movie) => (
                 <MovieCard
                   key={movie.path}

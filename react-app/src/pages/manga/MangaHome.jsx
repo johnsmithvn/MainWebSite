@@ -357,14 +357,14 @@ const MangaHome = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Random Sections - chỉ hiển thị ở root để giảm tải khi quay lại từ Reader */}
       {showRandomSection && (
-        <div className="mb-8 px-6">
+        <div className="mb-1 p-1 sm:p-2">
           <MangaRandomSection />
         </div>
       )}
 
-      <div className="p-3 sm:p-6">
+      <div className="p-1 sm:p-2">
         {/* Main Content Container */}
-        <div className="manga-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-6">
+        <div className="manga-main-container bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2 sm:p-3">
           {/* Header */}
           <div className="mb-4 sm:mb-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">

@@ -289,9 +289,9 @@ const TopViewSlider = ({
   }
 
   return (
-  <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 overflow-hidden w-full ${className}`}>
+  <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-1 sm:mb-1 overflow-hidden w-full ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-3 sm:p-6 pb-2 sm:pb-4">
+      <div className="flex items-center justify-between p-2 sm:p-3 pb-1 sm:pb-2">
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
           <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white truncate">
             {title}

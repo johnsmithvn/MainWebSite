@@ -8,11 +8,9 @@
   box-sizing: border-box;
   margin-left: auto;
   margin-right: auto;
-  /* Giảm max-width để đảm bảo không tràn */
-  max-width: calc(100% - 4px); /* buffer 4px tránh rounding issues */
-  /* Bỏ padding ngang để tránh gây tràn - dùng margin thay thế */
+  /* Đồng bộ với grid view container - không cần margin */
+  max-width: 100%;
   padding: 0;
-  margin: 0 0.5rem;
   
   /* Spacing & layout variables */
   --slide-gap-mobile: 0.25rem;
