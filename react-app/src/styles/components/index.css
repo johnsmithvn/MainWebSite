@@ -4,6 +4,8 @@
 /* Import all component styles */
 @import './manga-reader.css';
 @import './manga-card.css';
+@import './movie-card.css';
+@import './music-card.css';
 @import './random-slider.css';
 
 /* Future component imports can be added here:

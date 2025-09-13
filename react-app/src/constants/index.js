@@ -71,6 +71,12 @@ export const CACHE = {
 // Export cache key utilities
 export * from './cacheKeys';
 
+// Export UI style utilities
+export * from './uiStyles';
+
+// Export time formatting utilities
+export * from './timeFormats';
+
 /**
  * 🎵 Slider/Carousel Settings
  */

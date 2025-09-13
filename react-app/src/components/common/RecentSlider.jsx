@@ -12,6 +12,7 @@ import { useModal } from '@/components/common/Modal';
 import { useRecentItems } from '@/hooks/useRecentItems';
 import { useMangaStore, useMovieStore } from '@/store';
 import { formatDistanceToNow } from 'date-fns';
+import { TIME } from '@/constants';
 import '@/styles/components/embla.css';
 
 const RecentSlider = ({ 
@@ -238,15 +239,31 @@ const RecentSlider = ({
     try {
       const now = new Date();
       const viewedDate = new Date(lastViewed);
-      const diffInMinutes = Math.floor((now - viewedDate) / (1000 * 60));
+      const diffInSeconds = Math.floor((now - viewedDate) / 1000);
+      const diffInMinutes = Math.floor(diffInSeconds / TIME.SECONDS_PER_MINUTE);
+      const isMobile = window.innerWidth < 640;
       
+      // Luôn hiển thị "just now" cho thời gian dưới 1 phút
       if (diffInMinutes < 1) return 'just now';
-      if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
-      if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hours ago`;
       
-      return formatDistanceToNow(viewedDate, {
+      // Rút gọn hơn cho mobile
+      if (isMobile) {
+        if (diffInMinutes < TIME.MINUTES_PER_HOUR) return `${diffInMinutes}m ago`;
+        if (diffInMinutes < TIME.MINUTES_PER_DAY) return `${Math.floor(diffInMinutes / TIME.MINUTES_PER_HOUR)}h ago`;
+        if (diffInMinutes < TIME.MINUTES_PER_WEEK) return `${Math.floor(diffInMinutes / TIME.MINUTES_PER_DAY)}d ago`;
+        return `${Math.floor(diffInMinutes / TIME.MINUTES_PER_WEEK)}w ago`;
+      } 
+      
+      // Phiên bản đầy đủ cho desktop
+      if (diffInMinutes < TIME.MINUTES_PER_HOUR) return `${diffInMinutes} minutes ago`;
+      if (diffInMinutes < TIME.MINUTES_PER_DAY) return `${Math.floor(diffInMinutes / TIME.MINUTES_PER_HOUR)} hours ago`;
+      
+      // Ghi đè kết quả từ formatDistanceToNow nếu là "less than a minute ago"
+      const formattedTime = formatDistanceToNow(viewedDate, {
         addSuffix: true
       });
+      
+      return formattedTime === 'less than a minute ago' ? 'just now' : formattedTime;
     } catch (error) {
       return '';
     }
@@ -272,11 +289,11 @@ const RecentSlider = ({
   }
 
   return (
-    <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 ${className}`}>
+  <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 overflow-hidden w-full ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-6 pb-4">
-        <div className="flex items-center space-x-3 min-w-0 flex-1">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">
+      <div className="flex items-center justify-between p-2 sm:p-3 pb-1 sm:pb-2">
+        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+          <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white truncate">
             {title}
           </h2>
           
@@ -285,9 +302,9 @@ const RecentSlider = ({
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0"
+              className="flex items-center bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium flex-shrink-0"
             >
-              <FiClock className="w-3 h-3 mr-1" />
+              <FiClock className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
               <span>{items.length}</span>
             </motion.div>
           )}
@@ -297,9 +314,9 @@ const RecentSlider = ({
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center text-sm text-gray-500 dark:text-gray-400 flex-shrink-0"
+              className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0"
             >
-              <FiClock className="w-3 h-3 mr-1" />
+              <FiClock className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
               <span className="whitespace-nowrap">{formatTimestamp(lastUpdated)}</span>
             </motion.div>
           )}
@@ -379,8 +396,8 @@ const RecentSlider = ({
                   <div className="relative w-full h-full">
                     {/* Last viewed badge */}
                     {item.lastViewed && (
-                      <div className="absolute top-2 left-2 z-10">
-                        <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                      <div className="absolute top-1 left-1 sm:top-2 sm:left-2 z-10">
+                        <div className="bg-blue-500/90 text-white text-[9px] sm:text-xs px-1 py-0.5 sm:px-2 sm:py-1 rounded-full shadow-sm">
                           {formatLastViewed(item.lastViewed)}
                         </div>
                       </div>
@@ -389,7 +406,7 @@ const RecentSlider = ({
                       item={item}
                       type={type}
                       isFavorite={Boolean(item.isFavorite)}
-                      variant="slider"
+                      variant="compact-slider" // thu gọn chiều cao
                       showViews={false}
                       onToggleFavorite={async (toggleItem) => {
                         await handleToggleFavorite(toggleItem);
@@ -430,8 +447,7 @@ const RecentSlider = ({
         </div>
       )}
 
-      {/* Bottom padding */}
-      <div className="pb-2" />
+  {/* Bỏ padding đáy để slider thấp hơn */}
       
       {/* Modal Component */}
       <ModalComponent />

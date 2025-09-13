@@ -1,33 +1,59 @@
 /* Embla Carousel Styles */
 
-.embla {
+ .embla {
   position: relative;
-  overflow: hidden;
+  /* FORCE overflow hidden mọi hướng để slider không bao giờ tràn */
+  overflow: hidden !important;
   width: 100%;
   box-sizing: border-box;
   margin-left: auto;
   margin-right: auto;
-  max-width: 100vw;
+  /* Đồng bộ với grid view container - không cần margin */
+  max-width: 100%;
+  padding: 0;
+  
+  /* Spacing & layout variables */
+  --slide-gap-mobile: 0.25rem;
+  --slide-gap-desktop: 0.5rem;
+
+  /* Slides per view ở từng breakpoint (dễ chỉnh trong tương lai) */
+  --slides-per-view-mobile: 3; /* giảm từ 4 xuống 3 để card to hơn */
+  --slides-per-view-tablet: 4;
+  --slides-per-view-desktop: 5;
+  --slides-per-view-large: 6;
+}
+
+@media (min-width: 640px) {
+  .embla { 
+    padding: 0; /* không padding, dùng margin */
+    margin: 0 0.75rem;
+    max-width: calc(100% - 8px); /* desktop vẫn cần giảm nhẹ width */
+  }
 }
 
 .embla__viewport {
-  overflow: hidden;
+  overflow: hidden !important; /* FORCE hidden để ngăn chặn mọi trường hợp tràn */
   width: 100%;
+  box-sizing: border-box;
+  max-width: 100%; /* đảm bảo viewport không vượt quá 100% */
 }
 
 .embla__container {
   display: flex;
   align-items: flex-start;
-  gap: var(--slide-spacing, 0.5rem);
-  padding: 0 0.75rem;
+  gap: var(--slide-gap-mobile); /* Force mobile gap mặc định */
   box-sizing: border-box;
+  /* Không padding ở đây để tổng chiều rộng = 100% parent */
+  width: 100%;
+  max-width: calc(100% - 2px); /* giảm nhẹ để tránh subpixel rounding */
 }
 
-/* Mobile responsive container - consistent padding */
-@media (max-width: 640px) {
-  .embla__container {
-    padding: 0 0.5rem;
-    gap: 0.25rem;
+/* Desktop gap */
+@media (min-width: 641px) {
+  .embla__container { 
+    gap: var(--slide-gap-desktop);
+    /* Giảm nhẹ gap ở desktop */
+    --slide-gap-desktop: 0.4rem;
   }
 }
 
@@ -35,60 +61,91 @@
   flex: 0 0 auto;
   min-width: 0;
   position: relative;
+  /* Transition tinh gọn, tránh scale gây overflow tổng thể */
+  transition: transform 0.18s ease;
 }
 
-/* Responsive slide widths */
+/* Responsive slide widths - Quay lại dùng CSS variables để dễ quản lý */
+/* Điều chỉnh width slide theo breakpoint - tăng kích thước cho movie cards */
+@media (max-width: 389px) {
+  .embla__slide {
+    flex-basis: 90px !important; 
+    max-width: 90px !important;
+  }
+}
+
+@media (min-width: 390px) and (max-width: 479px) {
+  .embla__slide {
+    flex-basis: 105px !important;
+    max-width: 105px !important;
+  }
+}
+
+@media (min-width: 480px) and (max-width: 640px) {
+  .embla__slide {
+    flex-basis: 120px !important;
+    max-width: 120px !important;
+  }
+}
+
 @media (max-width: 640px) {
   .embla__slide {
-    flex: 0 0 40%;
-    max-width: 40%;
+    /* Đơn giản hóa width calculation bằng flex-basis cố định */
+    flex: 0 0 auto !important;
+    width: auto !important; /* reset width */
+    flex-basis: 120px !important; /* tăng từ 100px lên 120px cho movie cards */
+    max-width: 120px !important;
     box-sizing: border-box;
   }
-  .embla {
-    padding: 0 0.5rem;
-  }
-  /* Limit card height on mobile - use more specific selectors */
-  .embla__slide [class*="aspect-[3/4]"] {
-    aspect-ratio: 2/3;
-  }
-  .embla__slide [class*="aspect-square"] {
-    aspect-ratio: 1;
-  }
-  .embla__slide [class*="aspect-video"] {
-    aspect-ratio: 16/10;
-  }
+  .embla__slide [class*="aspect-[3/4]"] { aspect-ratio: 2/3; }
+  .embla__slide [class*="aspect-square"] { aspect-ratio: 1; }
+  .embla__slide [class*="aspect-video"] { aspect-ratio: 16/10; }
 }
 
 @media (min-width: 641px) and (max-width: 768px) {
   .embla__slide {
-    flex: 0 0 28%;
-    max-width: 28%;
+    /* Tablet: width cố định thay vì phần trăm phức tạp */
+    flex: 0 0 auto !important;
+    width: auto !important; /* reset width */
+    flex-basis: 150px !important;
+    max-width: 150px !important;
     box-sizing: border-box;
   }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
   .embla__slide {
-    flex: 0 0 25%;
-    max-width: 25%;
+    /* Desktop nhỏ: width cố định */
+    flex: 0 0 auto !important;
+    width: auto !important; /* reset width */
+    flex-basis: 170px !important;
+    max-width: 170px !important;
     box-sizing: border-box;
   }
 }
 
-@media (min-width: 1025px) and (max-width: 1280px) {
+@media (min-width: 1025px) {
   .embla__slide {
-    flex: 0 0 20%;
-    max-width: 20%;
+    /* Desktop lớn: width cố định */
+    flex: 0 0 auto !important;
+    width: auto !important; /* reset width */
+    flex-basis: 190px !important;
+    max-width: 190px !important;
     box-sizing: border-box;
   }
 }
 
-@media (min-width: 1281px) {
-  .embla__slide {
-    flex: 0 0 16.666667%;
-    max-width: 16.666667%;
-    box-sizing: border-box;
-  }
+/* Phòng tràn ngang triệt để - từ gốc html đến container */
+html, 
+body,
+#root,
+main { overflow-x: hidden !important; }
+
+/* Force main wrapper không bao giờ tràn viewport */
+.container {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
 }
 
 /* Smooth transitions */
@@ -124,10 +181,10 @@
   }
 }
 
-/* Card hover effects */
-.embla__slide:hover {
-  transform: translateY(-4px);
-  transition: transform 0.2s ease-out;
+/* Card hover effect - chỉ dịch dọc, không scale */
+.embla__slide:hover { 
+  transform: translateY(-2px); /* giảm xuống -2px (từ -3px) để nhẹ hơn */ 
+  z-index: 2; /* đảm bảo card hover nổi lên trên */
 }
 
 /* RTL support */

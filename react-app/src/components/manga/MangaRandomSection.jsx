@@ -15,7 +15,7 @@ const MangaRandomSection = () => {
   }
 
   return (
-    <div className="manga-random-sections space-y-6">
+    <div className="manga-random-sections space-y-1 w-full">
       {/* Random Banner */}
       <RandomSlider
         type="manga"

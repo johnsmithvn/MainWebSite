@@ -291,6 +291,19 @@
   align-items: center;
 }
 
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .simple-footer {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .simple-footer {
+    padding: 8px 10px;
+  }
+}
+
 .nav-btn {
   background: rgba(255, 255, 255, 0.1);
   color: white;
@@ -300,6 +313,21 @@
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s ease;
+}
+
+/* Mobile responsive nav buttons */
+@media (max-width: 768px) {
+  .nav-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-btn {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
 }
 
 .nav-btn:hover:not(:disabled) {
@@ -316,6 +344,19 @@
   color: white;
   font-size: 14px;
   font-weight: 500;
+}
+
+/* Mobile responsive page counter */
+@media (max-width: 768px) {
+  .page-counter {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-counter {
+    font-size: 11px;
+  }
 }
 
 /* ========== READING MODE TOGGLE ========== */

@@ -9,7 +9,18 @@ import { useAuthStore } from '@/store';
 import { useRecentManager } from '@/hooks/useRecentManager';
 import { apiService } from '@/utils/api';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
-import { DEFAULT_IMAGES } from '@/constants';
+import { 
+  DEFAULT_IMAGES, 
+  CARD_VARIANTS, 
+  IMAGE_STYLES, 
+  BUTTON_STYLES, 
+  BADGE_STYLES, 
+  TEXT_STYLES, 
+  LAYOUT, 
+  ANIMATIONS, 
+  ICON_SIZES, 
+  ASPECT_RATIOS 
+} from '@/constants';
 
 const UniversalCard = ({ 
   item, 
@@ -227,25 +238,27 @@ const UniversalCard = ({
   const cardVariants = {
     default: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
     compact: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
-    slider: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200'
+    slider: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
+    'compact-slider': 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200'
   };
 
   // Aspect ratio based on type
   const getAspectRatio = () => {
-    if (type === 'music') return 'aspect-square';
-    if (type === 'movie') return 'aspect-video';
-    return 'aspect-[3/4]'; // manga default
+    if (type === 'music') return ASPECT_RATIOS.music;
+    if (type === 'movie') return ASPECT_RATIOS.movie;
+    return ASPECT_RATIOS.manga; // manga default
   };
 
   return (
     <motion.div
       className={`
-        relative cursor-pointer group overflow-hidden
-        ${cardVariants[variant]}
+        ${LAYOUT.container}
+        ${CARD_VARIANTS[variant]}
         ${className}
       `}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      /* Avoid horizontal scaling that misaligns total width: dùng translateY nhẹ cho feedback */
+      whileHover={ANIMATIONS.cardHover}
+      whileTap={ANIMATIONS.cardTap}
       onClick={handleClick}
     >
       {/* Thumbnail */}
@@ -253,7 +266,7 @@ const UniversalCard = ({
         <img
           src={itemData.thumbnail}
           alt={itemData.displayName}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className={IMAGE_STYLES.base}
           loading="lazy"
           onError={(e) => {
             if (type === 'movie') {
@@ -270,8 +283,8 @@ const UniversalCard = ({
         
         {/* Play overlay for readable content */}
         {itemData.isReadable && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            <TypeIcon className="w-12 h-12 text-white drop-shadow-lg" />
+          <div className={IMAGE_STYLES.overlay}>
+            <TypeIcon className={ICON_SIZES.playOverlay} />
           </div>
         )}
 
@@ -279,90 +292,87 @@ const UniversalCard = ({
         {type !== 'music' && (
           <motion.button
             className={`
-              absolute top-2 right-2 p-2 rounded-full backdrop-blur-sm transition-colors duration-200
+              ${BUTTON_STYLES.favorite.base}
               ${currentFavoriteState 
-                ? 'bg-red-500/80 text-white hover:bg-red-600/80' 
-                : 'bg-black/20 text-white hover:bg-black/40'
+                ? BUTTON_STYLES.favorite.active
+                : BUTTON_STYLES.favorite.inactive
               }
             `}
             onClick={handleFavoriteClick}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            whileHover={ANIMATIONS.buttonHover}
+            whileTap={ANIMATIONS.buttonTap}
           >
-            <FiHeart className={`w-4 h-4 ${currentFavoriteState ? 'fill-current' : ''}`} />
+            <FiHeart className={`${ICON_SIZES.small} ${currentFavoriteState ? 'fill-current' : ''}`} />
           </motion.button>
         )}
 
         {/* Delete view button */}
         {showDeleteView && (
           <motion.button
-            className="absolute bottom-2 right-2 p-2 rounded-full bg-gray-900/80 text-white hover:bg-red-600/80 backdrop-blur-sm transition-colors duration-200"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            className={BUTTON_STYLES.deleteView}
+            whileHover={ANIMATIONS.buttonHover}
+            whileTap={ANIMATIONS.buttonTap}
             onClick={handleDeleteViewClick}
             title="Xóa lượt xem"
           >
-            <FiTrash2 className="w-4 h-4" />
+            <FiTrash2 className={ICON_SIZES.small} />
           </motion.button>
         )}
 
     {/* Add to playlist button (music only, top-right) */}
         {type === 'music' && (
           <motion.button
-            className="absolute top-2 right-2 h-9 w-9 flex items-center justify-center rounded-full border-2 border-white/80 text-white bg-black/30 hover:bg-black/40 backdrop-blur-sm shadow-md transition-all"
+            className={BUTTON_STYLES.addPlaylist}
             onClick={(e) => {
               e.stopPropagation();
               window.dispatchEvent(new CustomEvent('openPlaylistModal', { detail: { item } }));
             }}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={ANIMATIONS.buttonHover}
+            whileTap={ANIMATIONS.buttonTap}
             aria-label="Thêm vào playlist"
           >
-            <FiPlus className="w-4 h-4" />
+            <FiPlus className={ICON_SIZES.addPlaylist} />
           </motion.button>
         )}
 
   {/* Overlay: type badge top-left for music; otherwise bottom-left */}
-  <div className={`absolute ${type === 'music' ? 'top-2 left-2' : 'bottom-2 left-2'}`}>
+  <div className={`absolute ${LAYOUT.badgePositions[type] || LAYOUT.badgePositions.default}`}>
           {overlayMode === 'views' ? (
-            <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
-              <FiEye className="w-3 h-3" />
+            <div className={BADGE_STYLES.view}>
+              <FiEye className={ICON_SIZES.extraSmall} />
               <span>{(item?.views ?? item?.viewCount ?? item?.count ?? 0)}</span>
             </div>
           ) : (
-            <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
-              <TypeIcon className="w-3 h-3" />
+            <div className={BADGE_STYLES.type}>
+              <TypeIcon className={ICON_SIZES.extraSmall} />
               <span>{itemData.typeLabel}</span>
             </div>
           )}
         </div>
 
-        {/* View count (bottom-right). Hide if overlayMode already shows views to avoid duplication */}
-        {showViews && overlayMode !== 'views' && (item?.views ?? item?.viewCount ?? item?.count) !== undefined && (
-          <div className={`absolute ${showDeleteView ? 'bottom-12 right-2' : 'bottom-2 right-2'}`}>
-            <div className="flex items-center space-x-1 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
-              <FiEye className="w-3 h-3" />
-              <span>{item?.views ?? item?.viewCount ?? item?.count ?? 0}</span>
-            </div>
-          </div>
-        )}
+        {/* View count moved to bottom info section */}
       </div>
 
       {/* Content */}
-      <div className="p-3">
-        <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1">
+      <div className={LAYOUT.cardPadding[variant] || LAYOUT.cardPadding.default}>
+        <h3 className={TEXT_STYLES.title[variant] || TEXT_STYLES.title.default}>
           {itemData.displayName}
         </h3>
-        
         {/* Additional info */}
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-          <span>{itemData.typeLabel}</span>
-          {item.size && (
-            <span className="text-xs">{formatSize(item.size)}</span>
-          )}
-          {item.duration && (
-            <span className="text-xs">{formatDuration(item.duration)}</span>
-          )}
+        <div className={TEXT_STYLES.metadata[variant] || TEXT_STYLES.metadata.default}>
+          <span className={TEXT_STYLES.typeLabel}>{itemData.typeLabel}</span>
+          
+          {/* Priority: View count > Duration > Size */}
+          {showViews && overlayMode !== 'views' && (item?.views ?? item?.viewCount ?? item?.count) !== undefined ? (
+            <span className={TEXT_STYLES.viewCount}>
+              <FiEye className={ICON_SIZES.tiny} />
+              <span>{item?.views ?? item?.viewCount ?? item?.count ?? 0}</span>
+            </span>
+          ) : item.duration ? (
+            <span>{formatDuration(item.duration)}</span>
+          ) : item.size ? (
+            <span>{formatSize(item.size)}</span>
+          ) : null}
         </div>
       </div>
     </motion.div>

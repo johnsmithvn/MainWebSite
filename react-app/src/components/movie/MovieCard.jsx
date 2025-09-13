@@ -79,20 +79,20 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 
                       transition-all duration-300 flex items-center justify-center">
           {isVideo ? (
-            <Play className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Play className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
           ) : (
-            <Folder className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Folder className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
           )}
         </div>
 
         {/* Favorite button */}
         <button
           onClick={handleFavoriteClick}
-          className="absolute top-2 right-2 p-1 rounded-full bg-black bg-opacity-50 
+          className="absolute top-1 sm:top-2 right-1 sm:right-2 p-0.5 sm:p-1 rounded-full bg-black bg-opacity-50 
                      hover:bg-opacity-70 transition-all duration-200 z-10"
         >
           <Heart 
-            className={`w-4 h-4 ${
+            className={`w-3 h-3 sm:w-4 sm:h-4 ${
               item.isFavorite 
                 ? 'text-red-500 fill-current' 
                 : 'text-white'
@@ -101,43 +101,42 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
         </button>
 
         {/* Type indicator */}
-        <div className="absolute bottom-2 left-2">
-          <span className="bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-            {isVideo ? <Play className="w-3 h-3" /> : <Folder className="w-3 h-3" />}
+        <div className="absolute bottom-1 sm:bottom-2 left-1 sm:left-2">
+          <span className="bg-black bg-opacity-75 text-white text-[9px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded flex items-center gap-0.5 sm:gap-1">
+            {isVideo ? <Play className="w-2 h-2 sm:w-3 sm:h-3" /> : <Folder className="w-2 h-2 sm:w-3 sm:h-3" />}
             {typeLabel}
           </span>
         </div>
 
-        {/* Views count */}
-        {showViews && item.views !== undefined && (
-          <div className="absolute bottom-2 right-2">
-            <span className="bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {item.views?.toLocaleString() || 0}
-            </span>
-          </div>
-        )}
+        {/* Views count - removed from overlay, moved to info section below */}
+        {/* Views count moved to bottom info section */}
       </div>
 
       {/* Info */}
-      <div className="p-3">
+      <div className="p-2 sm:p-3">
         <h3 
-          className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1"
+          className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm line-clamp-2 mb-0.5 sm:mb-1"
           title={displayName}
         >
           {displayName}
         </h3>
         
         {/* Additional info */}
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-          <span className="flex items-center gap-1">
-            {isVideo ? <Play className="w-3 h-3" /> : <Folder className="w-3 h-3" />}
+        <div className="flex items-center justify-between text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">
+          <span className="flex items-center gap-0.5 sm:gap-1">
+            {isVideo ? <Play className="w-2 h-2 sm:w-3 sm:h-3" /> : <Folder className="w-2 h-2 sm:w-3 sm:h-3" />}
             {typeLabel}
           </span>
           
-          {item.size && (
+          {/* Views count moved here from overlay */}
+          {showViews && item.views !== undefined ? (
+            <span className="flex items-center gap-0.5 sm:gap-1">
+              <Clock className="w-2 h-2 sm:w-3 sm:h-3" />
+              {item.views?.toLocaleString() || 0}
+            </span>
+          ) : item.size ? (
             <span>{item.size}</span>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

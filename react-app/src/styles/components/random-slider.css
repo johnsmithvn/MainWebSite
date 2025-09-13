@@ -11,12 +11,28 @@
 }
 
 .random-slide {
-  width: 160px !important;
-  min-width: 160px;
-  max-width: 200px;
+  width: 120px !important; /* Reduced from 160px for mobile */
+  min-width: 120px;
+  max-width: 160px;
+}
+
+@media (min-width: 640px) {
+  .random-slide {
+    width: 140px !important;
+    min-width: 140px;
+    max-width: 180px;
+  }
 }
 
 @media (min-width: 768px) {
+  .random-slide {
+    width: 160px !important; /* Previous mobile size */
+    min-width: 160px;
+    max-width: 200px;
+  }
+}
+
+@media (min-width: 1024px) {
   .random-slide {
     width: 180px !important;
     min-width: 180px;
@@ -24,7 +40,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .random-slide {
     width: 200px !important;
     min-width: 200px;
