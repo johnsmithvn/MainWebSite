@@ -4,7 +4,11 @@
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
-const { parseEnvList } = require("../utils/stringUtils");
+const { 
+  generateDevOrigins, 
+  generateTailscaleOrigins, 
+  parseCompactCorsConfig 
+} = require("../utils/corsUtils");
 
 // Load environment variables
 const envPath = path.join(__dirname, "../.env");
@@ -18,9 +22,30 @@ try {
 // Environment detection
 const IS_DEV = process.env.NODE_ENV !== 'production';
 
-// Parse origins from environment variables
-const DEV_ORIGINS = parseEnvList(parsedEnv.CORS_DEV_ORIGINS);
-const TAILSCALE_ORIGINS = parseEnvList(parsedEnv.CORS_TAILSCALE_ORIGINS);
+// 🔧 Smart CORS origins generation
+let DEV_ORIGINS = [];
+let TAILSCALE_ORIGINS = [];
+
+// Generate development origins
+if (parsedEnv.CORS_DEV_CONFIG) {
+  DEV_ORIGINS = parseCompactCorsConfig(parsedEnv.CORS_DEV_CONFIG);
+} else {
+  // Default development origins
+  DEV_ORIGINS = generateDevOrigins();
+}
+
+// Generate Tailscale origins #tự generate Tailscale origins
+if (parsedEnv.TAILSCALE_DEVICE && parsedEnv.TAILSCALE_TAILNET) {
+  const ports = parsedEnv.TAILSCALE_PORTS ? parsedEnv.TAILSCALE_PORTS.split(',').map(p => p.trim()) : [3000, 3001];
+  const includeHttps = parsedEnv.TAILSCALE_PROTOCOLS ? parsedEnv.TAILSCALE_PROTOCOLS.includes('https') : true;
+  
+  TAILSCALE_ORIGINS = generateTailscaleOrigins(
+    parsedEnv.TAILSCALE_DEVICE,
+    parsedEnv.TAILSCALE_TAILNET,
+    ports,
+    includeHttps
+  );
+}
 
 // Combine all origins
 const EXTRA_ORIGINS = [...DEV_ORIGINS, ...TAILSCALE_ORIGINS];

@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- 🔄 [2025-09-14] Refactored CORS URL configuration → Created smart CORS generation utilities to eliminate repetitive URL patterns (http/https, hostnames, ports) using compact config format and auto-generation functions
+
 - 🐛 [2025-09-14] Fixed code duplication in middleware → Created parseEnvList utility function to replace repeated .split(",").map(s => s.trim()).filter(Boolean) pattern across auth.js and cors.js
 - 🐛 [2025-09-14] Fixed backend dev script dependency on PowerShell file → Changed from 'powershell -ExecutionPolicy Bypass -File start-dev.ps1' to 'npx nodemon server.js' to use local nodemon dependency instead of missing .ps1 file
 - 🐛 [2025-09-14] Fixed middleware import error → Fixed destructuring import for errorHandler in middleware/index.js
