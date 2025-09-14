@@ -39,15 +39,15 @@ backend/
 ├── 📄 .env                         # Environment configuration
 ├── 📄 .env.template                # Template cho environment setup
 │
-├── 📁 api/                         # API Routes
+├── 📁 api/                         # Individual API handlers
 │   ├── 📄 increase-view.js         # API tăng view count
-│   ├── 📁 manga/                   # Manga APIs
+│   ├── 📁 manga/                   # Manga API handlers
 │   │   ├── 📄 favorite.js          # Quản lý manga favorites
 │   │   ├── 📄 folder-cache.js      # API chính manga (browse/search)
 │   │   ├── 📄 reset-cache.js       # Reset manga database
 │   │   ├── 📄 root-thumbnail.js    # Thumbnail cho root folders
 │   │   └── 📄 scan.js              # Scan manga folders
-│   ├── 📁 movie/                   # Movie APIs
+│   ├── 📁 movie/                   # Movie API handlers
 │   │   ├── 📄 extract-movie-thumbnail.js # Extract video thumbnails
 │   │   ├── 📄 favorite-movie.js    # Quản lý movie favorites
 │   │   ├── 📄 movie-folder-empty.js # Check empty folders
@@ -57,7 +57,7 @@ backend/
 │   │   ├── 📄 set-thumbnail.js     # Set custom thumbnails
 │   │   ├── 📄 video-cache.js       # Video cache management
 │   │   └── 📄 video.js             # Stream video files
-│   └── 📁 music/                   # Music APIs
+│   └── 📁 music/                   # Music API handlers
 │       ├── 📄 audio-cache.js       # Audio cache management
 │       ├── 📄 audio.js             # Stream audio files
 │       ├── 📄 extract-thumbnail.js # Extract audio thumbnails
@@ -76,20 +76,21 @@ backend/
 │
 ├── 📁 middleware/                  # Express Middleware
 │   ├── 📄 auth.js                  # IP/Hostname authentication
+│   ├── 📄 cors.js                  # CORS configuration middleware
 │   ├── 📄 errorHandler.js          # Global error handling
-│   ├── 📄 index.js                 # Middleware exports
+│   ├── 📄 index.js                 # Middleware orchestration
 │   ├── 📄 rateLimiter.js           # Rate limiting protection
 │   └── 📄 security.js              # Token-based security
 │
-├── 📁 routes/                      # Express Routes
+├── 📁 routes/                      # Express Routes (ACTIVE)
 │   ├── 📄 index.js                 # Main router setup
 │   ├── 📄 manga.js                 # Manga route definitions
 │   ├── 📄 movie.js                 # Movie route definitions
 │   ├── 📄 music.js                 # Music route definitions
 │   └── 📄 system.js                # System routes (auth, keys)
 │
-├── 📁 services/                    # Business Logic Services
-│   └── 📄 MediaService.js          # Media processing service
+├── 📁 services/                    # Business Logic Services (UNUSED)
+│   └── 📄 MediaService.js          # Media processing service (legacy)
 │
 └── 📁 utils/                       # Utility Functions
     ├── 📄 cache-scan.js            # Manga folder scanning
@@ -229,6 +230,44 @@ Toggle Request → Current State Check → Database Update → Cache Invalidatio
 ---
 
 ## 📁 CẤU TRÚC FILE THEO MỨC ĐỘ QUAN TRỌNG
+
+### 🏗️ **ROUTING ARCHITECTURE** (Centralized)
+
+#### **Current Structure (v5.0.0+):**
+```javascript
+// server.js - Single route mount
+app.use("/api", require("./routes"));
+```
+
+#### **Routes Organization:**
+```
+routes/
+├── index.js    → Main router, mounts all sub-routes
+├── manga.js    → All manga endpoints (/api/manga/*)
+├── movie.js    → All movie endpoints (/api/movie/*)
+├── music.js    → All music endpoints (/api/music/*)
+└── system.js   → System endpoints (/api/login, /api/source-keys.js, etc.)
+```
+
+#### **Benefits:**
+- ✅ **Clean server.js**: Giảm từ 25+ dòng routes xuống 1 dòng
+- ✅ **Modular organization**: Mỗi domain có file riêng
+- ✅ **Easy maintenance**: Tìm endpoint dễ hơn
+- ✅ **Scalable**: Thêm route mới không làm phình server.js
+
+#### **Route Mapping:**
+```javascript
+// routes/index.js
+router.use("/manga", require("./manga"));     // /api/manga/*
+router.use("/movie", require("./movie"));     // /api/movie/*  
+router.use("/music", require("./music"));     // /api/music/*
+router.use("/", require("./system"));         // /api/login, /api/*
+```
+
+#### **API Handler Integration:**
+- Individual handlers ở `api/` folder vẫn giữ nguyên
+- Routes chỉ import và mount các handlers
+- Không thay đổi business logic
 
 ### 🔴 **CORE FILES (Cực kỳ quan trọng)**
 
@@ -563,8 +602,8 @@ SECURITY_PASSWORD=123456
 **Network:**
 ```bash
 PORT=3000
-ALLOWED_HOSTNAMES=xiaomi-redmi-k30-5g-speed,desktop-v88j9e0
-ALLOWED_IPS=127.0.0.1,192.168.1.111,192.168.1.1,192.168.1.88
+ALLOWED_HOSTNAMES=
+ALLOWED_IPS=
 CORS_EXTRA_ORIGINS=http://localhost:3001,http://127.0.0.1:3001
 ```
 

@@ -230,11 +230,11 @@ const RandomSlider = ({
   }
 
   return (
-    <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 ${className}`}>
+    <div ref={containerRef} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-1 sm:mb-1 overflow-hidden w-full ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-3 sm:p-6 pb-2 sm:pb-4">
-        <div className="flex items-center space-x-3 min-w-0 flex-1">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">
+      <div className="flex items-center justify-between p-2 sm:p-3 pb-1 sm:pb-2">
+        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+          <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white truncate">
             {title}
           </h2>
           
@@ -243,9 +243,9 @@ const RandomSlider = ({
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center text-sm text-gray-500 dark:text-gray-400 flex-shrink-0"
+              className="flex items-center text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0"
             >
-              <FiClock className="w-3 h-3 mr-1" />
+              <FiClock className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
               <span className="whitespace-nowrap">{formatTimestamp(lastUpdated)}</span>
             </motion.div>
           )}
@@ -315,8 +315,8 @@ const RandomSlider = ({
                     onToggleFavorite={async (toggleItem) => {
                       await handleToggleFavorite(toggleItem);
                     }}
-                    variant="compact"
-                    className="w-full h-full" // Card chiếm toàn bộ slide
+                    variant="compact-slider" // Dùng variant siêu gọn để giảm chiều cao slider
+                    className="w-full h-full"
                   />
                 </div>
               ))
@@ -351,8 +351,7 @@ const RandomSlider = ({
         </div>
       )}
 
-      {/* Bottom padding */}
-      <div className="pb-2" />
+  {/* Đã bỏ padding đáy thừa để giảm tổng chiều cao wrapper */}
     </div>
   );
 };

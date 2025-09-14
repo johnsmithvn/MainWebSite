@@ -1,10 +1,258 @@
-# Changelog
+# CHANGELOG
 
-## [Unreleased]
+## [Unreleased] - 2025-09-14
 
 ### Fixed
 
-- 🐛 [2025-09-13] Fixed code review issues → Improved codebase quality and maintainability
+- 🔄 [2025-09-14] Refactored Vite proxy configuration → Extracted createProxyConfig() function to eliminate hardcoded target URLs, made API target configurable via VITE_API_TARGET environment variable for better development flexibility
+
+- 🔄 [2025-09-14] Optimized React environment configuration → Removed 13 unused environment variables (VITE_APP_NAME, VITE_PRELOAD_COUNT, VITE_API_BASE_URL, etc.) keeping only variables actually used by the application, reducing .env file size by 70%
+
+- 🔄 [2025-09-14] Refactored CORS URL configuration → Created smart CORS generation utilities to eliminate repetitive URL patterns (http/https, hostnames, ports) using compact config format and auto-generation functions
+
+- 🐛 [2025-09-14] Fixed code duplication in middleware → Created parseEnvList utility function to replace repeated .split(",").map(s => s.trim()).filter(Boolean) pattern across auth.js and cors.js
+- 🐛 [2025-09-14] Fixed backend dev script dependency on PowerShell file → Changed from 'powershell -ExecutionPolicy Bypass -File start-dev.ps1' to 'npx nodemon server.js' to use local nodemon dependency instead of missing .ps1 file
+- 🐛 [2025-09-14] Fixed middleware import error → Fixed destructuring import for errorHandler in middleware/index.js
+- 🐛 [2025-09-14] Fixed NODE_ENV environment handling → Added cross-env to explicitly set NODE_ENV in dev/prod scripts instead of relying on .env file
+- 🔄 [2025-09-14] Refactored API routing architecture → Migrated from scattered app.use() calls to centralized routing structure using routes/ directory for better maintainability
+- 🐛 [2025-09-14] Fixed frontend static files serving → Legacy frontend HTML files now properly reference built CSS/JS files in /dist/ directory
+
+### Added
+
+- ✨ [2025-09-14] Added string utility functions → Created utils/stringUtils.js with parseEnvList(), parseCommaSeparatedList(), and joinCommaSeparatedList() for better code reuse
+- ✨ [2025-09-14] Added dedicated CORS middleware → Created middleware/cors.js with smart development/production handling, proper origin validation, and Tailscale domain support
+- ✨ [2025-09-14] Added proper Express.js middleware architecture → Restructured middleware system with correct order: CORS → body parsing → compression → rate limiting → auth → security
+- ✨ [2025-09-14] Added dev:frontendv1 script → Created npm script to build legacy frontend static files using scripts/build.js with esbuild for CSS/JS bundling and minification
+
+### Fixed
+
+- 🐛 [2025-09-14] Fixed duplicate CORS configuration → Removed redundant CORS setup from server.js, now using centralized middleware/cors.js for consistent CORS handling
+- 🐛 [2025-09-14] Fixed middleware execution order → CORS middleware now runs first to handle preflight OPTIONS requests, error handler moved to end of middleware chain
+- 🐛 [2025-09-14] Fixed Express.js middleware structure → Separated setupMiddleware() and setupErrorHandling() functions following Express.js best practices
+- �🔒 [2025-09-14] Fixed security issue in .env.template → Removed sensitive information (Tailscale hostnames, specific IP addresses, domain names) and replaced with secure placeholders (your-hostname.local, 192.168.1.xxx, your-domain.com)
+
+### Changed
+
+- 🔄 [2025-09-14] Changed backend middleware structure → Moved from inline middleware setup to modular system with dedicated CORS, auth, security, and error handling middlewares
+- 🔄 [2025-09-14] Changed server.js to use middleware system → Simplified server.js by using setupMiddleware() and setupErrorHandling() functions instead of inline configuration
+
+- 🔄 [2025-09-13] Changed React app environment configuration - Tổ chức lại file .env với comment chi tiết và group theo chức năng: Network (HMR, hosts), API communication, Development/Build settings, Production config, PWA manifest, UI/Theme, Performance/Cache, Security/Auth, Debug tools
+
+### Added
+
+- ✨ [2025-09-13] Added comprehensive production setup for both backend and React app - Security headers, optimized caching, SPA fallback routing
+- ✨ [2025-09-13] Added production environment configuration - Environment-based cache strategies, security optimizations, and build scripts
+- ✨ [2025-09-13] Added monorepo management scripts - Root package.json with automated build and deploy commands for full production workflow
+- ✨ [2025-09-13] Added React app production configuration - Complete .env setup with API base URL, PWA settings, performance and security configurations
+
+### Fixed
+
+- 🐛 [2025-09-13] Fixed missing production static file serving → Backend now properly serves React build files with optimized caching and SPA fallback
+- 🐛 [2025-09-13] Fixed development vs production environment handling → Different cache strategies, security policies, and CORS configurations
+- 🐛 [2025-09-13] Fixed missing security headers for production → Added HSTS, CSP, XSS protection, and frame options for enhanced security
+- 🐛 [2025-09-13] Fixed missing production deployment workflow → Added comprehensive build scripts and deployment documentation
+
+### Changed
+
+- 🔄 [2025-09-13] Changed backend server configuration - Added production optimizations with security headers, advanced caching, and React build serving
+- 🔄 [2025-09-13] Changed React app configuration - Enhanced .env with comprehensive production settings, API configuration, and performance options
+- 🔄 [2025-09-13] Changed package.json scripts structure - Added production build, deployment, and utility commands for both backend and React app
+- 🔄 [2025-09-13] Changed root project structure - Implemented monorepo management with workspace support and cross-project automation
+
+### Documentation
+
+- 📚 [2025-09-13] Added production deployment guide - Step-by-step instructions for building and deploying the application in production mode
+- 📚 [2025-09-13] Added environment configuration documentation - Complete guide for .env setup, API configuration, and production settings
+
+### Fixed (New)
+
+- 🔄 [2025-01-01] Cải thiện code quality theo gợi ý Copilot → Áp dụng best practices cho maintainability và performance
+  - **RecentSlider.jsx**: Extracted magic numbers thành named constants (MINUTES_PER_HOUR = 60, MINUTES_PER_DAY = 1440, MINUTES_PER_WEEK = 10080) cho time calculation logic
+  - **UniversalCard.jsx**: Replaced horizontal scaling animations với vertical feedback
+    - Main card: `whileTap={{ scale: 0.97 }}` → `whileTap={{ y: 2 }}` để tránh layout overflow
+    - Favorite button: `scale: 1.1/0.9` → `scale: 1.05/y: 1` để giảm aggressive scaling
+    - Delete button: `scale: 1.1/0.9` → `scale: 1.05/y: 1` để consistent animation behavior
+  - Tất cả thay đổi giữ nguyên functionality, chỉ cải thiện code quality và animation smoothness
+  - Giảm risk overflow trên mobile devices với subtle vertical movement thay vì horizontal scaling
+
+- 🏗️ [2025-01-01] Refactor constants để dễ quản lý và maintain → Centralized styling và values
+  - **Created uiStyles.js**: Centralized tất cả UI-related constants
+    - `CARD_VARIANTS`: Base styling cho different card layouts (default, compact, slider, compact-slider)
+    - `IMAGE_STYLES`: Standardized image và overlay styling
+    - `BUTTON_STYLES`: Consistent button styling (favorite, deleteView, addPlaylist)
+    - `BADGE_STYLES`: Unified badge styling cho view count và type indicators
+    - `TEXT_STYLES`: Typography styles cho title và metadata với responsive variants
+    - `LAYOUT`: Container layout và spacing constants
+    - `ANIMATIONS`: Framer Motion animation configurations
+    - `ICON_SIZES`: Standardized icon sizes (playOverlay, small, extraSmall, tiny, addPlaylist)
+    - `ASPECT_RATIOS`: Responsive aspect ratios cho different media types
+  - **Created timeFormats.js**: Time calculation và formatting constants
+    - `TIME`: Time unit constants (MINUTES_PER_HOUR, MINUTES_PER_DAY, MINUTES_PER_WEEK, etc.)
+    - `DATE_FORMATS`: Standardized date formatting options
+    - `LOCALE`: Locale settings cho consistent timestamp display
+    - `RELATIVE_TIME`: Thresholds và mobile abbreviations cho relative time
+  - **Updated UniversalCard.jsx**: Refactored để sử dụng centralized constants
+    - Replaced inline hardcoded CSS classes với constants từ uiStyles.js
+    - Improved maintainability và consistency across components
+    - Easier customization và theming trong tương lai
+  - **Updated RecentSlider.jsx**: Sử dụng TIME constants thay vì magic numbers
+  - **Updated index.js**: Export tất cả constants từ centralized location
+  - **Benefits**: Dễ maintain, consistent styling, easier theming, reduced code duplication
+
+- 🔄 [2025-09-13] Điều chỉnh kích thước UI elements trên mobile view
+  - Tăng kích thước card trong slider trên mobile (từ 100px lên 120px)
+  - Điều chỉnh slides per view từ 4 xuống 3 để card có kích thước phù hợp hơn
+  - Cải thiện kích thước card trên các breakpoint mobile khác nhau
+  - Di chuyển view count từ overlay xuống phần thông tin dưới tên card (MovieCard, MusicCard, UniversalCard)
+  - View count giờ hiển thị đối diện với loại file trong phần Additional info
+  - Loại bỏ view count badge khỏi overlay để UI gọn gàng hơn
+  - View count ưu tiên hiển thị hơn duration/size khi có showViews=true
+  - Áp dụng thống nhất cho tất cả card component (Universal, Movie, Music)
+  - Di chuyển view icon trong MusicCard từ góc phải dưới sang góc trái dưới
+  - Cải thiện tỷ lệ và spacing cho tất cả các icon trong MusicCard
+  - Giảm kích thước nút Add to playlist từ h-9 w-9 xuống h-6 w-6 trên mobile
+  - Giảm kích thước font trong badge xuống text-[9px] và spacing xuống 0.5
+  - Giảm padding từ p-3 xuống p-2 trên mobile trong MusicCard
+  - Cải thiện tỷ lệ và spacing cho MovieCard trong grid view
+  - Giảm kích thước icon trong MovieCard từ 4x4 xuống 3x3 trên mobile và 2x2 cho icon nhỏ
+  - Điều chỉnh padding của card xuống còn p-2 trên mobile thay vì p-3
+  - Giảm kích thước font chữ trong MovieCard xuống text-xs và text-[9px]
+  - Giảm font size title trong MovieCard xuống text-xs trên mobile
+  - Giảm kích thước icon Play trong overlay khi hover xuống 8x8 trên mobile
+  - Thu gọn spacing trong statistics card cho phù hợp với mobile view
+  - Điều chỉnh grid-cols xuống còn 2 cột trên mobile thay vì 3 cột
+  - Thay đổi hiển thị "less than a minute ago" thành "just now" cho gọn gàng hơn
+  - Giảm kích thước badge "time ago" trong RecentSlider (18 minutes ago -> 18m ago)
+  - Giảm font size của timestamp từ text-xs xuống text-[9px] trên mobile
+  - Thu gọn định dạng thời gian (minutes -> m, hours -> h, days -> d) trên mobile
+  - Giảm padding và vị trí của badge timestamp để phù hợp với không gian
+  - Giảm độ đậm của background color badge (thêm 90% opacity)
+  - Giảm kích thước icon phù hợp với mobile view
+  - Giảm kích thước icon media type (mp4, audio) trong badge từ 3x3 xuống 2.5x2.5 trên mobile
+  - Giảm kích thước nút xóa lượt xem (trash icon) và làm nhỏ padding
+  - Điều chỉnh nút favorite heart nhỏ hơn trên mobile view
+  - Giảm kích thước icon Play trong overlay khi hover card
+  - Áp dụng responsive size cho tất cả icon từ mobile đến desktop
+  - Tăng tính nhất quán UI và cải thiện trải nghiệm trên màn hình nhỏ
+
+- 🐛 [2025-09-13] Sửa lỗi import trong RecentSlider.jsx bị hỏngelog
+
+## [Unreleased]
+
+### Fixed (New)
+
+- � [2025-09-13] Sửa lỗi import trong RecentSlider.jsx bị hỏng
+  - Sửa lỗi import `embla-carousel-autoplay` bị hỏng gây lỗi khi khởi chạy ứng dụng
+  - Dòng import có chứa JSX của component nằm trong tên module bị import
+
+- �🔄 [2025-09-13] Tối ưu khoảng cách giữa các thành phần UI - giảm khoảng trống
+  - Giảm padding tổng thể của trang xuống còn p-1 sm:p-2 thay vì p-3 sm:p-6
+  - Giảm khoảng cách giữa các slider từ space-y-6 xuống space-y-1
+  - Giảm margin-bottom của các container slider xuống mb-1 sm:mb-1
+  - Giảm padding nội dung của các container xuống p-2 sm:p-3
+  - Tinh chỉnh padding của header trong slider xuống p-2 sm:p-3 pb-1 sm:pb-2
+  - Tăng không gian hiển thị nội dung bằng cách tối ưu khoảng trắng
+
+- 🔄 [2025-09-13] Đồng bộ hóa width giữa slider và grid view - cân bằng UI
+  - Áp dụng padding thống nhất cho container chứa MangaRandomSection và grid view
+  - Xóa bỏ margin 0.5rem thừa trong .embla CSS để đảm bảo cân bằng với grid view
+  - Đồng bộ max-width giữa slider và grid view
+  - Cải thiện tính nhất quán của UI giữa các phần
+
+- 🔄 [2025-09-13] Giảm chiều cao tổng thể sliders (Random/Recent/TopView) – áp dụng variant `compact-slider` & loại bỏ padding đáy
+  - Áp dụng variant mới `compact-slider` (padding nhỏ, font-size giảm, metadata tối giản) cho cả 3 slider thay cho `compact`/`slider`
+  - Loại bỏ `<div className="pb-2" />` đáy các slider (thừa sau khi tinh chỉnh dots & spacing) giúp giảm ~16px chiều cao mỗi section
+  - Giảm chiều cao card => wrapper bớt "dài", tăng mật độ thông tin trên màn hình nhỏ
+  - Không thay đổi logic dữ liệu; chỉ tác động presentation nên rủi ro thấp
+  - Chuẩn bị cho bước tiếp theo nếu cần thêm `density` prop tuỳ biến trong tương lai
+  - Bổ sung chống tràn 1px: bỏ padding ngang trong `.embla`, ép overflow-hidden trên Recent/TopView wrapper & trừ 0.2px trong công thức width để khử rounding dư
+
+- 🐛 [2025-09-13] Fixed slider hiển thị vượt viewport gây scroll ngang – áp dụng giải pháp triệt để theo phân tích cấu trúc:
+  - Xác định nguyên nhân gốc: width tổng chính xác trong container, flex gap, card layout overflow
+  - Áp dụng container width `calc(100vw - 32px)` với margin thay padding để đảm bảo không tràn
+  - Chặn scroll `overflow-hidden` và force `w-full` trên tất cả container
+  - Giảm breakpoint max-width slides xuống (nhỏ hơn 135px mobile), tăng padding
+  - Loại bỏ translate 3D và GPU accelerated classes không cần thiết
+  - Thêm `w-full` cho tất cả container slider để fit parent container
+  - Thay công thức width cũ `calc(% - gap)` (gây sai số + overflow) bằng công thức phân bố: `(100% - (n-1)*gap)/n` với biến `--slides-per-view-*`
+  - Di chuyển horizontal padding từ `.embla__container` lên `.embla` để không cộng dồn vào tổng chiều rộng flex container
+  - Chuẩn hóa biến: `--slides-per-view-mobile|tablet|desktop|large` giúp điều chỉnh số cột dễ dàng về sau
+  - Tăng gap rõ ràng (0.25rem mobile / 0.5rem desktop) đồng nhất thay vì trừ thủ công trong width
+  - Loại bỏ hover scale trực tiếp trên slide (chuyển sang translateY nhẹ) tránh làm “nhô” ra ngoài ở slide cuối
+  - Giảm transform lan truyền gây sub‑pixel rounding khi `dragFree + trimSnaps` hoạt động
+  - Thêm `will-change: transform` cho ảnh trong `UniversalCard` tối ưu hiệu ứng nhưng không nở rộng layout
+  - Kết quả: Không còn viền tràn 1–2px ở cạnh phải trên mobile/desktop, snap ổn định hơn, dễ bảo trì
+  - Điều chỉnh bổ sung: tăng `--slides-per-view-mobile` 3→4, giới hạn `max-width` slide (180px mobile, 220px desktop lớn) để tránh card phóng quá khổ khi màn hình hẹp nhưng density thấp
+  - Tối ưu sizing lần 2 (2025-09-13):
+    - Mobile dynamic density:  <390px = 4 cột, ≥390px = 5 cột, ≥480px = 6 cột
+    - Giảm tiếp max-width: 150px mobile, 200px desktop lớn
+    - Bỏ `max-width:100vw` → dùng `100%` tránh kéo theo scrollbar width
+    - Thêm `overflow-x:hidden` toàn cục chặn rounding leak
+
+### Fixed
+
+- �🐛 [2025-09-13] Improved CSS maintainability with custom properties → Applied Copilot suggestions for better code organization
+  - Extracted repetitive calc() expressions to CSS custom properties for slide widths
+  - Applied consistent gap values (0.17rem) across all breakpoints instead of mixing 0.25rem and 0.5rem
+  - Created reusable CSS variables: --slide-width-mobile, --slide-width-tablet, --slide-width-desktop, --slide-width-large
+  - Eliminated code duplication and improved maintainability as suggested by Copilot AI
+
+- � [2025-09-13] Fixed slider viewport overflow issue → Applied Copilot suggestions for better CSS maintainability
+  - Reverted complex flex calculations that caused slider to overflow beyond viewport
+  - Simplified slide width calculations using basic CSS instead of complex calc() expressions  
+  - Removed problematic `!important` declarations for better CSS maintainability
+  - Fixed embla container and viewport sizing to prevent horizontal scrolling
+  - Applied consistent responsive slide widths: 33.33% mobile, 25% tablet, 20% desktop, max 16.67% large screens
+
+- 📱 [2025-09-13] Limited grid columns to maximum 6 for better usability → Improved consistency across all media types
+  - MangaHome: Changed xl:grid-cols-8 to xl:grid-cols-6 to prevent cards from becoming too small
+  - MovieHome: Applied same grid-cols-6 limit for consistent card sizing  
+  - MusicHome: Updated to use consistent 6-column maximum layout
+  - Ensures cards remain interactive and readable on large screens as per Copilot recommendations
+
+- �📱 [2025-09-13] Optimized mobile UI header text and spacing → Improved readability and touch interaction
+  - TopViewSlider header: Reduced padding from p-6 to p-3 on mobile, title text from text-xl to text-base
+  - RecentSlider header: Applied responsive padding and text sizing for mobile optimization  
+  - RandomSlider header: Updated title and timestamp text sizes for better mobile display
+  - Ranking badges: Smaller positioning (w-4 h-4 vs w-6 h-6) and icon sizes for mobile touch targets
+  - Badge spacing: Tighter space-x-2 on mobile for better layout density
+  - All slider headers now use responsive breakpoint strategy: base mobile → sm → md → lg
+
+### Changed
+
+- � [2025-09-13] Giảm chiều cao tổng thể sliders (Random/Recent/TopView) – áp dụng variant `compact-slider` & loại bỏ padding đáy
+  - Áp dụng variant mới `compact-slider` (padding nhỏ, font-size giảm, metadata tối giản) cho cả 3 slider thay cho `compact`/`slider`
+  - Loại bỏ `<div className="pb-2" />` đáy các slider (thừa sau khi tinh chỉnh dots & spacing) giúp giảm ~16px chiều cao mỗi section
+  - Giảm chiều cao card => wrapper bớt “dài”, tăng mật độ thông tin trên màn hình nhỏ
+  - Không thay đổi logic dữ liệu; chỉ tác động presentation nên rủi ro thấp
+  - Chuẩn bị cho bước tiếp theo nếu cần thêm `density` prop tuỳ biến trong tương lai
+  - Bổ sung chống tràn 1px: bỏ padding ngang trong `.embla`, ép overflow-hidden trên Recent/TopView wrapper & trừ 0.2px trong công thức width để khử rounding dư
+
+- �📱 [2025-09-13] Optimized mobile UI layout → Improved responsive design for better mobile experience
+  - Increased grid columns on mobile: Grid view now shows 3 columns instead of 2 on small screens for all media types
+  - Reduced card sizes and spacing: Smaller manga/movie/music cards, tighter padding, and smaller badges for mobile
+  - Optimized stats cards: Better layout with responsive columns on mobile, smaller icons and text
+  - Improved list view: Smaller thumbnails, tighter spacing, and responsive text sizes
+  - Enhanced header controls: Responsive button sizes, smaller gaps, and better touch targets
+  - Updated pagination: Smaller buttons and text for mobile screens
+  - Added dedicated CSS: Created movie-card.css and music-card.css for consistent mobile optimization
+  - Fixed MovieHome mobile issues: Corrected remaining large stats card and optimized header controls
+  - Enhanced MusicHome mobile: Improved search bar, controls spacing, and view toggles
+  - Optimized slider cards: Reduced card sizes in all sliders for better mobile experience
+    - Manga cards: 120px base width (was 160px), with responsive breakpoints
+    - Movie cards: Added slider variant with 160px base width
+    - Music cards: Added slider variant with 120px base width
+    - Random slider: 120px base width (was 160px) with more responsive breakpoints
+    - Embla slider: 32% slide width (was 40%) to show more cards on mobile
+
+- � [2025-09-13] Optimized mobile UI layout → Improved responsive design for better mobile experience
+  - Increased grid columns on mobile: Grid view now shows 3 columns instead of 2 on small screens
+  - Reduced card sizes and spacing: Smaller manga cards, tighter padding, and smaller badges for mobile
+  - Optimized stats cards: Better layout with 3 columns on mobile, smaller icons and text
+  - Improved list view: Smaller thumbnails, tighter spacing, and responsive text sizes
+  - Enhanced header controls: Responsive button sizes, smaller gaps, and better touch targets
+  - Updated pagination: Smaller buttons and text for mobile screens
+- �🐛 [2025-09-13] Fixed code review issues → Improved codebase quality and maintainability
   - Fixed environment variable access in storageQuota.js → Use import.meta.env.VITE_MIN_STORAGE_SPACE instead of process.env for Vite compatibility
   - Fixed inline calculation in DownloadProgressModal.jsx → Use formatBytes utility function from '@/utils/formatters'
   - Fixed hardcoded 500KB fallback in offlineLibrary.js → Use CACHE.FALLBACK_IMAGE_SIZE_BYTES constant
@@ -23,7 +271,7 @@
 - 🐛 [2025-09-11] Fixed hardcoded storage requirements in storageQuota.js → Device-responsive configuration với environment override support
 - 🐛 [2025-09-11] Fixed complex cross-context checks in serviceWorkerManager.js → Extract to browserSupport utility for consistency
 
-### Added
+### Added (Set 1)
 
 - ✨ [2025-09-11] Added domain-level CORS capability caching → Prevent double requests for failing domains with 2s timeout optimization
 - ✨ [2025-09-11] Added centralized cache instance management → getCacheInstance() function in sw.js for consistent race condition protection
@@ -37,7 +285,7 @@
 - 🐛 [2025-09-10] Fixed Service Worker postMessage error handling → Thêm try-catch cho client.postMessage calls
 - 🐛 [2025-09-10] Fixed dynamic import performance issue → Move browserSupport import to module level
 
-### Added
+### Added (Set 2)
 
 - ✨ [2025-09-10] Added browser support utilities và compatibility checking → Kiểm tra HTTPS, Caches API, Service Worker, IndexedDB support
 - ✨ [2025-09-10] Added OfflineCompatibilityBanner component → Hiển thị cảnh báo khi browser không hỗ trợ offline features  
