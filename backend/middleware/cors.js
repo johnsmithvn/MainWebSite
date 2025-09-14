@@ -4,6 +4,7 @@
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+const { parseEnvList } = require("../utils/stringUtils");
 
 // Load environment variables
 const envPath = path.join(__dirname, "../.env");
@@ -18,15 +19,8 @@ try {
 const IS_DEV = process.env.NODE_ENV !== 'production';
 
 // Parse origins from environment variables
-const DEV_ORIGINS = (parsedEnv.CORS_DEV_ORIGINS || '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const TAILSCALE_ORIGINS = (parsedEnv.CORS_TAILSCALE_ORIGINS || '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
+const DEV_ORIGINS = parseEnvList(parsedEnv.CORS_DEV_ORIGINS);
+const TAILSCALE_ORIGINS = parseEnvList(parsedEnv.CORS_TAILSCALE_ORIGINS);
 
 // Combine all origins
 const EXTRA_ORIGINS = [...DEV_ORIGINS, ...TAILSCALE_ORIGINS];

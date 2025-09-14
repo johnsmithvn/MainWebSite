@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- 🐛 [2025-09-14] Fixed code duplication in middleware → Created parseEnvList utility function to replace repeated .split(",").map(s => s.trim()).filter(Boolean) pattern across auth.js and cors.js
 - 🐛 [2025-09-14] Fixed backend dev script dependency on PowerShell file → Changed from 'powershell -ExecutionPolicy Bypass -File start-dev.ps1' to 'npx nodemon server.js' to use local nodemon dependency instead of missing .ps1 file
 - 🐛 [2025-09-14] Fixed middleware import error → Fixed destructuring import for errorHandler in middleware/index.js
 - 🐛 [2025-09-14] Fixed NODE_ENV environment handling → Added cross-env to explicitly set NODE_ENV in dev/prod scripts instead of relying on .env file
@@ -12,6 +13,7 @@
 
 ### Added
 
+- ✨ [2025-09-14] Added string utility functions → Created utils/stringUtils.js with parseEnvList(), parseCommaSeparatedList(), and joinCommaSeparatedList() for better code reuse
 - ✨ [2025-09-14] Added dedicated CORS middleware → Created middleware/cors.js with smart development/production handling, proper origin validation, and Tailscale domain support
 - ✨ [2025-09-14] Added proper Express.js middleware architecture → Restructured middleware system with correct order: CORS → body parsing → compression → rate limiting → auth → security
 - ✨ [2025-09-14] Added dev:frontendv1 script → Created npm script to build legacy frontend static files using scripts/build.js with esbuild for CSS/JS bundling and minification

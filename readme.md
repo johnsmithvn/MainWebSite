@@ -32,3 +32,31 @@ Lệnh build sẽ:
 - Build React app vào `react-app/dist`
 
 Sau khi build có thể phục vụ React app tại đường dẫn `/app` từ backend.
+
+
+
+
+<!-- note -->
+
+- nếu chạy dev thì sử dụng
+
+```bash
+npm run dev
+```
+- Khi đó vừa sửa code thì nó tự cập nhật 
+lúc này nó đang chạy trên các file gốc và react-app ở 3001 
+
+- nếu chạy prod thì sử dụng
+```bash
+npm run prod
+```
+
+- Nó sẽ build react-app thành dist , rồi chạy vào backend và start 
+=> khi đó froent chỉ chạy được reac-app trong dist đã build sẽ tối ưu hơn và lúc này sẽ chạy ở port 3000 của sever
+
+=> sử dụng tailce thì cần config trong env của cả 2 env ở backend và react-app để nó build trc khi chạy prod
+
+nó sẽ chạy được ở các http://localhost:3000/ ,http://127.0.0.1:3000/ ,.ts.net:3000 (do đã cấu hình trong env) 
+chạy prod trong backend nó tự set "prod": "cross-env NODE_ENV=production node server.js",
+
+- nếu k tin tưởng có thể tự đổi tay
