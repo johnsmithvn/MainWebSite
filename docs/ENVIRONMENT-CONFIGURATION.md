@@ -64,15 +64,14 @@ mkcert -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 your-tailscale-
 
 | Variable | Mô tả | File sử dụng | Default | Ví dụ |
 |----------|-------|--------------|---------|-------|
-| `PORT` | Port backend server | `server.js:22` | `3000` | `3000` |
-| `NODE_ENV` | Môi trường chạy | `server.js:23` | `development` | `production` |
-| `ENABLE_HTTPS` | Bật HTTPS cho backend | `server.js` | `false` | `true` |
+| `PORT` | Port backend server | `server.js:18` | `3000` | `3000` |
+| `NODE_ENV` | Môi trường chạy | `server.js:19` | `development` | `production` |
 
 **Code sử dụng:**
 ```javascript
-// backend/server.js:22-23
+// backend/server.js:18-19
 const PORT = process.env.PORT || 3000;
-const IS_DEV = (process.env.NODE_ENV || 'development') !== 'production';
+const IS_DEV = process.env.NODE_ENV !== 'production';
 ```
 
 #### **Media Root Paths** 
@@ -94,6 +93,24 @@ Object.keys(parsedEnv).forEach((key) => {
     ROOT_PATHS[key] = value;
   }
 });
+```
+
+### Development Tools
+
+| Variable | Mô tả | File sử dụng | Default | Impact |
+|----------|-------|--------------|---------|--------|
+| `nodemon` | Auto-restart trên dev | `package.json scripts` | Local package | Chạy với `npx nodemon` |
+| `cross-env` | Cross-platform ENV setting | `package.json scripts` | Local package | Set NODE_ENV properly |
+
+**Package.json scripts:**
+```json
+{
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development npx nodemon server.js",
+    "prod": "cross-env NODE_ENV=production node server.js",
+    "start": "node server.js"
+  }
+}
 ```
 
 **⚠️ Impact khi thay đổi:**
@@ -124,16 +141,15 @@ const SECURITY_PASSWORD = parsedEnv.SECURITY_PASSWORD || "";
 
 | Variable | Mô tả | File sử dụng | Default |
 |----------|-------|--------------|---------|
-| `CORS_EXTRA_ORIGINS` | Extra CORS origins | `server.js:26-31` | `http://localhost:3001` |
+| `CORS_EXTRA_ORIGINS` | Extra CORS origins | `middleware/cors.js` | `http://localhost:3001` |
 
 **Code sử dụng:**
 ```javascript
-// backend/server.js:26-31
-const EXTRA_ORIGINS = (process.env.CORS_EXTRA_ORIGINS || '')
+// backend/middleware/cors.js
+const extraOrigins = (process.env.CORS_EXTRA_ORIGINS || '')
   .split(',')
-  .map((s) => s.trim())
+  .map(s => s.trim())
   .filter(Boolean);
-const ALLOWED_ORIGINS = [...new Set([...DEFAULT_DEV_ORIGINS, ...EXTRA_ORIGINS])];
 ```
 
 ---
