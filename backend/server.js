@@ -1,6 +1,8 @@
 // 📁 backend/server.js
 
 const express = require("express");
+const https = require("https");
+const http = require("http");
 const path = require("path");
 const fs = require("fs");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
@@ -18,6 +20,7 @@ const { setupMiddleware, setupErrorHandling } = require("./middleware");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const IS_DEV = process.env.NODE_ENV !== 'production';
+const ENABLE_HTTPS = process.env.ENABLE_HTTPS === 'true';
 
 // Constants
 const ONE_HOUR = 60 * 60;
@@ -300,5 +303,79 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`🔒 Production mode - Serving React build files`);
   }
 });
+
+// ✅ SSL Certificate loading function
+function loadSSLCertificates() {
+  const sslDir = path.join(__dirname, '../ssl');
+  const keyPath = path.join(sslDir, 'private-key.pem');
+  const certPath = path.join(sslDir, 'certificate.pem');
+  
+  try {
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+      return {
+        key: fs.readFileSync(keyPath, 'utf8'),
+        cert: fs.readFileSync(certPath, 'utf8')
+      };
+    }
+  } catch (error) {
+    console.error('❌ Error loading SSL certificates:', error.message);
+  }
+  
+  return null;
+}
+
+// ✅ Graceful shutdown function
+function setupGracefulShutdown(server) {
+  process.on('SIGTERM', () => {
+    console.log('\n📴 SIGTERM received, shutting down gracefully...');
+    server.close(() => {
+      console.log('✅ Server closed successfully');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    console.log('\n📴 SIGINT received, shutting down gracefully...');
+    server.close(() => {
+      console.log('✅ Server closed successfully');
+      process.exit(0);
+    });
+  });
+}
+
+// ✅ Start server with HTTPS support
+if (ENABLE_HTTPS) {
+  const sslOptions = loadSSLCertificates();
+  
+  if (sslOptions) {
+    console.log('🔐 Starting HTTPS server with SSL certificates...');
+    const httpsServer = https.createServer(sslOptions, app);
+    
+    httpsServer.listen(PORT, '0.0.0.0', () => {
+      console.log(`\n🚀 MainWebSite HTTPS Server running!`);
+      console.log(`   Local:     https://localhost:${PORT}`);
+      console.log(`   Tailscale: https://desktop-v88j9e0.tail2b3d3b.ts.net`);
+      console.log(`   Mode:      ${IS_DEV ? 'development' : 'production'}\n`);
+      console.log(`🔐 SSL Certificate loaded successfully!`);
+      console.log(`⚠️  Browser will show security warning for self-signed cert`);
+      console.log(`   Click "Advanced" -> "Proceed to site" to continue\n`);
+    });
+    
+    setupGracefulShutdown(httpsServer);
+  } else {
+    console.log('⚠️  SSL certificates not found. Starting HTTP server...');
+    console.log('   Run "node ssl/generate-cert.js" to generate certificates.');
+    
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  }
+} else {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
 
 module.exports = app;

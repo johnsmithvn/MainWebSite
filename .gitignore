@@ -14,6 +14,30 @@ frontend/public/dist/
 # bỏ thư mục dist trong react-app
 react-app/dist/
 !react-app/dist/.gitkeep
+# bỏ file .env.local
+.env.local
+
+# 🔐 SSL certificates (security - không commit private keys)
+ssl/*.pem
+ssl/*.pfx
+ssl/*.key
+ssl/*.crt
+ssl/*.p12
+!ssl/README.md
+!ssl/create-ssl.js Bỏ toàn bộ file trong backend/data, trừ .gitkeep
+backend/data/*
+!backend/data/.gitkeep
+
+# Bỏ file .env
+.env
+
+# ✅ Bỏ thư mục dist trong frontend/public
+frontend/public/dist/
+!frontend/public/dist/.gitkeep
+
+# bỏ thư mục dist trong react-app
+react-app/dist/
+!react-app/dist/.gitkeep
 # bỏ file .env.local
 .env.local
 
