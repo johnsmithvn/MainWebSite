@@ -125,7 +125,7 @@ Object.keys(parsedEnv).forEach((key) => {
 | `SECURITY` | Keys cần password | `utils/config.js:13` | `ROOT_MANGAH,V_JAVA` |
 | `SECURITY_PASSWORD` | Password cho protected keys | `utils/config.js:17` | `123456` |
 | `ALLOWED_IPS` | IPs được phép truy cập | `middleware/auth.js` | `192.1.,......` |
-| `ALLOWED_HOSTNAMES` | Hostnames được phép | `middleware/auth.js` | `desktop-v88j9e0` |
+| `ALLOWED_HOSTNAMES` | Hostnames được phép | `middleware/auth.js` | `DEVICE_NAME` |
 
 **Code sử dụng:**
 ```javascript
@@ -241,9 +241,9 @@ VITE_DISABLE_SW=true
 VITE_ENABLE_SW_IN_DEV=false
 
 # HMR configuration cho Tailscale
-VITE_HMR_HOST=desktop-v88j9e0.tail2b3d3b.ts.net
+VITE_HMR_HOST=DEVICE_NAME.tail2b3d3b.ts.net
 VITE_HMR_PORT=3001
-VITE_ALLOWED_HOSTS=desktop-v88j9e0.tail2b3d3b.ts.net
+VITE_ALLOWED_HOSTS=DEVICE_NAME.tail2b3d3b.ts.net
 VITE_DISABLE_HMR=false
 ```
 
@@ -251,15 +251,15 @@ VITE_DISABLE_HMR=false
 
 ```bash
 # Tailscale domain config
-VITE_HMR_HOST=desktop-v88j9e0.tail2b3d3b.ts.net
+VITE_HMR_HOST=DEVICE_NAME.tail2b3d3b.ts.net
 VITE_HMR_PORT=3001
-VITE_ALLOWED_HOSTS=desktop-v88j9e0.tail2b3d3b.ts.net
+VITE_ALLOWED_HOSTS=DEVICE_NAME.tail2b3d3b.ts.net
 
 # HMR disabled cho production
 VITE_DISABLE_HMR=true
 
 # Production settings (uncomment khi deploy)
-# VITE_API_BASE_URL=https://desktop-v88j9e0.tail2b3d3b.ts.net
+# VITE_API_BASE_URL=https://DEVICE_NAME.tail2b3d3b.ts.net
 # VITE_ENABLE_HTTPS=true
 # VITE_MIN_STORAGE_SPACE=524288000
 ```
