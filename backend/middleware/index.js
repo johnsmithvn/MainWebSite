@@ -25,12 +25,15 @@ function setupMiddleware(app) {
   // 3. Compression - Compress responses to reduce bandwidth
   app.use(compression());
   
-  // 4. Rate limiting - Limit requests per IP/user (disabled in development)
-  if (process.env.NODE_ENV === 'production') {
+  // 4. Rate limiting - DISABLED vì manga cần load hàng nghìn ảnh
+  // 2000 requests/15min = chỉ đọc được 2 chapter, quá ít!
+  const ENABLE_RATE_LIMIT = false; // Set true nếu muốn bật lại
+  
+  if (process.env.NODE_ENV === 'production' && ENABLE_RATE_LIMIT) {
     console.log('🚦 Rate limiting enabled (production mode)');
     app.use(rateLimiter);
   } else {
-    console.log('🔧 Rate limiting disabled (development mode)');
+    console.log('🔧 Rate limiting DISABLED (manga reading needs unlimited requests)');
   }
   
   // 5. Authentication - Check IP/hostname whitelist
