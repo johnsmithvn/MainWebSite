@@ -24,7 +24,7 @@ const queryClient = new QueryClient({
 Modal.setAppElement('#root');
 
 // Allow disabling StrictMode in dev to investigate double image requests (e.g., React 18 intentional double-mount)
-// Set VITE_DISABLE_STRICT_MODE=true in .env.local to render without StrictMode.
+// Set VITE_DISABLE_STRICT_MODE=true in .env to render without StrictMode.
 const disableStrict = import.meta.env.VITE_DISABLE_STRICT_MODE === 'true';
 
 const AppTree = (

@@ -4,6 +4,10 @@
 
 ### Fixed
 
+- 🔄 [2025-09-14] Refactored Vite proxy configuration → Extracted createProxyConfig() function to eliminate hardcoded target URLs, made API target configurable via VITE_API_TARGET environment variable for better development flexibility
+
+- 🔄 [2025-09-14] Optimized React environment configuration → Removed 13 unused environment variables (VITE_APP_NAME, VITE_PRELOAD_COUNT, VITE_API_BASE_URL, etc.) keeping only variables actually used by the application, reducing .env file size by 70%
+
 - 🔄 [2025-09-14] Refactored CORS URL configuration → Created smart CORS generation utilities to eliminate repetitive URL patterns (http/https, hostnames, ports) using compact config format and auto-generation functions
 
 - 🐛 [2025-09-14] Fixed code duplication in middleware → Created parseEnvList utility function to replace repeated .split(",").map(s => s.trim()).filter(Boolean) pattern across auth.js and cors.js
