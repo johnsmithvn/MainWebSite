@@ -107,7 +107,7 @@ Object.keys(parsedEnv).forEach((key) => {
 |----------|-------|--------------|-------|
 | `SECURITY` | Keys cần password | `utils/config.js:13` | `ROOT_MANGAH,V_JAVA` |
 | `SECURITY_PASSWORD` | Password cho protected keys | `utils/config.js:17` | `123456` |
-| `ALLOWED_IPS` | IPs được phép truy cập | `middleware/auth.js` | `127.0.0.1,192.168.1.111` |
+| `ALLOWED_IPS` | IPs được phép truy cập | `middleware/auth.js` | `192.1.,......` |
 | `ALLOWED_HOSTNAMES` | Hostnames được phép | `middleware/auth.js` | `desktop-v88j9e0` |
 
 **Code sử dụng:**

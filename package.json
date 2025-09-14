@@ -1,20 +1,50 @@
 {
-  "name": "MainWebSite",
-  "version": "5.0.4",
+  "name": "mainwebsite-monorepo",
+  "version": "5.0.0",
+  "description": "MainWebSite - Media management application monorepo",
   "private": true,
   "workspaces": [
     "backend",
     "react-app"
   ],
   "scripts": {
-    "dev": "concurrently \"npm:dev:*\"",
-    "dev:backend": "npm --workspace backend run dev",
-    "dev:react": "npm --workspace react-app run dev",
-    "build": "npm run build:backend && npm run build:react",
-    "build:backend": "npm --workspace backend run build",
-    "build:react": "npm --workspace react-app run build"
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd react-app && npm run dev",
+    "build": "cd react-app && npm run build",
+    "build:prod": "cd react-app && npm run build:prod",
+    "start": "cd backend && npm start",
+    "prod": "npm run build:prod && cd backend && npm run prod",
+    "deploy": "echo Full production deployment... && npm run build:prod && cd backend && npm run prod",
+    "install:all": "npm install && cd backend && npm install && cd ../react-app && npm install",
+    "clean": "cd react-app && npm run clean && cd ../backend && rmdir /s /q node_modules && npm install",
+    "check": "cd backend && npm run check:build",
+    "lint": "cd react-app && npm run lint",
+    "lint:fix": "cd react-app && npm run lint:fix",
+    "preview": "cd react-app && npm run preview",
+    "preview:prod": "cd react-app && npm run preview:prod"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "media-management", 
+    "manga", 
+    "movie", 
+    "music", 
+    "react", 
+    "express", 
+    "nodejs", 
+    "monorepo"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/johnsmithvn/MainWebSite.git"
   }
 }

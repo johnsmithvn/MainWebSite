@@ -1,4 +1,58 @@
-# ## [Unreleased]
+# CHANGELOG
+
+## [Unreleased] - 2025-09-14
+
+### Fixed
+
+- 🐛 [2025-09-14] Fixed backend dev script dependency on PowerShell file → Changed from 'powershell -ExecutionPolicy Bypass -File start-dev.ps1' to 'npx nodemon server.js' to use local nodemon dependency instead of missing .ps1 file
+- 🐛 [2025-09-14] Fixed middleware import error → Fixed destructuring import for errorHandler in middleware/index.js
+- 🐛 [2025-09-14] Fixed NODE_ENV environment handling → Added cross-env to explicitly set NODE_ENV in dev/prod scripts instead of relying on .env file
+- 🔄 [2025-09-14] Refactored API routing architecture → Migrated from scattered app.use() calls to centralized routing structure using routes/ directory for better maintainability
+
+### Added
+
+- ✨ [2025-09-14] Added dedicated CORS middleware → Created middleware/cors.js with smart development/production handling, proper origin validation, and Tailscale domain support
+- ✨ [2025-09-14] Added proper Express.js middleware architecture → Restructured middleware system with correct order: CORS → body parsing → compression → rate limiting → auth → security
+
+### Fixed
+
+- 🐛 [2025-09-14] Fixed duplicate CORS configuration → Removed redundant CORS setup from server.js, now using centralized middleware/cors.js for consistent CORS handling
+- � [2025-09-14] Fixed middleware execution order → CORS middleware now runs first to handle preflight OPTIONS requests, error handler moved to end of middleware chain
+- 🐛 [2025-09-14] Fixed Express.js middleware structure → Separated setupMiddleware() and setupErrorHandling() functions following Express.js best practices
+- �🔒 [2025-09-14] Fixed security issue in .env.template → Removed sensitive information (Tailscale hostnames, specific IP addresses, domain names) and replaced with secure placeholders (your-hostname.local, 192.168.1.xxx, your-domain.com)
+
+### Changed
+
+- 🔄 [2025-09-14] Changed backend middleware structure → Moved from inline middleware setup to modular system with dedicated CORS, auth, security, and error handling middlewares
+- 🔄 [2025-09-14] Changed server.js to use middleware system → Simplified server.js by using setupMiddleware() and setupErrorHandling() functions instead of inline configuration
+
+- 🔄 [2025-09-13] Changed React app environment configuration - Tổ chức lại file .env với comment chi tiết và group theo chức năng: Network (HMR, hosts), API communication, Development/Build settings, Production config, PWA manifest, UI/Theme, Performance/Cache, Security/Auth, Debug tools
+
+### Added
+
+- ✨ [2025-09-13] Added comprehensive production setup for both backend and React app - Security headers, optimized caching, SPA fallback routing
+- ✨ [2025-09-13] Added production environment configuration - Environment-based cache strategies, security optimizations, and build scripts
+- ✨ [2025-09-13] Added monorepo management scripts - Root package.json with automated build and deploy commands for full production workflow
+- ✨ [2025-09-13] Added React app production configuration - Complete .env setup with API base URL, PWA settings, performance and security configurations
+
+### Fixed
+
+- 🐛 [2025-09-13] Fixed missing production static file serving → Backend now properly serves React build files with optimized caching and SPA fallback
+- 🐛 [2025-09-13] Fixed development vs production environment handling → Different cache strategies, security policies, and CORS configurations
+- 🐛 [2025-09-13] Fixed missing security headers for production → Added HSTS, CSP, XSS protection, and frame options for enhanced security
+- 🐛 [2025-09-13] Fixed missing production deployment workflow → Added comprehensive build scripts and deployment documentation
+
+### Changed
+
+- 🔄 [2025-09-13] Changed backend server configuration - Added production optimizations with security headers, advanced caching, and React build serving
+- 🔄 [2025-09-13] Changed React app configuration - Enhanced .env with comprehensive production settings, API configuration, and performance options
+- 🔄 [2025-09-13] Changed package.json scripts structure - Added production build, deployment, and utility commands for both backend and React app
+- 🔄 [2025-09-13] Changed root project structure - Implemented monorepo management with workspace support and cross-project automation
+
+### Documentation
+
+- 📚 [2025-09-13] Added production deployment guide - Step-by-step instructions for building and deploying the application in production mode
+- 📚 [2025-09-13] Added environment configuration documentation - Complete guide for .env setup, API configuration, and production settings
 
 ### Fixed (New)
 

@@ -1,11 +1,20 @@
 {
-  "name": "backend",
+  "name": "mainwebsite-backend",
   "version": "5.0.0",
+  "description": "Backend server for MainWebSite media management app",
   "private": true,
   "main": "server.js",
   "scripts": {
-    "dev": "node server.js",
-    "build": "node ../scripts/build.js"
+    "start": "node server.js",
+    "dev": "cross-env NODE_ENV=development npx nodemon server.js",
+    "dev:unix": "NODE_ENV=development nodemon server.js",
+    "build": "echo Building React app... && cd ../react-app && npm run build",
+    "build:prod": "npm run build && npm run prod",
+    "prod": "cross-env NODE_ENV=production node server.js",
+    "prod:unix": "NODE_ENV=production node server.js",
+    "deploy": "echo Full production deployment... && npm run build && npm run prod",
+    "check:build": "if exist \"../react-app/dist\" (echo React build exists) else (echo React build missing - run npm run build first)",
+    "legacy": "node ../scripts/build.js"
   },
   "dependencies": {
     "axios": "^1.9.0",
@@ -25,6 +34,22 @@
     "string-natural-compare": "^3.0.1"
   },
   "devDependencies": {
-    "esbuild": "^0.19.0"
+    "cross-env": "^10.0.0",
+    "esbuild": "^0.19.0",
+    "nodemon": "^3.0.0"
+  },
+  "keywords": [
+    "media",
+    "manga",
+    "movie",
+    "music",
+    "express",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
   }
 }
