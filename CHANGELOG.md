@@ -8,16 +8,18 @@
 - 🐛 [2025-09-14] Fixed middleware import error → Fixed destructuring import for errorHandler in middleware/index.js
 - 🐛 [2025-09-14] Fixed NODE_ENV environment handling → Added cross-env to explicitly set NODE_ENV in dev/prod scripts instead of relying on .env file
 - 🔄 [2025-09-14] Refactored API routing architecture → Migrated from scattered app.use() calls to centralized routing structure using routes/ directory for better maintainability
+- 🐛 [2025-09-14] Fixed frontend static files serving → Legacy frontend HTML files now properly reference built CSS/JS files in /dist/ directory
 
 ### Added
 
 - ✨ [2025-09-14] Added dedicated CORS middleware → Created middleware/cors.js with smart development/production handling, proper origin validation, and Tailscale domain support
 - ✨ [2025-09-14] Added proper Express.js middleware architecture → Restructured middleware system with correct order: CORS → body parsing → compression → rate limiting → auth → security
+- ✨ [2025-09-14] Added dev:frontendv1 script → Created npm script to build legacy frontend static files using scripts/build.js with esbuild for CSS/JS bundling and minification
 
 ### Fixed
 
 - 🐛 [2025-09-14] Fixed duplicate CORS configuration → Removed redundant CORS setup from server.js, now using centralized middleware/cors.js for consistent CORS handling
-- � [2025-09-14] Fixed middleware execution order → CORS middleware now runs first to handle preflight OPTIONS requests, error handler moved to end of middleware chain
+- 🐛 [2025-09-14] Fixed middleware execution order → CORS middleware now runs first to handle preflight OPTIONS requests, error handler moved to end of middleware chain
 - 🐛 [2025-09-14] Fixed Express.js middleware structure → Separated setupMiddleware() and setupErrorHandling() functions following Express.js best practices
 - �🔒 [2025-09-14] Fixed security issue in .env.template → Removed sensitive information (Tailscale hostnames, specific IP addresses, domain names) and replaced with secure placeholders (your-hostname.local, 192.168.1.xxx, your-domain.com)
 

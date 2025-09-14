@@ -25,8 +25,13 @@ function setupMiddleware(app) {
   // 3. Compression - Compress responses to reduce bandwidth
   app.use(compression());
   
-  // 4. Rate limiting - Limit requests per IP/user
-  app.use(rateLimiter);
+  // 4. Rate limiting - Limit requests per IP/user (disabled in development)
+  if (process.env.NODE_ENV === 'production') {
+    console.log('🚦 Rate limiting enabled (production mode)');
+    app.use(rateLimiter);
+  } else {
+    console.log('🔧 Rate limiting disabled (development mode)');
+  }
   
   // 5. Authentication - Check IP/hostname whitelist
   app.use(authMiddleware);

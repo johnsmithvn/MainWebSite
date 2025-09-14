@@ -17,28 +17,30 @@ try {
 // Environment detection
 const IS_DEV = process.env.NODE_ENV !== 'production';
 
-// Default development origins (always included in dev)
-const DEFAULT_DEV_ORIGINS = [
-  'http://localhost:3001',      // React dev server
-  'http://127.0.0.1:3001',      // React dev server (IP)
-];
-
-// Extra origins from environment (for Tailscale, production, etc.)
-const EXTRA_ORIGINS = (parsedEnv.CORS_EXTRA_ORIGINS || '')
+// Parse origins from environment variables
+const DEV_ORIGINS = (parsedEnv.CORS_DEV_ORIGINS || '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
 
+const TAILSCALE_ORIGINS = (parsedEnv.CORS_TAILSCALE_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+// Combine all origins
+const EXTRA_ORIGINS = [...DEV_ORIGINS, ...TAILSCALE_ORIGINS];
+
 // Combine origins based on environment
 const ALLOWED_ORIGINS = IS_DEV 
-  ? [...new Set([...DEFAULT_DEV_ORIGINS, ...EXTRA_ORIGINS])]  // Dev: localhost + extra
+  ? [...new Set([...EXTRA_ORIGINS])]  // Dev: only configured origins
   : EXTRA_ORIGINS;  // Production: only extra (same-origin automatically allowed)
 
 // Log CORS configuration
 console.log('🌐 CORS Configuration:');
 console.log(`   - Environment: ${IS_DEV ? 'development' : 'production'}`);
-console.log(`   - Default dev origins: ${DEFAULT_DEV_ORIGINS.join(', ')}`);
-console.log(`   - Extra origins: ${EXTRA_ORIGINS.join(', ') || 'none'}`);
+console.log(`   - Dev origins: ${DEV_ORIGINS.join(', ') || 'none'}`);
+console.log(`   - Tailscale origins: ${TAILSCALE_ORIGINS.join(', ') || 'none'}`);
 console.log(`   - Total allowed: ${ALLOWED_ORIGINS.length} origins`);
 
 /**
@@ -50,7 +52,6 @@ const corsMiddleware = cors({
   origin: (origin, callback) => {
     // No origin = same-origin requests (browser navigation, same-domain fetch)
     if (!origin) {
-      console.log('🔧 Same-origin request - allowing');
       return callback(null, true);
     }
 

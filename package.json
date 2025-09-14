@@ -11,6 +11,7 @@
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd react-app && npm run dev",
+    "dev:frontendv1": "cd scripts && node build.js",
     "build": "cd react-app && npm run build",
     "build:prod": "cd react-app && npm run build:prod",
     "start": "cd backend && npm start",
