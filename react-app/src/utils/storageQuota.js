@@ -30,7 +30,11 @@ const getMinRequiredSpace = () => {
     baseRequirement = 25 * 1024 * 1024; // 25MB for mobile
   }
   
- 
+   // Allow environment override
+  const envOverride = import.meta.env.VITE_MIN_STORAGE_SPACE;
+  if (envOverride && !isNaN(envOverride)) {
+    return parseInt(envOverride) * 1024 * 1024; // Convert MB to bytes
+  }
   
   return baseRequirement;
 };
