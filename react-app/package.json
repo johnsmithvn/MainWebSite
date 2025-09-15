@@ -1,6 +1,6 @@
 {
   "name": "main-website-react",
-  "version": "5.0.0",
+  "version": "5.0.10",
   "description": "React version of MainWebSite - Media management app for manga, movies, and music",
   "private": true,
   "type": "module",
