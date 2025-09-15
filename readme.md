@@ -60,3 +60,23 @@ nó sẽ chạy được ở các http://localhost:3000/ ,http://127.0.0.1:3000/
 chạy prod trong backend nó tự set "prod": "cross-env NODE_ENV=production node server.js",
 
 - nếu k tin tưởng có thể tự đổi tay
+
+
+
+------------------------ Chạy lần đầu ---- 
+
+1. tạo key để chạy https
+(domain taiscle mà sever đang chạy)
+```bash
+mkcert -install
+mkcert TAILSCALE_DEVICE.TAILSCALE_TAILNET.ts.net 
+```
+=> lúc này nó sẽ tạo ra 2 file 
+*.pem  => đổi thành  certificate.pem
+*-key.pem => đổi thành private-key.pem
+
+=> rồi move vào ssl folder
+
+----------
+
+
