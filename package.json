@@ -1,6 +1,6 @@
 {
   "name": "mainwebsite-monorepo",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "description": "MainWebSite - Media management application monorepo",
   "private": true,
   "workspaces": [
