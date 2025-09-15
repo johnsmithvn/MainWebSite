@@ -1,6 +1,6 @@
 {
   "name": "mainwebsite-monorepo",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "MainWebSite - Media management application monorepo",
   "private": true,
   "workspaces": [
@@ -29,13 +29,13 @@
     "concurrently": "^8.2.2"
   },
   "keywords": [
-    "media-management", 
-    "manga", 
-    "movie", 
-    "music", 
-    "react", 
-    "express", 
-    "nodejs", 
+    "media-management",
+    "manga",
+    "movie",
+    "music",
+    "react",
+    "express",
+    "nodejs",
     "monorepo"
   ],
   "author": "",
