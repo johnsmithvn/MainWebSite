@@ -58,7 +58,7 @@ const SECURITY = {
   MAX_REQUEST_SIZE: '10mb',
   RATE_LIMIT: {
     WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-    MAX_REQUESTS: 100
+    MAX_REQUESTS: 50000 // Tăng cực cao: 50k requests = ~100 chapter/15min
   }
 };
 

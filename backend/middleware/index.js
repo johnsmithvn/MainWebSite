@@ -1,34 +1,58 @@
 // 📁 backend/middleware/index.js
-// 🛡️ Middleware tổng quát
+// 🛡️ Middleware tổng quát - Proper Express.js middleware order
 
 const express = require("express");
 const compression = require("compression");
 const { SECURITY } = require("../constants");
+const corsMiddleware = require("./cors");
 const authMiddleware = require("./auth");
 const securityMiddleware = require("./security");
-const errorHandler = require("./errorHandler");
+const { errorHandler } = require("./errorHandler");
 const rateLimiter = require("./rateLimiter");
 
 /**
- * 🔧 Setup all middleware
+ * 🔧 Setup core middleware (proper Express.js order)
+ * Must be called BEFORE routes are defined
  */
 function setupMiddleware(app) {
-  // Body parsing
+  // 1. CORS - Must be FIRST to handle preflight OPTIONS requests
+  app.use(corsMiddleware);
+  
+  // 2. Body parsing - Parse JSON/form data from requests
   app.use(express.json({ limit: SECURITY.MAX_REQUEST_SIZE }));
   app.use(express.urlencoded({ extended: true, limit: SECURITY.MAX_REQUEST_SIZE }));
   
-  // Compression
+  // 3. Compression - Compress responses to reduce bandwidth
   app.use(compression());
   
-  // Rate limiting
-  app.use(rateLimiter);
+  // 4. Rate limiting - DISABLED vì manga cần load hàng nghìn ảnh
+  // 2000 requests/15min = chỉ đọc được 2 chapter, quá ít!
+  const ENABLE_RATE_LIMIT = false; // Set true nếu muốn bật lại
   
-  // Security
+  if (process.env.NODE_ENV === 'production' && ENABLE_RATE_LIMIT) {
+    console.log('🚦 Rate limiting enabled (production mode)');
+    app.use(rateLimiter);
+  } else {
+    console.log('🔧 Rate limiting DISABLED (manga reading needs unlimited requests)');
+  }
+  
+  // 5. Authentication - Check IP/hostname whitelist
   app.use(authMiddleware);
-  app.use(securityMiddleware);
   
-  // Error handling (must be last)
+  // 6. Security - Check auth tokens for secure endpoints
+  app.use(securityMiddleware);
+}
+
+/**
+ * 🚨 Setup error handling middleware
+ * Must be called AFTER all routes are defined
+ */
+function setupErrorHandling(app) {
+  // Error handler must be LAST middleware to catch all errors
   app.use(errorHandler);
 }
 
-module.exports = { setupMiddleware };
+module.exports = { 
+  setupMiddleware, 
+  setupErrorHandling 
+};

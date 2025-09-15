@@ -7,8 +7,17 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview",
-    "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+    "build:prod": "set NODE_ENV=production && vite build --mode production",
+    "build:prod:unix": "NODE_ENV=production vite build --mode production",
+    "preview": "vite preview --host",
+    "preview:prod": "npm run build:prod && vite preview --host --port 3002",
+    "deploy": "npm run clean && npm run build:prod && cd ../backend && npm run prod",
+    "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint src --ext js,jsx --fix",
+    "clean": "rmdir /s /q dist",
+    "clean:unix": "rm -rf dist",
+    "analyze": "vite build --mode analyze",
+    "check:env": "node -e \"console.log('Environment check:', process.env)\""
   },
   "dependencies": {
     "@tanstack/react-query": "^4.29.0",
@@ -52,8 +61,15 @@
     "movie",
     "music",
     "media-player",
-    "local-media"
+    "local-media",
+    "pwa",
+    "tailwindcss",
+    "vite"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
 }

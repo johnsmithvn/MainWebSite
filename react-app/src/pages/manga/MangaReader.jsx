@@ -9,7 +9,7 @@ import { downloadChapter, isChapterDownloaded, getChapter } from '../../utils/of
 import { checkStorageForDownload } from '../../utils/storageQuota';
 import { isCachesAPISupported, getUnsupportedMessage } from '../../utils/browserSupport';
 import ReaderHeader from '../../components/manga/ReaderHeader';
-import { DownloadProgressModal, StorageQuotaModal, OfflineCompatibilityBanner } from '../../components/common';
+import { DownloadProgressModal, StorageQuotaModal } from '../../components/common';
 import toast from 'react-hot-toast';
 
 import '../../styles/components/manga-reader.css';
@@ -805,8 +805,6 @@ const MangaReader = () => {
 
   return (
     <div className={`manga-reader ${readerSettings.readingMode === 'vertical' ? 'scroll-mode-active' : ''}`}>
-      {/* Offline Compatibility Banner */}
-      <OfflineCompatibilityBanner />
       
       {/* Reader Header */}
       {showControls && (

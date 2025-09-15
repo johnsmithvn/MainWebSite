@@ -64,15 +64,14 @@ mkcert -key-file key.pem -cert-file cert.pem localhost 127.0.0.1 your-tailscale-
 
 | Variable | Mô tả | File sử dụng | Default | Ví dụ |
 |----------|-------|--------------|---------|-------|
-| `PORT` | Port backend server | `server.js:22` | `3000` | `3000` |
-| `NODE_ENV` | Môi trường chạy | `server.js:23` | `development` | `production` |
-| `ENABLE_HTTPS` | Bật HTTPS cho backend | `server.js` | `false` | `true` |
+| `PORT` | Port backend server | `server.js:18` | `3000` | `3000` |
+| `NODE_ENV` | Môi trường chạy | `server.js:19` | `development` | `production` |
 
 **Code sử dụng:**
 ```javascript
-// backend/server.js:22-23
+// backend/server.js:18-19
 const PORT = process.env.PORT || 3000;
-const IS_DEV = (process.env.NODE_ENV || 'development') !== 'production';
+const IS_DEV = process.env.NODE_ENV !== 'production';
 ```
 
 #### **Media Root Paths** 
@@ -96,6 +95,24 @@ Object.keys(parsedEnv).forEach((key) => {
 });
 ```
 
+### Development Tools
+
+| Variable | Mô tả | File sử dụng | Default | Impact |
+|----------|-------|--------------|---------|--------|
+| `nodemon` | Auto-restart trên dev | `package.json scripts` | Local package | Chạy với `npx nodemon` |
+| `cross-env` | Cross-platform ENV setting | `package.json scripts` | Local package | Set NODE_ENV properly |
+
+**Package.json scripts:**
+```json
+{
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development npx nodemon server.js",
+    "prod": "cross-env NODE_ENV=production node server.js",
+    "start": "node server.js"
+  }
+}
+```
+
 **⚠️ Impact khi thay đổi:**
 - Thay đổi paths sẽ require re-scan database
 - Sai path sẽ gây lỗi "folder not found"
@@ -107,8 +124,8 @@ Object.keys(parsedEnv).forEach((key) => {
 |----------|-------|--------------|-------|
 | `SECURITY` | Keys cần password | `utils/config.js:13` | `ROOT_MANGAH,V_JAVA` |
 | `SECURITY_PASSWORD` | Password cho protected keys | `utils/config.js:17` | `123456` |
-| `ALLOWED_IPS` | IPs được phép truy cập | `middleware/auth.js` | `127.0.0.1,192.168.1.111` |
-| `ALLOWED_HOSTNAMES` | Hostnames được phép | `middleware/auth.js` | `desktop-v88j9e0` |
+| `ALLOWED_IPS` | IPs được phép truy cập | `middleware/auth.js` | `192.1.,......` |
+| `ALLOWED_HOSTNAMES` | Hostnames được phép | `middleware/auth.js` | `DEVICE_NAME` |
 
 **Code sử dụng:**
 ```javascript
@@ -124,16 +141,15 @@ const SECURITY_PASSWORD = parsedEnv.SECURITY_PASSWORD || "";
 
 | Variable | Mô tả | File sử dụng | Default |
 |----------|-------|--------------|---------|
-| `CORS_EXTRA_ORIGINS` | Extra CORS origins | `server.js:26-31` | `http://localhost:3001` |
+| `CORS_EXTRA_ORIGINS` | Extra CORS origins | `middleware/cors.js` | `http://localhost:3001` |
 
 **Code sử dụng:**
 ```javascript
-// backend/server.js:26-31
-const EXTRA_ORIGINS = (process.env.CORS_EXTRA_ORIGINS || '')
+// backend/middleware/cors.js
+const extraOrigins = (process.env.CORS_EXTRA_ORIGINS || '')
   .split(',')
-  .map((s) => s.trim())
+  .map(s => s.trim())
   .filter(Boolean);
-const ALLOWED_ORIGINS = [...new Set([...DEFAULT_DEV_ORIGINS, ...EXTRA_ORIGINS])];
 ```
 
 ---
@@ -225,9 +241,9 @@ VITE_DISABLE_SW=true
 VITE_ENABLE_SW_IN_DEV=false
 
 # HMR configuration cho Tailscale
-VITE_HMR_HOST=desktop-v88j9e0.tail2b3d3b.ts.net
+VITE_HMR_HOST=DEVICE_NAME.tail2b3d3b.ts.net
 VITE_HMR_PORT=3001
-VITE_ALLOWED_HOSTS=desktop-v88j9e0.tail2b3d3b.ts.net
+VITE_ALLOWED_HOSTS=DEVICE_NAME.tail2b3d3b.ts.net
 VITE_DISABLE_HMR=false
 ```
 
@@ -235,15 +251,15 @@ VITE_DISABLE_HMR=false
 
 ```bash
 # Tailscale domain config
-VITE_HMR_HOST=desktop-v88j9e0.tail2b3d3b.ts.net
+VITE_HMR_HOST=DEVICE_NAME.tail2b3d3b.ts.net
 VITE_HMR_PORT=3001
-VITE_ALLOWED_HOSTS=desktop-v88j9e0.tail2b3d3b.ts.net
+VITE_ALLOWED_HOSTS=DEVICE_NAME.tail2b3d3b.ts.net
 
 # HMR disabled cho production
 VITE_DISABLE_HMR=true
 
 # Production settings (uncomment khi deploy)
-# VITE_API_BASE_URL=https://desktop-v88j9e0.tail2b3d3b.ts.net
+# VITE_API_BASE_URL=https://DEVICE_NAME.tail2b3d3b.ts.net
 # VITE_ENABLE_HTTPS=true
 # VITE_MIN_STORAGE_SPACE=524288000
 ```

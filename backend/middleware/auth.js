@@ -2,19 +2,20 @@ const dns = require("dns").promises;
 const dotenv = require("dotenv");
 const path = require("path");
 const fs = require("fs");
+const { parseEnvList } = require("../utils/stringUtils");
 
 // Đọc biến môi trường từ .env
 const envPath = path.join(__dirname, "../.env");
 const parsedEnv = dotenv.parse(fs.readFileSync(envPath, "utf-8"));
 
 // Lấy danh sách hostname và IP được phép từ .env
-const allowedHostnames = (parsedEnv.ALLOWED_HOSTNAMES || "").split(",").map(s => s.trim()).filter(Boolean);
-const allowedIPs = (parsedEnv.ALLOWED_IPS || "").split(",").map(s => s.trim()).filter(Boolean);
+const allowedHostnames = parseEnvList(parsedEnv.ALLOWED_HOSTNAMES);
+const allowedIPs = parseEnvList(parsedEnv.ALLOWED_IPS);
 
 // Hàm kiểm tra IP nội bộ hoặc localhost
 function isAllowedClient(clientIP) {
-  return true; // Bỏ comment nếu muốn cho phép toàn bộ nội bộ
-  // return allowedIPs.includes(clientIP);
+  // return true; // Bỏ comment nếu muốn cho phép toàn bộ nội bộ
+  return allowedIPs.includes(clientIP);
   
 }
 

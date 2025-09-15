@@ -1,8 +1,6 @@
 // 📁 backend/server.js
 
 const express = require("express");
-const compression = require("compression");
-const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
@@ -15,77 +13,35 @@ const {
   ROOT_PATHS,
 } = require("./utils/config");
 
-const authMiddleware = require("./middleware/auth");
-const securityMiddleware = require("./middleware/security");
+const { setupMiddleware, setupErrorHandling } = require("./middleware");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const IS_DEV = (process.env.NODE_ENV || 'development') !== 'production';
+const IS_DEV = process.env.NODE_ENV !== 'production';
 
-// ✅ CORS Configuration (mở cho dev + Tailscale domain)
-const EXTRA_ORIGINS = (process.env.CORS_EXTRA_ORIGINS || '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-const DEFAULT_DEV_ORIGINS = [
-  'http://localhost:3001',
-  'http://127.0.0.1:3001',
-];
+// Constants
+const ONE_HOUR = 60 * 60;
+const ONE_DAY = 24 * ONE_HOUR;
 
-const ALLOWED_ORIGINS = [...new Set([...DEFAULT_DEV_ORIGINS, ...EXTRA_ORIGINS])];
+// ✅ Setup all middleware (CORS, compression, auth, security, etc.)
+setupMiddleware(app);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Không có origin (cURL, server-to-server) → cho phép
-      if (!origin) return callback(null, true);
+// Security headers for production
+if (!IS_DEV) {
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+}
 
-      // Dev mode: nới lỏng CORS để phục vụ React dev/Tailscale
-      if (IS_DEV) return callback(null, true);
-
-      // Whitelist tĩnh từ env + dev mặc định
-      if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
-
-      // Cho phép domain Tailscale (*.ts.net)
-      try {
-        const u = new URL(origin);
-        const isTS = u.hostname.endsWith('.ts.net');
-        if (isTS) return callback(null, true);
-      } catch (_) {}
-
-      console.warn('CORS blocked origin:', origin);
-      return callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    // Thêm 'x-secure-token' để preflight không bị chặn khi React gửi header này
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'x-secure-token',
-    ],
-  })
-);
-
-// ✅ Middleware cơ bản (giữ nguyên logic cũ)
-app.use(express.json());
-app.use(compression());
-app.use(authMiddleware);
-app.use(securityMiddleware);
-
-// ✅ API Routes - giữ nguyên tất cả logic cũ
-app.use("/api/manga", require("./api/manga/folder-cache"));
-app.use("/api", require("./api/increase-view"));
-app.use("/api/manga", require("./api/manga/reset-cache"));
-app.use("/api/manga", require("./api/manga/scan"));
-app.use("/api/manga", require("./api/manga/favorite"));
-app.use("/api/manga", require("./api/manga/root-thumbnail"));
+// ✅ API Routes - Centralized routing
+app.use("/api", require("./routes"));
 
 // ✅ Cache constants and helpers
-const ONE_HOUR = 3600;
-const ONE_DAY = 86400;
-
 const isImg = /\.(avif|jpe?g|png|gif|webp|bmp)$/i;
 const isAudio = /\.(mp3|m4a|aac|ogg|flac|wav)$/i;
 const isVideo = /\.(mp4|m4v|webm|mov|mkv|ts|m3u8)$/i;
@@ -140,11 +96,47 @@ for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
 app.use(express.static(path.join(__dirname, "../frontend/public")));
 app.use("/dist", express.static(path.join(__dirname, "../frontend/public/dist")));
 
+// ✅ Default assets
+app.use("/default", express.static(path.join(__dirname, "../frontend/public/default"), {
+  maxAge: IS_DEV ? 0 : ONE_DAY * 7 * 1000,
+  etag: !IS_DEV,
+  setHeaders: setStaticHeaders('image')
+}));
+
+// ✅ NEW: Production React App Serving
+const REACT_BUILD_PATH = path.join(__dirname, '../react-app/dist');
+
+if (fs.existsSync(REACT_BUILD_PATH)) {
+  console.log('✅ React build found, serving production app');
+  console.log('📦 React build path:', REACT_BUILD_PATH);
+  
+  // Serve React build static assets
+  app.use(express.static(REACT_BUILD_PATH, {
+    maxAge: IS_DEV ? 0 : ONE_DAY * 30 * 1000,
+    etag: !IS_DEV,
+    index: false
+  }));
+} else {
+  console.log('❌ React build not found at:', REACT_BUILD_PATH);
+  
+  if (IS_DEV) {
+    console.log('🔧 Development mode: React dev server should be running separately on port 3001');
+  } else {
+    console.log('💡 Production mode: Please build React app first:');
+    console.log('   cd react-app && npm run build');
+  }
+}
+
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/public/home.html"));
+  // Check if React build exists for production
+  if (!IS_DEV && fs.existsSync(REACT_BUILD_PATH)) {
+    res.sendFile(path.join(REACT_BUILD_PATH, "index.html"));
+  } else {
+    res.sendFile(path.join(__dirname, "../frontend/public/home.html"));
+  }
 });
 
-// Serve React build at /app
+// Legacy: Serve React build at /app for compatibility
 app.use("/app", express.static(path.join(__dirname, "../react-app/dist")));
 app.get(/^\/app\/.*$/, (_req, res) => {
   res.sendFile(path.join(__dirname, "../react-app/dist/index.html"));
@@ -234,70 +226,79 @@ app.get("/api/list-roots", (req, res) => {
   }
 });
 
-// ✅ SPA fallback - giữ nguyên logic cũ
+// ✅ SPA fallback - Production React serving with fallback to legacy
 app.use((req, res, next) => {
-  if (
-    req.method === "GET" &&
-    !req.path.startsWith("/api") &&
-    !req.path.startsWith("/src") &&
-    !req.path.startsWith("/manga")
-  ) {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) return next();
+  
+  // Skip media routes
+  if (req.path.startsWith('/manga/') || 
+      req.path.startsWith('/video/') || 
+      req.path.startsWith('/audio/') ||
+      req.path.startsWith('/default/') ||
+      req.path.startsWith('/src/') ||
+      req.path.startsWith('/app/')) return next();
+  
+  // Skip static assets
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map)$/)) {
+    return next();
+  }
+  
+  if (req.method === "GET") {
+    // Production: Serve React app if build exists
+    if (!IS_DEV && fs.existsSync(REACT_BUILD_PATH)) {
+      console.log(`🔄 SPA Fallback: ${req.path} → React index.html`);
+      return res.sendFile(path.join(REACT_BUILD_PATH, 'index.html'), {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+    }
+    
+    // Development or fallback: Serve legacy frontend
+    console.log(`🔄 SPA Fallback: ${req.path} → legacy index.html`);
     return res.sendFile(path.join(__dirname, "../frontend/public/manga/index.html"));
   }
   next();
 });
 
-// ✅ Config APIs - giữ nguyên logic cũ
-app.get("/api/source-keys.js", (req, res) => {
-  const manga = getAllMangaKeys();
-  const movie = getAllMovieKeys();
-  const music = getAllMusicKeys();
-  const js = `window.mangaKeys = ${JSON.stringify(manga)};
-window.movieKeys = ${JSON.stringify(movie)};
-window.musicKeys = ${JSON.stringify(music)};`;
-  res.type("application/javascript").send(js);
+// ✅ Setup error handling (must be after all routes)
+setupErrorHandling(app);
+
+// ✅ Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully');
+  process.exit(0);
 });
 
-app.get("/api/security-keys.js", (req, res) => {
-  const { SECURITY_KEYS } = require("./utils/config");
-  const js = `window.secureKeys = ${JSON.stringify(SECURITY_KEYS)};`;
-  res.type("application/javascript").send(js);
+process.on('SIGINT', () => {
+  console.log('🛑 SIGINT received, shutting down gracefully');
+  process.exit(0);
 });
-
-app.post("/api/login", (req, res) => {
-  const { SECURITY_PASSWORD, SECURITY_KEYS } = require("./utils/config");
-  const key = (req.body.key || "").toUpperCase();
-  const pass = req.body.password || "";
-  if (!SECURITY_KEYS.includes(key)) return res.status(400).json({ error: "invalid key" });
-  if (pass !== SECURITY_PASSWORD) return res.status(401).json({ error: "wrong" });
-  res.json({ token: SECURITY_PASSWORD });
-});
-
-// ✅ Movie APIs - giữ nguyên logic cũ
-app.use("/api/movie", require("./api/movie/movie-folder"));
-app.use("/api/movie", require("./api/movie/video"));
-app.use("/api/movie", require("./api/movie/movie-folder-empty"));
-app.use("/api/movie", require("./api/movie/scan-movie"));
-app.use("/api/movie", require("./api/movie/reset-movie-db"));
-app.use("/api/movie", require("./api/movie/video-cache"));
-app.use("/api/movie", require("./api/movie/favorite-movie"));
-app.use("/api/movie", require("./api/movie/extract-movie-thumbnail"));
-app.use("/api/movie", require("./api/movie/set-thumbnail"));
-
-// ✅ Music APIs - giữ nguyên logic cũ
-app.use("/api/music", require("./api/music/scan-music"));
-app.use("/api/music", require("./api/music/music-folder"));
-app.use("/api/music", require("./api/music/audio"));
-app.use("/api/music", require("./api/music/audio-cache"));
-app.use("/api/music", require("./api/music/playlist"));
-app.use("/api/music", require("./api/music/music-meta"));
-app.use("/api/music", require("./api/music/reset-music-db"));
-app.use("/api/music", require("./api/music/extract-thumbnail"));
-app.use("/api/music", require("./api/music/set-thumbnail"));
 
 // ✅ Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server is running at http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`� Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📂 Root paths configured: ${Object.keys(ROOT_PATHS).length}`);
+  
+  // Local access URLs
+  console.log(`🌐 Local access:`);
+  console.log(`   - http://localhost:${PORT}`);
+  console.log(`   - http://127.0.0.1:${PORT}`);
+  
+  // Network access (if configured)
+  if (process.env.CORS_EXTRA_ORIGINS) {
+    console.log(`� Network access: Check CORS_EXTRA_ORIGINS in .env`);
+  }
+  
+  if (IS_DEV) {
+    console.log(`🔧 Development mode - React dev server should be running on port 3001`);
+  } else {
+    console.log(`🔒 Production mode - Serving React build files`);
+  }
 });
 
 module.exports = app;
