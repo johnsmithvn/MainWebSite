@@ -69,8 +69,8 @@ function generateDevOrigins(ports = [3000, 3001], includeHttps = false) {
  * 🔧 Generate Tailscale CORS origins
  * Preset cho Tailscale network access
  * 
- * @param {string} deviceName - Tailscale device name (e.g., "desktop-v88j9e0")
- * @param {string} tailnetId - Tailnet ID (e.g., "tail2b3d3b") 
+ * @param {string} deviceName - Tailscale device name (e.g., "TAILSCALE_DEVICE")
+ * @param {string} tailnetId - Tailnet ID (e.g., "TAILSCALE_TAILNET") 
  * @param {Array} ports - Ports to include (default: [3000, 3001])
  * @param {boolean} includeHttps - Include HTTPS variants (default: true)
  * @returns {string[]} - Array of Tailscale URLs

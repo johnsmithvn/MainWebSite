@@ -459,6 +459,10 @@ function printSection(title, rows) {
         ["Certificates", "OK"],
       ]);
       console.log('Note: Self-signed certificates may show a browser warning. Choose "Advanced" -> "Proceed".');
+      console.log('Note: if the Tailscale domain is not accessible, ensure you are connected to the Tailscale network.');
+      console.log('Note: try running `tailscale status` to check your connection.');
+      console.log('Note: try running `tailscale up` to connect to the Tailscale network.');
+
     });
     setupGracefulShutdown(httpsServer);
   } else if (ENABLE_HTTPS && !sslOptions) {

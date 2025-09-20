@@ -20,23 +20,23 @@ Server sử dụng **intelligent routing** để tự động phát hiện front
 
 ```
 # Interface Selector (tự động chọn)
-https://desktop-v88j9e0.tail2b3d3b.ts.net:3000/
+https://TAILSCALE_DEVICE.TAILSCALE_TAILNET.ts.net:3000/
 
 # Force React App
-https://desktop-v88j9e0.tail2b3d3b.ts.net:3000/app
-https://desktop-v88j9e0.tail2b3d3b.ts.net:3000/?ui=react
+https://TAILSCALE_DEVICE.TAILSCALE_TAILNET.ts.net:3000/app
+https://TAILSCALE_DEVICE.TAILSCALE_TAILNET.ts.net:3000/?ui=react
 
 # Force Legacy
-https://desktop-v88j9e0.tail2b3d3b.ts.net:3000/?ui=legacy
+https://TAILSCALE_DEVICE.TAILSCALE_TAILNET.ts.net:3000/?ui=legacy
 
 # Interface Selector
-https://desktop-v88j9e0.tail2b3d3b.ts.net:3000/?selector=true
+https://TAILSCALE_DEVICE.TAILSCALE_TAILNET.ts.net:3000/?selector=true
 ```
 
 ## 🚀 Cách Sử Dụng
 
 ### 1. **Truy Cập Lần Đầu**
-- Vào `https://desktop-v88j9e0.tail2b3d3b.ts.net:3000/`
+- Vào `https://TAILSCALE_DEVICE.TAILSCALE_TAILNET.ts.net:3000/`
 - Chọn giao diện trong **Interface Selector**
 - Lựa chọn được lưu cho các lần sau
 
