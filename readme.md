@@ -137,3 +137,29 @@ File `.env` trong `backend/` và `react-app/` đã được config sẵn cho:
 
 Không cần sửa gì trừ khi thay đổi domain hoặc ports.
 
+NẾU k chạy được EXO cần import chứng chỉ
+
+KHi đã cài `mkcert` thì sẽ tạo ra file  `rootCA.pem` 
+
+```
+1. Trên máy bạn, tìm file rootCA.pem:
+
+2. Windows: C:\Users\<username>\AppData\Local\mkcert
+3. Copy file rootCA.pem ra, đổi tên thành rootCA.crt (có thể k cần đổi tên)
+4.Import vào Android
+=>>
+Import CA trên Android (MIUI – Xiaomi)
+
+Mở Cài đặt (Settings).
+
+Tìm: Mật khẩu & Bảo mật → Quyền riêng tư → Mã hoá & chứng chỉ.
+(có thể là Cài đặt > Bảo mật > Chứng chỉ tuỳ MIUI version).
+
+Chọn: Cài đặt chứng chỉ từ bộ nhớ.
+
+Chọn file rootCA.crt trong thư mục Download.
+
+Khi được hỏi loại chứng chỉ, chọn: CA chứng thực (VPN và app).
+
+Xác nhận cảnh báo “Mạng có thể bị giám sát” → bấm OK.
+```
