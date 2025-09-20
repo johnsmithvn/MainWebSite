@@ -254,8 +254,17 @@ app.use((req, res, next) => {
   next();
 });
 
+
+// ✅ Simple log endpoint
+app.post("/api/log", (req, res) => {
+  const { message, extra } = req.body || {};
+  console.log("📡 [CLIENT LOG]:", message, extra || "");
+  res.json({ status: "ok" });
+});
 // ✅ Setup error handling (must be after all routes)
 setupErrorHandling(app);
+
+
 
 // ========== HTTPS helpers ==========
 function loadSSLCertificates() {

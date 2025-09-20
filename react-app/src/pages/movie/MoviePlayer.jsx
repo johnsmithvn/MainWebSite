@@ -16,6 +16,20 @@ import Toast from '@/components/common/Toast';
 import MovieRandomSection from '@/components/movie/MovieRandomSection';
 
 const MoviePlayer = () => {
+
+const sendLog = async (message, extra = null) => {
+  try {
+    await fetch("/api/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, extra }),
+    });
+  } catch (err) {
+    console.warn("❌ Failed to send log:", err);
+  }
+};
+
+  
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -158,6 +172,8 @@ const MoviePlayer = () => {
           token ? `&token=${encodeURIComponent(token)}` : ''
         }`;
         videoRef.current.src = videoSrc;
+        sendLog("Web video player URL", videoSrc);
+
         // Ensure the video element reloads when the source changes
         if (typeof videoRef.current.load === 'function') {
           videoRef.current.load();
@@ -413,6 +429,8 @@ const MoviePlayer = () => {
     const videoUrl = `${window.location.origin}/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(currentFile)}${
       token ? `&token=${encodeURIComponent(token)}` : ''
     }`;
+    sendLog("ExoPlayer video URL", videoUrl);
+
    
     if (window.Android?.openExoPlayer) {
       window.Android.openExoPlayer(videoUrl);
