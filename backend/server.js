@@ -211,19 +211,10 @@ app.get("/api/list-roots", (req, res) => {
 
 // ✅ SPA fallback - Production React serving with fallback to legacy
 app.use((req, res, next) => {
-  // Skip API and static assets
+  // Skip API routes completely
   if (req.path.startsWith("/api/")) return next();
-  if (
-    req.path.startsWith("/manga/") ||
-    req.path.startsWith("/video/") ||
-    req.path.startsWith("/audio/") ||
-    req.path.startsWith("/default/") ||
-    req.path.startsWith("/src/") ||
-    req.path.startsWith("/dist/")
-  )
-    return next();
 
-  // Skip static assets
+  // Let direct asset requests fall through to static middleware
   if (
     req.path.match(
       /\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map)$/
@@ -232,26 +223,30 @@ app.use((req, res, next) => {
     return next();
   }
 
-  if (req.method === "GET") {
-    // Production: Serve React app if build exists
-    if (!IS_DEV && fs.existsSync(REACT_BUILD_PATH)) {
-      console.log(`🔄 SPA Fallback: ${req.path} → React index.html`);
-      return res.sendFile(path.join(REACT_BUILD_PATH, "index.html"), {
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
-      });
-    }
+  // Only handle normal browser navigations (GET + Accept: text/html)
+  if (req.method !== "GET") return next();
 
-    // Development or fallback: Serve legacy frontend
-    console.log(`🔄 SPA Fallback: ${req.path} → legacy index.html`);
-    return res.sendFile(
-      path.join(__dirname, "../frontend/public/manga/index.html")
-    );
+  const acceptsHtml =
+    typeof req.accepts === "function" ? req.accepts("html") : undefined;
+  if (!acceptsHtml) return next();
+
+  // Production: Serve React app if build exists
+  if (!IS_DEV && fs.existsSync(REACT_BUILD_PATH)) {
+    console.log(`🔄 SPA Fallback: ${req.path} → React index.html`);
+    return res.sendFile(path.join(REACT_BUILD_PATH, "index.html"), {
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
   }
-  next();
+
+  // Development or fallback: Serve legacy frontend
+  console.log(`🔄 SPA Fallback: ${req.path} → legacy index.html`);
+  return res.sendFile(
+    path.join(__dirname, "../frontend/public/manga/index.html")
+  );
 });
 
 // ✅ Setup error handling (must be after all routes)
