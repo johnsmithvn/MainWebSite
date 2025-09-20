@@ -17,3 +17,6 @@ react-app/dist/
 # bỏ file .env.local
 .env.local
 
+# bo file ssl
+ssl/
+!ssl/.gitkeep
