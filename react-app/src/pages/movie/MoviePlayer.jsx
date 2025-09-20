@@ -409,11 +409,45 @@ const MoviePlayer = () => {
 
   // Open with ExoPlayer (for Android webview)
   const handleOpenExoPlayer = () => {
-   
-    const videoUrl = `${window.location.origin}/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(currentFile)}${
-      token ? `&token=${encodeURIComponent(token)}` : ''
-    }`;
-   
+    // 🔁 Ưu tiên dùng đúng URL mà thẻ <video> đang phát để tránh sai khác
+    const videoElement = videoRef.current;
+    let videoUrl = videoElement?.currentSrc || videoElement?.src || '';
+
+    if (!videoUrl) {
+      const resolvedKey = sourceKey || stateKey || keyParam;
+
+      if (!resolvedKey || !currentFile) {
+        showToast('❌ Không xác định được video để mở bằng ExoPlayer', 'error');
+        return;
+      }
+
+      // 📌 location.origin bị null trong 1 số WebView → fallback sang URL hiện tại
+      let origin = '';
+      try {
+        origin = window.location.origin && window.location.origin !== 'null'
+          ? window.location.origin
+          : new URL(window.location.href).origin;
+      } catch (err) {
+        console.error('❌ Không thể xác định origin cho ExoPlayer:', err);
+      }
+
+      if (!origin) {
+        showToast('❌ Không xác định được domain để mở ExoPlayer', 'error');
+        return;
+      }
+
+      const params = new URLSearchParams({
+        key: resolvedKey,
+        file: currentFile
+      });
+
+      if (token) {
+        params.set('token', token);
+      }
+
+      videoUrl = `${origin.replace(/\/$/, '')}/api/movie/video?${params.toString()}`;
+    }
+
     if (window.Android?.openExoPlayer) {
       window.Android.openExoPlayer(videoUrl);
     } else {
