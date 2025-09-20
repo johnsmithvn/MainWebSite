@@ -55,7 +55,7 @@ export const TEXT_STYLES = {
     default: 'font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1',
     compact: 'font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1',
     slider: 'font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1',
-    'compact-slider': 'font-medium text-gray-900 dark:text-white text-[11px] leading-tight line-clamp-2 mb-0.5'
+    'compact-slider': 'font-medium text-gray-900 dark:text-white text-xs leading-tight line-clamp-2 mb-0.5'
   },
   
   metadata: {

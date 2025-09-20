@@ -16,6 +16,17 @@ import Toast from '@/components/common/Toast';
 import MovieRandomSection from '@/components/movie/MovieRandomSection';
 
 const MoviePlayer = () => {
+  const sendLog = async (message, extra = null) => {
+  try {
+    await fetch("/api/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, extra }),
+    });
+  } catch (err) {
+    console.warn("❌ Failed to send log:", err);
+  }
+};
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -157,7 +168,9 @@ const MoviePlayer = () => {
         const videoSrc = `/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(currentFile)}${
           token ? `&token=${encodeURIComponent(token)}` : ''
         }`;
-        videoRef.current.src = videoSrc;
+        
+        sendLog("Web video player URL", videoSrc);
+
         // Ensure the video element reloads when the source changes
         if (typeof videoRef.current.load === 'function') {
           videoRef.current.load();
@@ -412,6 +425,7 @@ const MoviePlayer = () => {
     // 🔁 Ưu tiên dùng đúng URL mà thẻ <video> đang phát để tránh sai khác
     const videoElement = videoRef.current;
     let videoUrl = videoElement?.currentSrc || videoElement?.src || '';
+    sendLog("ExoPlayer video URL", videoUrl);
 
     if (!videoUrl) {
       const resolvedKey = sourceKey || stateKey || keyParam;
@@ -450,6 +464,8 @@ const MoviePlayer = () => {
 
     if (window.Android?.openExoPlayer) {
       window.Android.openExoPlayer(videoUrl);
+      sendLog("ExoPlayer video URL", videoUrl);
+
     } else {
       showToast('❌ Ứng dụng không hỗ trợ ExoPlayer', 'error');
     }

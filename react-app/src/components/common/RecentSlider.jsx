@@ -239,8 +239,7 @@ const RecentSlider = ({
     try {
       const now = new Date();
       const viewedDate = new Date(lastViewed);
-      const diffInSeconds = Math.floor((now - viewedDate) / 1000);
-      const diffInMinutes = Math.floor(diffInSeconds / TIME.SECONDS_PER_MINUTE);
+      const diffInMinutes = Math.floor((now - viewedDate) / 60000);
       const isMobile = window.innerWidth < 640;
       
       // Luôn hiển thị "just now" cho thời gian dưới 1 phút
