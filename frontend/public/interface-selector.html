@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MainWebSite - Choose Interface</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 1rem;
+        }
+        .container {
+            text-align: center;
+            max-width: 900px;
+            width: 100%;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+            opacity: 0.9;
+        }
+        .interfaces {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .interface-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255,255,255,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .interface-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.5s;
+            opacity: 0;
+        }
+        .interface-card:hover {
+            transform: translateY(-8px);
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.4);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        .interface-card:hover::before {
+            animation: shine 0.5s ease-in-out;
+        }
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); opacity: 0; }
+        }
+        .card-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        .card-title {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .card-desc {
+            opacity: 0.8;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+        .features {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        .feature {
+            background: rgba(255,255,255,0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .status-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(34, 197, 94, 0.9);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-badge.stable {
+            background: rgba(59, 130, 246, 0.9);
+        }
+        .tips {
+            margin-top: 2rem;
+            opacity: 0.7;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .tips code {
+            background: rgba(255,255,255,0.2);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .quick-actions {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .quick-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        .quick-btn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-2px);
+        }
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .subtitle { font-size: 1rem; }
+            .interfaces { grid-template-columns: 1fr; gap: 1.5rem; }
+            .container { padding: 1rem; }
+            .card-title { font-size: 1.5rem; }
+            .quick-actions { flex-direction: column; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 MainWebSite</h1>
+        <p class="subtitle">Chọn giao diện phù hợp với nhu cầu của bạn</p>
+        
+        <div class="interfaces">
+            <a href="/app?ui=react" class="interface-card">
+                <div class="status-badge">Recommended</div>
+                <div class="card-icon">⚡</div>
+                <div class="card-title">React App (V2)</div>
+                <div class="card-desc">
+                    Giao diện hiện đại được xây dựng với React, TailwindCSS và tối ưu hóa performance.
+                    Hỗ trợ PWA, dark mode và trải nghiệm người dùng mượt mà.
+                </div>
+                <div class="features">
+                    <span class="feature">⚡ Fast Loading</span>
+                    <span class="feature">🎨 Modern UI</span>
+                    <span class="feature">📱 PWA Ready</span>
+                    <span class="feature">🌙 Dark Mode</span>
+                    <span class="feature">🔄 Live Updates</span>
+                </div>
+            </a>
+            
+            <a href="/?ui=legacy" class="interface-card">
+                <div class="status-badge stable">Stable</div>
+                <div class="card-icon">🏛️</div>
+                <div class="card-title">Legacy (V1)</div>
+                <div class="card-desc">
+                    Giao diện truyền thống với đầy đủ tính năng đã được kiểm chứng qua thời gian.
+                    Ổn định, đáng tin cậy và hoàn chỉnh với mọi chức năng cần thiết.
+                </div>
+                <div class="features">
+                    <span class="feature">🛡️ Battle Tested</span>
+                    <span class="feature">✅ Complete</span>
+                    <span class="feature">🏛️ Classic Design</span>
+                    <span class="feature">🔒 Proven Stability</span>
+                    <span class="feature">📋 Full Features</span>
+                </div>
+            </a>
+        </div>
+        
+        <div class="quick-actions">
+            <a href="/app?ui=react" class="quick-btn">
+                ⚡ Launch React App
+            </a>
+            <a href="/?ui=legacy" class="quick-btn">
+                🏛️ Use Legacy Interface
+            </a>
+            <a href="/app/settings" class="quick-btn">
+                ⚙️ Settings
+            </a>
+        </div>
+        
+        <div class="tips">
+            <div style="margin-bottom: 1rem;">
+                <strong>💡 Pro Tips:</strong>
+            </div>
+            <div>
+                • Bạn có thể chuyển đổi bất kỳ lúc nào từ Settings<br>
+                • Thêm <code>?ui=react</code> hoặc <code>?ui=legacy</code> vào URL để force giao diện<br>
+                • Lựa chọn của bạn sẽ được lưu cho các lần truy cập sau<br>
+                • Cả hai giao diện đều chia sẻ cùng dữ liệu và API backend
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-redirect based on saved preference
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const response = await fetch('/api/ui-preference');
+                const data = await response.json();
+                
+                // If user has a specific preference and no ui param in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const uiParam = urlParams.get('ui');
+                
+                if (!uiParam && data.preference && data.preference !== 'auto') {
+                    setTimeout(() => {
+                        if (data.preference === 'react') {
+                            window.location.href = '/app?ui=react';
+                        } else if (data.preference === 'legacy') {
+                            window.location.href = '/?ui=legacy';
+                        }
+                    }, 2000); // 2 second delay to show interface selector
+                }
+            } catch (error) {
+                console.log('Could not load UI preference:', error);
+            }
+        });
+
+        // Add click animation
+        document.querySelectorAll('.interface-card, .quick-btn').forEach(el => {
+            el.addEventListener('click', function(e) {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+            });
+        });
+    </script>
+</body>
+</html>

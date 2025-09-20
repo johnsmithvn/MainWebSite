@@ -29,6 +29,31 @@ const ONE_DAY = 24 * ONE_HOUR;
 // ========== Middleware ==========
 setupMiddleware(app);
 
+// ========== Smart Frontend Detection ==========
+function detectFrontendType(req) {
+  // Method 1: Query parameter (?ui=react or ?ui=legacy)
+  const uiParam = req.query.ui;
+  if (uiParam === 'react') return 'react';
+  if (uiParam === 'legacy') return 'legacy';
+  
+  // Method 2: Cookie-based preference
+  const uiPreference = req.cookies?.ui_preference;
+  if (uiPreference === 'react') return 'react';
+  if (uiPreference === 'legacy') return 'legacy';
+  
+  // Method 3: Path-based detection  
+  if (req.path.startsWith('/app/')) return 'react';
+  if (req.path.startsWith('/legacy/')) return 'legacy';
+  
+  // Method 4: Referrer-based detection
+  const referer = req.headers.referer || '';
+  if (referer.includes('/app/') || referer.includes('?ui=react')) return 'react';
+  if (referer.includes('/legacy/') || referer.includes('?ui=legacy')) return 'legacy';
+  
+  // Default: React for production, Legacy for development  
+  return (!IS_DEV && fs.existsSync(path.join(__dirname, "../react-app/dist"))) ? 'react' : 'legacy';
+}
+
 // Security headers for production
 if (!IS_DEV) {
   app.use((req, res, next) => {
@@ -46,6 +71,26 @@ if (!IS_DEV) {
 
 // ========== Routes ==========
 app.use("/api", require("./routes"));
+
+// ========== UI Preference API ==========
+app.post('/api/ui-preference', (req, res) => {
+  const { preference } = req.body;
+  if (['react', 'legacy'].includes(preference)) {
+    res.cookie('ui_preference', preference, { 
+      maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+      httpOnly: true,
+      secure: !IS_DEV
+    });
+    res.json({ success: true, preference });
+  } else {
+    res.status(400).json({ error: 'Invalid preference' });
+  }
+});
+
+app.get('/api/ui-preference', (req, res) => {
+  const preference = req.cookies?.ui_preference || 'auto';
+  res.json({ preference, detected: detectFrontendType(req) });
+});
 
 // Helpers to detect media types
 const isImg = /\.(avif|jpe?g|png|gif|webp|bmp|svg)$/i;
@@ -150,7 +195,24 @@ app.use(
 const REACT_BUILD_PATH = path.join(__dirname, "../react-app/dist");
 if (fs.existsSync(REACT_BUILD_PATH)) {
   console.log("✅ React build found, serving production app");
+  
+  // Serve React assets directly (CSS, JS, etc.)
   app.use(
+    "/assets",
+    express.static(path.join(REACT_BUILD_PATH, "assets"), {
+      maxAge: IS_DEV ? 0 : ONE_DAY * 30 * 1000, // 30 days for assets
+      etag: !IS_DEV,
+      setHeaders: (res, filePath) => {
+        if (/\.(js|css)$/.test(filePath) && /\.[a-f0-9]{8,}\./i.test(filePath)) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        }
+      },
+    })
+  );
+  
+  // Serve React static assets with proper caching for /app route
+  app.use(
+    "/app",
     express.static(REACT_BUILD_PATH, {
       maxAge: IS_DEV ? 0 : ONE_DAY * 1000,
       etag: !IS_DEV,
@@ -161,7 +223,7 @@ if (fs.existsSync(REACT_BUILD_PATH)) {
         ) {
           res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
         } else if (filePath.endsWith(".html")) {
-          res.setHeader("Cache-Control", "public, max-age=300");
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         }
       },
       index: false,
@@ -180,10 +242,46 @@ if (fs.existsSync(REACT_BUILD_PATH)) {
   }
 }
 
+// ========== Smart Root Route ==========
 app.get("/", (req, res) => {
-  const idx = path.join(REACT_BUILD_PATH, "index.html");
-  if (!IS_DEV && fs.existsSync(idx)) return res.sendFile(idx);
+  const frontendType = detectFrontendType(req);
+  
+  // If user specifically requests interface selector or no preference
+  if (req.query.selector === 'true' || (!req.cookies?.ui_preference && !req.query.ui)) {
+    return res.sendFile(path.join(__dirname, "../frontend/public/interface-selector.html"));
+  }
+  
+  if (frontendType === 'react') {
+    const reactIndex = path.join(REACT_BUILD_PATH, "index.html");
+    if (!IS_DEV && fs.existsSync(reactIndex)) {
+      return res.sendFile(reactIndex, {
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      });
+    }
+  }
+  
+  // Default to legacy
   return res.sendFile(path.join(__dirname, "../frontend/public/home.html"));
+});
+
+// ========== React App Routes ==========
+// Direct /app access always serves React
+app.get('/app', (req, res) => {
+  const reactIndex = path.join(REACT_BUILD_PATH, "index.html");
+  if (fs.existsSync(reactIndex)) {
+    return res.sendFile(reactIndex, {
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
+  }
+  res.status(404).send("React app not built");
 });
 
 // Legacy: /app
@@ -236,8 +334,9 @@ app.get("/api/list-roots", (req, res) => {
 
 
 
-// SPA fallback
+// ========== Smart SPA Fallback ==========
 app.use((req, res, next) => {
+  // Skip API and static assets
   if (req.path.startsWith("/api/")) return next();
   if (
     req.path.startsWith("/manga/") ||
@@ -245,7 +344,8 @@ app.use((req, res, next) => {
     req.path.startsWith("/audio/") ||
     req.path.startsWith("/default/") ||
     req.path.startsWith("/src/") ||
-    req.path.startsWith("/app/")
+    req.path.startsWith("/app/") ||
+    req.path.startsWith("/dist/")
   )
     return next();
   if (
@@ -254,19 +354,32 @@ app.use((req, res, next) => {
     return next();
 
   if (req.method === "GET") {
-    const idx = path.join(REACT_BUILD_PATH, "index.html");
-    if (!IS_DEV && fs.existsSync(idx)) {
-      return res.sendFile(idx, {
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
-      });
+    const frontendType = detectFrontendType(req);
+    
+    if (frontendType === 'react') {
+      const reactIndex = path.join(REACT_BUILD_PATH, "index.html");
+      if (!IS_DEV && fs.existsSync(reactIndex)) {
+        return res.sendFile(reactIndex, {
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        });
+      }
     }
-    return res.sendFile(
-      path.join(__dirname, "../frontend/public/manga/index.html")
-    );
+    
+    // Fallback to legacy based on path or default
+    if (req.path.startsWith('/manga')) {
+      return res.sendFile(path.join(__dirname, "../frontend/public/manga/index.html"));
+    } else if (req.path.startsWith('/movie')) {
+      return res.sendFile(path.join(__dirname, "../frontend/public/movie/index.html"));
+    } else if (req.path.startsWith('/music')) {
+      return res.sendFile(path.join(__dirname, "../frontend/public/music/index.html"));
+    }
+    
+    // Default fallback
+    return res.sendFile(path.join(__dirname, "../frontend/public/home.html"));
   }
   next();
 });

@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { 
   Settings as SettingsIcon, Moon, Sun, Monitor, Globe, 
   Palette, Volume2, Eye, Database, Download, Upload,
-  Shield, User, Bell, Trash2, RotateCcw, Save
+  Shield, User, Bell, Trash2, RotateCcw, Save, Layers
 } from 'lucide-react';
 import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore, useSharedSettingsStore } from '@/store';
 import { clearSourceCache, clearAllCache as clearAllCacheKeys, clearTypeCache, clearRecentViewCache, CACHE_PREFIXES } from '@/constants/cacheKeys';
@@ -13,6 +13,7 @@ import { isCachesAPISupported } from '@/utils/browserSupport';
 import { getContentTypeFromSourceKey } from '@/utils/databaseOperations';
 import Button from '@/components/common/Button';
 import DatabaseActions from '@/components/common/DatabaseActions';
+import UISwitcher from '@/components/common/UISwitcher';
 import { useModal } from '@/components/common/Modal';
 
 const Settings = () => {
@@ -914,6 +915,7 @@ const Settings = () => {
 
   const [activeTab, setActiveTab] = useState('appearance');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showUISwitcher, setShowUISwitcher] = useState(false);
   
   // Modal hook
   const { 
@@ -933,6 +935,7 @@ const Settings = () => {
     { id: 'media', label: 'Media', icon: Volume2 },
     { id: 'account', label: 'Account', icon: User },
     { id: 'privacy', label: 'Privacy', icon: Shield },
+    { id: 'interface', label: 'Interface', icon: Layers },
     { id: 'about', label: 'About', icon: Globe }
   ];
 
@@ -1706,6 +1709,106 @@ const Settings = () => {
           </div>
         );
 
+      case 'interface':
+        return (
+          <div className="space-y-6">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              🔄 Interface Management
+            </h3>
+            
+            {/* Interface Selector */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Frontend Interface
+                  </h4>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Switch between React app (modern) and Legacy (traditional) interface
+                  </p>
+                </div>
+                <Layers className="w-8 h-8 text-blue-500" />
+              </div>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 border-2 border-blue-200 dark:border-blue-700 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="text-2xl">⚡</div>
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">React App (V2)</div>
+                        <div className="text-sm text-green-600 dark:text-green-400">Currently Active</div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      Modern interface with React, TailwindCSS, and optimized performance
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {['Fast', 'Modern', 'PWA', 'Dark Mode'].map(feature => (
+                        <span key={feature} className="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-xs rounded-full text-blue-700 dark:text-blue-300">
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <button 
+                    onClick={() => setShowUISwitcher(true)}
+                    className="p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:border-gray-400 dark:hover:border-gray-500 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="text-2xl">🏛️</div>
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">Legacy (V1)</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Switch to Legacy</div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      Traditional interface with complete features and proven stability
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {['Stable', 'Complete', 'Classic', 'Proven'].map(feature => (
+                        <span key={feature} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded-full text-gray-700 dark:text-gray-300">
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                </div>
+                
+                <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <Button 
+                    onClick={() => setShowUISwitcher(true)}
+                    className="flex-1"
+                  >
+                    <Layers className="w-4 h-4 mr-2" />
+                    Switch Interface
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.open('/?ui=legacy', '_blank')}
+                    className="flex-1"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Preview Legacy
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Tips */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+              <h5 className="font-medium text-blue-900 dark:text-blue-400 mb-2">💡 Interface Tips</h5>
+              <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
+                <li>• Add <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">?ui=react</code> or <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">?ui=legacy</code> to any URL for quick switching</li>
+                <li>• Your preference is saved and will be remembered across sessions</li>
+                <li>• Both interfaces share the same backend API and data</li>
+                <li>• You can preview any interface in a new tab without affecting your current session</li>
+              </ul>
+            </div>
+          </div>
+        );
+
       case 'about':
         return (
           <div className="space-y-6">
@@ -1848,6 +1951,12 @@ const Settings = () => {
       
       {/* Modal Component */}
       <ModalComponent />
+      
+      {/* UI Switcher Modal */}
+      <UISwitcher 
+        isOpen={showUISwitcher} 
+        onClose={() => setShowUISwitcher(false)} 
+      />
     </div>
   );
 };
