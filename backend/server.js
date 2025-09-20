@@ -417,27 +417,88 @@ function setupGracefulShutdown(server) {
   }
 }
 
+// ========== Pretty console sections ==========
+function printSection(title, rows) {
+  const items = Array.isArray(rows) ? rows : [];
+  const keyLen = items.reduce((m, [k]) => Math.max(m, String(k).length), 0);
+  const maxWidth = 110;
+  const width = Math.min(maxWidth, Math.max(56, 8 + keyLen + 36));
+  const line = "=".repeat(width);
+  const sub = "-".repeat(width);
+  console.log("\n" + line);
+  console.log(`:: ${title}`);
+  console.log(sub);
+  for (const [k, v] of items) {
+    const key = String(k).padEnd(keyLen, " ");
+    console.log(`• ${key}: ${v}`);
+  }
+  console.log(line);
+}
+
 // ========== Start exactly ONCE (one port) ==========
 (function start() {
+  // Get Tailscale config from environment
+  const TAILSCALE_DEVICE = process.env.TAILSCALE_DEVICE || '[DEVICE]';
+  const TAILSCALE_TAILNET = process.env.TAILSCALE_TAILNET || '[TAILNET]';
+  const TAILSCALE_DOMAIN = `${TAILSCALE_DEVICE}.${TAILSCALE_TAILNET}.ts.net`;
+  // Consistent SSL paths (match loader in ../ssl)
+  const SSL_DIR = path.join(__dirname, "../ssl");
+  const SSL_KEY = path.join(SSL_DIR, "private-key.pem");
+  const SSL_CERT = path.join(SSL_DIR, "certificate.pem");
+  
   const sslOptions = ENABLE_HTTPS ? loadSSLCertificates() : null;
 
   if (ENABLE_HTTPS && sslOptions) {
-    console.log("🔐 Starting HTTPS server with SSL certificates...");
+    console.log("✅ SSL certificates found - starting HTTPS server...");
     const httpsServer = https.createServer(sslOptions, app);
     httpsServer.listen(PORT, "0.0.0.0", () => {
-      console.log(`\n🚀 MainWebSite HTTPS Server running!`);
-      console.log(`   Local:     https://localhost:${PORT}`);
-      console.log(`   Mode:      ${IS_DEV ? "development" : "production"}\n`);
-      console.log("🔐 SSL Certificate loaded successfully!");
-      console.log(
-        '⚠️  Self-signed: trình duyệt sẽ cảnh báo, chọn "Advanced" -> "Proceed".'
-      );
+      printSection("Server started [HTTPS]", [
+        ["Local", `https://localhost:${PORT}`],
+        ["Tailscale", `https://${TAILSCALE_DOMAIN}:${PORT}`],
+        ["Mode", IS_DEV ? "development" : "production"],
+        ["Certificates", "OK"],
+      ]);
+      console.log('Note: Self-signed certificates may show a browser warning. Choose "Advanced" -> "Proceed".');
     });
     setupGracefulShutdown(httpsServer);
-  } else {
+  } else if (ENABLE_HTTPS && !sslOptions) {
+    printSection("HTTPS requested but certificates missing", [
+      ["Problem", "SSL certificates not found"],
+      ["Expected key", SSL_KEY],
+      ["Expected cert", SSL_CERT],
+    ]);
+    printSection("HOW TO FIX", [
+      ["1", `mkcert ${TAILSCALE_DOMAIN}`],
+      ["2", `move ${TAILSCALE_DOMAIN}.pem ${SSL_CERT}`],
+      ["3", `move ${TAILSCALE_DOMAIN}-key.pem ${SSL_KEY}`],
+      ["4", "restart server"],
+    ]);
+    console.log("Falling back to HTTP server without Tailscale HTTPS...\n");
+    
     const httpServer = app.listen(PORT, "0.0.0.0", () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+      printSection("Server started [HTTP fallback]", [
+        ["Local", `http://localhost:${PORT}`],
+        ["Tailscale", "NOT ACCESSIBLE (requires HTTPS)"],
+        ["Mode", process.env.NODE_ENV],
+      ]);
+      console.log("WARNING: Tailscale access requires HTTPS with valid certificates!\n");
+    });
+    setupGracefulShutdown(httpServer);
+  } else {
+    console.log("ℹ️  HTTPS disabled in configuration - starting HTTP server...");
+    const httpServer = app.listen(PORT, "0.0.0.0", () => {
+      printSection("Server started [HTTP]", [
+        ["Local", `http://localhost:${PORT}`],
+        ["Tailscale", "NOT ACCESSIBLE (HTTPS disabled)"],
+        ["Mode", process.env.NODE_ENV || "development"],
+      ]);
+      printSection("Enable HTTPS for Tailscale", [
+        ["1", "Set ENABLE_HTTPS=true in backend/.env"],
+        ["2", `mkcert ${TAILSCALE_DOMAIN}`],
+        ["3", `move ${TAILSCALE_DOMAIN}.pem ${SSL_CERT}`],
+        ["4", `move ${TAILSCALE_DOMAIN}-key.pem ${SSL_KEY}`],
+        ["5", "restart server"],
+      ]);
     });
     setupGracefulShutdown(httpServer);
   }

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [Unreleased] - 2025-09-20
+
+### Fixed
+- 🐛 [2025-09-20] Fixed unclear SSL logging causing confusion about Tailscale access → Enhanced server startup logging with detailed SSL certificate paths, clear HTTPS/HTTP mode indication, and specific fallback reasons with setup instructions
+- 🔐 [2025-09-20] Fixed hardcoded Tailscale domain in server logs → Moved domain configuration to environment variables (TAILSCALE_DEVICE, TAILSCALE_TAILNET) for better security and flexibility
+ - 🐛 [2025-09-20] Fixed startup log readability → Thiết kế lại log theo từng section (SSL / Tailscale configuration, Server started (HTTPS/HTTP), How to fix) với viền phân tách rõ ràng, đường dẫn SSL đồng bộ ../ssl, hướng dẫn mkcert/move cụ thể để tránh hiểu nhầm
+
 ## [Unreleased] - 2025-09-14
 
 ### Added
