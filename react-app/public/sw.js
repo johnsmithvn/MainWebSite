@@ -238,24 +238,23 @@ async function mangaImageStrategy(request) {
     // Check our offline chapter cache first using centralized cache getter
     const chapterCache = await getCacheInstance(IMAGE_CACHE);
     const cachedImage = await chapterCache.match(request);
-    
+
     if (cachedImage) {
       console.log('🖼️ Offline manga image:', getResourceName(request.url));
       return cachedImage;
     }
-    
-    // For online reading, try network with timeout
+
+    // For online reading, prefer the live network response without forcing a timeout
     console.log('🌐 Online manga image:', getResourceName(request.url));
-    const networkResponse = await Promise.race([
-      fetch(request),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Image timeout')), NETWORK_TIMEOUT)
-      )
-    ]);
-    
+    const networkResponse = await fetch(request);
+
+    if (!networkResponse || !networkResponse.ok) {
+      throw new Error(`Image request failed with status ${networkResponse?.status}`);
+    }
+
     return networkResponse;
   } catch (error) {
-    console.log('❌ Manga image failed, serving fallback');
+    console.log('❌ Manga image failed, serving fallback:', error.message);
     return getFallbackImage();
   }
 }
