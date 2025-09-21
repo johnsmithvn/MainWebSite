@@ -265,18 +265,65 @@ async function navigationStrategy(request) {
   try {
     console.log('🧭 Navigation:', request.url);
     const networkResponse = await fetch(request);
+
+    if (networkResponse && networkResponse.ok) {
+      try {
+        const cache = await getCacheInstance(DYNAMIC_CACHE);
+
+        await cache.put(request, networkResponse.clone());
+
+        const appShellPaths = ['/', '/index.html'];
+        await Promise.all(
+          appShellPaths.map(async (path) => {
+            try {
+              await cache.put(path, networkResponse.clone());
+            } catch (cacheError) {
+              console.warn('⚠️ Failed to update app shell cache for', path, cacheError);
+            }
+          })
+        );
+      } catch (cacheError) {
+        console.warn('⚠️ Failed to cache navigation response:', cacheError);
+      }
+    }
+
     return networkResponse;
   } catch (error) {
     console.log('📴 Offline navigation fallback:', request.url);
 
-    // Get cache instance using centralized getter
-    const cache = await getCacheInstance(STATIC_CACHE);
+    try {
+      const dynamicCache = await getCacheInstance(DYNAMIC_CACHE);
 
-    // Serve dedicated offline page when available
-    const offlinePage = await cache.match('/offline.html');
-    if (offlinePage) {
-      console.log('✅ Serving offline fallback page');
-      return offlinePage;
+      const cachedResponse = await dynamicCache.match(request);
+      if (cachedResponse) {
+        console.log('✅ Serving cached navigation response');
+        return cachedResponse;
+      }
+
+      const appShellPaths = ['/', '/index.html'];
+      for (const path of appShellPaths) {
+        const appShell = await dynamicCache.match(path);
+        if (appShell) {
+          console.log('✅ Serving cached app shell fallback');
+          return appShell;
+        }
+      }
+    } catch (cacheError) {
+      console.warn('⚠️ Failed to read navigation cache:', cacheError);
+    }
+
+    try {
+      // Get cache instance using centralized getter
+      const cache = await getCacheInstance(STATIC_CACHE);
+
+      // Serve dedicated offline page when available
+      const offlinePage = await cache.match('/offline.html');
+      if (offlinePage) {
+        console.log('✅ Serving offline fallback page');
+        return offlinePage;
+      }
+    } catch (fallbackError) {
+      console.warn('⚠️ Failed to serve offline fallback page:', fallbackError);
     }
 
     // Final fallback with inline HTML
