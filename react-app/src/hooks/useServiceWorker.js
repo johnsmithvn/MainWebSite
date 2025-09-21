@@ -194,8 +194,8 @@ export function useServiceWorker() {
 
   // Helper to format cache names for display
   const formatCacheName = (name) => {
-    if (name.includes('static')) return '📦 App Shell';
-    if (name.includes('dynamic')) return '🌐 API Cache';
+    if (name.includes('offline-core')) return '📴 Offline Essentials';
+    if (name.includes('reader-dynamic') || name.includes('dynamic')) return '🌐 API Cache';
     if (name.includes('chapter-images')) return '🖼️ Offline Images';
     return `💾 ${name}`;
   };

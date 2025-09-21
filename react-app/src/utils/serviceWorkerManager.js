@@ -163,12 +163,21 @@ class ServiceWorkerManager {
 
     try {
       const cacheInfo = await this.getCacheInfo();
-      const hasAppShell = cacheInfo?.caches?.['manga-static-v2.0.0']?.count > 0;
-      
+      const caches = cacheInfo?.caches || {};
+      const offlineEntry = Object.values(caches).find((entry) => entry?.type === 'offline-core');
+      const hasOfflineFallback = Array.isArray(offlineEntry?.urls)
+        ? offlineEntry.urls.some((url) => url === '/offline.html')
+        : false;
+      const hasChapterImages = (caches['chapter-images']?.count || 0) > 0;
+
       return {
-        capable: hasAppShell,
-        reason: hasAppShell ? 'App shell cached' : 'App shell not cached',
-        cacheInfo
+        capable: hasOfflineFallback,
+        reason: hasOfflineFallback ? 'Offline fallback cached' : 'Offline fallback missing',
+        cacheInfo,
+        offlineStatus: {
+          hasOfflineFallback,
+          hasChapterImages
+        }
       };
     } catch (error) {
       return {

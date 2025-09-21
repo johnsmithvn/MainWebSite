@@ -12,25 +12,19 @@ const DEFAULT_IMAGES = {
   favicon: '/default/favicon.png'
 };
 
-const CACHE_VERSION = 'v2.0.0';
-const STATIC_CACHE = `manga-static-${CACHE_VERSION}`;
-const DYNAMIC_CACHE = `manga-dynamic-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v3.0.0';
+const STATIC_CACHE = `offline-core-${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `reader-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'chapter-images'; // Keep existing name for compatibility
 
-// Critical app shell resources  
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
-  // Default images
+// Offline essentials
+const OFFLINE_CORE_ASSETS = [
+  '/offline.html',
   DEFAULT_IMAGES.favicon,
   DEFAULT_IMAGES.cover,
   DEFAULT_IMAGES.folder,
   DEFAULT_IMAGES.music,
-  DEFAULT_IMAGES.video,
-  // Vite build assets (will be generated at build time)
-  '/assets/index.css',
-  '/assets/index.js'
+  DEFAULT_IMAGES.video
 ];
 
 // Network timeout for better UX
@@ -41,93 +35,46 @@ const cacheInstances = new Map();
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('🔧 SW installing v2.0.0...');
-  
-  event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then(async (cache) => {
-        console.log('📦 Caching app shell...');
-        
-        // Cache essential resources first
-        const essentialAssets = [
-          '/',
-          '/index.html',
-          '/offline.html',  // Add offline fallback page
-          DEFAULT_IMAGES.favicon,
-          DEFAULT_IMAGES.cover,
-          DEFAULT_IMAGES.folder,
-          DEFAULT_IMAGES.music,
-          DEFAULT_IMAGES.video
-        ];
-        
-        // Try to cache all essential assets
+  console.log('🔧 SW installing v3.0.0...');
+
+  event.waitUntil((async () => {
+    try {
+      const cache = await caches.open(STATIC_CACHE);
+      console.log('📦 Caching offline essentials...');
+
+      for (const asset of OFFLINE_CORE_ASSETS) {
         try {
-          await cache.addAll(essentialAssets);
-          console.log('✅ Essential assets cached');
+          await cache.add(asset);
+          console.log('✅ Cached offline asset:', asset);
         } catch (error) {
-          console.warn('⚠️ Some essential assets failed to cache:', error);
-          // Fallback to individual caching for essential assets
-          for (const asset of essentialAssets) {
-            try {
-              await cache.add(asset);
-            } catch (individualError) {
-              console.warn('⚠️ Failed to cache essential asset:', asset);
-            }
-          }
+          console.warn('⚠️ Failed to cache offline asset:', asset, error);
         }
-        
-        // Cache optional assets groups with better error handling
-        const assetGroups = [
-          {
-            name: 'Vite dev assets',
-            assets: ['/src/main.jsx', '/src/App.jsx', '/src/index.css', '/@vite/client']
-          },
-          {
-            name: 'Production assets', 
-            assets: ['/manifest.webmanifest', '/assets/index.css', '/assets/index.js']
-          }
-        ];
-        
-        for (const group of assetGroups) {
-          try {
-            await cache.addAll(group.assets);
-            console.log(`✅ ${group.name} cached successfully`);
-          } catch (error) {
-            console.warn(`⚠️ Failed to cache ${group.name} as group, trying individually...`);
-            // Fallback to individual caching
-            for (const asset of group.assets) {
-              try {
-                await cache.add(asset);
-                console.log(`✅ Cached ${group.name.toLowerCase()}:`, asset);
-              } catch (individualError) {
-                console.warn(`⚠️ Failed to cache ${group.name.toLowerCase()}:`, asset);
-              }
-            }
-          }
-        }
-        
-        return self.skipWaiting();
-      })
-      .catch((error) => {
-        console.error('❌ Failed to cache app shell:', error);
-      })
-  );
+      }
+    } catch (error) {
+      console.error('❌ Failed to prepare offline cache:', error);
+    }
+
+    await self.skipWaiting();
+  })());
 });
 
 // Activate event - cleanup old caches
 self.addEventListener('activate', (event) => {
-  console.log('🚀 SW activating v2.0.0...');
-  
+  console.log('🚀 SW activating v3.0.0...');
+
   event.waitUntil(
     Promise.all([
       // Cleanup old caches
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE && 
-                cacheName !== DYNAMIC_CACHE && 
+            const managedPrefixes = ['manga-', 'mainws-', 'offline-core-', 'reader-dynamic-'];
+            const isManagedCache = managedPrefixes.some(prefix => cacheName.startsWith(prefix));
+
+            if (cacheName !== STATIC_CACHE &&
+                cacheName !== DYNAMIC_CACHE &&
                 cacheName !== IMAGE_CACHE &&
-                (cacheName.includes('manga-') || cacheName.includes('mainws-'))) {
+                isManagedCache) {
               console.log('🗑️ Deleting old cache:', cacheName);
               // Remove from cache instances map too
               cacheInstances.delete(cacheName);
@@ -320,26 +267,18 @@ async function navigationStrategy(request) {
     const networkResponse = await fetch(request);
     return networkResponse;
   } catch (error) {
-    console.log('📦 Offline navigation, serving app shell');
-    
+    console.log('📴 Offline navigation fallback:', request.url);
+
     // Get cache instance using centralized getter
     const cache = await getCacheInstance(STATIC_CACHE);
-    
-    // Try to serve React app first
-    const appShell = await cache.match('/index.html') || await cache.match('/');
-    
-    if (appShell) {
-      console.log('✅ Serving React app shell for offline navigation');
-      return appShell;
-    }
-    
-    // If React app not available, serve offline page
+
+    // Serve dedicated offline page when available
     const offlinePage = await cache.match('/offline.html');
     if (offlinePage) {
       console.log('✅ Serving offline fallback page');
       return offlinePage;
     }
-    
+
     // Final fallback with inline HTML
     return new Response(`
       <!DOCTYPE html>
@@ -369,14 +308,19 @@ async function navigationStrategy(request) {
 
 // Helper functions
 function isStaticAsset(request) {
-  const url = request.url;
-  return url.includes('/static/') || 
-         url.includes('/assets/') ||
-         url.includes('/src/') ||  // Vite dev mode
-         url.includes('/@vite/') || // Vite client
-         url.includes('/manifest.webmanifest') ||
-         url.includes('/default/') ||
-         url.includes('favicon');
+  try {
+    const url = new URL(request.url);
+
+    if (url.origin !== self.location.origin) {
+      return false;
+    }
+
+    return url.pathname === '/offline.html' ||
+           url.pathname.startsWith('/default/');
+  } catch (error) {
+    console.warn('⚠️ Failed to inspect static asset request:', error);
+    return false;
+  }
 }
 
 function isAPIRequest(request) {
@@ -540,10 +484,23 @@ async function getCacheInfo() {
     for (const cacheName of cacheNames) {
       const cache = await caches.open(cacheName);
       const keys = await cache.keys();
-      info.caches[cacheName] = {
+      const cacheType = getCacheType(cacheName);
+      const cacheInfo = {
         count: keys.length,
-        type: getCacheType(cacheName)
+        type: cacheType
       };
+
+      if (cacheType === 'offline-core') {
+        cacheInfo.urls = keys.map((request) => {
+          try {
+            return new URL(request.url).pathname;
+          } catch (error) {
+            return request.url;
+          }
+        });
+      }
+
+      info.caches[cacheName] = cacheInfo;
     }
     
     return info;
@@ -574,12 +531,13 @@ async function clearSpecificCache(cacheName) {
 }
 
 function getCacheType(cacheName) {
-  if (cacheName.includes('static')) return 'static';
-  if (cacheName.includes('dynamic')) return 'dynamic';
-  if (cacheName.includes('chapter-images')) return 'images';
+  if (cacheName === STATIC_CACHE) return 'offline-core';
+  if (cacheName === DYNAMIC_CACHE) return 'dynamic';
+  if (cacheName === IMAGE_CACHE) return 'images';
+  if (cacheName.includes('manga-') || cacheName.includes('mainws-')) return 'legacy';
   return 'unknown';
 }
 
 // Performance monitoring logic moved to main fetch handler.
 
-console.log('🚀 Enhanced Service Worker v2.0.0 loaded');
+console.log('🚀 Enhanced Service Worker v3.0.0 loaded');

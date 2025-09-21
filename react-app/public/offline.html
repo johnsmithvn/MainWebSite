@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Offline - MainWebSite</title>
     <style>
+        :root {
+            color-scheme: dark light;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1f2937 0%, #0f172a 100%);
             color: white;
             min-height: 100vh;
             display: flex;
@@ -17,61 +20,147 @@
             justify-content: center;
         }
         .container {
+            width: 100%;
+            max-width: 960px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+        .header {
             text-align: center;
-            max-width: 400px;
         }
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
+            font-size: clamp(2.2rem, 4vw, 3rem);
+            margin-bottom: 12px;
         }
-        p {
-            font-size: 1.1rem;
-            margin-bottom: 2rem;
-            opacity: 0.9;
+        p.description {
+            font-size: 1.05rem;
+            margin: 0 auto;
+            max-width: 560px;
+            color: rgba(255, 255, 255, 0.8);
         }
-        .buttons {
+        .modes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+        }
+        .mode-card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 18px;
+            padding: 28px 24px;
+            text-align: center;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
             display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 16px;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+        .mode-card.ready:hover {
+            transform: translateY(-6px);
+            border-color: rgba(74, 222, 128, 0.6);
+        }
+        .mode-icon {
+            font-size: 48px;
+        }
+        .mode-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+        .mode-description {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.75);
+            min-height: 60px;
         }
         button {
-            background: rgba(255,255,255,0.2);
-            border: 2px solid rgba(255,255,255,0.3);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
+            border: none;
+            border-radius: 9999px;
+            padding: 12px 20px;
             font-size: 1rem;
-            transition: all 0.3s ease;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease;
         }
-        button:hover {
-            background: rgba(255,255,255,0.3);
+        button.primary {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            box-shadow: 0 10px 20px rgba(34, 197, 94, 0.35);
+        }
+        button.primary:hover {
             transform: translateY(-2px);
         }
-        .icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
+        button.secondary {
+            background: rgba(148, 163, 184, 0.2);
+            color: rgba(226, 232, 240, 0.75);
+            cursor: not-allowed;
+        }
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .actions button {
+            background: rgba(148, 163, 184, 0.15);
+            color: white;
+            border-radius: 12px;
+        }
+        .actions button:hover {
+            transform: none;
+            opacity: 0.85;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="icon">📱</div>
-        <h1>App đang offline</h1>
-        <p>Không thể kết nối với server. App đang chạy ở chế độ offline với các tính năng giới hạn.</p>
-        <div class="buttons">
-            <button onclick="window.location.reload()">🔄 Thử lại</button>
-            <button onclick="goToMain()">🏠 Trang chủ</button>
+        <header class="header">
+            <div style="font-size: 64px; margin-bottom: 16px;">📴</div>
+            <h1>Không có kết nối mạng</h1>
+            <p class="description">
+                MainWebSite đang chạy ở chế độ offline. Bạn vẫn có thể truy cập nội dung đã lưu trước đó.
+            </p>
+        </header>
+
+        <section class="modes">
+            <article class="mode-card ready">
+                <div class="mode-icon">📚</div>
+                <div class="mode-title">Manga</div>
+                <p class="mode-description">
+                    Truy cập các chapter đã download và tiếp tục đọc ngay cả khi mất mạng.
+                </p>
+                <button class="primary" onclick="openMode('/offline/manga')">Mở thư viện</button>
+            </article>
+            <article class="mode-card">
+                <div class="mode-icon">🎬</div>
+                <div class="mode-title">Movie</div>
+                <p class="mode-description">
+                    Chế độ xem phim offline sẽ có mặt trong những bản cập nhật sắp tới.
+                </p>
+                <button class="secondary" disabled>Đang phát triển</button>
+            </article>
+            <article class="mode-card">
+                <div class="mode-icon">🎵</div>
+                <div class="mode-title">Music</div>
+                <p class="mode-description">
+                    Đang chuẩn bị hỗ trợ nghe nhạc offline. Hãy đợi thêm một chút nhé!
+                </p>
+                <button class="secondary" disabled>Đang phát triển</button>
+            </article>
+        </section>
+
+        <div class="actions">
+            <button onclick="window.location.reload()">🔄 Thử kết nối lại</button>
+            <button onclick="openMode('/')">🏠 Quay về trang chủ</button>
         </div>
     </div>
 
     <script>
-        function goToMain() {
-            window.location.href = '/';
+        function openMode(path) {
+            window.location.href = path;
         }
-        
-        // Auto retry after 30 seconds
+
         setTimeout(() => {
             console.log('Auto retrying connection...');
             window.location.reload();

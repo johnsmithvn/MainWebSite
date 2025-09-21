@@ -21,7 +21,10 @@ import MusicPlayerV2 from '@/pages/music/MusicPlayerV2';
 import MusicPlaylists from '@/pages/music/MusicPlaylists';
 import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
-import OfflineLibrary from '@/pages/OfflineLibrary';
+import OfflineHome from '@/pages/offline/OfflineHome';
+import OfflineMangaLibrary from '@/pages/offline/OfflineMangaLibrary';
+import OfflineMovieLibrary from '@/pages/offline/OfflineMovieLibrary';
+import OfflineMusicLibrary from '@/pages/offline/OfflineMusicLibrary';
 
 function MusicPlayerRouter() {
   const { playerSettings } = useMusicStore();
@@ -85,7 +88,12 @@ function App() {
         
         {/* Settings */}
         <Route path="settings" element={<Settings />} />
-        <Route path="offline" element={<OfflineLibrary />} />
+        <Route path="offline">
+          <Route index element={<OfflineHome />} />
+          <Route path="manga" element={<OfflineMangaLibrary />} />
+          <Route path="movie" element={<OfflineMovieLibrary />} />
+          <Route path="music" element={<OfflineMusicLibrary />} />
+        </Route>
         
         {/* 404 */}
         <Route path="*" element={<NotFound />} />

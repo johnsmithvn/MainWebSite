@@ -1,8 +1,8 @@
 // 📁 src/components/common/Layout.jsx
 // 🏗️ Main layout component
 
-import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './Header';
@@ -14,9 +14,36 @@ import PlaylistModal from '@/components/music/PlaylistModal';
 const Layout = () => {
   const { sidebarOpen, loading, setSidebarOpen } = useUIStore();
   const location = useLocation();
+  const navigate = useNavigate();
   const isMoviePlayer = location.pathname.startsWith('/movie/player');
   const isHomePage = location.pathname === '/';
   const isSelectPage = location.pathname === '/manga/select';
+
+  useEffect(() => {
+    const offlineAllowedPrefixes = ['/offline', '/manga/reader'];
+
+    const redirectToOffline = () => {
+      if (typeof window === 'undefined' || navigator.onLine) {
+        return;
+      }
+
+      const currentPath = window.location.pathname;
+      const isAllowed = offlineAllowedPrefixes.some((prefix) => currentPath.startsWith(prefix));
+
+      if (!isAllowed) {
+        navigate('/offline', { replace: true });
+      }
+    };
+
+    // Run immediately if the app loads offline
+    redirectToOffline();
+
+    window.addEventListener('offline', redirectToOffline);
+
+    return () => {
+      window.removeEventListener('offline', redirectToOffline);
+    };
+  }, [navigate, location.pathname]);
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-900 transition-colors duration-200">
