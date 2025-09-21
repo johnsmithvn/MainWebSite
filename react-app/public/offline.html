@@ -3,39 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offline - MainWebSite</title>
+    <title>Offline Mode - MainWebSite</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 20px;
         }
+        
         .container {
             text-align: center;
-            max-width: 400px;
+            max-width: 500px;
+            width: 100%;
         }
+        
+        .header {
+            margin-bottom: 3rem;
+        }
+        
         h1 {
             font-size: 2.5rem;
             margin-bottom: 1rem;
+            font-weight: 600;
         }
-        p {
+        
+        .subtitle {
             font-size: 1.1rem;
-            margin-bottom: 2rem;
             opacity: 0.9;
+            margin-bottom: 2rem;
         }
-        .buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
+        
+        .mode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
         }
-        button {
+        
+        .mode-card {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 16px;
+            padding: 2rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .mode-card:hover {
+            transform: translateY(-8px);
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.4);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        
+        .mode-card:active {
+            transform: translateY(-4px);
+        }
+        
+        .mode-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .mode-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .mode-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .mode-card.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .mode-card.disabled:hover {
+            transform: none;
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.2);
+            box-shadow: none;
+        }
+        
+        .coming-soon {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        
+        .footer {
+            margin-top: 3rem;
+        }
+        
+        .retry-btn {
             background: rgba(255,255,255,0.2);
             border: 2px solid rgba(255,255,255,0.3);
             color: white;
@@ -44,25 +129,92 @@
             cursor: pointer;
             font-size: 1rem;
             transition: all 0.3s ease;
+            margin: 0 8px;
         }
-        button:hover {
+        
+        .retry-btn:hover {
             background: rgba(255,255,255,0.3);
             transform: translateY(-2px);
         }
-        .icon {
-            font-size: 4rem;
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #ff4444;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .network-status {
             margin-bottom: 1rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .mode-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .mode-card {
+                padding: 1.5rem 1rem;
+            }
+            
+            .mode-icon {
+                font-size: 2.5rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="icon">📱</div>
-        <h1>App đang offline</h1>
-        <p>Không thể kết nối với server. App đang chạy ở chế độ offline với các tính năng giới hạn.</p>
-        <div class="buttons">
-            <button onclick="window.location.reload()">🔄 Thử lại</button>
-            <button onclick="goToMain()">🏠 Trang chủ</button>
+        <div class="header">
+            <h1>📱 Offline Mode</h1>
+            <div class="network-status">
+                <span class="status-indicator"></span>
+                Không có kết nối mạng
+            </div>
+            <p class="subtitle">Chọn loại nội dung bạn muốn truy cập offline</p>
+        </div>
+        
+        <div class="mode-grid">
+            <a href="/offline-manga" class="mode-card">
+                <span class="mode-icon">📚</span>
+                <div class="mode-title">Manga</div>
+                <div class="mode-subtitle">Đọc truyện offline</div>
+            </a>
+            
+            <a href="/offline-movie" class="mode-card disabled">
+                <span class="coming-soon">Soon</span>
+                <span class="mode-icon">🎬</span>
+                <div class="mode-title">Movie</div>
+                <div class="mode-subtitle">Xem phim offline</div>
+            </a>
+            
+            <a href="/offline-music" class="mode-card disabled">
+                <span class="coming-soon">Soon</span>
+                <span class="mode-icon">🎵</span>
+                <div class="mode-title">Music</div>
+                <div class="mode-subtitle">Nghe nhạc offline</div>
+            </a>
+        </div>
+        
+        <div class="footer">
+            <button class="retry-btn" onclick="checkConnection()">🔄 Kiểm tra kết nối</button>
+            <button class="retry-btn" onclick="goToMain()">🏠 Trang chủ</button>
         </div>
     </div>
 
@@ -71,11 +223,42 @@
             window.location.href = '/';
         }
         
-        // Auto retry after 30 seconds
-        setTimeout(() => {
-            console.log('Auto retrying connection...');
+        function checkConnection() {
+            console.log('Checking connection...');
             window.location.reload();
+        }
+        
+        // Auto check connection every 30 seconds
+        setInterval(() => {
+            if (navigator.onLine) {
+                console.log('Connection restored, redirecting...');
+                window.location.href = '/';
+            }
         }, 30000);
+        
+        // Update online status indicator
+        function updateOnlineStatus() {
+            const indicator = document.querySelector('.status-indicator');
+            const status = document.querySelector('.network-status');
+            
+            if (navigator.onLine) {
+                indicator.style.background = '#44ff44';
+                status.innerHTML = '<span class="status-indicator"></span>Đã kết nối - đang chuyển hướng...';
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                indicator.style.background = '#ff4444';
+                status.innerHTML = '<span class="status-indicator"></span>Không có kết nối mạng';
+            }
+        }
+        
+        // Listen for online/offline events
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        
+        // Initial status check
+        updateOnlineStatus();
     </script>
 </body>
 </html>

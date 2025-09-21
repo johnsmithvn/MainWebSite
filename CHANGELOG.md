@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## [Unreleased] - 2025-09-21
+
+### 🔄 Offline Mode Refactoring
+
+- **🚀 [2025-09-21] Restructured offline functionality architecture** → Created dedicated `/pages/offline/` folder with modular offline components: OfflineHome, OfflineManga, OfflineMovie, OfflineMusic
+- **📱 [2025-09-21] Enhanced offline user experience** → Replaced single offline library with mode selection interface featuring Manga (ready), Movie (coming soon), Music (coming soon) options
+- **⚡ [2025-09-21] Optimized ServiceWorker caching strategy** → Hybrid approach: cache offline.html for static access + minimal React app for offline routing functionality
+- **🎯 [2025-09-21] Improved offline navigation** → ServiceWorker detects `/offline/*` routes and serves React app, while serving static offline.html for network failures
+- **🗂️ [2025-09-21] Reorganized offline routing** → Migrated from `/offline` → OfflineLibrary to nested structure: `/offline` → OfflineHome, `/offline/manga` → OfflineManga, with future `/offline/movie` and `/offline/music` routes
+
+### Fixed
+
+- 🐛 **[2025-09-21] Fixed offline routing cache miss** → Added index.html and enhanced static asset detection to support offline React routing, resolving issue where clicking Manga in offline mode failed to load library
+- 🐛 **[2025-09-21] Fixed manga reader offline functionality** → Enhanced ServiceWorker to handle `/manga/reader/*` routes, added offline data loading in MangaReader component, and graceful API fallbacks for offline mode
+- 🐛 **[2025-09-21] Fixed offline route path matching** → Changed ServiceWorker navigationStrategy from `/offline/` to `/offline` (removed trailing slash) to properly serve React app for `/offline` path instead of static offline.html
+- 🐛 **[2025-09-21] Fixed offline routing structure** → Changed `/offline` to go directly to manga library instead of mode selection page, moved OfflineHome to `/offline/home` route for simplified UX
+- 🔄 **[2025-09-21] Refactored offline routes architecture** → Changed from nested `/offline/*` to flat `/offline-manga`, `/offline-movie`, `/offline-music` structure to avoid routing conflicts and improve navigation clarity
+
+### Added
+
+- ✨ **OfflineHome component** → Beautiful mode selection page with 3 cards (Manga/Movie/Music), network status indicator, and smooth transitions
+- ✨ **OfflineManga component** → Refactored OfflineLibrary with back navigation and improved UX
+- ✨ **OfflineMovie/OfflineMusic placeholders** → Coming soon pages with feature previews and navigation to online versions
+- ✨ **Enhanced offline.html** → Modern UI with glassmorphism design, auto connection detection, and intuitive mode selection
+
+### Changed
+
+- 🔄 **ServiceWorker cache policy** → Only cache offline.html and reader resources instead of full app shell
+- 🔄 **Offline routing structure** → Nested routes for better organization and future expansion
+- 🔄 **Import paths** → Updated App.jsx to use new offline component structure
+
+### Removed
+
+- 🗑️ **Original OfflineLibrary.jsx** → Replaced with modular offline components in dedicated folder
+
+---
+
 ## [Unreleased] - 2025-09-14
 
 ### Fixed

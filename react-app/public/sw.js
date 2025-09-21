@@ -12,25 +12,23 @@ const DEFAULT_IMAGES = {
   favicon: '/default/favicon.png'
 };
 
-const CACHE_VERSION = 'v2.0.0';
+const CACHE_VERSION = 'v2.1.0';
 const STATIC_CACHE = `manga-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `manga-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'chapter-images'; // Keep existing name for compatibility
 
-// Critical app shell resources  
+// Minimal offline resources + basic React app cho offline routing
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
+  '/offline.html',
+  '/index.html',  // Cần cho React routing offline
   '/manifest.webmanifest',
-  // Default images
+  // Default images for reader fallback
   DEFAULT_IMAGES.favicon,
   DEFAULT_IMAGES.cover,
   DEFAULT_IMAGES.folder,
   DEFAULT_IMAGES.music,
-  DEFAULT_IMAGES.video,
-  // Vite build assets (will be generated at build time)
-  '/assets/index.css',
-  '/assets/index.js'
+  DEFAULT_IMAGES.video
+  // Vite assets sẽ được cache động khi load
 ];
 
 // Network timeout for better UX
@@ -41,7 +39,7 @@ const cacheInstances = new Map();
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('🔧 SW installing v2.0.0...');
+  console.log('🔧 SW installing v2.1.0...');
   
   event.waitUntil(
     caches.open(STATIC_CACHE)
@@ -281,6 +279,20 @@ async function networkFirstWithTimeout(request, cacheName) {
       return cachedResponse;
     }
     
+    // Special handling for API requests when offline
+    if (isAPIRequest(request)) {
+      console.log('🔌 API offline fallback');
+      return new Response(JSON.stringify({
+        error: 'OFFLINE_MODE',
+        message: 'API not available offline',
+        offline: true
+      }), {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     return handleFetchError(request, error);
   }
 }
@@ -313,27 +325,38 @@ async function mangaImageStrategy(request) {
   }
 }
 
-// Navigation strategy for SPA
+// Navigation strategy for offline routing
 async function navigationStrategy(request) {
+  const url = new URL(request.url);
+  
   try {
     console.log('🧭 Navigation:', request.url);
     const networkResponse = await fetch(request);
     return networkResponse;
   } catch (error) {
-    console.log('📦 Offline navigation, serving app shell');
+    // Check if it's an offline route OR reader route that needs React app
+    if (url.pathname.startsWith('/offline') || 
+        url.pathname.startsWith('/manga/reader') ||
+        url.pathname.includes('/reader')) {
+      console.log('📦 Offline/Reader route detected, serving React app');
+      
+      // Get cache instance
+      const cache = await getCacheInstance(STATIC_CACHE);
+      
+      // Serve React app for offline/reader routes
+      const reactApp = await cache.match('/index.html') || await cache.match('/');
+      if (reactApp) {
+        console.log('✅ Serving React app for offline/reader routing');
+        return reactApp;
+      }
+    }
+    
+    console.log('📦 Offline navigation, serving offline page');
     
     // Get cache instance using centralized getter
     const cache = await getCacheInstance(STATIC_CACHE);
     
-    // Try to serve React app first
-    const appShell = await cache.match('/index.html') || await cache.match('/');
-    
-    if (appShell) {
-      console.log('✅ Serving React app shell for offline navigation');
-      return appShell;
-    }
-    
-    // If React app not available, serve offline page
+    // Serve offline page for other routes
     const offlinePage = await cache.match('/offline.html');
     if (offlinePage) {
       console.log('✅ Serving offline fallback page');
@@ -376,7 +399,16 @@ function isStaticAsset(request) {
          url.includes('/@vite/') || // Vite client
          url.includes('/manifest.webmanifest') ||
          url.includes('/default/') ||
-         url.includes('favicon');
+         url.includes('favicon') ||
+         url.endsWith('.css') ||
+         url.endsWith('.js') ||
+         url.endsWith('.jsx') ||
+         url.endsWith('.ts') ||
+         url.endsWith('.tsx') ||
+         // Reader specific assets
+         url.includes('reader') ||
+         url.includes('manga-card') ||
+         url.includes('manga-reader');
 }
 
 function isAPIRequest(request) {

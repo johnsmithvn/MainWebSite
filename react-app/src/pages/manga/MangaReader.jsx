@@ -114,6 +114,12 @@ const MangaReader = () => {
 
   // Immediate increase view using last key (avoid StrictMode timer clears)
   const increaseViewCount = useCallback(async (path, sKey, rFolder) => {
+    // Skip API calls in offline mode
+    if (isOfflineMode) {
+      console.log('📱 Offline mode: Skipping view count increase');
+      return;
+    }
+    
     const cleanPath = path.replace(/\/__self__$/, '');
     const nextKey = `${sKey}::${rFolder}::${cleanPath}`;
     if (lastViewKeyRef.current === nextKey) return;
@@ -128,7 +134,7 @@ const MangaReader = () => {
     } catch (err) {
       console.warn('❌ increaseView failed:', err);
     }
-  }, []);
+  }, [isOfflineMode]);
 
   // Derive favorite from store favorites
   useEffect(() => {
@@ -207,6 +213,34 @@ const MangaReader = () => {
   }, []);
 
   const loadFolderData = useCallback(async (path) => {
+    // Handle offline mode separately
+    if (isOfflineMode) {
+      console.log('📱 Offline mode: Loading from local storage');
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Import offline library utilities
+        const { getChapter } = await import('../../utils/offlineLibrary');
+        
+        const chapter = await getChapter(path);
+        if (chapter && chapter.pageUrls) {
+          setCurrentImages(chapter.pageUrls);
+          setCurrentPath(path);
+          console.log('✅ Loaded offline images:', chapter.pageUrls.length);
+        } else {
+          setError('Chapter not found in offline library');
+        }
+      } catch (err) {
+        console.error('❌ Offline load failed:', err);
+        setError('Failed to load offline chapter');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Online mode - normal API flow
     // Abort previous in-flight request
     if (folderAbortRef.current) {
       try { folderAbortRef.current.abort(); } catch {}
@@ -278,7 +312,7 @@ const MangaReader = () => {
     } finally {
       if (myRequestId === requestIdRef.current) setLoading(false);
     }
-  }, [stableAuthKeys.sourceKey, stableAuthKeys.rootFolder, mangaSettings.useDb, preloadImage, addRecentItem, readerSettings.readingMode]);
+  }, [isOfflineMode, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder, mangaSettings.useDb, preloadImage, addRecentItem, readerSettings.readingMode]);
 
   useEffect(() => {
     if (currentMangaPath && stableAuthKeys.sourceKey && stableAuthKeys.rootFolder) {
