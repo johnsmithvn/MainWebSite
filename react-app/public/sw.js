@@ -164,20 +164,23 @@ self.addEventListener('activate', (event) => {
 // Enhanced fetch handler with intelligent strategies
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  const url = new URL(request.url);
-  
+
   // Skip non-GET requests
   if (request.method !== 'GET') return;
-  
-  // Route to appropriate strategy
+
+  // Always handle navigation requests first so that offline routing works correctly
+  if (isNavigation(request)) {
+    event.respondWith(navigationStrategy(request));
+    return;
+  }
+
+  // Route to appropriate strategy for other request types
   if (isStaticAsset(request)) {
     event.respondWith(cacheFirstStrategy(request, STATIC_CACHE));
   } else if (isAPIRequest(request)) {
     event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE));
   } else if (isMangaImage(request)) {
     event.respondWith(mangaImageStrategy(request));
-  } else if (isNavigation(request)) {
-    event.respondWith(navigationStrategy(request));
   } else {
     // Default to network-first for other resources
     event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE));
@@ -387,7 +390,7 @@ async function navigationStrategy(request) {
 // Helper functions
 function isStaticAsset(request) {
   const url = request.url;
-  return url.includes('/static/') || 
+  return url.includes('/static/') ||
          url.includes('/assets/') ||
          url.includes('/src/') ||  // Vite dev mode
          url.includes('/@vite/') || // Vite client
@@ -398,11 +401,7 @@ function isStaticAsset(request) {
          url.endsWith('.js') ||
          url.endsWith('.jsx') ||
          url.endsWith('.ts') ||
-         url.endsWith('.tsx') ||
-         // Reader specific assets
-         url.includes('reader') ||
-         url.includes('manga-card') ||
-         url.includes('manga-reader');
+         url.endsWith('.tsx');
 }
 
 function isAPIRequest(request) {
