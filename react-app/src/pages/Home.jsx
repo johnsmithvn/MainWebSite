@@ -271,14 +271,14 @@ const Home = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
           >
-            <Button 
+            <Button
               onClick={() => navigate('/offline')}
               className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 text-lg font-medium"
             >
-              📚 Mở Offline Library
+              🔌 Mở chế độ Offline
             </Button>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              Truy cập các chapter đã tải để đọc offline
+              Chọn Manga, Movie hoặc Music đã lưu để sử dụng offline
             </p>
           </motion.div>
         </div>

@@ -1,10 +1,30 @@
-# CHANGELOG
+### Fixed
+
+- 🐛 [2025-09-21] Fixed Service Worker cache cleanup redundant conditions → Simplified cache cleanup logic by removing redundant explicit cache name checks since they're already covered by managedPrefixes
+
+- 🐛 [2025-09-21] Fixed Layout.jsx navigation effect infinite loop potential → Removed location.pathname from useEffect dependencies to prevent re-runs on redirect-triggered pathname changes
+
+- 🐛 [2025-09-21] Fixed serviceWorkerManager offline detection after offline.html removal → Updated to check React app cache availability instead of searching for removed offline.html file
+
+- 🗑️ [2025-09-21] Removed redundant offline.html static file → Eliminated confusion between static HTML and React OfflineHome component by using only React-based offline experience, streamlined Service Worker logic
+
+- 🐛 [2025-09-21] Fixed Service Worker offline navigation inconsistency → Modified navigationStrategy to prioritize React app cache over static offline.html, ensuring consistent offline experience with functional UI instead of static dark page
+
+- 🐛 [2025-09-21] Fixed Service Worker image fallback interference → Removed automatic timeout (5s) and default image fallback for online manga images in Service Worker, allowing natural loading behavior when API is slow while preserving offline functionality Fixed
+
+- �️ [2025-09-21] Removed redundant offline.html static file → Eliminated confusion between static HTML and React OfflineHome component by using only React-based offline experience, streamlined Service Worker logic
+
+- �🐛 [2025-09-21] Fixed Service Worker offline navigation inconsistency → Modified navigationStrategy to prioritize React app cache over static offline.html, ensuring consistent offline experience with functional UI instead of static dark page
+
+- 🐛 [2025-09-21] Fixed Service Worker image fallback interference → Removed automatic timeout (5s) and default image fallback for online manga images in Service Worker, allowing natural loading behavior when API is slow while preserving offline functionalityELOG
 
 ## [Unreleased] - 2025-09-14
 
 ### Fixed
 
-- 🔄 [2025-09-14] Refactored Vite proxy configuration → Extracted createProxyConfig() function to eliminate hardcoded target URLs, made API target configurable via VITE_API_TARGET environment variable for better development flexibility
+- � [2025-09-21] Fixed Service Worker image fallback interference → Removed automatic timeout (5s) and default image fallback for online manga images in Service Worker, allowing natural loading behavior when API is slow while preserving offline functionality
+
+- �🔄 [2025-09-14] Refactored Vite proxy configuration → Extracted createProxyConfig() function to eliminate hardcoded target URLs, made API target configurable via VITE_API_TARGET environment variable for better development flexibility
 
 - 🔄 [2025-09-14] Optimized React environment configuration → Removed 13 unused environment variables (VITE_APP_NAME, VITE_PRELOAD_COUNT, VITE_API_BASE_URL, etc.) keeping only variables actually used by the application, reducing .env file size by 70%
 

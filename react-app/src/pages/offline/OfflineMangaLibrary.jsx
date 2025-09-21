@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Trash2, Calendar, Eye, Grid, List } from 'lucide-react';
-import { DEFAULT_IMAGES } from '../constants';
-import Button from '../components/common/Button';
-import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis } from '../utils/offlineLibrary';
-import { formatDate, formatSize } from '../utils/formatters';
+import { DEFAULT_IMAGES } from '../../constants';
+import Button from '../../components/common/Button';
+import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis } from '../../utils/offlineLibrary';
+import { formatDate, formatSize } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
-export default function OfflineLibrary() {
+export default function OfflineMangaLibrary() {
   const [chapters, setChapters] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'name'
@@ -171,16 +171,23 @@ export default function OfflineLibrary() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Offline Library
+              Manga Offline Library
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
               {chapters.length} chapter{chapters.length !== 1 ? 's' : ''} đã tải offline
             </p>
           </div>
-          
+
           {/* Actions */}
-          {chapters.length > 0 && (
-            <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/offline')}
+              className="border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
+            >
+              ⬅️ Quay lại chế độ Offline
+            </Button>
+            {chapters.length > 0 && (
               <Button
                 variant="outline"
                 onClick={() => setShowClearModal(true)}
@@ -189,8 +196,8 @@ export default function OfflineLibrary() {
                 <Trash2 size={16} />
                 <span className="ml-1">Xóa tất cả</span>
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
         
         {/* Storage Statistics */}

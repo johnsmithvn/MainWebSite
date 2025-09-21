@@ -163,12 +163,22 @@ class ServiceWorkerManager {
 
     try {
       const cacheInfo = await this.getCacheInfo();
-      const hasAppShell = cacheInfo?.caches?.['manga-static-v2.0.0']?.count > 0;
+      const caches = cacheInfo?.caches || {};
       
+      // Since offline.html is removed, check if we have React app cache for offline support
+      const staticCache = caches['offline-core'];
+      const dynamicCache = caches['reader-dynamic'];
+      const hasOfflineFallback = (staticCache?.count || 0) > 0 || (dynamicCache?.count || 0) > 0;
+      const hasChapterImages = (caches['chapter-images']?.count || 0) > 0;
+
       return {
-        capable: hasAppShell,
-        reason: hasAppShell ? 'App shell cached' : 'App shell not cached',
-        cacheInfo
+        capable: hasOfflineFallback,
+        reason: hasOfflineFallback ? 'Offline fallback cached' : 'Offline fallback missing',
+        cacheInfo,
+        offlineStatus: {
+          hasOfflineFallback,
+          hasChapterImages
+        }
       };
     } catch (error) {
       return {
