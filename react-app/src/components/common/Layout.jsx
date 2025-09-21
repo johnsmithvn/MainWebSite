@@ -43,7 +43,7 @@ const Layout = () => {
     return () => {
       window.removeEventListener('offline', redirectToOffline);
     };
-  }, [navigate, location.pathname]);
+  }, [navigate]); // location.pathname intentionally omitted to avoid effect re-run issues on redirect
   
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-900 transition-colors duration-200">

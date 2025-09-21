@@ -17,9 +17,8 @@ const STATIC_CACHE = `offline-core-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `reader-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'chapter-images'; // Keep existing name for compatibility
 
-// Offline essentials
+// Offline essentials - only default images, no offline.html
 const OFFLINE_CORE_ASSETS = [
-  '/offline.html',
   DEFAULT_IMAGES.favicon,
   DEFAULT_IMAGES.cover,
   DEFAULT_IMAGES.folder,
@@ -71,10 +70,8 @@ self.addEventListener('activate', (event) => {
             const managedPrefixes = ['manga-', 'mainws-', 'offline-core-', 'reader-dynamic-'];
             const isManagedCache = managedPrefixes.some(prefix => cacheName.startsWith(prefix));
 
-            if (cacheName !== STATIC_CACHE &&
-                cacheName !== DYNAMIC_CACHE &&
-                cacheName !== IMAGE_CACHE &&
-                isManagedCache) {
+            // Simplified logic - only check if managed cache and not current
+            if (cacheName !== IMAGE_CACHE && isManagedCache) {
               console.log('🗑️ Deleting old cache:', cacheName);
               // Remove from cache instances map too
               cacheInstances.delete(cacheName);
@@ -244,19 +241,18 @@ async function mangaImageStrategy(request) {
       return cachedImage;
     }
     
-    // For online reading, try network with timeout
-    console.log('🌐 Online manga image:', getResourceName(request.url));
-    const networkResponse = await Promise.race([
-      fetch(request),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Image timeout')), NETWORK_TIMEOUT)
-      )
-    ]);
+    // For online reading, try network without timeout or fallback
+    // Let browser handle naturally - no interference for slow APIs
+    console.log('🌐 Online manga image (no timeout):', getResourceName(request.url));
+    const networkResponse = await fetch(request);
     
+    // Only return if network succeeds, otherwise let request fail naturally
     return networkResponse;
   } catch (error) {
-    console.log('❌ Manga image failed, serving fallback');
-    return getFallbackImage();
+    // For offline mode: only fallback if we have cached offline content
+    // For online mode: let the image fail naturally (no default image interference)
+    console.log('❌ Manga image network failed - letting request fail naturally');
+    throw error; // Don't serve fallback for online requests
   }
 }
 
@@ -294,39 +290,38 @@ async function navigationStrategy(request) {
     try {
       const dynamicCache = await getCacheInstance(DYNAMIC_CACHE);
 
+      // First: Try exact cached response for the route
       const cachedResponse = await dynamicCache.match(request);
       if (cachedResponse) {
         console.log('✅ Serving cached navigation response');
         return cachedResponse;
       }
 
+      // Second: Try app shell - prefer React app over static offline.html
       const appShellPaths = ['/', '/index.html'];
       for (const path of appShellPaths) {
         const appShell = await dynamicCache.match(path);
         if (appShell) {
-          console.log('✅ Serving cached app shell fallback');
+          console.log('✅ Serving cached app shell fallback (React app)');
           return appShell;
         }
       }
+
+      // Try static cache for app shell as well
+      const staticCache = await getCacheInstance(STATIC_CACHE);
+      for (const path of appShellPaths) {
+        const appShell = await staticCache.match(path);
+        if (appShell) {
+          console.log('✅ Serving static cached app shell');
+          return appShell;
+        }
+      }
+
     } catch (cacheError) {
       console.warn('⚠️ Failed to read navigation cache:', cacheError);
     }
 
-    try {
-      // Get cache instance using centralized getter
-      const cache = await getCacheInstance(STATIC_CACHE);
-
-      // Serve dedicated offline page when available
-      const offlinePage = await cache.match('/offline.html');
-      if (offlinePage) {
-        console.log('✅ Serving offline fallback page');
-        return offlinePage;
-      }
-    } catch (fallbackError) {
-      console.warn('⚠️ Failed to serve offline fallback page:', fallbackError);
-    }
-
-    // Final fallback with inline HTML
+    // Final fallback with inline HTML - no static offline.html needed
     return new Response(`
       <!DOCTYPE html>
       <html>
@@ -362,8 +357,8 @@ function isStaticAsset(request) {
       return false;
     }
 
-    return url.pathname === '/offline.html' ||
-           url.pathname.startsWith('/default/');
+    // Only check for default images, no offline.html
+    return url.pathname.startsWith('/default/');
   } catch (error) {
     console.warn('⚠️ Failed to inspect static asset request:', error);
     return false;
