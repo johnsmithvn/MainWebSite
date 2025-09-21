@@ -82,7 +82,7 @@ applyTo: '**'
 
 Project structure:
 
-  📦MainWebSite
+📦MainWebSite
  ┣ 📂backend
  ┃ ┣ 📂api
  ┃ ┃ ┣ 📂manga
@@ -111,41 +111,28 @@ Project structure:
  ┃ ┃ ┃ ┣ 📜reset-music-db.js
  ┃ ┃ ┃ ┣ 📜scan-music.js
  ┃ ┃ ┃ ┗ 📜set-thumbnail.js
- ┃ ┃ ┗ 📜increase-view.js
+ ┃ ┃ ┣ 📜increase-view.js
+ ┃ ┃ ┗ 📜log.js
  ┃ ┣ 📂data
  ┃ ┃ ┣ 📜.gitkeep
  ┃ ┃ ┣ 📜M_MUSIC.db
+ ┃ ┃ ┣ 📜ROOT_DOW.db
  ┃ ┃ ┣ 📜ROOT_FANTASY.db
+ ┃ ┃ ┣ 📜ROOT_MANGAH.db
+ ┃ ┃ ┣ 📜ROOT_TEST.db
+ ┃ ┃ ┣ 📜V_ANIME.db
+ ┃ ┃ ┣ 📜V_ANIMEH.db
  ┃ ┃ ┣ 📜V_JAVA.db
  ┃ ┃ ┗ 📜V_MOVIE.db
+ ┃ ┣ 📂logs
  ┃ ┣ 📂middleware
  ┃ ┃ ┣ 📜auth.js
+ ┃ ┃ ┣ 📜cors.js
  ┃ ┃ ┣ 📜errorHandler.js
  ┃ ┃ ┣ 📜index.js
  ┃ ┃ ┣ 📜rateLimiter.js
  ┃ ┃ ┗ 📜security.js
  ┃ ┣ 📂node_modules
- ┃ ┃ ┗ 📂lru-cache
- ┃ ┃ ┃ ┣ 📂dist
- ┃ ┃ ┃ ┃ ┣ 📂commonjs
- ┃ ┃ ┃ ┃ ┃ ┣ 📜index.d.ts
- ┃ ┃ ┃ ┃ ┃ ┣ 📜index.d.ts.map
- ┃ ┃ ┃ ┃ ┃ ┣ 📜index.js
- ┃ ┃ ┃ ┃ ┃ ┣ 📜index.js.map
- ┃ ┃ ┃ ┃ ┃ ┣ 📜index.min.js
- ┃ ┃ ┃ ┃ ┃ ┣ 📜index.min.js.map
- ┃ ┃ ┃ ┃ ┃ ┗ 📜package.json
- ┃ ┃ ┃ ┃ ┗ 📂esm
- ┃ ┃ ┃ ┃ ┃ ┣ 📜index.d.ts
- ┃ ┃ ┃ ┃ ┃ ┣ 📜index.d.ts.map
- ┃ ┃ ┃ ┃ ┃ ┣ 📜index.js
- ┃ ┃ ┃ ┃ ┃ ┣ 📜index.js.map
- ┃ ┃ ┃ ┃ ┃ ┣ 📜index.min.js
- ┃ ┃ ┃ ┃ ┃ ┣ 📜index.min.js.map
- ┃ ┃ ┃ ┃ ┃ ┗ 📜package.json
- ┃ ┃ ┃ ┣ 📜LICENSE
- ┃ ┃ ┃ ┣ 📜package.json
- ┃ ┃ ┃ ┗ 📜README.md
  ┃ ┣ 📂routes
  ┃ ┃ ┣ 📜index.js
  ┃ ┃ ┣ 📜manga.js
@@ -157,6 +144,7 @@ Project structure:
  ┃ ┣ 📂utils
  ┃ ┃ ┣ 📜cache-scan.js
  ┃ ┃ ┣ 📜config.js
+ ┃ ┃ ┣ 📜corsUtils.js
  ┃ ┃ ┣ 📜DatabaseManager.js
  ┃ ┃ ┣ 📜databaseUtils.js
  ┃ ┃ ┣ 📜db.js
@@ -165,13 +153,26 @@ Project structure:
  ┃ ┃ ┣ 📜movie-scan.js
  ┃ ┃ ┣ 📜music-scan.js
  ┃ ┃ ┣ 📜responseHelpers.js
+ ┃ ┃ ┣ 📜stringUtils.js
  ┃ ┃ ┗ 📜thumbnailUtils.js
  ┃ ┣ 📜.env
  ┃ ┣ 📜.env.template
  ┃ ┣ 📜constants.js
  ┃ ┣ 📜package.json
  ┃ ┗ 📜server.js
+ ┣ 📂config
+ ┣ 📂docs
+ ┃ ┣ 📜BACKEND-ANALYSIS.md
+ ┃ ┣ 📜FRONTEND_V1-ANALYSIS.md
+ ┃ ┗ 📜FRONTEND_V2-ANALYSIS.md
  ┣ 📂frontend
+ ┃ ┣ 📂docs
+ ┃ ┃ ┣ 📜CONSTANTS-ANALYSIS.md
+ ┃ ┃ ┣ 📜CONSTANTS-MIGRATION-SUMMARY.md
+ ┃ ┃ ┣ 📜CONSTANTS-MIGRATION.md
+ ┃ ┃ ┣ 📜FINAL-SUMMARY.md
+ ┃ ┃ ┣ 📜PROJECT-INDEX.md
+ ┃ ┃ ┗ 📜README.md
  ┃ ┣ 📂public
  ┃ ┃ ┣ 📂default
  ┃ ┃ ┃ ┣ 📜default-cover.jpg
@@ -179,7 +180,6 @@ Project structure:
  ┃ ┃ ┃ ┣ 📜folder-thumb.png
  ┃ ┃ ┃ ┣ 📜music-thumb.png
  ┃ ┃ ┃ ┗ 📜video-thumb.png
- ┃ ┃ ┣ 📂dist
  ┃ ┃ ┣ 📂manga
  ┃ ┃ ┃ ┣ 📜favorites.html
  ┃ ┃ ┃ ┣ 📜index.html
@@ -263,6 +263,13 @@ Project structure:
  ┃ ┃ ┗ 📂components
  ┃ ┃ ┃ ┗ 📜readerSettingsModal.css
  ┣ 📂react-app
+ ┃ ┣ 📂docs
+ ┃ ┃ ┣ 📜ARCHITECTURE.md
+ ┃ ┃ ┣ 📜DATA_FLOW.md
+ ┃ ┃ ┣ 📜README.md
+ ┃ ┃ ┣ 📜SERVICE-WORKER-ANALYSIS.md
+ ┃ ┃ ┣ 📜STORAGE-QUOTA-MANAGEMENT.md
+ ┃ ┃ ┗ 📜UI_UX_OVERVIEW.md
  ┃ ┣ 📂public
  ┃ ┃ ┣ 📂default
  ┃ ┃ ┃ ┣ 📜default-cover.jpg
@@ -270,15 +277,21 @@ Project structure:
  ┃ ┃ ┃ ┣ 📜folder-thumb.png
  ┃ ┃ ┃ ┣ 📜music-thumb.png
  ┃ ┃ ┃ ┗ 📜video-thumb.png
- ┃ ┃ ┗ 📜favicon.ico
+ ┃ ┃ ┣ 📜favicon.ico
+ ┃ ┃ ┣ 📜favicon.svg
+ ┃ ┃ ┣ 📜manifest.webmanifest
+ ┃ ┃ ┣ 📜offline.html
+ ┃ ┃ ┗ 📜sw.js
  ┃ ┣ 📂src
  ┃ ┃ ┣ 📂components
  ┃ ┃ ┃ ┣ 📂auth
  ┃ ┃ ┃ ┃ ┗ 📜LoginModal.jsx
  ┃ ┃ ┃ ┣ 📂common
  ┃ ┃ ┃ ┃ ┣ 📜Breadcrumb.jsx
+ ┃ ┃ ┃ ┃ ┣ 📜BrowserSupportStatus.jsx
  ┃ ┃ ┃ ┃ ┣ 📜Button.jsx
  ┃ ┃ ┃ ┃ ┣ 📜DatabaseActions.jsx
+ ┃ ┃ ┃ ┃ ┣ 📜DownloadProgressModal.jsx
  ┃ ┃ ┃ ┃ ┣ 📜Header.jsx
  ┃ ┃ ┃ ┃ ┣ 📜index.js
  ┃ ┃ ┃ ┃ ┣ 📜Layout.jsx
@@ -288,8 +301,10 @@ Project structure:
  ┃ ┃ ┃ ┃ ┣ 📜RandomSlider.jsx
  ┃ ┃ ┃ ┃ ┣ 📜RecentSlider.jsx
  ┃ ┃ ┃ ┃ ┣ 📜SearchModal.jsx
+ ┃ ┃ ┃ ┃ ┣ 📜ServiceWorkerStatus.jsx
  ┃ ┃ ┃ ┃ ┣ 📜SettingsModal.jsx
  ┃ ┃ ┃ ┃ ┣ 📜Sidebar.jsx
+ ┃ ┃ ┃ ┃ ┣ 📜StorageQuotaModal.jsx
  ┃ ┃ ┃ ┃ ┣ 📜Toast.jsx
  ┃ ┃ ┃ ┃ ┣ 📜TopViewSlider.jsx
  ┃ ┃ ┃ ┃ ┗ 📜UniversalCard.jsx
@@ -311,7 +326,10 @@ Project structure:
  ┃ ┃ ┃ ┃ ┗ 📜PlaylistModal.jsx
  ┃ ┃ ┣ 📂constants
  ┃ ┃ ┃ ┣ 📜cacheKeys.js
- ┃ ┃ ┃ ┗ 📜index.js
+ ┃ ┃ ┃ ┣ 📜colors.js
+ ┃ ┃ ┃ ┣ 📜index.js
+ ┃ ┃ ┃ ┣ 📜timeFormats.js
+ ┃ ┃ ┃ ┗ 📜uiStyles.js
  ┃ ┃ ┣ 📂hooks
  ┃ ┃ ┃ ┣ 📜index.js
  ┃ ┃ ┃ ┣ 📜useMovieData.js
@@ -319,6 +337,7 @@ Project structure:
  ┃ ┃ ┃ ┣ 📜useRandomItems.js
  ┃ ┃ ┃ ┣ 📜useRecentItems.js
  ┃ ┃ ┃ ┣ 📜useRecentManager.js
+ ┃ ┃ ┃ ┣ 📜useServiceWorker.js
  ┃ ┃ ┃ ┗ 📜useTopViewItems.js
  ┃ ┃ ┣ 📂pages
  ┃ ┃ ┃ ┣ 📂manga
@@ -338,6 +357,7 @@ Project structure:
  ┃ ┃ ┃ ┃ ┗ 📜PlaylistDetail.jsx
  ┃ ┃ ┃ ┣ 📜Home.jsx
  ┃ ┃ ┃ ┣ 📜NotFound.jsx
+ ┃ ┃ ┃ ┣ 📜OfflineLibrary.jsx
  ┃ ┃ ┃ ┗ 📜Settings.jsx
  ┃ ┃ ┣ 📂store
  ┃ ┃ ┃ ┗ 📜index.js
@@ -347,20 +367,29 @@ Project structure:
  ┃ ┃ ┃ ┃ ┣ 📜index.css
  ┃ ┃ ┃ ┃ ┣ 📜manga-card.css
  ┃ ┃ ┃ ┃ ┣ 📜manga-reader.css
+ ┃ ┃ ┃ ┃ ┣ 📜movie-card.css
+ ┃ ┃ ┃ ┃ ┣ 📜music-card.css
  ┃ ┃ ┃ ┃ ┣ 📜random-slider.css
  ┃ ┃ ┃ ┃ ┗ 📜reader-header.css
  ┃ ┃ ┣ 📂utils
  ┃ ┃ ┃ ┣ 📜api.js
+ ┃ ┃ ┃ ┣ 📜browserSupport.js
  ┃ ┃ ┃ ┣ 📜databaseOperations.js
  ┃ ┃ ┃ ┣ 📜favoriteCache.js
  ┃ ┃ ┃ ┣ 📜formatters.js
+ ┃ ┃ ┃ ┣ 📜logger.js
  ┃ ┃ ┃ ┣ 📜mangaCache.js
+ ┃ ┃ ┃ ┣ 📜offlineLibrary.js
+ ┃ ┃ ┃ ┣ 📜pathUtils.js
  ┃ ┃ ┃ ┣ 📜randomCache.js
+ ┃ ┃ ┃ ┣ 📜serviceWorkerManager.js
+ ┃ ┃ ┃ ┣ 📜storageQuota.js
  ┃ ┃ ┃ ┗ 📜thumbnailUtils.js
  ┃ ┃ ┣ 📜App.jsx
- ┃ ┃ ┣ 📜index.css
  ┃ ┃ ┣ 📜main.jsx
  ┃ ┃ ┗ 📜styles.css
+ ┃ ┣ 📜.env
+ ┃ ┣ 📜.env.template
  ┃ ┣ 📜index.html
  ┃ ┣ 📜package.json
  ┃ ┣ 📜postcss.config.js
@@ -368,14 +397,13 @@ Project structure:
  ┃ ┗ 📜vite.config.js
  ┣ 📂scripts
  ┃ ┗ 📜build.js
+ ┣ 📂ssl
+ ┃ ┣ 📜.gitkeep
+ ┃ ┣ 📜certificate.pem
+ ┃ ┗ 📜private-key.pem
  ┣ 📜.gitignore
+ ┣ 📜CHANGELOG.md
  ┣ 📜package-lock.json
  ┣ 📜package.json
  ┣ 📜Promt.md
- ┣ 📜readme.md
- ┗ 📜REFACTOR.md
----
-
-_Last updated: August 23, 2025_
-
-Please review and suggest any missing or unclear sections for further improvement.
+ ┗ 📜readme.md

@@ -1,19 +1,18 @@
 // 📁 src/pages/movie/MoviePlayer.jsx
 // 🎬 Movie player page with full functionality from old frontend
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { useAuthStore, useMovieStore, useUIStore } from '@/store';
-import { useRecentManager } from '@/hooks';
-import { apiService } from '@/utils/api';
-import { PAGINATION } from '@/constants';
-import Header from '@/components/common/Header';
-import Sidebar from '@/components/common/Sidebar';
-import SearchModal from '@/components/common/SearchModal';
-import LoadingOverlay from '@/components/common/LoadingOverlay';
-import Toast from '@/components/common/Toast';
-import MovieRandomSection from '@/components/movie/MovieRandomSection';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { useAuthStore, useMovieStore, useUIStore } from "@/store";
+import { useRecentManager } from "@/hooks";
+import { apiService } from "@/utils/api";
+import Header from "@/components/common/Header";
+import Sidebar from "@/components/common/Sidebar";
+import SearchModal from "@/components/common/SearchModal";
+import LoadingOverlay from "@/components/common/LoadingOverlay";
+import Toast from "@/components/common/Toast";
+import MovieRandomSection from "@/components/movie/MovieRandomSection";
+import { sendLog } from "@/utils/logger";
 
 const MoviePlayer = () => {
   const navigate = useNavigate();
@@ -21,46 +20,47 @@ const MoviePlayer = () => {
   const location = useLocation();
   const videoRef = useRef(null);
   const gestureTargetRef = useRef(null);
-  
+
   // Get file and key from URL params or navigation state
-  const fileParam = searchParams.get('file');
-  const keyParam = searchParams.get('key');
+  const fileParam = searchParams.get("file");
+  const keyParam = searchParams.get("key");
   const { file: stateFile, key: stateKey } = location.state || {};
-  const initialFile = stateFile || fileParam || '';
-  const initialKey = stateKey || keyParam || '';
+  const initialFile = stateFile || fileParam || "";
+  const initialKey = stateKey || keyParam || "";
 
   const { sourceKey, setSourceKey, token, isSecureKey } = useAuthStore();
-  const { toggleFavorite, favorites, fetchFavorites, favoritesRefreshTrigger } = useMovieStore();
-  const { 
-    sidebarOpen, 
+  const { toggleFavorite, favorites, fetchFavorites, favoritesRefreshTrigger } =
+    useMovieStore();
+  const {
+    sidebarOpen,
     setSidebarOpen,
-    showToast, 
-    searchModalOpen, 
-    toggleSearchModal 
+    showToast,
+    searchModalOpen,
+    toggleSearchModal,
   } = useUIStore();
-  
-  const { addRecentItem } = useRecentManager('movie');
+
+  const { addRecentItem } = useRecentManager("movie");
 
   // Local state
   const [currentFile, setCurrentFile] = useState(initialFile);
-  const [videoName, setVideoName] = useState('');
-  const [folderName, setFolderName] = useState('');
-  const [folderPath, setFolderPath] = useState('');
+  const [videoName, setVideoName] = useState("");
+  const [folderName, setFolderName] = useState("");
+  const [folderPath, setFolderPath] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
   const [videoList, setVideoList] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
-  const [error, setError] = useState('');
-  
+  const [error, setError] = useState("");
+
   // Separate loading states for different actions
   const [videoLoading, setVideoLoading] = useState(false); // For video initialization
   const [thumbnailLoading, setThumbnailLoading] = useState(false); // For thumbnail setting
   const [randomLoading, setRandomLoading] = useState(false); // For random jump
-  
+
   // Video gesture controls
   const [dragStartX, setDragStartX] = useState(null);
   const [startTime, setStartTime] = useState(0);
   const [dragging, setDragging] = useState(false);
-  
+
   // Constants from old frontend
   const SKIP_SECONDS = 10;
   const PIXELS_PER_SECOND = 10;
@@ -68,22 +68,22 @@ const MoviePlayer = () => {
 
   // Track last initialized combination to avoid duplicate init (StrictMode / key sync)
   const lastInitRef = useRef({ file: null, key: null });
-  const viewCountStateRef = useRef({ path: '', counted: false });
+  const viewCountStateRef = useRef({ path: "", counted: false });
 
   // Close sidebar on player load to avoid conflicts with video controls
   useEffect(() => {
-    console.log('🎬 MoviePlayer mounted - closing sidebar');
+    console.log("🎬 MoviePlayer mounted - closing sidebar");
     setSidebarOpen(false);
   }, [setSidebarOpen]);
 
   // Debug log when sidebar state changes
   useEffect(() => {
-    console.log('🎬 MoviePlayer sidebar state changed:', sidebarOpen);
+    console.log("🎬 MoviePlayer sidebar state changed:", sidebarOpen);
   }, [sidebarOpen]);
 
   // Sync current file from URL/state when either changes
   useEffect(() => {
-    const nextFile = stateFile || fileParam || '';
+    const nextFile = stateFile || fileParam || "";
     if (nextFile !== currentFile) {
       setCurrentFile(nextFile);
     }
@@ -100,8 +100,8 @@ const MoviePlayer = () => {
   // Authentication check
   useEffect(() => {
     if (isSecureKey(sourceKey) && !token) {
-      showToast('❌ Cần đăng nhập để xem video này', 'error');
-      navigate('/');
+      showToast("❌ Cần đăng nhập để xem video này", "error");
+      navigate("/");
       return;
     }
   }, [sourceKey, token, isSecureKey, navigate, showToast]);
@@ -109,13 +109,13 @@ const MoviePlayer = () => {
   // Initialize video when file/key changes
   useEffect(() => {
     if (!currentFile) {
-      setError('❌ Thiếu file');
+      setError("❌ Thiếu file");
       return;
     }
 
     const resolvedKey = keyParam || sourceKey;
     if (!resolvedKey) {
-      setError('❌ Thiếu sourceKey');
+      setError("❌ Thiếu sourceKey");
       return;
     }
 
@@ -137,16 +137,16 @@ const MoviePlayer = () => {
       return;
     }
     lastInitRef.current = { file: currentFile, key: sourceKey };
-    
+
     setVideoLoading(true);
-    setError('');
+    setError("");
 
     try {
       // Extract folder info
-      const parts = currentFile.split('/').filter(Boolean);
+      const parts = currentFile.split("/").filter(Boolean);
       const videoFileName = parts[parts.length - 1];
-      const parentFolderPath = parts.slice(0, -1).join('/');
-      const parentFolderName = parts.at(-2) || 'Home';
+      const parentFolderPath = parts.slice(0, -1).join("/");
+      const parentFolderName = parts.at(-2) || "Home";
 
       setVideoName(videoFileName);
       setFolderPath(parentFolderPath);
@@ -154,12 +154,14 @@ const MoviePlayer = () => {
 
       // Set video source
       if (videoRef.current) {
-        const videoSrc = `/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(currentFile)}${
-          token ? `&token=${encodeURIComponent(token)}` : ''
-        }`;
+        const videoSrc = `/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(
+          currentFile
+        )}${token ? `&token=${encodeURIComponent(token)}` : ""}`;
         videoRef.current.src = videoSrc;
+        sendLog("Web video player URL", videoSrc);
+
         // Ensure the video element reloads when the source changes
-        if (typeof videoRef.current.load === 'function') {
+        if (typeof videoRef.current.load === "function") {
           videoRef.current.load();
         }
         // Reset view count state for this file
@@ -168,16 +170,15 @@ const MoviePlayer = () => {
 
       // Load sibling videos
       await loadSiblingVideos(parentFolderPath, currentFile);
-      
+
       // Check if current video is favorited
       await checkFavoriteStatus();
-      
+
       // Save to recent
       saveToRecent(videoFileName, currentFile);
-      
     } catch (err) {
-      console.error('Error initializing video:', err);
-      setError('❌ Lỗi khi khởi tạo video');
+      console.error("Error initializing video:", err);
+      setError("❌ Lỗi khi khởi tạo video");
     } finally {
       setVideoLoading(false);
     }
@@ -188,22 +189,21 @@ const MoviePlayer = () => {
     try {
       const response = await apiService.movie.getFolders({
         key: sourceKey,
-        path: folderPath
+        path: folderPath,
       });
-      
+
       const allItems = response.data.folders || [];
-      const videosOnly = allItems.filter(item => 
-        item.type === 'video' || item.type === 'file'
+      const videosOnly = allItems.filter(
+        (item) => item.type === "video" || item.type === "file"
       );
-      
+
       setVideoList(videosOnly);
-      
-      const index = videosOnly.findIndex(v => v.path === currentFile);
+
+      const index = videosOnly.findIndex((v) => v.path === currentFile);
       setCurrentIndex(index);
-      
     } catch (err) {
-      console.error('Error loading sibling videos:', err);
-      showToast('❌ Lỗi khi tải danh sách video', 'error');
+      console.error("Error loading sibling videos:", err);
+      showToast("❌ Lỗi khi tải danh sách video", "error");
     }
   };
 
@@ -211,16 +211,16 @@ const MoviePlayer = () => {
   const checkFavoriteStatus = async () => {
     try {
       await fetchFavorites();
-      const found = favorites.find(v => v.path === currentFile);
+      const found = favorites.find((v) => v.path === currentFile);
       setIsFavorite(!!found);
     } catch (err) {
-      console.warn('Failed to check favorite status:', err);
+      console.warn("Failed to check favorite status:", err);
     }
   };
 
   // Update favorite status when favorites change
   useEffect(() => {
-    const found = favorites.find(v => v.path === currentFile);
+    const found = favorites.find((v) => v.path === currentFile);
     setIsFavorite(!!found);
   }, [favorites, currentFile, favoritesRefreshTrigger]);
 
@@ -230,18 +230,18 @@ const MoviePlayer = () => {
       const videoItem = {
         path: currentFile,
         name: videoName,
-        type: 'video',
-        thumbnail: getVideoThumbnail(currentFile)
+        type: "video",
+        thumbnail: getVideoThumbnail(currentFile),
       };
-      
+
       await toggleFavorite(videoItem);
       showToast(
-        isFavorite ? '💔 Đã bỏ yêu thích' : '❤️ Đã thêm vào yêu thích', 
-        'success'
+        isFavorite ? "💔 Đã bỏ yêu thích" : "❤️ Đã thêm vào yêu thích",
+        "success"
       );
     } catch (err) {
-      console.error('Error toggling favorite:', err);
-      showToast('❌ Lỗi khi thay đổi yêu thích', 'error');
+      console.error("Error toggling favorite:", err);
+      showToast("❌ Lỗi khi thay đổi yêu thích", "error");
     }
   };
 
@@ -249,28 +249,28 @@ const MoviePlayer = () => {
   const handleSetThumbnail = async () => {
     try {
       setThumbnailLoading(true);
-      
+
       // Extract thumbnail for the video
       await apiService.movie.extractThumbnail({
         key: sourceKey,
-        path: currentFile
+        path: currentFile,
       });
-      
+
       // Set as folder thumbnail using the old API path
-      await fetch('/api/movie/set-thumbnail', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          key: sourceKey, 
-          folderPath, 
-          srcPath: currentFile 
-        })
+      await fetch("/api/movie/set-thumbnail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: sourceKey,
+          folderPath,
+          srcPath: currentFile,
+        }),
       });
-      
-      showToast('✅ Đã đặt thumbnail', 'success');
+
+      showToast("✅ Đã đặt thumbnail", "success");
     } catch (err) {
-      console.error('Error setting thumbnail:', err);
-      showToast('❌ Lỗi đặt thumbnail', 'error');
+      console.error("Error setting thumbnail:", err);
+      showToast("❌ Lỗi đặt thumbnail", "error");
     } finally {
       setThumbnailLoading(false);
     }
@@ -294,52 +294,60 @@ const MoviePlayer = () => {
       }
       if (!state.counted && video.currentTime >= THRESHOLD_SECONDS) {
         try {
-          await fetch('/api/increase-view/movie', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: sourceKey, path: currentFile })
+          await fetch("/api/increase-view/movie", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: sourceKey, path: currentFile }),
           });
         } catch (err) {
-          console.warn('Failed to increase movie view count:', err);
+          console.warn("Failed to increase movie view count:", err);
         } finally {
           viewCountStateRef.current.counted = true;
         }
       }
     };
 
-    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener("timeupdate", handleTimeUpdate);
     return () => {
-      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
     };
   }, [currentFile, sourceKey]);
 
   // Save to recent viewed
   const saveToRecent = (fileName, filePath) => {
     try {
-      const videoBaseName = fileName.replace(/\.(mp4|mkv|ts|avi|mov|webm|wmv)$/i, '');
+      const videoBaseName = fileName.replace(
+        /\.(mp4|mkv|ts|avi|mov|webm|wmv)$/i,
+        ""
+      );
       const thumbnail = `.thumbnail/${videoBaseName}.jpg`;
-      
+
       addRecentItem({
         name: fileName,
         path: filePath,
         thumbnail: getVideoThumbnail(filePath),
-        type: 'video'
+        type: "video",
       });
     } catch (err) {
-      console.error('Error saving to recent:', err);
+      console.error("Error saving to recent:", err);
     }
   };
 
   // Get video thumbnail URL
   const getVideoThumbnail = (videoPath) => {
-    const parts = videoPath.split('/');
+    const parts = videoPath.split("/");
     const fileName = parts.pop();
-    const baseName = fileName.replace(/\.(mp4|mkv|ts|avi|mov|webm|wmv)$/i, '');
-    const folderPrefix = parts.join('/');
-    
+    const baseName = fileName.replace(/\.(mp4|mkv|ts|avi|mov|webm|wmv)$/i, "");
+    const folderPrefix = parts.join("/");
+
     if (folderPrefix) {
-      const safeFolderPrefix = folderPrefix.split('/').map(encodeURIComponent).join('/');
-      return `/video/${safeFolderPrefix}/.thumbnail/${encodeURIComponent(baseName)}.jpg`;
+      const safeFolderPrefix = folderPrefix
+        .split("/")
+        .map(encodeURIComponent)
+        .join("/");
+      return `/video/${safeFolderPrefix}/.thumbnail/${encodeURIComponent(
+        baseName
+      )}.jpg`;
     }
     return `/video/.thumbnail/${encodeURIComponent(baseName)}.jpg`;
   };
@@ -349,7 +357,7 @@ const MoviePlayer = () => {
     if (folderPath) {
       navigate(`/movie?path=${encodeURIComponent(folderPath)}`);
     } else {
-      navigate('/movie');
+      navigate("/movie");
     }
   };
 
@@ -357,22 +365,28 @@ const MoviePlayer = () => {
   const handlePrevVideo = () => {
     if (currentIndex > 0) {
       const prevVideo = videoList[currentIndex - 1];
-      navigate('/movie/player', { state: { file: prevVideo.path, key: sourceKey } });
+      navigate("/movie/player", {
+        state: { file: prevVideo.path, key: sourceKey },
+      });
     }
   };
 
-  // Navigate to next video  
+  // Navigate to next video
   const handleNextVideo = () => {
     if (currentIndex < videoList.length - 1) {
       const nextVideo = videoList[currentIndex + 1];
-      navigate('/movie/player', { state: { file: nextVideo.path, key: sourceKey } });
+      navigate("/movie/player", {
+        state: { file: nextVideo.path, key: sourceKey },
+      });
     }
   };
 
   // Navigate to specific episode
   const handleEpisodeClick = (video) => {
     if (video.path !== currentFile) {
-      navigate('/movie/player', { state: { file: video.path, key: sourceKey } });
+      navigate("/movie/player", {
+        state: { file: video.path, key: sourceKey },
+      });
     }
   };
 
@@ -381,27 +395,32 @@ const MoviePlayer = () => {
     try {
       setRandomLoading(true);
       const response = await apiService.movie.getVideoCache({
-        mode: 'random',
-        type: 'file',
-        key: sourceKey
+        mode: "random",
+        type: "file",
+        key: sourceKey,
       });
-      
+
       const data = response.data;
       const list = Array.isArray(data) ? data : data.folders;
-      const videosOnly = list.filter(v => v.type === 'video' || v.type === 'file');
-      
+      const videosOnly = list.filter(
+        (v) => v.type === "video" || v.type === "file"
+      );
+
       if (!videosOnly.length) {
-        showToast('❌ Không có video ngẫu nhiên', 'error');
+        showToast("❌ Không có video ngẫu nhiên", "error");
         return;
       }
-      
-      const randomVideo = videosOnly[Math.floor(Math.random() * videosOnly.length)];
+
+      const randomVideo =
+        videosOnly[Math.floor(Math.random() * videosOnly.length)];
       if (randomVideo?.path) {
-        navigate('/movie/player', { state: { file: randomVideo.path, key: sourceKey } });
+        navigate("/movie/player", {
+          state: { file: randomVideo.path, key: sourceKey },
+        });
       }
     } catch (err) {
-      console.error('Error random jump:', err);
-      showToast('❌ Không thể tải video ngẫu nhiên', 'error');
+      console.error("Error random jump:", err);
+      showToast("❌ Không thể tải video ngẫu nhiên", "error");
     } finally {
       setRandomLoading(false);
     }
@@ -409,26 +428,28 @@ const MoviePlayer = () => {
 
   // Open with ExoPlayer (for Android webview)
   const handleOpenExoPlayer = () => {
-   
-    const videoUrl = `${window.location.origin}/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(currentFile)}${
-      token ? `&token=${encodeURIComponent(token)}` : ''
+    const videoUrl = `${
+      window.location.origin
+    }/api/movie/video?key=${sourceKey}&file=${encodeURIComponent(currentFile)}${
+      token ? `&token=${encodeURIComponent(token)}` : ""
     }`;
-   
+    sendLog("ExoPlayer video URL", videoUrl);
+
     if (window.Android?.openExoPlayer) {
       window.Android.openExoPlayer(videoUrl);
     } else {
-      showToast('❌ Ứng dụng không hỗ trợ ExoPlayer', 'error');
+      showToast("❌ Ứng dụng không hỗ trợ ExoPlayer", "error");
     }
   };
 
   // Video gesture controls
   const handlePointerDown = (e) => {
     if (!videoRef.current) return;
-    
+
     setDragStartX(e.clientX);
     setStartTime(videoRef.current.currentTime);
     setDragging(false);
-    
+
     if (gestureTargetRef.current) {
       gestureTargetRef.current.setPointerCapture(e.pointerId);
     }
@@ -436,32 +457,35 @@ const MoviePlayer = () => {
 
   const handlePointerMove = (e) => {
     if (dragStartX === null || !videoRef.current) return;
-    
+
     const diff = e.clientX - dragStartX;
     if (!dragging && Math.abs(diff) >= SWIPE_THRESHOLD) {
       setDragging(true);
     }
-    
+
     if (!dragging) return;
-    
+
     e.preventDefault();
     const preview = startTime + diff / PIXELS_PER_SECOND;
-    videoRef.current.currentTime = Math.max(0, Math.min(videoRef.current.duration, preview));
+    videoRef.current.currentTime = Math.max(
+      0,
+      Math.min(videoRef.current.duration, preview)
+    );
   };
 
   const handlePointerUp = (e) => {
     if (dragStartX === null || !videoRef.current) return;
-    
+
     const diff = e.clientX - dragStartX;
     if (dragging) {
       e.preventDefault();
       const skipped = Math.floor(diff / PIXELS_PER_SECOND);
       // Removed toast for skip gesture
     }
-    
+
     setDragStartX(null);
     setDragging(false);
-    
+
     if (gestureTargetRef.current) {
       gestureTargetRef.current.releasePointerCapture(e.pointerId);
     }
@@ -475,12 +499,15 @@ const MoviePlayer = () => {
   // Double tap to skip
   const handleDoubleClick = (e) => {
     if (!videoRef.current) return;
-    
+
     const x = e.clientX;
     const width = videoRef.current.clientWidth;
-    
+
     if (x < width / 2) {
-      videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - SKIP_SECONDS);
+      videoRef.current.currentTime = Math.max(
+        0,
+        videoRef.current.currentTime - SKIP_SECONDS
+      );
       // Removed skip back toast
     } else {
       videoRef.current.currentTime = Math.min(
@@ -494,21 +521,21 @@ const MoviePlayer = () => {
   // Header buttons
   const headerButtons = [
     {
-      icon: isFavorite ? '❤️' : '🤍',
-      title: isFavorite ? 'Bỏ yêu thích' : 'Thêm yêu thích',
-      onClick: handleToggleFavorite
+      icon: isFavorite ? "❤️" : "🤍",
+      title: isFavorite ? "Bỏ yêu thích" : "Thêm yêu thích",
+      onClick: handleToggleFavorite,
     },
     {
-      icon: thumbnailLoading ? '⏳' : '🖼️',
-      title: thumbnailLoading ? 'Đang đặt thumbnail...' : 'Đặt thumbnail',
+      icon: thumbnailLoading ? "⏳" : "🖼️",
+      title: thumbnailLoading ? "Đang đặt thumbnail..." : "Đặt thumbnail",
       onClick: handleSetThumbnail,
-      disabled: thumbnailLoading
+      disabled: thumbnailLoading,
     },
     {
-      icon: '🔍',
-      title: 'Tìm kiếm',
-      onClick: toggleSearchModal
-    }
+      icon: "🔍",
+      title: "Tìm kiếm",
+      onClick: toggleSearchModal,
+    },
   ];
 
   if (error) {
@@ -518,7 +545,7 @@ const MoviePlayer = () => {
           <div className="text-6xl mb-4">😞</div>
           <h2 className="text-xl font-semibold mb-2">{error}</h2>
           <button
-            onClick={() => navigate('/movie')}
+            onClick={() => navigate("/movie")}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Về trang chủ
@@ -536,7 +563,7 @@ const MoviePlayer = () => {
           <button
             onClick={handleFolderClick}
             className="flex items-center gap-2 hover:bg-white/10 px-3 py-2 rounded transition-colors"
-            title={folderPath || 'Quay lại thư mục'}
+            title={folderPath || "Quay lại thư mục"}
           >
             <span>📁</span>
             <span className="font-semibold">{folderName}</span>
@@ -550,7 +577,7 @@ const MoviePlayer = () => {
       {sidebarOpen && (
         <>
           {/* Backdrop above video to dim and capture clicks */}
-          <div 
+          <div
             className="fixed inset-0 bg-black/20"
             style={{ zIndex: 2147483645 }}
             onClick={() => setSidebarOpen(false)}
@@ -559,16 +586,20 @@ const MoviePlayer = () => {
           {/* Extra transparent overlay to ensure we block any video interactions */}
           <div
             className="fixed inset-0"
-            style={{ zIndex: 2147483646, pointerEvents: 'auto' }}
+            style={{ zIndex: 2147483646, pointerEvents: "auto" }}
             onClick={() => setSidebarOpen(false)}
           />
-          
+
           {/* Sidebar forced on top of video */}
           <div
             className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-72 shadow-lg pointer-events-auto"
             style={{ zIndex: 2147483647 }}
           >
-            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} type="movie" />
+            <Sidebar
+              isOpen={sidebarOpen}
+              onClose={() => setSidebarOpen(false)}
+              type="movie"
+            />
           </div>
         </>
       )}
@@ -581,7 +612,9 @@ const MoviePlayer = () => {
             <button
               onClick={handleFolderClick}
               className="inline-block mb-4 hover:bg-gray-100 dark:hover:bg-gray-800 px-4 py-2 rounded-lg transition-colors"
-              title={`${videoName} - Click để về thư mục: ${folderPath || 'Trang chủ'}`}
+              title={`${videoName} - Click để về thư mục: ${
+                folderPath || "Trang chủ"
+              }`}
             >
               <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
                 {videoName}
@@ -606,17 +639,17 @@ const MoviePlayer = () => {
               ref={videoRef}
               controls
               className="w-full rounded-lg shadow-lg"
-              style={{ maxHeight: '70vh' }}
+              style={{ maxHeight: "70vh" }}
               onDoubleClick={handleDoubleClick}
             />
             {/* Gesture overlay */}
-            <div 
+            <div
               ref={gestureTargetRef}
               className="absolute inset-0"
-              style={{ 
-                pointerEvents: dragging ? 'auto' : 'none',
-                background: 'transparent',
-                cursor: dragging ? 'grabbing' : 'default'
+              style={{
+                pointerEvents: dragging ? "auto" : "none",
+                background: "transparent",
+                cursor: dragging ? "grabbing" : "default",
               }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
@@ -624,9 +657,9 @@ const MoviePlayer = () => {
               onPointerCancel={handlePointerCancel}
             />
             {/* Video Loading Overlay */}
-            <LoadingOverlay 
-              loading={videoLoading} 
-              message="Đang tải video..." 
+            <LoadingOverlay
+              loading={videoLoading}
+              message="Đang tải video..."
             />
           </div>
 
@@ -645,7 +678,7 @@ const MoviePlayer = () => {
               disabled={randomLoading}
               className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
-              {randomLoading ? '⏳ Đang tải...' : '🎲 Xem ngẫu nhiên'}
+              {randomLoading ? "⏳ Đang tải..." : "🎲 Xem ngẫu nhiên"}
             </button>
 
             <button
@@ -670,8 +703,8 @@ const MoviePlayer = () => {
                     onClick={() => handleEpisodeClick(video)}
                     className={`px-3 py-2 rounded text-sm transition-colors ${
                       video.path === currentFile
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
                     }`}
                   >
                     Tập {index + 1}
@@ -692,7 +725,7 @@ const MoviePlayer = () => {
         onClose={toggleSearchModal}
         type="movie"
       />
-      
+
       {/* Toast */}
       <Toast />
     </div>
