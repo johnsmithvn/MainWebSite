@@ -6,6 +6,7 @@ const fs = require("fs");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const { getRootPath, ROOT_PATHS } = require("./utils/config");
+const logRouter = require("./api/log");
 
 const { setupMiddleware, setupErrorHandling } = require("./middleware");
 
@@ -254,17 +255,10 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use("/api/log", logRouter);
 
-// ✅ Simple log endpoint
-app.post("/api/log", (req, res) => {
-  const { message, extra } = req.body || {};
-  console.log("📡 [CLIENT LOG]:", message, extra || "");
-  res.json({ status: "ok" });
-});
 // ✅ Setup error handling (must be after all routes)
 setupErrorHandling(app);
-
-
 
 // ========== HTTPS helpers ==========
 function loadSSLCertificates() {
@@ -317,8 +311,8 @@ function printSection(title, rows) {
 // ========== Start exactly ONCE (one port) ==========
 (function start() {
   // Get Tailscale config from environment
-  const TAILSCALE_DEVICE = process.env.TAILSCALE_DEVICE || '[DEVICE]';
-  const TAILSCALE_TAILNET = process.env.TAILSCALE_TAILNET || '[TAILNET]';
+  const TAILSCALE_DEVICE = process.env.TAILSCALE_DEVICE || "[DEVICE]";
+  const TAILSCALE_TAILNET = process.env.TAILSCALE_TAILNET || "[TAILNET]";
   const TAILSCALE_DOMAIN = `${TAILSCALE_DEVICE}.${TAILSCALE_TAILNET}.ts.net`;
   // Consistent SSL paths (match loader in ../ssl)
   const SSL_DIR = path.join(__dirname, "../ssl");
@@ -337,11 +331,18 @@ function printSection(title, rows) {
         ["Mode", IS_DEV ? "development" : "production"],
         ["Certificates", "OK"],
       ]);
-      console.log('Note: Self-signed certificates may show a browser warning. Choose "Advanced" -> "Proceed".');
-      console.log('Note: if the Tailscale domain is not accessible, ensure you are connected to the Tailscale network.');
-      console.log('Note: try running `tailscale status` to check your connection.');
-      console.log('Note: try running `tailscale up` to connect to the Tailscale network.');
-
+      console.log(
+        'Note: Self-signed certificates may show a browser warning. Choose "Advanced" -> "Proceed".'
+      );
+      console.log(
+        "Note: if the Tailscale domain is not accessible, ensure you are connected to the Tailscale network."
+      );
+      console.log(
+        "Note: try running `tailscale status` to check your connection."
+      );
+      console.log(
+        "Note: try running `tailscale up` to connect to the Tailscale network."
+      );
     });
     setupGracefulShutdown(httpsServer);
   } else if (ENABLE_HTTPS && !sslOptions) {
@@ -364,11 +365,15 @@ function printSection(title, rows) {
         ["Tailscale", "NOT ACCESSIBLE (requires HTTPS)"],
         ["Mode", process.env.NODE_ENV],
       ]);
-      console.log("WARNING: Tailscale access requires HTTPS with valid certificates!\n");
+      console.log(
+        "WARNING: Tailscale access requires HTTPS with valid certificates!\n"
+      );
     });
     setupGracefulShutdown(httpServer);
   } else {
-    console.log("ℹ️  HTTPS disabled in configuration - starting HTTP server...");
+    console.log(
+      "ℹ️  HTTPS disabled in configuration - starting HTTP server..."
+    );
     const httpServer = app.listen(PORT, "0.0.0.0", () => {
       printSection("Server started [HTTP]", [
         ["Local", `http://localhost:${PORT}`],

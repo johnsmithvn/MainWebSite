@@ -4,6 +4,8 @@
 import axios from 'axios';
 import { API } from '@/constants';
 
+
+
 // Create axios instance
 const api = axios.create({
   baseURL: '', // Use relative URLs to leverage Vite proxy
