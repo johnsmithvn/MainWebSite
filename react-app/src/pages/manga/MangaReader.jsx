@@ -8,6 +8,7 @@ import { apiService } from '../../utils/api';
 import { downloadChapter, isChapterDownloaded, getChapter } from '../../utils/offlineLibrary';
 import { checkStorageForDownload } from '../../utils/storageQuota';
 import { isCachesAPISupported, getUnsupportedMessage } from '../../utils/browserSupport';
+import { DEFAULT_IMAGES } from '../../constants';
 import ReaderHeader from '../../components/manga/ReaderHeader';
 import { DownloadProgressModal, StorageQuotaModal } from '../../components/common';
 import toast from 'react-hot-toast';
@@ -56,6 +57,7 @@ const MangaReader = () => {
   
   // Download states
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isCheckingStorage, setIsCheckingStorage] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0, status: 'idle' });
   const [isChapterOfflineAvailable, setIsChapterOfflineAvailable] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -597,10 +599,14 @@ const MangaReader = () => {
   };
 
   const handleDownloadChapter = async () => {
-    if (!currentImages.length || !currentMangaPath || isDownloading) return;
+    if (!currentImages.length || !currentMangaPath || isDownloading || isCheckingStorage) return;
+    
+    // Set loading state ngay khi user click
+    setIsCheckingStorage(true);
     
     // Kiểm tra Caches API có sẵn không
     if (!isCachesAPISupported()) {
+      setIsCheckingStorage(false);
       toast.error('❌ ' + getUnsupportedMessage('Offline download'));
       
       // Hiển thị modal với thông tin browser support
@@ -625,21 +631,25 @@ const MangaReader = () => {
       
       if (!checkResult.canDownload) {
         // Hiển thị modal thông báo lỗi storage
+        setIsCheckingStorage(false);
         setShowStorageQuotaModal(true);
         return;
       }
       
       // 2. Nếu có warning, hiển thị modal xác nhận
       if (checkResult.warning) {
+        setIsCheckingStorage(false);
         setShowStorageQuotaModal(true);
         return; // Chờ user xác nhận trong modal
       }
       
       // 3. Tiếp tục download nếu quota OK
+      setIsCheckingStorage(false);
       await proceedWithDownload();
       
     } catch (err) {
       console.error('❌ Error checking storage quota:', err);
+      setIsCheckingStorage(false);
       toast.error('❌ Lỗi kiểm tra dung lượng: ' + err.message);
       
       // Set error state for modal display
@@ -849,6 +859,7 @@ const MangaReader = () => {
           onSetThumbnail={handleSetThumbnail}
           onDownload={!isOfflineMode ? handleDownloadChapter : undefined}
           isDownloading={isDownloading}
+          isCheckingStorage={isCheckingStorage}
           downloadProgress={downloadProgress}
           isOfflineAvailable={isChapterOfflineAvailable}
         />
@@ -882,6 +893,8 @@ const MangaReader = () => {
                       console.log(`🧪 Vertical load #${c} for ${globalIndex + 1} (${imageSrc.split('/').pop()}) perfEntries=${perfCount}`);
                     }}
                     onError={(e) => {
+                      console.error('❌ Image load error:', imageSrc);
+                      e.target.src = DEFAULT_IMAGES.cover;
                       e.target.style.background = '#333';
                       e.target.alt = 'Lỗi tải ảnh';
                     }}
@@ -966,6 +979,8 @@ const MangaReader = () => {
                     };
                   }}
                   onError={(e) => {
+                    console.error('❌ Image load error:', e.target.src);
+                    e.target.src = DEFAULT_IMAGES.cover;
                     e.target.style.background = '#333';
                     e.target.alt = 'Lỗi tải ảnh';
                   }}

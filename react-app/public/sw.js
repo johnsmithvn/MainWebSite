@@ -32,7 +32,7 @@ const STATIC_ASSETS = [
 ];
 
 // Network timeout for better UX
-const NETWORK_TIMEOUT = 5000;
+const NETWORK_TIMEOUT = 15000; // Tăng từ 5s lên 15s cho images
 
 // Cache instances management
 const cacheInstances = new Map();
@@ -300,27 +300,21 @@ async function networkFirstWithTimeout(request, cacheName) {
 // Special strategy for manga images
 async function mangaImageStrategy(request) {
   try {
-    // Check our offline chapter cache first using centralized cache getter
+    // This strategy is ONLY for offline manga reading
+    // Check our offline chapter cache
     const chapterCache = await getCacheInstance(IMAGE_CACHE);
     const cachedImage = await chapterCache.match(request);
     
     if (cachedImage) {
-      console.log('🖼️ Offline manga image:', getResourceName(request.url));
+      console.log('🖼️ Serving cached offline manga image:', getResourceName(request.url));
       return cachedImage;
     }
     
-    // For online reading, try network with timeout
-    console.log('🌐 Online manga image:', getResourceName(request.url));
-    const networkResponse = await Promise.race([
-      fetch(request),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Image timeout')), NETWORK_TIMEOUT)
-      )
-    ]);
-    
-    return networkResponse;
+    // If not in cache, this is an offline request but image not downloaded
+    console.log('❌ Offline manga image not found in cache:', getResourceName(request.url));
+    return getFallbackImage();
   } catch (error) {
-    console.log('❌ Manga image failed, serving fallback');
+    console.log('❌ Offline manga image strategy failed:', error);
     return getFallbackImage();
   }
 }
@@ -417,9 +411,10 @@ function isAPIRequest(request) {
 
 function isMangaImage(request) {
   const url = request.url;
-  return (url.includes('/manga/') && 
-          url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ||
-         request.destination === 'image';
+  // Only apply manga image strategy for offline mode requests
+  // Check if it's an offline manga request (has offline=1 param or offline route)
+  return (url.includes('offline=1') || url.includes('/offline')) && 
+         url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
 }
 
 function isNavigation(request) {

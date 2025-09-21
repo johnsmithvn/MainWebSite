@@ -17,6 +17,11 @@
 - 🐛 **[2025-09-21] Fixed offline route path matching** → Changed ServiceWorker navigationStrategy from `/offline/` to `/offline` (removed trailing slash) to properly serve React app for `/offline` path instead of static offline.html
 - 🐛 **[2025-09-21] Fixed offline routing structure** → Changed `/offline` to go directly to manga library instead of mode selection page, moved OfflineHome to `/offline/home` route for simplified UX
 - 🔄 **[2025-09-21] Refactored offline routes architecture** → Changed from nested `/offline/*` to flat `/offline-manga`, `/offline-movie`, `/offline-music` structure to avoid routing conflicts and improve navigation clarity
+- 🐛 **[2025-09-21] Fixed manga reader random default images** → Removed ServiceWorker manga image strategy from online reading, now only applies to offline mode with cached images, preventing unnecessary fallbacks to default cover during normal online usage
+
+### Changed
+
+- 🔄 **[2025-09-21] Enhanced download UX for mobile** → Added loading state when checking storage quota before download, prevents multiple clicks on slow networks by showing "Kiểm tra..." status immediately when user taps download button
 
 ### Added
 

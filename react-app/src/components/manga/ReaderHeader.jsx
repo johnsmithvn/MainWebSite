@@ -17,6 +17,7 @@ const ReaderHeader = ({
   className = '',
   onDownload,
   isDownloading = false,
+  isCheckingStorage = false,
   downloadProgress = { current: 0, total: 0, status: 'idle' },
   isOfflineAvailable = false
 }) => {
@@ -204,18 +205,27 @@ const ReaderHeader = ({
           </button>
           {onDownload && (
             <button
-              className={`reader-header-btn download-btn ${isOfflineAvailable ? 'offline-available' : ''} ${isDownloading ? 'downloading' : ''}`}
+              className={`reader-header-btn download-btn ${isOfflineAvailable ? 'offline-available' : ''} ${isDownloading || isCheckingStorage ? 'downloading' : ''}`}
               onClick={onDownload}
-              disabled={isDownloading}
+              disabled={isDownloading || isCheckingStorage}
               title={
-                isDownloading 
-                  ? `Đang tải... ${downloadProgress.current}/${downloadProgress.total}`
-                  : isOfflineAvailable 
-                    ? "Chapter đã tải offline" 
-                    : "Download offline"
+                isCheckingStorage
+                  ? "Đang kiểm tra dung lượng..."
+                  : isDownloading 
+                    ? `Đang tải... ${downloadProgress.current}/${downloadProgress.total}`
+                    : isOfflineAvailable 
+                      ? "Chapter đã tải offline" 
+                      : "Download offline"
               }
             >
-              {isDownloading ? (
+              {isCheckingStorage ? (
+                <div className="download-progress">
+                  <div className="spinner" />
+                  <span className="progress-text">
+                    Kiểm tra...
+                  </span>
+                </div>
+              ) : isDownloading ? (
                 <div className="download-progress">
                   <div className="spinner" />
                   <span className="progress-text">
