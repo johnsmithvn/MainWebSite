@@ -16,6 +16,41 @@ import {
 } from '@/utils/databaseOperations';
 import Button from './Button';
 
+const ThumbnailOverwriteToggle = ({
+  defaultChecked = false,
+  onChange,
+}) => {
+  const [checked, setChecked] = React.useState(defaultChecked);
+
+  React.useEffect(() => {
+    setChecked(defaultChecked);
+  }, [defaultChecked]);
+
+  React.useEffect(() => {
+    onChange?.(checked);
+  }, [checked, onChange]);
+
+  return (
+    <label className="flex items-start space-x-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50/60 dark:bg-purple-900/20 cursor-pointer">
+      <input
+        type="checkbox"
+        className="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+        checked={checked}
+        onChange={(event) => setChecked(event.target.checked)}
+      />
+      <div className="text-sm text-left">
+        <p className="font-semibold text-purple-800 dark:text-purple-100">
+          Ghi đè thumbnail hiện có
+        </p>
+        <p className="text-xs text-purple-700 dark:text-purple-300">
+          Khi bật tùy chọn này hệ thống sẽ tạo lại toàn bộ thumbnail ngay cả khi đã tồn tại.
+          Nếu tắt, các thumbnail sẵn có sẽ được giữ nguyên và bỏ qua.
+        </p>
+      </div>
+    </label>
+  );
+};
+
 const DatabaseActions = ({ 
   contentType = null, // If null, will auto-detect from sourceKey
   sourceKey = null, // If null, will use from auth store
@@ -45,6 +80,7 @@ const DatabaseActions = ({
   // Current folder path for contextual actions
   const moviePath = useMovieStore((state) => state.currentPath);
   const musicPath = useMusicStore((state) => state.currentPath);
+  const overwriteRef = React.useRef(false);
   const currentPath = React.useMemo(() => {
     if (currentContentType === 'movie') return moviePath || '';
     if (currentContentType === 'music') return musicPath || '';
@@ -106,6 +142,7 @@ const DatabaseActions = ({
     }
 
     const folderLabel = currentPath || 'Thư mục gốc (root)';
+    overwriteRef.current = false;
 
     confirmModal({
       title: `🖼️ ${labels.thumbnail || 'Quét thumbnail'}`,
@@ -122,6 +159,12 @@ const DatabaseActions = ({
               </li>
             </ul>
           </div>
+          <ThumbnailOverwriteToggle
+            defaultChecked={false}
+            onChange={(value) => {
+              overwriteRef.current = value;
+            }}
+          />
           <p className="text-xs text-purple-600 dark:text-purple-300">
             Lưu ý: thao tác có thể mất vài phút tùy số lượng file. Vui lòng giữ ứng dụng mở trong khi xử lý.
           </p>
@@ -133,7 +176,7 @@ const DatabaseActions = ({
         performThumbnailExtraction(
           currentContentType,
           currentSourceKey,
-          { path: currentPath },
+          { path: currentPath, overwrite: overwriteRef.current },
           (data) => {
             const countInfo = data.count ? `Đã xử lý ${data.count} mục.` : '';
             const successTitle = labels.thumbnailSuccess || '✅ Hoàn tất!';

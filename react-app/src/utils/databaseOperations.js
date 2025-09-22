@@ -245,7 +245,7 @@ export const performThumbnailExtraction = async (
   const movieState = useMovieStore.getState();
   const musicState = useMusicStore.getState();
 
-  const { path = null } = options || {};
+  const { path = null, overwrite = false } = options || {};
   const currentPath =
     path ?? (type === 'movie' ? movieState.currentPath : musicState.currentPath) ?? '';
 
@@ -258,11 +258,13 @@ export const performThumbnailExtraction = async (
       response = await apiService.movie.extractThumbnail({
         key: sourceKey,
         path: currentPath || '',
+        overwrite,
       });
     } else {
       response = await apiService.music.extractThumbnail({
         key: sourceKey,
         path: currentPath || '',
+        overwrite,
       });
     }
 

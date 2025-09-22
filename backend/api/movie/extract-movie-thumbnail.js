@@ -11,7 +11,7 @@ ffmpeg.setFfprobePath(ffprobe.path);
 const VIDEO_EXTS = [".mp4", ".mkv", ".avi", ".mov", ".webm", ".ts", ".wmv"];
 
 // Hàm extract thumbnail cho file hoặc folder/subfolder, và update DB cho cả video & folder cha
-async function extractMovieThumbnailSmart({ key, relPath = "" }) {
+async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false }) {
   const rootPath = getRootPath(key);
   const absPath = path.join(rootPath, relPath);
   if (!fs.existsSync(absPath)) return { success: false, message: "Not found" };
@@ -28,6 +28,7 @@ async function extractMovieThumbnailSmart({ key, relPath = "" }) {
       const result = await extractMovieThumbnailSmart({
         key,
         relPath: childRelPath,
+        overwrite,
       });
       // Nếu là video đầu tiên trong folder, lưu lại thumbnail làm đại diện
       if (
@@ -46,7 +47,11 @@ async function extractMovieThumbnailSmart({ key, relPath = "" }) {
           firstVideoThumb = thumbFile;
         }
       }
-      if (result && result.success) count += result.count || 1;
+      if (result && result.success) {
+        const increment =
+          typeof result.count === "number" ? result.count : 1;
+        count += increment;
+      }
     }
 
     // Tạo thumbnail đại diện cho folder cha nếu có video
@@ -54,7 +59,7 @@ async function extractMovieThumbnailSmart({ key, relPath = "" }) {
       const folderName = path.basename(absPath);
       const thumbDir = path.join(absPath, ".thumbnail");
       const folderThumb = path.join(thumbDir, folderName + ".jpg");
-      if (!fs.existsSync(folderThumb)) {
+      if (overwrite || !fs.existsSync(folderThumb)) {
         fs.copyFileSync(firstVideoThumb, folderThumb);
       }
 
@@ -100,7 +105,7 @@ async function extractMovieThumbnailSmart({ key, relPath = "" }) {
       const thumbFolder = path.join(baseDir, ".thumbnail");
       if (!fs.existsSync(thumbFolder)) fs.mkdirSync(thumbFolder);
       const thumbFile = path.join(thumbFolder, name + ".jpg");
-      let needExtract = !fs.existsSync(thumbFile);
+      let needExtract = overwrite || !fs.existsSync(thumbFile);
 
       // Nếu chưa có thumbnail, dùng ffmpeg extract frame random
       if (needExtract) {
@@ -142,7 +147,7 @@ async function extractMovieThumbnailSmart({ key, relPath = "" }) {
       return {
         success: true,
         thumb: path.posix.join(".thumbnail", name + ".jpg"),
-        count: 1,
+        count: needExtract ? 1 : 0,
       };
     } catch (err) {
       return { success: false, message: err.message };
@@ -154,11 +159,11 @@ async function extractMovieThumbnailSmart({ key, relPath = "" }) {
 
 // API duy nhất
 router.post("/extract-thumbnail", async (req, res) => {
-  const { key, path: relPath = "" } = req.body;
+  const { key, path: relPath = "", overwrite = false } = req.body;
   if (!key) return res.status(400).json({ error: "Missing key" });
 
   try {
-    const result = await extractMovieThumbnailSmart({ key, relPath });
+    const result = await extractMovieThumbnailSmart({ key, relPath, overwrite });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

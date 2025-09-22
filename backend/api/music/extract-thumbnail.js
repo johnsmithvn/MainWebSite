@@ -6,7 +6,7 @@ const { getRootPath } = require("../../utils/config");
 const { getMusicDB } = require("../../utils/db");
 
 // Hàm extract thumbnail (cho file hoặc folder/subfolder)
-async function extractThumbnailSmart({ key, relPath = "" }) {
+async function extractThumbnailSmart({ key, relPath = "", overwrite = false }) {
   const rootPath = getRootPath(key);
   const absPath = path.join(rootPath, relPath);
   if (!fs.existsSync(absPath)) return { success: false, message: "Not found" };
@@ -24,6 +24,7 @@ async function extractThumbnailSmart({ key, relPath = "" }) {
       const result = await extractThumbnailSmart({
         key,
         relPath: childRelPath,
+        overwrite,
       });
       // Nếu là nhạc đầu tiên có thumbnail thì lưu lại
       if (
@@ -44,7 +45,11 @@ async function extractThumbnailSmart({ key, relPath = "" }) {
           firstMusicThumb = thumbFile;
         }
       }
-      if (result && result.success) count += result.count || 1;
+      if (result && result.success) {
+        const increment =
+          typeof result.count === "number" ? result.count : 1;
+        count += increment;
+      }
     }
 
     // Tạo thumbnail đại diện cho folder nếu có nhạc
@@ -52,7 +57,7 @@ async function extractThumbnailSmart({ key, relPath = "" }) {
       const folderName = path.basename(absPath);
       const thumbDir = path.join(absPath, ".thumbnail");
       const folderThumb = path.join(thumbDir, folderName + ".jpg");
-      if (!fs.existsSync(folderThumb)) {
+      if (overwrite || !fs.existsSync(folderThumb)) {
         fs.copyFileSync(firstMusicThumb, folderThumb);
       }
       // Update thumbnail cho folder trong DB
@@ -97,7 +102,10 @@ async function extractThumbnailSmart({ key, relPath = "" }) {
         const thumbFolder = path.join(baseDir, ".thumbnail");
         if (!fs.existsSync(thumbFolder)) fs.mkdirSync(thumbFolder);
         const thumbFile = path.join(thumbFolder, name + ext);
-        fs.writeFileSync(thumbFile, pic.data);
+        const shouldWrite = overwrite || !fs.existsSync(thumbFile);
+        if (shouldWrite) {
+          fs.writeFileSync(thumbFile, pic.data);
+        }
         // === UPDATE DB thumbnail ===
         const db = getMusicDB(key);
         db.prepare(
@@ -109,10 +117,11 @@ async function extractThumbnailSmart({ key, relPath = "" }) {
           relPath
         );
         // === END UPDATE ===
+        const relativeThumbPath = path.posix.join(".thumbnail", name + ext);
         return {
           success: true,
-          thumb: path.posix.join(".thumbnail", name + ext),
-          count: 1,
+          thumb: relativeThumbPath,
+          count: shouldWrite ? 1 : 0,
         };
       }
       return { success: false, message: "No embedded picture found" };
@@ -126,11 +135,11 @@ async function extractThumbnailSmart({ key, relPath = "" }) {
 
 // API duy nhất
 router.post("/extract-thumbnail", async (req, res) => {
-  const { key, path: relPath = "" } = req.body;
+  const { key, path: relPath = "", overwrite = false } = req.body;
   if (!key) return res.status(400).json({ error: "Missing key" });
 
   try {
-    const result = await extractThumbnailSmart({ key, relPath });
+    const result = await extractThumbnailSmart({ key, relPath, overwrite });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
