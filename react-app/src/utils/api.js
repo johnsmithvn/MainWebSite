@@ -166,7 +166,7 @@ export const apiService = {
   getVideoCache: (params, config = {}) => api.get(`${API.ENDPOINTS.MOVIE}/video-cache`, { params, ...config }),
     getFavorites: (params) => api.get(`${API.ENDPOINTS.MOVIE}/favorite-movie`, { params }),
     toggleFavorite: (dbkey, path, value) => api.post(`${API.ENDPOINTS.MOVIE}/favorite-movie`, { dbkey, path, value }),
-    extractThumbnail: (params) => api.post(`${API.ENDPOINTS.MOVIE}/extract-movie-thumbnail`, params),
+    extractThumbnail: (params) => api.post(`${API.ENDPOINTS.MOVIE}/extract-thumbnail`, params),
     setThumbnail: (params) => api.post(`${API.ENDPOINTS.MOVIE}/set-thumbnail`, params),
     resetDb: (params) => api.delete(`${API.ENDPOINTS.MOVIE}/reset-cache-movie`, { params, timeout: 0 }),
     scan: (params) => api.post(`${API.ENDPOINTS.MOVIE}/scan-movie`, params, { timeout: 0 }),
