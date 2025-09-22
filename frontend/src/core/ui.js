@@ -561,6 +561,7 @@ export function showConfirm(message, options = {}) {
     modal.innerHTML = `
       <div class="modal-box">
         <p id="confirm-text"></p>
+        <div id="confirm-extra" class="confirm-extra hidden"></div>
         <div class="buttons">
           <button class="ok">OK</button>
           <button class="cancel">Huỷ</button>
@@ -576,11 +577,79 @@ export function showConfirm(message, options = {}) {
   return new Promise((resolve) => {
     const okBtn = modal.querySelector("button.ok");
     const cancelBtn = modal.querySelector("button.cancel");
+    const extraContainer = modal.querySelector("#confirm-extra");
+
+    let checkboxInput = null;
+    let checkboxChangeHandler = null;
+
+    if (extraContainer) {
+      extraContainer.innerHTML = "";
+      extraContainer.classList.add("hidden");
+    }
+
+    if (options.checkbox && extraContainer) {
+      const {
+        label = "",
+        description = "",
+        defaultChecked = false,
+        onChange,
+      } = options.checkbox;
+
+      const wrapper = document.createElement("label");
+      wrapper.className = "confirm-checkbox";
+
+      checkboxInput = document.createElement("input");
+      checkboxInput.type = "checkbox";
+      checkboxInput.className = "confirm-checkbox-input";
+      checkboxInput.checked = Boolean(defaultChecked);
+
+      const textWrapper = document.createElement("div");
+      textWrapper.className = "confirm-checkbox-text";
+
+      const titleEl = document.createElement("div");
+      titleEl.className = "confirm-checkbox-label";
+      titleEl.textContent = label;
+      textWrapper.appendChild(titleEl);
+
+      if (description) {
+        const descEl = document.createElement("div");
+        descEl.className = "confirm-checkbox-desc";
+        descEl.textContent = description;
+        textWrapper.appendChild(descEl);
+      }
+
+      wrapper.appendChild(checkboxInput);
+      wrapper.appendChild(textWrapper);
+
+      extraContainer.appendChild(wrapper);
+      extraContainer.classList.remove("hidden");
+
+      const handleCheckboxChange = (event) => {
+        if (typeof onChange === "function") {
+          onChange(event.target.checked);
+        }
+      };
+
+      checkboxChangeHandler = handleCheckboxChange;
+      checkboxInput.addEventListener("change", handleCheckboxChange);
+
+      // Gửi giá trị mặc định ngay khi mở modal để caller nắm được state ban đầu
+      if (typeof onChange === "function") {
+        onChange(checkboxInput.checked);
+      }
+    }
 
     const cleanup = () => {
       modal.classList.add("hidden");
       okBtn.removeEventListener("click", onOK);
       cancelBtn.removeEventListener("click", onCancel);
+      if (checkboxInput && checkboxChangeHandler) {
+        checkboxInput.removeEventListener("change", checkboxChangeHandler);
+      }
+      if (extraContainer) {
+        extraContainer.innerHTML = "";
+        extraContainer.classList.add("hidden");
+      }
     };
 
     const onOK = () => {

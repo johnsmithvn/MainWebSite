@@ -326,6 +326,42 @@ body.dark-mode .icon-button:hover {
   font-weight: 500;
 }
 
+.confirm-extra {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.confirm-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #d8c8ff;
+  background: rgba(101, 67, 191, 0.08);
+  cursor: pointer;
+}
+
+.confirm-checkbox-input {
+  margin-top: 4px;
+}
+
+.confirm-checkbox-text {
+  flex: 1;
+}
+
+.confirm-checkbox-label {
+  font-weight: 600;
+  color: #4a2c82;
+}
+
+.confirm-checkbox-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #5c4f87;
+}
+
 .modal-box .buttons {
   display: flex;
   justify-content: center;
@@ -544,5 +580,4 @@ body.dark-mode #main-footer {
   align-items: center;
   justify-content: center;
 }
-
 

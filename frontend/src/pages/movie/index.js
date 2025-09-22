@@ -65,7 +65,21 @@ function setupExtractThumbnailButton() {
 
   extractBtn.onclick = withLoading(async () => {
     // KHÔNG truyền {loading: true} nữa
-    const ok = await showConfirm("Extract lại thumbnail phim cho toàn bộ folder hiện tại?");
+    let shouldOverwrite = false;
+    const ok = await showConfirm(
+      "Extract lại thumbnail phim cho toàn bộ folder hiện tại?",
+      {
+        checkbox: {
+          label: "Ghi đè thumbnail hiện có",
+          description:
+            "Bật tuỳ chọn này để tạo lại toàn bộ thumbnail dù đã tồn tại. Nếu tắt, hệ thống sẽ bỏ qua các thumbnail đã có.",
+          defaultChecked: false,
+          onChange: (checked) => {
+            shouldOverwrite = checked;
+          },
+        },
+      }
+    );
     if (!ok) return;
 
     const sourceKey = getSourceKey();
@@ -82,14 +96,24 @@ function setupExtractThumbnailButton() {
         body: JSON.stringify({
           key: sourceKey,
           path: currentPath,
+          overwrite: shouldOverwrite,
         }),
       });
       const data = await resp.json();
       if (data.success) {
-        showToast("✅ Đã extract thumbnail xong!");
+        const countInfo =
+          typeof data.count === "number"
+            ? data.count > 0
+              ? `Đã xử lý ${data.count} mục.`
+              : "Không có mục nào cần cập nhật."
+            : "";
+        showToast(
+          `✅ Đã extract thumbnail xong!${countInfo ? " " + countInfo : ""}`
+        );
         loadMovieFolder(currentPath, moviePage);
       } else {
-        showToast("❌ Lỗi extract thumbnail!");
+        const errorDetail = data.message ? ` (${data.message})` : "";
+        showToast(`❌ Lỗi extract thumbnail!${errorDetail}`);
       }
     } catch (err) {
       showToast("❌ Lỗi khi extract thumbnail!");

@@ -202,7 +202,21 @@ function setupExtractThumbnailButton() {
 
   extractBtn.onclick = withLoading(async () => {
     // Xác nhận
-    const ok = await showConfirm("Extract lại thumbnail nhạc cho toàn bộ folder hiện tại?");
+    let shouldOverwrite = false;
+    const ok = await showConfirm(
+      "Extract lại thumbnail nhạc cho toàn bộ folder hiện tại?",
+      {
+        checkbox: {
+          label: "Ghi đè thumbnail hiện có",
+          description:
+            "Bật tuỳ chọn này để tạo lại toàn bộ thumbnail dù đã tồn tại. Nếu tắt, hệ thống sẽ bỏ qua các thumbnail đã có.",
+          defaultChecked: false,
+          onChange: (checked) => {
+            shouldOverwrite = checked;
+          },
+        },
+      }
+    );
     if (!ok) return;
 
     const sourceKey = getSourceKey();
@@ -211,39 +225,51 @@ function setupExtractThumbnailButton() {
       return;
     }
 
-    // Tải danh sách file nhạc trong folder hiện tại
-    const params = new URLSearchParams();
-    if (sourceKey) params.set("key", sourceKey);
-    if (currentPath) params.set("path", currentPath);
-
     try {
+      showToast("⏳ Đang extract thumbnail...");
+      // Kiểm tra nhanh xem folder hiện tại có audio hoặc subfolder nào không
+      const params = new URLSearchParams();
+      if (sourceKey) params.set("key", sourceKey);
+      if (currentPath) params.set("path", currentPath);
+
       const res = await fetch("/api/music/music-folder?" + params.toString());
       const data = await res.json();
       const list = data.folders || [];
+      const hasAnyEntry = list.some(
+        (item) => item.type === "audio" || item.type === "folder"
+      );
 
-      // Lọc chỉ lấy các audio file
-      const audioFiles = list.filter(item => item.type === "audio");
-
-      if (audioFiles.length === 0) {
+      if (!hasAnyEntry) {
         showToast("😅 Không có bài hát nào để extract thumbnail.");
         return;
       }
 
-      showToast("⏳ Đang extract thumbnail...");
+      const resp = await fetch("/api/music/extract-thumbnail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: sourceKey,
+          path: currentPath,
+          overwrite: shouldOverwrite,
+        }),
+      });
+      const result = await resp.json();
 
-      // Gọi tuần tự từng file
-      for (const item of audioFiles) {
-        const resp = await fetch("/api/music/extract-thumbnail", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: sourceKey, file: item.path }),
-        });
-        const result = await resp.json();
-        // Nếu muốn có thể hiện progress ở đây
+      if (result.success) {
+        const countInfo =
+          typeof result.count === "number"
+            ? result.count > 0
+              ? `Đã xử lý ${result.count} mục.`
+              : "Không có mục nào cần cập nhật."
+            : "";
+        showToast(
+          `✅ Đã extract thumbnail xong!${countInfo ? " " + countInfo : ""}`
+        );
+        loadMusicFolder(currentPath, musicPage);
+      } else {
+        const errorDetail = result.message ? ` (${result.message})` : "";
+        showToast(`❌ Lỗi extract thumbnail!${errorDetail}`);
       }
-
-      showToast("✅ Đã extract thumbnail xong!");
-      loadMusicFolder(currentPath, musicPage);
 
     } catch (err) {
       showToast("❌ Lỗi extract thumbnail!");
