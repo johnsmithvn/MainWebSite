@@ -1,7 +1,7 @@
 // 📁 src/utils/databaseOperations.js
 // 🔄 Centralized database operations with loading states and confirmations
 
-import { useUIStore } from '@/store';
+import { useUIStore, useMovieStore, useMusicStore } from '@/store';
 import { apiService } from './api';
 
 /**
@@ -216,8 +216,92 @@ export const performDatabaseReset = async (type, sourceKey, rootFolder = null, o
 };
 
 /**
+ * Thumbnail extraction operation for movie & music
+ * @param {string} type - Content type ('movie', 'music')
+ * @param {string} sourceKey - Database key
+ * @param {Object} options - Additional options
+ * @param {string|null} options.path - Optional explicit folder path to extract
+ * @param {Function} onSuccess - Success callback
+ * @param {Function} onError - Error callback
+ */
+export const performThumbnailExtraction = async (
+  type,
+  sourceKey,
+  options = {},
+  onSuccess,
+  onError
+) => {
+  if (!['movie', 'music'].includes(type)) {
+    onError?.('Thumbnail extraction is only supported for movie or music sources');
+    return;
+  }
+
+  if (!sourceKey) {
+    onError?.('Missing source key');
+    return;
+  }
+
+  const { setLoading } = useUIStore.getState();
+  const movieState = useMovieStore.getState();
+  const musicState = useMusicStore.getState();
+
+  const { path = null, overwrite = false } = options || {};
+  const currentPath =
+    path ?? (type === 'movie' ? movieState.currentPath : musicState.currentPath) ?? '';
+
+  try {
+    setLoading(true);
+
+    let response;
+
+    if (type === 'movie') {
+      response = await apiService.movie.extractThumbnail({
+        key: sourceKey,
+        path: currentPath || '',
+        overwrite,
+      });
+    } else {
+      response = await apiService.music.extractThumbnail({
+        key: sourceKey,
+        path: currentPath || '',
+        overwrite,
+      });
+    }
+
+    if (response.data?.success) {
+      try {
+        if (type === 'movie' && typeof movieState.fetchMovieFolders === 'function') {
+          await movieState.fetchMovieFolders(currentPath || '');
+        }
+        if (type === 'music' && typeof musicState.fetchMusicFolders === 'function') {
+          await musicState.fetchMusicFolders(currentPath || '');
+        }
+      } catch (refreshError) {
+        console.warn('Thumbnail refresh failed:', refreshError);
+      }
+
+      onSuccess?.(
+        response.data,
+        `${type} thumbnail extraction completed successfully`
+      );
+    } else {
+      onError?.(
+        response.data?.error ||
+          response.data?.message ||
+          'Thumbnail extraction failed'
+      );
+    }
+  } catch (error) {
+    console.error(`Thumbnail extraction error for ${type}:`, error);
+    onError?.(error.response?.data?.error || error.message || 'Network error occurred');
+  } finally {
+    setLoading(false);
+  }
+};
+
+/**
  * Get database operation labels based on content type
- * @param {string} type 
+ * @param {string} type
  * @returns {Object}
  */
 export const getDatabaseOperationLabels = (type) => {
@@ -236,7 +320,11 @@ export const getDatabaseOperationLabels = (type) => {
       reset: 'Reset DB Movie',
       scanDescription: 'Quét và cập nhật database movie',
       deleteDescription: 'Xóa tất cả dữ liệu movie từ database',
-      resetDescription: 'Xóa dữ liệu cũ và quét lại từ đầu'
+      resetDescription: 'Xóa dữ liệu cũ và quét lại từ đầu',
+      thumbnail: 'Quét thumbnail Movie',
+      thumbnailDescription: 'Tạo lại thumbnail cho toàn bộ video và thư mục con trong thư mục hiện tại.',
+      thumbnailSuccess: '✅ Đã quét thumbnail movie!',
+      thumbnailSuccessDetail: 'Đã hoàn tất quét thumbnail movie.'
     },
     music: {
       scan: 'Quét Music',
@@ -244,7 +332,11 @@ export const getDatabaseOperationLabels = (type) => {
       reset: 'Reset DB Music',
       scanDescription: 'Quét và cập nhật database music',
       deleteDescription: 'Xóa tất cả dữ liệu music từ database',
-      resetDescription: 'Xóa dữ liệu cũ và quét lại từ đầu'
+      resetDescription: 'Xóa dữ liệu cũ và quét lại từ đầu',
+      thumbnail: 'Quét thumbnail Music',
+      thumbnailDescription: 'Tạo lại thumbnail cho toàn bộ bài hát và thư mục con trong thư mục hiện tại.',
+      thumbnailSuccess: '✅ Đã quét thumbnail music!',
+      thumbnailSuccessDetail: 'Đã hoàn tất quét thumbnail music.'
     }
   };
   
@@ -257,5 +349,6 @@ export default {
   performDatabaseScan,
   performDatabaseDelete,
   performDatabaseReset,
+  performThumbnailExtraction,
   getDatabaseOperationLabels
 };
