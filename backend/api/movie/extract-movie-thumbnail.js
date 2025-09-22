@@ -36,14 +36,25 @@ async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false
         result &&
         result.success &&
         result.thumb &&
-        entry.isFile() &&
-        VIDEO_EXTS.includes(path.extname(entry.name).toLowerCase())
+        (entry.isFile() || entry.isDirectory())
       ) {
-        // Lấy path tuyệt đối file thumbnail
-        const baseDir = path.join(absPath, ".thumbnail");
-        const name = path.basename(entry.name, path.extname(entry.name));
-        const thumbFile = path.join(baseDir, name + ".jpg");
-        if (fs.existsSync(thumbFile)) {
+        let thumbFile = null;
+        if (
+          entry.isFile() &&
+          VIDEO_EXTS.includes(path.extname(entry.name).toLowerCase())
+        ) {
+          // Lấy path tuyệt đối file thumbnail của video
+          const baseDir = path.join(absPath, ".thumbnail");
+          const name = path.basename(entry.name, path.extname(entry.name));
+          thumbFile = path.join(baseDir, name + ".jpg");
+        } else if (entry.isDirectory()) {
+          // Dùng thumbnail của subfolder đầu tiên
+          if (result.thumb) {
+            const childAbsPath = path.join(absPath, entry.name);
+            thumbFile = path.join(childAbsPath, result.thumb);
+          }
+        }
+        if (thumbFile && fs.existsSync(thumbFile)) {
           firstVideoThumb = thumbFile;
         }
       }
@@ -55,6 +66,7 @@ async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false
     }
 
     // Tạo thumbnail đại diện cho folder cha nếu có video
+    let folderThumbRelative = null;
     if (firstVideoThumb) {
       const folderName = path.basename(absPath);
       const thumbDir = path.join(absPath, ".thumbnail");
@@ -62,6 +74,8 @@ async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false
       if (overwrite || !fs.existsSync(folderThumb)) {
         fs.copyFileSync(firstVideoThumb, folderThumb);
       }
+
+      folderThumbRelative = path.posix.join(".thumbnail", folderName + ".jpg");
 
       // Update thumbnail vào DB cho folder cha
       const db = getMovieDB(key);
@@ -76,7 +90,7 @@ async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false
         ).run(
           folderName,
           relPath,
-          path.posix.join(".thumbnail", folderName + ".jpg"),
+          folderThumbRelative,
           Date.now(),
           Date.now()
         );
@@ -85,7 +99,7 @@ async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false
         db.prepare(
           `UPDATE folders SET thumbnail = ?, updatedAt = ? WHERE name = ? AND path = ?`
         ).run(
-          path.posix.join(".thumbnail", folderName + ".jpg"),
+          folderThumbRelative,
           Date.now(),
           folderName,
           relPath
@@ -93,7 +107,12 @@ async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false
       }
     }
 
-    return { success: true, message: "Extracted all in folder", count };
+    return {
+      success: true,
+      message: "Extracted all in folder",
+      count,
+      thumb: folderThumbRelative,
+    };
   }
 
   // Nếu là file video
