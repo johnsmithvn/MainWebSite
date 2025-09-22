@@ -2,8 +2,8 @@
 // 🔄 Centralized database actions component with loading and confirmations
 
 import React from 'react';
-import { FiRefreshCw, FiTrash2, FiRotateCcw } from 'react-icons/fi';
-import { useAuthStore } from '@/store';
+import { FiRefreshCw, FiTrash2, FiRotateCcw, FiImage } from 'react-icons/fi';
+import { useAuthStore, useMovieStore, useMusicStore } from '@/store';
 import { useModal } from './Modal';
 import { 
   getContentTypeFromSourceKey, 
@@ -11,6 +11,7 @@ import {
   performDatabaseScan,
   performDatabaseDelete,
   performDatabaseReset,
+  performThumbnailExtraction,
   getDatabaseOperationLabels
 } from '@/utils/databaseOperations';
 import Button from './Button';
@@ -34,12 +35,21 @@ const DatabaseActions = ({
   
   // Auto-detect content type if not provided
   const currentContentType = contentType || getContentTypeFromSourceKey(currentSourceKey);
-  
+
   // Check if operations are valid
   const isValid = isValidContentType(currentContentType, currentSourceKey, currentRootFolder);
-  
+
   // Get labels for current content type
   const labels = getDatabaseOperationLabels(currentContentType);
+
+  // Current folder path for contextual actions
+  const moviePath = useMovieStore((state) => state.currentPath);
+  const musicPath = useMusicStore((state) => state.currentPath);
+  const currentPath = React.useMemo(() => {
+    if (currentContentType === 'movie') return moviePath || '';
+    if (currentContentType === 'music') return musicPath || '';
+    return '';
+  }, [currentContentType, moviePath, musicPath]);
   
   if (!isValid || !currentContentType) {
     return null; // Don't render if invalid
@@ -88,7 +98,67 @@ const DatabaseActions = ({
       }
     });
   };
-  
+
+  // Handle thumbnail extraction (movie & music)
+  const handleThumbnailExtraction = () => {
+    if (!['movie', 'music'].includes(currentContentType)) {
+      return;
+    }
+
+    const folderLabel = currentPath || 'Thư mục gốc (root)';
+
+    confirmModal({
+      title: `🖼️ ${labels.thumbnail || 'Quét thumbnail'}`,
+      message: (
+        <div className="text-left space-y-3">
+          <p className="font-medium">{labels.thumbnailDescription || 'Tạo lại thumbnail cho thư mục hiện tại.'}</p>
+          <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
+            <p className="font-semibold text-purple-800 dark:text-purple-200 mb-2">📁 Phạm vi quét:</p>
+            <ul className="text-sm space-y-1 text-purple-700 dark:text-purple-300">
+              <li>• Source: <strong>{currentSourceKey}</strong></li>
+              <li>• Thư mục: <strong>{folderLabel}</strong></li>
+              <li>
+                • Bao gồm toàn bộ {currentContentType === 'movie' ? 'video' : 'bài hát'} và thư mục con hiện có
+              </li>
+            </ul>
+          </div>
+          <p className="text-xs text-purple-600 dark:text-purple-300">
+            Lưu ý: thao tác có thể mất vài phút tùy số lượng file. Vui lòng giữ ứng dụng mở trong khi xử lý.
+          </p>
+        </div>
+      ),
+      confirmText: '🖼️ Bắt đầu quét thumbnail',
+      cancelText: 'Hủy',
+      onConfirm: () => {
+        performThumbnailExtraction(
+          currentContentType,
+          currentSourceKey,
+          { path: currentPath },
+          (data) => {
+            const countInfo = data.count ? `Đã xử lý ${data.count} mục.` : '';
+            const successTitle = labels.thumbnailSuccess || '✅ Hoàn tất!';
+            const successMessage = [
+              labels.thumbnailSuccessDetail || 'Đã hoàn tất quét thumbnail.',
+              countInfo
+            ]
+              .filter(Boolean)
+              .join(' ');
+            successModal({
+              title: successTitle,
+              message: successMessage || 'Đã hoàn tất quét thumbnail.',
+            });
+          },
+          (error) => {
+            errorModal({
+              title: '❌ Lỗi quét thumbnail',
+              message: error,
+            });
+          }
+        );
+      }
+    });
+  };
+
   // Handle delete operation
   const handleDelete = () => {
     confirmModal({
@@ -190,7 +260,19 @@ const DatabaseActions = ({
   };
   
   // Button configurations
-  const buttons = [
+  const buttons = [];
+
+  if (['movie', 'music'].includes(currentContentType) && labels.thumbnail) {
+    buttons.push({
+      key: 'thumbnail',
+      icon: FiImage,
+      label: showLabels ? labels.thumbnail : '',
+      onClick: handleThumbnailExtraction,
+      className: 'text-purple-600 hover:text-purple-700 border-purple-300 hover:border-purple-400'
+    });
+  }
+
+  buttons.push(
     {
       key: 'scan',
       icon: FiRefreshCw,
@@ -212,7 +294,7 @@ const DatabaseActions = ({
       onClick: handleReset,
       className: 'text-yellow-600 hover:text-yellow-700 border-yellow-300 hover:border-yellow-400'
     }
-  ];
+  );
   
   // Layout classes
   const layoutClasses = {
