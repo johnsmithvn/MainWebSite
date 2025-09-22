@@ -11,7 +11,11 @@ ffmpeg.setFfprobePath(ffprobe.path);
 const VIDEO_EXTS = [".mp4", ".mkv", ".avi", ".mov", ".webm", ".ts", ".wmv"];
 
 // Hàm extract thumbnail cho file hoặc folder/subfolder, và update DB cho cả video & folder cha
-async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false }) {
+async function extractMovieThumbnailSmart({
+  key,
+  relPath = "",
+  overwrite = false,
+}) {
   const rootPath = getRootPath(key);
   const absPath = path.join(rootPath, relPath);
   if (!fs.existsSync(absPath)) return { success: false, message: "Not found" };
@@ -59,8 +63,7 @@ async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false
         }
       }
       if (result && result.success) {
-        const increment =
-          typeof result.count === "number" ? result.count : 1;
+        const increment = typeof result.count === "number" ? result.count : 1;
         count += increment;
       }
     }
@@ -83,27 +86,14 @@ async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false
         .prepare(`SELECT * FROM folders WHERE path = ?`)
         .get(relPath);
       if (!existing) {
-
         db.prepare(
           `INSERT INTO folders (name, path, thumbnail, type, createdAt, updatedAt)
      VALUES (?, ?, ?, 'folder', ?, ?)`
-        ).run(
-          folderName,
-          relPath,
-          folderThumbRelative,
-          Date.now(),
-          Date.now()
-        );
+        ).run(folderName, relPath, folderThumbRelative, Date.now(), Date.now());
       } else {
-
         db.prepare(
           `UPDATE folders SET thumbnail = ?, updatedAt = ? WHERE name = ? AND path = ?`
-        ).run(
-          folderThumbRelative,
-          Date.now(),
-          folderName,
-          relPath
-        );
+        ).run(folderThumbRelative, Date.now(), folderName, relPath);
       }
     }
 
@@ -122,7 +112,7 @@ async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false
       const name = path.basename(relPath, path.extname(relPath));
       const baseDir = path.dirname(absPath);
       const thumbFolder = path.join(baseDir, ".thumbnail");
-      if (!fs.existsSync(thumbFolder)) fs.mkdirSync(thumbFolder);
+      fs.mkdirSync(thumbFolder, { recursive: true }); // ✅ idempotent & tránh race-condition
       const thumbFile = path.join(thumbFolder, name + ".jpg");
       let needExtract = overwrite || !fs.existsSync(thumbFile);
 
@@ -145,7 +135,7 @@ async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false
             .on("error", reject)
             .screenshots({
               count: 1,
-              timemarks: [randSec],
+              timestamps: [randSec],
               filename: name + ".jpg",
               folder: thumbFolder,
               size: "480x?",
@@ -160,7 +150,7 @@ async function extractMovieThumbnailSmart({ key, relPath = "", overwrite = false
           `UPDATE folders SET thumbnail = ?, updatedAt = ? WHERE path = ?`
         )
         .run(path.posix.join(".thumbnail", name + ".jpg"), Date.now(), relPath);
-     
+
       // ==== END SỬA ====
 
       return {
@@ -182,7 +172,11 @@ router.post("/extract-thumbnail", async (req, res) => {
   if (!key) return res.status(400).json({ error: "Missing key" });
 
   try {
-    const result = await extractMovieThumbnailSmart({ key, relPath, overwrite });
+    const result = await extractMovieThumbnailSmart({
+      key,
+      relPath,
+      overwrite,
+    });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

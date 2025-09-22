@@ -65,8 +65,7 @@ async function extractThumbnailSmart({ key, relPath = "", overwrite = false }) {
         }
       }
       if (result && result.success) {
-        const increment =
-          typeof result.count === "number" ? result.count : 1;
+        const increment = typeof result.count === "number" ? result.count : 1;
         count += increment;
       }
     }
@@ -85,12 +84,7 @@ async function extractThumbnailSmart({ key, relPath = "", overwrite = false }) {
       const db = getMusicDB(key);
       db.prepare(
         `UPDATE folders SET thumbnail = ?, updatedAt = ? WHERE name = ? AND path = ?`
-      ).run(
-        folderThumbRelative,
-        Date.now(),
-        folderName,
-        relPath
-      );
+      ).run(folderThumbRelative, Date.now(), folderName, relPath);
     }
 
     return {
@@ -126,7 +120,7 @@ async function extractThumbnailSmart({ key, relPath = "", overwrite = false }) {
         const name = path.basename(relPath, path.extname(relPath));
         const baseDir = path.dirname(absPath);
         const thumbFolder = path.join(baseDir, ".thumbnail");
-        if (!fs.existsSync(thumbFolder)) fs.mkdirSync(thumbFolder);
+        fs.mkdirSync(thumbFolder, { recursive: true }); // ✅ an toàn khi chạy song song
         const thumbFile = path.join(thumbFolder, name + ext);
         const shouldWrite = overwrite || !fs.existsSync(thumbFile);
         if (shouldWrite) {
