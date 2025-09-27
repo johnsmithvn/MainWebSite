@@ -17,13 +17,9 @@ const STATIC_CACHE = `offline-core-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `reader-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'chapter-images'; // Keep existing name for compatibility
 
-// Offline essentials - only default images, no offline.html
+// Offline essentials - cache only minimal assets (no thumbnails or full index)
 const OFFLINE_CORE_ASSETS = [
-  DEFAULT_IMAGES.favicon,
-  DEFAULT_IMAGES.cover,
-  DEFAULT_IMAGES.folder,
-  DEFAULT_IMAGES.music,
-  DEFAULT_IMAGES.video
+  DEFAULT_IMAGES.favicon
 ];
 
 // Network timeout for better UX
@@ -260,91 +256,10 @@ async function mangaImageStrategy(request) {
 async function navigationStrategy(request) {
   try {
     console.log('🧭 Navigation:', request.url);
-    const networkResponse = await fetch(request);
-
-    if (networkResponse && networkResponse.ok) {
-      try {
-        const cache = await getCacheInstance(DYNAMIC_CACHE);
-
-        await cache.put(request, networkResponse.clone());
-
-        const appShellPaths = ['/', '/index.html'];
-        await Promise.all(
-          appShellPaths.map(async (path) => {
-            try {
-              await cache.put(path, networkResponse.clone());
-            } catch (cacheError) {
-              console.warn('⚠️ Failed to update app shell cache for', path, cacheError);
-            }
-          })
-        );
-      } catch (cacheError) {
-        console.warn('⚠️ Failed to cache navigation response:', cacheError);
-      }
-    }
-
-    return networkResponse;
+    return await fetch(request);
   } catch (error) {
     console.log('📴 Offline navigation fallback:', request.url);
-
-    try {
-      const dynamicCache = await getCacheInstance(DYNAMIC_CACHE);
-
-      // First: Try exact cached response for the route
-      const cachedResponse = await dynamicCache.match(request);
-      if (cachedResponse) {
-        console.log('✅ Serving cached navigation response');
-        return cachedResponse;
-      }
-
-      // Second: Try app shell - prefer React app over static offline.html
-      const appShellPaths = ['/', '/index.html'];
-      for (const path of appShellPaths) {
-        const appShell = await dynamicCache.match(path);
-        if (appShell) {
-          console.log('✅ Serving cached app shell fallback (React app)');
-          return appShell;
-        }
-      }
-
-      // Try static cache for app shell as well
-      const staticCache = await getCacheInstance(STATIC_CACHE);
-      for (const path of appShellPaths) {
-        const appShell = await staticCache.match(path);
-        if (appShell) {
-          console.log('✅ Serving static cached app shell');
-          return appShell;
-        }
-      }
-
-    } catch (cacheError) {
-      console.warn('⚠️ Failed to read navigation cache:', cacheError);
-    }
-
-    // Final fallback with inline HTML - no static offline.html needed
-    return new Response(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Offline - MainWebSite</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body { font-family: system-ui; text-align: center; padding: 50px; }
-            h1 { color: #333; }
-            button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-          </style>
-        </head>
-        <body>
-          <h1>📱 App đang offline</h1>
-          <p>Không thể kết nối server. Vui lòng kiểm tra kết nối mạng.</p>
-          <button onclick="window.location.reload()">🔄 Thử lại</button>
-        </body>
-      </html>
-    `, {
-      status: 200,
-      statusText: 'OK',
-      headers: { 'Content-Type': 'text/html' }
-    });
+    return generateOfflineLibraryResponse();
   }
 }
 
@@ -424,16 +339,342 @@ async function getFallbackImage() {
   }
 }
 
+function generateOfflineLibraryResponse() {
+  const html = `
+      <!DOCTYPE html>
+      <html lang="vi">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Thư viện Offline</title>
+          <style>
+            :root {
+              color-scheme: light dark;
+            }
+            body {
+              margin: 0;
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              background: #0f172a;
+              color: #e2e8f0;
+              min-height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 24px;
+            }
+            main {
+              width: min(860px, 100%);
+              background: rgba(15, 23, 42, 0.85);
+              border: 1px solid rgba(148, 163, 184, 0.2);
+              border-radius: 24px;
+              box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.65);
+              padding: 32px clamp(24px, 5vw, 48px);
+              backdrop-filter: blur(18px);
+            }
+            header {
+              display: flex;
+              flex-direction: column;
+              gap: 16px;
+              margin-bottom: 32px;
+            }
+            header h1 {
+              font-size: clamp(28px, 5vw, 40px);
+              font-weight: 700;
+              margin: 0;
+            }
+            header p {
+              margin: 0;
+              color: #cbd5f5;
+              line-height: 1.6;
+            }
+            .card {
+              background: rgba(15, 23, 42, 0.55);
+              border-radius: 20px;
+              border: 1px solid rgba(148, 163, 184, 0.15);
+              padding: clamp(20px, 4vw, 28px);
+              margin-bottom: 24px;
+            }
+            .card h2 {
+              margin: 0 0 16px 0;
+              font-size: 20px;
+            }
+            .status {
+              font-size: 15px;
+              margin: 0;
+              color: #e2e8f0;
+            }
+            .status strong {
+              color: #38bdf8;
+            }
+            .chapter-list {
+              list-style: none;
+              padding: 0;
+              margin: 0;
+              display: grid;
+              gap: 16px;
+            }
+            .chapter-item {
+              padding: clamp(16px, 3vw, 20px);
+              border-radius: 16px;
+              background: rgba(30, 41, 59, 0.75);
+              border: 1px solid rgba(148, 163, 184, 0.15);
+              transition: transform 0.2s ease, border-color 0.2s ease;
+            }
+            .chapter-item:hover {
+              transform: translateY(-4px);
+              border-color: rgba(96, 165, 250, 0.45);
+            }
+            .chapter-item h3 {
+              margin: 0 0 8px 0;
+              font-size: 18px;
+              font-weight: 600;
+              color: #f8fafc;
+            }
+            .meta {
+              margin: 0;
+              font-size: 14px;
+              color: #cbd5f5;
+            }
+            .meta span {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              margin-right: 12px;
+            }
+            .meta span::before {
+              font-size: 14px;
+            }
+            .meta span.pages::before { content: '📄'; }
+            .meta span.size::before { content: '💾'; }
+            .meta span.updated::before { content: '🕒'; }
+            .empty {
+              padding: 20px;
+              border-radius: 16px;
+              background: rgba(30, 41, 59, 0.65);
+              border: 1px dashed rgba(148, 163, 184, 0.4);
+              text-align: center;
+              color: #cbd5f5;
+            }
+            .tag {
+              display: inline-flex;
+              align-items: center;
+              gap: 8px;
+              background: rgba(56, 189, 248, 0.15);
+              border: 1px solid rgba(56, 189, 248, 0.35);
+              color: #bae6fd;
+              padding: 6px 12px;
+              border-radius: 999px;
+              font-size: 13px;
+            }
+            .footer {
+              margin-top: 24px;
+              font-size: 13px;
+              color: #94a3b8;
+              text-align: center;
+              line-height: 1.6;
+            }
+            .footer strong {
+              color: #38bdf8;
+            }
+            @media (max-width: 640px) {
+              body {
+                padding: 16px;
+              }
+              main {
+                padding: 24px 18px;
+              }
+              .chapter-item h3 {
+                font-size: 16px;
+              }
+              .meta {
+                font-size: 13px;
+                display: grid;
+                gap: 6px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <main>
+            <header>
+              <span class="tag">Chế độ ngoại tuyến</span>
+              <h1>Thư viện Offline</h1>
+              <p>Danh sách chapter đã tải xuống trên thiết bị của bạn. Nội dung bên dưới được đọc trực tiếp từ bộ nhớ offline (IndexedDB).</p>
+            </header>
+            <section class="card">
+              <h2>Trạng thái lưu trữ</h2>
+              <p id="offline-status" class="status"><strong>Đang kiểm tra</strong> dữ liệu offline...</p>
+              <div id="storage-summary" class="meta" style="margin-top:12px;"></div>
+            </section>
+            <section class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;">
+                <h2 style="margin:0;">Danh sách chapter đã tải</h2>
+                <span class="tag" id="chapter-count">0 chapters</span>
+              </div>
+              <ul id="chapter-list" class="chapter-list"></ul>
+            </section>
+            <p class="footer">
+              Bạn có thể tiếp tục đọc khi trực tuyến trở lại bằng cách mở ứng dụng chính. Service Worker phiên bản <strong>${CACHE_VERSION}</strong> chỉ lưu lại danh sách offline để tiết kiệm dung lượng bộ nhớ cache.
+            </p>
+          </main>
+          <script>
+            (() => {
+              const statusEl = document.getElementById('offline-status');
+              const summaryEl = document.getElementById('storage-summary');
+              const listEl = document.getElementById('chapter-list');
+              const countEl = document.getElementById('chapter-count');
+
+              const formatSize = (bytes) => {
+                if (!bytes) return '0 B';
+                const units = ['B', 'KB', 'MB', 'GB'];
+                let size = bytes;
+                let unit = 0;
+                while (size >= 1024 && unit < units.length - 1) {
+                  size /= 1024;
+                  unit++;
+                }
+                const precision = unit === 0 ? 0 : size < 10 ? 1 : 0;
+                return size.toFixed(precision) + ' ' + units[unit];
+              };
+
+              const formatDateTime = (value) => {
+                if (!value) return 'Không rõ thời gian';
+                try {
+                  return new Date(value).toLocaleString('vi-VN', {
+                    hour12: false,
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+                } catch (error) {
+                  return 'Không rõ thời gian';
+                }
+              };
+
+              const renderEmpty = () => {
+                listEl.innerHTML = '<li class="empty">Chưa có chapter nào được tải về. Hãy quay lại khi có kết nối để tải chapter mới.</li>';
+                countEl.textContent = '0 chapters';
+                summaryEl.textContent = '';
+                statusEl.innerHTML = '<strong>Chế độ offline hoạt động</strong>, nhưng chưa có dữ liệu được lưu.';
+              };
+
+              const renderChapters = (chapters) => {
+                if (!Array.isArray(chapters) || chapters.length === 0) {
+                  renderEmpty();
+                  return;
+                }
+
+                listEl.innerHTML = '';
+                const sorted = [...chapters].sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+
+                let totalBytes = 0;
+                let totalPages = 0;
+
+                sorted.forEach((chapter) => {
+                  const item = document.createElement('li');
+                  item.className = 'chapter-item';
+
+                  const title = document.createElement('h3');
+                  const mangaTitle = chapter.mangaTitle || 'Manga';
+                  const chapterTitle = chapter.chapterTitle || chapter.id || 'Chapter';
+                  title.textContent = mangaTitle + ' · ' + chapterTitle;
+
+                  const meta = document.createElement('p');
+                  meta.className = 'meta';
+
+                  const pages = chapter.totalPages || (Array.isArray(chapter.pageUrls) ? chapter.pageUrls.length : 0) || 0;
+                  const bytes = chapter.bytes || 0;
+                  const updated = chapter.updatedAt || chapter.createdAt || null;
+
+                  totalBytes += bytes;
+                  totalPages += pages;
+
+                  meta.innerHTML = '
+                    <span class="pages">' + pages + ' trang</span>
+                    <span class="size">' + formatSize(bytes) + '</span>
+                    <span class="updated">' + formatDateTime(updated) + '</span>
+                  ';
+
+                  item.appendChild(title);
+                  item.appendChild(meta);
+                  listEl.appendChild(item);
+                });
+
+                countEl.textContent = sorted.length + (sorted.length > 1 ? ' chapters' : ' chapter');
+                summaryEl.innerHTML = '
+                  <span class="pages">' + totalPages + ' trang</span>
+                  <span class="size">' + formatSize(totalBytes) + '</span>
+                ';
+
+                statusEl.innerHTML = '<strong>Hiển thị dữ liệu offline</strong> từ bộ nhớ thiết bị.';
+              };
+
+              const loadOfflineData = () => {
+                if (!('indexedDB' in window)) {
+                  statusEl.innerHTML = 'Trình duyệt không hỗ trợ IndexedDB, không thể đọc dữ liệu offline.';
+                  return;
+                }
+
+                try {
+                  const request = indexedDB.open('offline-manga', 1);
+
+                  request.onerror = () => {
+                    statusEl.innerHTML = 'Không thể mở cơ sở dữ liệu offline.';
+                    renderEmpty();
+                  };
+
+                  request.onupgradeneeded = () => {
+                    const db = request.result;
+                    if (!db.objectStoreNames.contains('chapters')) {
+                      db.createObjectStore('chapters', { keyPath: 'id' });
+                    }
+                  };
+
+                  request.onsuccess = () => {
+                    const db = request.result;
+                    const tx = db.transaction('chapters', 'readonly');
+                    const store = tx.objectStore('chapters');
+                    const getAll = store.getAll();
+
+                    getAll.onerror = () => {
+                      statusEl.innerHTML = 'Không thể tải danh sách chapter offline.';
+                      renderEmpty();
+                    };
+
+                    getAll.onsuccess = () => {
+                      const chapters = Array.isArray(getAll.result) ? getAll.result : [];
+                      renderChapters(chapters);
+                    };
+                  };
+                } catch (error) {
+                  console.error('Offline page error:', error);
+                  statusEl.innerHTML = 'Đã xảy ra lỗi khi đọc dữ liệu offline.';
+                  renderEmpty();
+                }
+              };
+
+              loadOfflineData();
+            })();
+          <\/script>
+        </body>
+      </html>
+    `;
+
+  return new Response(html, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html' }
+  });
+}
+
 function handleFetchError(request, error) {
   console.error('❌ Fetch error:', getResourceName(request.url), error.message);
-  
+
   if (isNavigation(request)) {
-    return new Response('Page not available offline', {
-      status: 503,
-      statusText: 'Service Unavailable'
-    });
+    return generateOfflineLibraryResponse();
   }
-  
+
   return new Response('Resource not available', {
     status: 503,
     statusText: 'Service Unavailable'
