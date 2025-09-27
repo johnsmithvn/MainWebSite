@@ -402,9 +402,16 @@ function generateOfflineLibraryResponse() {
               font-size: 15px;
               margin: 0;
               color: #e2e8f0;
+              transition: color 0.2s ease;
             }
             .status strong {
               color: #38bdf8;
+            }
+            .status.error {
+              color: #fca5a5;
+            }
+            .status.error strong {
+              color: #f87171;
             }
             .chapter-list {
               list-style: none;
@@ -524,6 +531,28 @@ function generateOfflineLibraryResponse() {
               const listEl = document.getElementById('chapter-list');
               const countEl = document.getElementById('chapter-count');
 
+              const setStatus = (message, options = {}) => {
+                if (!statusEl) return;
+                const { isError = false } = options;
+                statusEl.innerHTML = message;
+                if (isError) {
+                  statusEl.classList.add('error');
+                } else {
+                  statusEl.classList.remove('error');
+                }
+              };
+
+              const toNumber = (value, fallback = 0) => {
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? parsed : fallback;
+              };
+
+              const formatNumber = (value) => {
+                const num = Number(value);
+                if (!Number.isFinite(num)) return '0';
+                return new Intl.NumberFormat('vi-VN').format(num);
+              };
+
               const formatSize = (bytes) => {
                 if (!bytes) return '0 B';
                 const units = ['B', 'KB', 'MB', 'GB'];
@@ -553,11 +582,19 @@ function generateOfflineLibraryResponse() {
                 }
               };
 
-              const renderEmpty = () => {
+              const renderEmpty = (preserveStatus = false) => {
                 listEl.innerHTML = '<li class="empty">Chưa có chapter nào được tải về. Hãy quay lại khi có kết nối để tải chapter mới.</li>';
-                countEl.textContent = '0 chapters';
+                countEl.textContent = formatNumber(0) + ' chapters';
                 summaryEl.textContent = '';
-                statusEl.innerHTML = '<strong>Chế độ offline hoạt động</strong>, nhưng chưa có dữ liệu được lưu.';
+                if (!preserveStatus) {
+                  setStatus('<strong>Chế độ offline hoạt động</strong>, nhưng chưa có dữ liệu được lưu.');
+                }
+              };
+
+              const handleFatalError = (error) => {
+                console.error('Offline library error:', error);
+                setStatus('Đã xảy ra lỗi khi đọc dữ liệu offline.', { isError: true });
+                renderEmpty(true);
               };
 
               const renderChapters = (chapters) => {
@@ -584,15 +621,16 @@ function generateOfflineLibraryResponse() {
                   const meta = document.createElement('p');
                   meta.className = 'meta';
 
-                  const pages = chapter.totalPages || (Array.isArray(chapter.pageUrls) ? chapter.pageUrls.length : 0) || 0;
-                  const bytes = chapter.bytes || 0;
+                  const fallbackPages = Array.isArray(chapter.pageUrls) ? chapter.pageUrls.length : 0;
+                  const pages = toNumber(chapter.totalPages, fallbackPages);
+                  const bytes = toNumber(chapter.bytes);
                   const updated = chapter.updatedAt || chapter.createdAt || null;
 
                   totalBytes += bytes;
                   totalPages += pages;
 
                   meta.innerHTML = '
-                    <span class="pages">' + pages + ' trang</span>
+                    <span class="pages">' + formatNumber(pages) + ' trang</span>
                     <span class="size">' + formatSize(bytes) + '</span>
                     <span class="updated">' + formatDateTime(updated) + '</span>
                   ';
@@ -602,60 +640,89 @@ function generateOfflineLibraryResponse() {
                   listEl.appendChild(item);
                 });
 
-                countEl.textContent = sorted.length + (sorted.length > 1 ? ' chapters' : ' chapter');
+                countEl.textContent = formatNumber(sorted.length) + (sorted.length > 1 ? ' chapters' : ' chapter');
                 summaryEl.innerHTML = '
-                  <span class="pages">' + totalPages + ' trang</span>
+                  <span class="pages">' + formatNumber(totalPages) + ' trang</span>
                   <span class="size">' + formatSize(totalBytes) + '</span>
                 ';
 
-                statusEl.innerHTML = '<strong>Hiển thị dữ liệu offline</strong> từ bộ nhớ thiết bị.';
+                setStatus('<strong>Hiển thị dữ liệu offline</strong> từ bộ nhớ thiết bị.');
               };
 
               const loadOfflineData = () => {
                 if (!('indexedDB' in window)) {
-                  statusEl.innerHTML = 'Trình duyệt không hỗ trợ IndexedDB, không thể đọc dữ liệu offline.';
+                  setStatus('Trình duyệt không hỗ trợ IndexedDB, không thể đọc dữ liệu offline.', { isError: true });
+                  renderEmpty(true);
                   return;
                 }
 
+                setStatus('<strong>Đang kiểm tra</strong> dữ liệu offline...');
+
+                let request;
                 try {
-                  const request = indexedDB.open('offline-manga', 1);
+                  request = indexedDB.open('offline-manga');
+                } catch (error) {
+                  handleFatalError(error);
+                  return;
+                }
 
-                  request.onerror = () => {
-                    statusEl.innerHTML = 'Không thể mở cơ sở dữ liệu offline.';
-                    renderEmpty();
-                  };
+                request.onerror = () => {
+                  const error = request.error;
+                  console.error('IndexedDB open error:', error);
+                  const isVersionError = error && error.name === 'VersionError';
+                  const message = isVersionError
+                    ? 'Phiên bản dữ liệu offline mới hơn phiên bản ứng dụng hiện tại. Hãy kết nối mạng để đồng bộ lại.'
+                    : 'Không thể mở cơ sở dữ liệu offline.';
+                  setStatus(message, { isError: true });
+                  renderEmpty(true);
+                };
 
-                  request.onupgradeneeded = () => {
-                    const db = request.result;
-                    if (!db.objectStoreNames.contains('chapters')) {
-                      db.createObjectStore('chapters', { keyPath: 'id' });
-                    }
-                  };
+                request.onupgradeneeded = () => {
+                  const db = request.result;
+                  if (!db.objectStoreNames.contains('chapters')) {
+                    db.createObjectStore('chapters', { keyPath: 'id' });
+                  }
+                };
 
-                  request.onsuccess = () => {
-                    const db = request.result;
+                request.onsuccess = () => {
+                  const db = request.result;
+                  try {
                     const tx = db.transaction('chapters', 'readonly');
                     const store = tx.objectStore('chapters');
                     const getAll = store.getAll();
 
+                    tx.onerror = (event) => {
+                      handleFatalError(event?.target?.error || event);
+                    };
+
                     getAll.onerror = () => {
-                      statusEl.innerHTML = 'Không thể tải danh sách chapter offline.';
-                      renderEmpty();
+                      setStatus('Không thể tải danh sách chapter offline.', { isError: true });
+                      renderEmpty(true);
                     };
 
                     getAll.onsuccess = () => {
-                      const chapters = Array.isArray(getAll.result) ? getAll.result : [];
-                      renderChapters(chapters);
+                      try {
+                        const chapters = Array.isArray(getAll.result) ? getAll.result : [];
+                        renderChapters(chapters);
+                      } catch (err) {
+                        handleFatalError(err);
+                      }
                     };
-                  };
-                } catch (error) {
-                  console.error('Offline page error:', error);
-                  statusEl.innerHTML = 'Đã xảy ra lỗi khi đọc dữ liệu offline.';
-                  renderEmpty();
-                }
+
+                    tx.oncomplete = () => {
+                      db.close();
+                    };
+                  } catch (err) {
+                    handleFatalError(err);
+                  }
+                };
               };
 
-              loadOfflineData();
+              try {
+                loadOfflineData();
+              } catch (error) {
+                handleFatalError(error);
+              }
             })();
           <\/script>
         </body>
