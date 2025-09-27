@@ -3,27 +3,17 @@
  * Provides intelligent caching, offline functionality, and storage management
  */
 
-// Import default images constants
-const DEFAULT_IMAGES = {
-  cover: '/default/default-cover.jpg',
-  folder: '/default/folder-thumb.png',
-  music: '/default/music-thumb.png',
-  video: '/default/video-thumb.png',
-  favicon: '/default/favicon.png'
-};
-
 const CACHE_VERSION = 'v3.0.0';
 const STATIC_CACHE = `offline-core-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `reader-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'chapter-images'; // Keep existing name for compatibility
 
-// Offline essentials - only default images, no offline.html
+// Serve a dedicated offline list instead of the whole SPA shell
+const OFFLINE_PAGE = '/offline/index.html';
+
+// Offline essentials - only cache the offline list page as requested
 const OFFLINE_CORE_ASSETS = [
-  DEFAULT_IMAGES.favicon,
-  DEFAULT_IMAGES.cover,
-  DEFAULT_IMAGES.folder,
-  DEFAULT_IMAGES.music,
-  DEFAULT_IMAGES.video
+  OFFLINE_PAGE
 ];
 
 // Network timeout for better UX
@@ -34,16 +24,16 @@ const cacheInstances = new Map();
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('🔧 SW installing v3.0.0...');
+  console.log('🔧 SW installing v3.0.0 (offline list focused)...');
 
   event.waitUntil((async () => {
     try {
       const cache = await caches.open(STATIC_CACHE);
-      console.log('📦 Caching offline essentials...');
+      console.log('📦 Caching offline essentials (offline list only)...');
 
       for (const asset of OFFLINE_CORE_ASSETS) {
         try {
-          await cache.add(asset);
+          await cache.add(new Request(asset, { cache: 'reload' }));
           console.log('✅ Cached offline asset:', asset);
         } catch (error) {
           console.warn('⚠️ Failed to cache offline asset:', asset, error);
@@ -59,7 +49,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - cleanup old caches
 self.addEventListener('activate', (event) => {
-  console.log('🚀 SW activating v3.0.0...');
+  console.log('🚀 SW activating v3.0.0 (offline list focus)...');
 
   event.waitUntil(
     Promise.all([
@@ -197,21 +187,21 @@ async function cacheFirstStrategy(request, cacheName) {
 async function networkFirstWithTimeout(request, cacheName) {
   try {
     console.log('🌐 Network-first:', getResourceName(request.url));
-    
+
     // Race between network and timeout
     const networkPromise = fetch(request);
-    const timeoutPromise = new Promise((_, reject) => 
+    const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Network timeout')), NETWORK_TIMEOUT)
     );
-    
+
     const networkResponse = await Promise.race([networkPromise, timeoutPromise]);
-    
-    if (networkResponse.ok) {
-      // Use centralized cache instance getter
+
+    if (networkResponse.ok && shouldCacheApiResponse(request)) {
+      // Only persist offline-specific APIs to avoid caching the entire index
       const cache = await getCacheInstance(cacheName);
       cache.put(request, networkResponse.clone());
     }
-    
+
     return networkResponse;
   } catch (error) {
     console.log('📦 Network failed, trying cache:', getResourceName(request.url));
@@ -262,88 +252,24 @@ async function navigationStrategy(request) {
     console.log('🧭 Navigation:', request.url);
     const networkResponse = await fetch(request);
 
-    if (networkResponse && networkResponse.ok) {
-      try {
-        const cache = await getCacheInstance(DYNAMIC_CACHE);
-
-        await cache.put(request, networkResponse.clone());
-
-        const appShellPaths = ['/', '/index.html'];
-        await Promise.all(
-          appShellPaths.map(async (path) => {
-            try {
-              await cache.put(path, networkResponse.clone());
-            } catch (cacheError) {
-              console.warn('⚠️ Failed to update app shell cache for', path, cacheError);
-            }
-          })
-        );
-      } catch (cacheError) {
-        console.warn('⚠️ Failed to cache navigation response:', cacheError);
-      }
-    }
-
     return networkResponse;
   } catch (error) {
     console.log('📴 Offline navigation fallback:', request.url);
 
     try {
-      const dynamicCache = await getCacheInstance(DYNAMIC_CACHE);
-
-      // First: Try exact cached response for the route
-      const cachedResponse = await dynamicCache.match(request);
-      if (cachedResponse) {
-        console.log('✅ Serving cached navigation response');
-        return cachedResponse;
-      }
-
-      // Second: Try app shell - prefer React app over static offline.html
-      const appShellPaths = ['/', '/index.html'];
-      for (const path of appShellPaths) {
-        const appShell = await dynamicCache.match(path);
-        if (appShell) {
-          console.log('✅ Serving cached app shell fallback (React app)');
-          return appShell;
-        }
-      }
-
-      // Try static cache for app shell as well
       const staticCache = await getCacheInstance(STATIC_CACHE);
-      for (const path of appShellPaths) {
-        const appShell = await staticCache.match(path);
-        if (appShell) {
-          console.log('✅ Serving static cached app shell');
-          return appShell;
-        }
+      const offlinePage = await staticCache.match(OFFLINE_PAGE);
+      if (offlinePage) {
+        console.log('✅ Serving offline list page');
+        return offlinePage;
       }
-
     } catch (cacheError) {
       console.warn('⚠️ Failed to read navigation cache:', cacheError);
     }
 
-    // Final fallback with inline HTML - no static offline.html needed
-    return new Response(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Offline - MainWebSite</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body { font-family: system-ui; text-align: center; padding: 50px; }
-            h1 { color: #333; }
-            button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-          </style>
-        </head>
-        <body>
-          <h1>📱 App đang offline</h1>
-          <p>Không thể kết nối server. Vui lòng kiểm tra kết nối mạng.</p>
-          <button onclick="window.location.reload()">🔄 Thử lại</button>
-        </body>
-      </html>
-    `, {
-      status: 200,
-      statusText: 'OK',
-      headers: { 'Content-Type': 'text/html' }
+    return new Response('Offline content unavailable', {
+      status: 503,
+      statusText: 'Service Unavailable'
     });
   }
 }
@@ -357,8 +283,8 @@ function isStaticAsset(request) {
       return false;
     }
 
-    // Only check for default images, no offline.html
-    return url.pathname.startsWith('/default/');
+    // Only cache the dedicated offline list page as requested
+    return url.pathname === OFFLINE_PAGE;
   } catch (error) {
     console.warn('⚠️ Failed to inspect static asset request:', error);
     return false;
@@ -384,6 +310,16 @@ function getResourceName(url) {
   return url.split('/').pop() || url;
 }
 
+function shouldCacheApiResponse(request) {
+  try {
+    const url = new URL(request.url);
+    return url.pathname.includes('/offline');
+  } catch (error) {
+    console.warn('⚠️ Failed to inspect API request for caching:', error);
+    return false;
+  }
+}
+
 async function updateCacheInBackground(request, cache) {
   try {
     const response = await fetch(request);
@@ -395,38 +331,9 @@ async function updateCacheInBackground(request, cache) {
   }
 }
 
-async function getFallbackImage() {
-  try {
-    // Use centralized cache getter
-    const cache = await getCacheInstance(STATIC_CACHE);
-    const fallback = await cache.match(DEFAULT_IMAGES.cover);
-    
-    if (fallback) {
-      return fallback;
-    }
-    
-    // SVG placeholder if default image not available
-    const svgResponse = new Response(
-      `<svg width="200" height="300" xmlns="http://www.w3.org/2000/svg">
-        <rect width="200" height="300" fill="#374151"/>
-        <text x="100" y="150" text-anchor="middle" fill="white" font-family="Arial">
-          Image not available
-        </text>
-      </svg>`,
-      {
-        headers: { 'Content-Type': 'image/svg+xml' }
-      }
-    );
-    
-    return svgResponse;
-  } catch (error) {
-    return new Response('Image not available', { status: 404 });
-  }
-}
-
 function handleFetchError(request, error) {
   console.error('❌ Fetch error:', getResourceName(request.url), error.message);
-  
+
   if (isNavigation(request)) {
     return new Response('Page not available offline', {
       status: 503,

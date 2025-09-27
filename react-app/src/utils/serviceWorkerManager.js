@@ -164,16 +164,19 @@ class ServiceWorkerManager {
     try {
       const cacheInfo = await this.getCacheInfo();
       const caches = cacheInfo?.caches || {};
-      
-      // Since offline.html is removed, check if we have React app cache for offline support
-      const staticCache = caches['offline-core'];
-      const dynamicCache = caches['reader-dynamic'];
-      const hasOfflineFallback = (staticCache?.count || 0) > 0 || (dynamicCache?.count || 0) > 0;
-      const hasChapterImages = (caches['chapter-images']?.count || 0) > 0;
+
+      // Find caches by type instead of exact name (names contain version suffixes)
+      const cacheEntries = Object.entries(caches);
+      const offlineCoreEntry = cacheEntries.find(([, data]) => data.type === 'offline-core');
+      const dynamicEntry = cacheEntries.find(([, data]) => data.type === 'dynamic');
+      const imageEntry = cacheEntries.find(([name, data]) => data.type === 'images' || name.includes('chapter-images'));
+
+      const hasOfflineFallback = Boolean((offlineCoreEntry?.[1]?.count || 0) > 0 || (dynamicEntry?.[1]?.count || 0) > 0);
+      const hasChapterImages = Boolean((imageEntry?.[1]?.count || 0) > 0);
 
       return {
         capable: hasOfflineFallback,
-        reason: hasOfflineFallback ? 'Offline fallback cached' : 'Offline fallback missing',
+        reason: hasOfflineFallback ? 'Offline list cached' : 'Offline fallback missing',
         cacheInfo,
         offlineStatus: {
           hasOfflineFallback,
