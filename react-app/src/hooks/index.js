@@ -10,6 +10,7 @@ export { default as useRandomItems } from './useRandomItems';
 export { default as useRecentItems } from './useRecentItems';
 export { default as useRecentManager } from './useRecentManager';
 export { default as useServiceWorker } from './useServiceWorker';
+export { default as useOfflineStatus } from './useOfflineStatus';
 
 // useLocalStorage hook
 export const useLocalStorage = (key, initialValue) => {

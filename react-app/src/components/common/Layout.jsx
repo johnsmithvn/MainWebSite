@@ -10,6 +10,7 @@ import Sidebar from './Sidebar';
 import LoadingOverlay from './LoadingOverlay';
 import { useUIStore } from '../../store';
 import PlaylistModal from '@/components/music/PlaylistModal';
+import useOfflineStatus from '@/hooks/useOfflineStatus';
 
 const Layout = () => {
   const { sidebarOpen, loading, setSidebarOpen } = useUIStore();
@@ -18,6 +19,13 @@ const Layout = () => {
   const isMoviePlayer = location.pathname.startsWith('/movie/player');
   const isHomePage = location.pathname === '/';
   const isSelectPage = location.pathname === '/manga/select';
+  const isOffline = useOfflineStatus();
+
+  useEffect(() => {
+    if (isOffline && sidebarOpen) {
+      setSidebarOpen(false);
+    }
+  }, [isOffline, sidebarOpen, setSidebarOpen]);
 
   useEffect(() => {
     const offlineAllowedPrefixes = ['/offline', '/manga/reader'];
@@ -51,7 +59,7 @@ const Layout = () => {
       
       <div className="flex">
         <AnimatePresence>
-          {sidebarOpen && !isMoviePlayer && !isHomePage && !isSelectPage && (
+          {sidebarOpen && !isOffline && !isMoviePlayer && !isHomePage && !isSelectPage && (
             <>
               {/* Backdrop */}
               <motion.div

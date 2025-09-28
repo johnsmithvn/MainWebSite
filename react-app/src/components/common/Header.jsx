@@ -19,6 +19,7 @@ import { useUIStore, useAuthStore } from '../../store';
 import SearchModal from './SearchModal';
 import SettingsModal from './SettingsModal';
 import Button from './Button';
+import useOfflineStatus from '@/hooks/useOfflineStatus';
 
 const Header = () => {
   const location = useLocation();
@@ -32,11 +33,12 @@ const Header = () => {
   const isHomePage = pathname === '/';
   const isSelectPage = pathname === '/manga/select';
   
-  const { 
-    darkMode, 
-    toggleDarkMode, 
-    toggleSidebar 
+  const {
+    darkMode,
+    toggleDarkMode,
+    toggleSidebar
   } = useUIStore();
+  const isOffline = useOfflineStatus();
   const {
     lastMangaKey,
     lastMovieKey,
@@ -91,7 +93,7 @@ const Header = () => {
           <div className="flex items-center justify-between h-16">
             {/* Left section */}
             <div className="flex items-center space-x-4">
-              {!isHomePage && !isSelectPage && (
+              {!isHomePage && !isSelectPage && !isOffline && (
                 <Button
                   variant="ghost"
                   size="sm"
