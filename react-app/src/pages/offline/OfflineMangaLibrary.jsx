@@ -166,13 +166,13 @@ export default function OfflineMangaLibrary() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-5">
         <h1 className="sr-only">Manga Offline Library</h1>
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
-          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3">
+          <p className="hidden sm:block text-sm sm:text-base text-gray-600 dark:text-gray-300">
             {chapters.length} chapter{chapters.length !== 1 ? 's' : ''} đã tải offline
           </p>
 
@@ -262,34 +262,44 @@ export default function OfflineMangaLibrary() {
         )}
 
         {storageStats && (
-          <div className="sm:hidden text-xs text-gray-500 dark:text-gray-400 text-center">
-            Cập nhật lần cuối: {storageStats?.generatedAt ? formatDate(storageStats.generatedAt) : 'Không xác định'}
+          <div className="sm:hidden text-xs text-gray-500 dark:text-gray-400 text-center space-y-1">
+            <div>
+              Cập nhật lần cuối: {storageStats?.generatedAt ? formatDate(storageStats.generatedAt) : 'Không xác định'}
+            </div>
+            <div className="text-gray-600 dark:text-gray-300">
+              {chapters.length} chapter{chapters.length !== 1 ? 's' : ''} đã tải offline
+            </div>
+          </div>
+        )}
+        {!storageStats && (
+          <div className="sm:hidden text-xs text-gray-600 dark:text-gray-300 text-center">
+            {chapters.length} chapter{chapters.length !== 1 ? 's' : ''} đã tải offline
           </div>
         )}
       </div>
 
       {/* Controls */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-5">
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-5 mb-5">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center justify-between">
           {/* Search */}
           <div className="relative w-full sm:flex-1 sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
             <input
               type="text"
               placeholder="Tìm kiếm chapter..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+            className="w-full pl-9 pr-3 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
           />
         </div>
 
           {/* Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Sort */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="px-2.5 py-1.5 text-xs sm:text-sm sm:px-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="newest">Mới nhất</option>
               <option value="oldest">Cũ nhất</option>
