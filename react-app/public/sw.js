@@ -111,15 +111,19 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  
+
   // Skip non-GET requests
   if (request.method !== 'GET') return;
-  
+
   // Route to appropriate strategy
   if (isStaticAsset(request)) {
     event.respondWith(cacheFirstStrategy(request, STATIC_CACHE));
   } else if (isAPIRequest(request)) {
-    event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE));
+    if (shouldSkipDynamicCaching(request)) {
+      event.respondWith(networkOnlyStrategy(request));
+    } else {
+      event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE));
+    }
   } else if (isMangaImage(request)) {
     event.respondWith(mangaImageStrategy(request));
   } else if (isNavigation(request)) {
@@ -262,7 +266,7 @@ async function navigationStrategy(request) {
     console.log('🧭 Navigation:', request.url);
     const networkResponse = await fetch(request);
 
-    if (networkResponse && networkResponse.ok) {
+    if (networkResponse && networkResponse.ok && shouldCacheNavigation(request)) {
       try {
         const cache = await getCacheInstance(DYNAMIC_CACHE);
 
@@ -384,6 +388,79 @@ function getResourceName(url) {
   return url.split('/').pop() || url;
 }
 
+function shouldSkipDynamicCaching(request) {
+  try {
+    const url = new URL(request.url);
+    const { pathname, searchParams } = url;
+
+    // Skip caching for favorite endpoints (GET)
+    const favoriteEndpoints = [
+      '/api/manga/favorite',
+      '/api/movie/favorite-movie',
+      '/api/music/favorite'
+    ];
+    if (favoriteEndpoints.some((endpoint) => pathname.startsWith(endpoint))) {
+      console.log('🚫 Skip cache for favorite endpoint:', pathname);
+      return true;
+    }
+
+    // Skip caching for explicit grid view toggles
+    if (searchParams.get('view') === 'grid') {
+      console.log('🚫 Skip cache for grid view request:', request.url);
+      return true;
+    }
+
+    // Skip caching for random/top/search/list API responses
+    const mode = searchParams.get('mode');
+    const skipModes = new Set(['random', 'top', 'search', 'list', 'favorites']);
+    if (mode && skipModes.has(mode)) {
+      console.log('🚫 Skip cache for API mode:', mode, request.url);
+      return true;
+    }
+
+    // For cache endpoints, allow only essential modes for offline reading
+    const isCacheEndpoint = /\/api\/(manga|movie|music)\/(folder|video|audio)-cache$/.test(pathname);
+    if (isCacheEndpoint) {
+      const allowedModes = new Set(['path', 'chapter', 'chapters', 'detail']);
+
+      // Skip caching for root folder listings (empty path)
+      if (mode === 'path') {
+        const pathParam = searchParams.get('path');
+        if (!pathParam) {
+          console.log('🚫 Skip cache for root folder listing:', request.url);
+          return true;
+        }
+      }
+
+      if (!allowedModes.has(mode)) {
+        console.log('🚫 Skip cache for non-essential cache mode:', mode, request.url);
+        return true;
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to evaluate cache skip rules:', error);
+  }
+
+  return false;
+}
+
+function shouldCacheNavigation(request) {
+  try {
+    const url = new URL(request.url);
+    const { pathname } = url;
+
+    // Only cache navigation for offline hub and app shell roots
+    if (pathname === '/' || pathname === '/index.html') return true;
+    if (pathname.startsWith('/offline')) return true;
+
+    // Avoid caching legacy standalone pages like /manga/index.html, /movie/index.html, etc.
+    return false;
+  } catch (error) {
+    console.warn('⚠️ Failed to evaluate navigation caching rules:', error);
+    return true;
+  }
+}
+
 async function updateCacheInBackground(request, cache) {
   try {
     const response = await fetch(request);
@@ -392,6 +469,18 @@ async function updateCacheInBackground(request, cache) {
     }
   } catch (error) {
     // Silent fail for background updates
+  }
+}
+
+async function networkOnlyStrategy(request) {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      return response;
+    }
+    return response || handleFetchError(request, new Error('Empty network response'));
+  } catch (error) {
+    return handleFetchError(request, error);
   }
 }
 
