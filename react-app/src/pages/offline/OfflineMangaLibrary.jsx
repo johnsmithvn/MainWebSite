@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Trash2, Calendar, Eye, Grid, List } from 'lucide-react';
+import { Search, Trash2, Calendar, Eye, Grid, List, Info } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../constants';
 import Button from '../../components/common/Button';
 import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis } from '../../utils/offlineLibrary';
@@ -17,6 +17,7 @@ export default function OfflineMangaLibrary() {
   const [showClearModal, setShowClearModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [chapterToDelete, setChapterToDelete] = useState(null);
+  const [showStorageInfoModal, setShowStorageInfoModal] = useState(false);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -165,28 +166,21 @@ export default function OfflineMangaLibrary() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       {/* Header */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
               Manga Offline Library
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
               {chapters.length} chapter{chapters.length !== 1 ? 's' : ''} đã tải offline
             </p>
           </div>
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/offline')}
-              className="border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
-            >
-              ⬅️ Quay lại chế độ Offline
-            </Button>
             {chapters.length > 0 && (
               <Button
                 variant="outline"
@@ -202,7 +196,7 @@ export default function OfflineMangaLibrary() {
         
         {/* Storage Statistics */}
         {storageStats && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <div className="hidden sm:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
@@ -255,6 +249,19 @@ export default function OfflineMangaLibrary() {
             )}
           </div>
         )}
+
+        {storageStats && (
+          <div className="sm:hidden flex justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowStorageInfoModal(true)}
+              className="text-sm px-3 py-2"
+            >
+              <Info size={16} className="mr-2" />
+              Xem thông tin lưu trữ
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Controls */}
@@ -268,12 +275,12 @@ export default function OfflineMangaLibrary() {
               placeholder="Tìm kiếm chapter..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+          />
+        </div>
 
           {/* Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Sort */}
             <select
               value={sortBy}
@@ -508,6 +515,81 @@ export default function OfflineMangaLibrary() {
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Xóa chapter
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Storage Info Modal for mobile */}
+      {showStorageInfoModal && storageStats && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full p-6 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
+                <Info className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Thông tin lưu trữ</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Tổng quan dung lượng offline hiện tại</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/40">
+                <div className="text-xl font-semibold text-primary-600 dark:text-primary-400">
+                  {storageStats.chapters.count}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Chapters</div>
+              </div>
+              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/40">
+                <div className="text-xl font-semibold text-green-600 dark:text-green-400">
+                  {storageStats.chapters.totalImages}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Ảnh</div>
+              </div>
+              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/40">
+                <div className="text-xl font-semibold text-blue-600 dark:text-blue-400">
+                  {storageStats.formattedSize}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Dung lượng</div>
+              </div>
+              <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/40">
+                <div className="text-xl font-semibold text-purple-600 dark:text-purple-400">
+                  {storageStats.quota ? `${storageStats.quota.percentage}%` : 'N/A'}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Đã dùng</div>
+              </div>
+            </div>
+
+            {storageStats.quota && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <span>Storage quota</span>
+                  <span>{storageStats.quota.percentage}% used</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      storageStats.quota.percentage > 90
+                        ? 'bg-red-500'
+                        : storageStats.quota.percentage > 75
+                        ? 'bg-yellow-500'
+                        : 'bg-green-500'
+                    }`}
+                    style={{ width: `${Math.min(100, storageStats.quota.percentage)}%` }}
+                  ></div>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <span>Đã dùng: {formatSize(storageStats.quota.usage)}</span>
+                  <span>Còn trống: {formatSize(storageStats.quota.available)}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setShowStorageInfoModal(false)}>
+                Đóng
               </Button>
             </div>
           </div>
