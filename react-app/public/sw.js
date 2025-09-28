@@ -26,6 +26,13 @@ const OFFLINE_CORE_ASSETS = [
   DEFAULT_IMAGES.video
 ];
 
+const APP_SHELL_PATHS = ['/', '/index.html'];
+
+const STATIC_PRELOAD_ASSETS = Array.from(new Set([
+  ...OFFLINE_CORE_ASSETS,
+  ...APP_SHELL_PATHS
+]));
+
 // Network timeout for better UX
 const NETWORK_TIMEOUT = 5000;
 
@@ -41,7 +48,7 @@ self.addEventListener('install', (event) => {
       const cache = await caches.open(STATIC_CACHE);
       console.log('📦 Caching offline essentials...');
 
-      for (const asset of OFFLINE_CORE_ASSETS) {
+      for (const asset of STATIC_PRELOAD_ASSETS) {
         try {
           await cache.add(asset);
           console.log('✅ Cached offline asset:', asset);
@@ -119,10 +126,10 @@ self.addEventListener('fetch', (event) => {
   if (isStaticAsset(request)) {
     event.respondWith(cacheFirstStrategy(request, STATIC_CACHE));
   } else if (isAPIRequest(request)) {
-    if (shouldSkipDynamicCaching(request)) {
-      event.respondWith(networkOnlyStrategy(request));
-    } else {
+    if (shouldUseDynamicCaching(request)) {
       event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE));
+    } else {
+      event.respondWith(networkOnlyStrategy(request));
     }
   } else if (isMangaImage(request)) {
     event.respondWith(mangaImageStrategy(request));
@@ -266,25 +273,8 @@ async function navigationStrategy(request) {
     console.log('🧭 Navigation:', request.url);
     const networkResponse = await fetch(request);
 
-    if (networkResponse && networkResponse.ok && shouldCacheNavigation(request)) {
-      try {
-        const cache = await getCacheInstance(DYNAMIC_CACHE);
-
-        await cache.put(request, networkResponse.clone());
-
-        const appShellPaths = ['/', '/index.html'];
-        await Promise.all(
-          appShellPaths.map(async (path) => {
-            try {
-              await cache.put(path, networkResponse.clone());
-            } catch (cacheError) {
-              console.warn('⚠️ Failed to update app shell cache for', path, cacheError);
-            }
-          })
-        );
-      } catch (cacheError) {
-        console.warn('⚠️ Failed to cache navigation response:', cacheError);
-      }
+    if (networkResponse && networkResponse.ok) {
+      await refreshAppShellCache(networkResponse.clone());
     }
 
     return networkResponse;
@@ -292,33 +282,10 @@ async function navigationStrategy(request) {
     console.log('📴 Offline navigation fallback:', request.url);
 
     try {
-      const dynamicCache = await getCacheInstance(DYNAMIC_CACHE);
-
-      // First: Try exact cached response for the route
-      const cachedResponse = await dynamicCache.match(request);
-      if (cachedResponse) {
-        console.log('✅ Serving cached navigation response');
-        return cachedResponse;
-      }
-
-      // Second: Try app shell - prefer React app over static offline.html
-      const appShellPaths = ['/', '/index.html'];
-      for (const path of appShellPaths) {
-        const appShell = await dynamicCache.match(path);
-        if (appShell) {
-          console.log('✅ Serving cached app shell fallback (React app)');
-          return appShell;
-        }
-      }
-
-      // Try static cache for app shell as well
-      const staticCache = await getCacheInstance(STATIC_CACHE);
-      for (const path of appShellPaths) {
-        const appShell = await staticCache.match(path);
-        if (appShell) {
-          console.log('✅ Serving static cached app shell');
-          return appShell;
-        }
+      const cachedShell = await getCachedAppShell();
+      if (cachedShell) {
+        console.log('✅ Serving cached app shell');
+        return cachedShell;
       }
 
     } catch (cacheError) {
@@ -388,77 +355,66 @@ function getResourceName(url) {
   return url.split('/').pop() || url;
 }
 
-function shouldSkipDynamicCaching(request) {
+function shouldUseDynamicCaching(request) {
   try {
     const url = new URL(request.url);
     const { pathname, searchParams } = url;
 
-    // Skip caching for favorite endpoints (GET)
-    const favoriteEndpoints = [
-      '/api/manga/favorite',
-      '/api/movie/favorite-movie',
-      '/api/music/favorite'
-    ];
-    if (favoriteEndpoints.some((endpoint) => pathname.startsWith(endpoint))) {
-      console.log('🚫 Skip cache for favorite endpoint:', pathname);
-      return true;
-    }
-
-    // Skip caching for explicit grid view toggles
-    if (searchParams.get('view') === 'grid') {
-      console.log('🚫 Skip cache for grid view request:', request.url);
-      return true;
-    }
-
-    // Skip caching for random/top/search/list API responses
-    const mode = searchParams.get('mode');
-    const skipModes = new Set(['random', 'top', 'search', 'list', 'favorites']);
-    if (mode && skipModes.has(mode)) {
-      console.log('🚫 Skip cache for API mode:', mode, request.url);
-      return true;
-    }
-
-    // For cache endpoints, allow only essential modes for offline reading
+    // Only allow caching for offline-critical cache endpoints
     const isCacheEndpoint = /\/api\/(manga|movie|music)\/(folder|video|audio)-cache$/.test(pathname);
-    if (isCacheEndpoint) {
-      const allowedModes = new Set(['path', 'chapter', 'chapters', 'detail']);
-
-      // Skip caching for root folder listings (empty path)
-      if (mode === 'path') {
-        const pathParam = searchParams.get('path');
-        if (!pathParam) {
-          console.log('🚫 Skip cache for root folder listing:', request.url);
-          return true;
-        }
-      }
-
-      if (!allowedModes.has(mode)) {
-        console.log('🚫 Skip cache for non-essential cache mode:', mode, request.url);
-        return true;
-      }
+    if (!isCacheEndpoint) {
+      return false;
     }
+
+    const mode = searchParams.get('mode');
+    const allowedModes = new Set(['chapter', 'chapters', 'detail']);
+
+    if (!mode || !allowedModes.has(mode)) {
+      console.log('🚫 Skip cache for non-offline cache mode:', mode, request.url);
+      return false;
+    }
+
+    // Allow caching of specific chapter/detail payloads for offline reader prefetch
+    return true;
   } catch (error) {
     console.warn('⚠️ Failed to evaluate cache skip rules:', error);
+    return false;
   }
-
-  return false;
 }
 
-function shouldCacheNavigation(request) {
+async function refreshAppShellCache(response) {
   try {
-    const url = new URL(request.url);
-    const { pathname } = url;
+    const cache = await getCacheInstance(STATIC_CACHE);
 
-    // Only cache navigation for offline hub and app shell roots
-    if (pathname === '/' || pathname === '/index.html') return true;
-    if (pathname.startsWith('/offline')) return true;
-
-    // Avoid caching legacy standalone pages like /manga/index.html, /movie/index.html, etc.
-    return false;
+    await Promise.all(
+      APP_SHELL_PATHS.map(async (path) => {
+        try {
+          await cache.put(path, response.clone());
+        } catch (cacheError) {
+          console.warn('⚠️ Failed to update app shell cache for', path, cacheError);
+        }
+      })
+    );
   } catch (error) {
-    console.warn('⚠️ Failed to evaluate navigation caching rules:', error);
-    return true;
+    console.warn('⚠️ Failed to refresh app shell cache:', error);
   }
+}
+
+async function getCachedAppShell() {
+  try {
+    const cache = await getCacheInstance(STATIC_CACHE);
+
+    for (const path of APP_SHELL_PATHS) {
+      const match = await cache.match(path);
+      if (match) {
+        return match;
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to read app shell from cache:', error);
+  }
+
+  return null;
 }
 
 async function updateCacheInBackground(request, cache) {
