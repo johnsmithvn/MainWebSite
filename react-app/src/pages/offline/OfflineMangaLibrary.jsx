@@ -603,63 +603,77 @@ export default function OfflineMangaLibrary() {
 const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
   const coverImage = chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover;
   const title = chapter.mangaTitle || chapter.chapterTitle || chapter.id || 'Unknown';
-  
+  const totalPages = chapter.totalPages ?? chapter.pageUrls?.length ?? 0;
+  const downloadedDate = chapter.createdAt ? formatDate(chapter.createdAt) : 'Không rõ';
+
+  const handleRead = () => {
+    onRead(chapter);
+  };
+
+  const handleDelete = (event) => {
+    event.stopPropagation();
+    onDelete(chapter.id);
+  };
+
   return (
-    <div className="group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-200">
-      {/* Cover Image */}
-      <div className="relative aspect-[3/4] bg-gray-100 dark:bg-gray-700">
-        <img
-          src={coverImage}
-          alt={title}
-          className="w-full h-full object-cover"
-          loading="lazy"
-          onError={(e) => {
-            e.target.src = DEFAULT_IMAGES.cover;
-          }}
-        />
-        
-        {/* Overlay on hover */}
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() => onRead(chapter)}
-              className="bg-primary-600 hover:bg-primary-700 text-white"
-            >
-              <Eye size={16} />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onDelete(chapter.id)}
-              className="bg-red-600 hover:bg-red-700 text-white border-red-600"
-            >
-              <Trash2 size={16} />
-            </Button>
-          </div>
+    <div
+      className="group bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 dark:border-gray-700 p-3 cursor-pointer"
+      onClick={handleRead}
+    >
+      <div className="relative">
+        <div className="aspect-[3/4] bg-gray-200 dark:bg-gray-700 rounded-md overflow-hidden mb-3">
+          <img
+            src={coverImage}
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+            onError={(e) => {
+              e.target.src = DEFAULT_IMAGES.cover;
+            }}
+          />
         </div>
-        
-        {/* Pages badge */}
-        <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-md text-xs font-medium">
-          {chapter.totalPages} trang
+
+        <div className="absolute top-3 left-3 bg-black/70 text-white px-2 py-1 rounded-md text-xs font-medium">
+          {totalPages} trang
         </div>
       </div>
 
-      {/* Info */}
-      <div className="p-3">
-        <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-2">
-          {title}
-        </h3>
-        
-        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-          <div className="flex items-center gap-1">
-            <Calendar size={12} />
-            <span>{formatDate(chapter.createdAt)}</span>
-          </div>
-          {chapter.bytes && (
-            <div>Size: {formatSize(chapter.bytes)}</div>
-          )}
-        </div>
+      <h3
+        className="font-semibold text-gray-900 dark:text-white text-sm mb-2 line-clamp-2 hover:text-primary-500"
+        title={title}
+      >
+        {title}
+      </h3>
+
+      <div className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
+        {chapter.bytes && <span>Dung lượng: {formatSize(chapter.bytes)}</span>}
+        <span className="flex items-center gap-1">
+          <Calendar size={12} />
+          <span>Tải ngày: {downloadedDate}</span>
+        </span>
+      </div>
+
+      <div className="flex gap-2 mt-3">
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRead(chapter);
+          }}
+          className="flex-1"
+        >
+          <Eye size={14} className="mr-1" />
+          Đọc
+        </Button>
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={handleDelete}
+          className="text-red-500 hover:text-red-600"
+        >
+          <Trash2 size={14} />
+        </Button>
       </div>
     </div>
   );
