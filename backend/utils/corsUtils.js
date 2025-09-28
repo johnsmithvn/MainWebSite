@@ -57,11 +57,11 @@ function generateCorsOrigins(hostnames, ports, options = {}) {
  * generateDevOrigins() 
  * // ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"]
  */
-function generateDevOrigins(ports = [3000, 3001], includeHttps = false) {
+function generateDevOrigins(ports = [3000, 3001], includeHttps = true) {
   const devHostnames = ['localhost', '127.0.0.1'];
   return generateCorsOrigins(devHostnames, ports, { 
     includeHttp: true, 
-    includeHttps 
+    includeHttps  // 🔧 Now includes HTTPS by default for production testing
   });
 }
 

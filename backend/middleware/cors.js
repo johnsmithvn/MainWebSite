@@ -103,6 +103,17 @@ const corsMiddleware = cors({
       return callback(null, true);
     }
 
+    // 🔧 Production localhost fallback (for development/testing)
+    try {
+      const u = new URL(origin);
+      if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
+        console.log(`🔧 Prod - Localhost allowed for testing: ${origin}`);
+        return callback(null, true);
+      }
+    } catch (_) {
+      // Ignore URL parse errors
+    }
+
     // Production fallback: allow Tailscale domains (for remote access)
     try {
       const u = new URL(origin);
