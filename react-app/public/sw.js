@@ -12,17 +12,17 @@ const DEFAULT_IMAGES = {
   favicon: '/default/favicon.png'
 };
 
-const CACHE_VERSION = 'v3.1.0'; // Updated for optimization
+const CACHE_VERSION = 'v3.2.0'; // Updated for offline fix
 const STATIC_CACHE = `offline-core-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `reader-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'chapter-images'; // Keep existing name for compatibility
 
-// 🎯 Cache optimization settings
+// 🚨 Cache optimization settings - LUÔN cache để offline hoạt động
 const CACHE_OPTIMIZATION = {
-  DISABLE_RANDOM_CACHE: true,    // Don't cache random API calls
-  DISABLE_INDEX_CACHE: true,     // Don't cache manga list API calls
+  KEEP_ALL_FOR_OFFLINE: true,    // 🚨 Cache tất cả để offline hoạt động
   KEEP_OFFLINE_ESSENTIALS: true, // Always cache offline essentials
-  MAX_DYNAMIC_ENTRIES: 50,       // Limit dynamic cache entries
+  MAX_DYNAMIC_ENTRIES: 100,      // Tăng limit để đủ cho offline (50→100)
+  OPTIMIZE_SIZE_ONLY: true,      // Chỉ optimize size, không skip cache
 };
 
 // Offline essentials - only default images, no offline.html
@@ -406,26 +406,13 @@ function isAPIRequest(request) {
   return request.url.includes('/api/');
 }
 
-// 🎯 Check if API request should be cached
+// 🚨 LUÔN cache API để app hoạt động offline - chỉ giới hạn size
 function shouldCacheAPIRequest(request) {
   const url = request.url;
   
-  // Don't cache random API calls if optimization enabled
-  if (CACHE_OPTIMIZATION.DISABLE_RANDOM_CACHE && url.includes('random')) {
-    console.log('🚫 Skipping cache for random API:', url);
-    return false;
-  }
-  
-  // Don't cache index/list API calls if optimization enabled  
-  if (CACHE_OPTIMIZATION.DISABLE_INDEX_CACHE && (
-    url.includes('folder-cache') && !url.includes('random') ||
-    url.includes('video-cache') && !url.includes('random') ||
-    url.includes('audio-cache') && !url.includes('random')
-  )) {
-    console.log('🚫 Skipping cache for index API:', url);
-    return false;
-  }
-  
+  // 🚨 LUÔN cache API responses để offline hoạt động
+  // Chỉ giới hạn cache size thay vì skip cache hoàn toàn
+  console.log('📦 Caching API request (required for offline):', url);
   return true;
 }
 

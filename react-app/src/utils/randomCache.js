@@ -65,15 +65,13 @@ export const ensureRandomCache = async (type, sourceKey, rootFolder, count = CAC
     }
 
     if (Array.isArray(items) && items.length > 0) {
-      // 🎯 Check if we should cache random data
-      const offlineNeeded = await isOfflineModeNeeded();
-      if (CACHE_CONFIG.OFFLINE_OPTIMIZATION.DISABLE_RANDOM_CACHE && !offlineNeeded) {
-        console.log('🚫 Skipping random cache (optimization enabled, not offline)');
-        return true; // Return true to indicate data was fetched successfully
-      }
+      // 🚨 LUÔN cache để app hoạt động offline - chỉ giảm số lượng
+      const maxItems = CACHE_CONFIG.OFFLINE_OPTIMIZATION.MAX_RANDOM_ITEMS;
+      const optimizedItems = items.slice(0, maxItems); // Giảm số lượng thay vì skip cache
       
-      const payload = { timestamp: Date.now(), data: items };
+      const payload = { timestamp: Date.now(), data: optimizedItems };
       localStorage.setItem(cacheKey, JSON.stringify(payload));
+      console.log(`💾 Random cache saved (optimized): ${items.length} → ${optimizedItems.length} items`);
       return true;
     }
   } catch (err) {

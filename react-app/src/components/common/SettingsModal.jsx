@@ -98,21 +98,22 @@ const SettingsModal = ({ isOpen, onClose }) => {
         <div className="text-left space-y-3">
           <p className="font-medium">Tối ưu cache để giảm dung lượng không cần thiết?</p>
           <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-green-800 dark:text-green-200 mb-2">✅ Sẽ được tối ưu:</p>
+            <p className="font-semibold text-green-800 dark:text-green-200 mb-2">🎯 Sẽ được tối ưu (SAFE MODE):</p>
             <ul className="text-sm space-y-1 text-green-700 dark:text-green-300">
-              <li>• Xóa random cache không cần thiết</li>
-              <li>• Giảm recent items từ 20 → 15</li>
-              <li>• Xóa cache danh sách manga index</li>
-              <li>• Dọn dẹp cache hết hạn</li>
+              <li>• Giảm random items từ 20 → 10 (vẫn giữ cache)</li>
+              <li>• Giảm recent items từ 20 → 15 (vẫn giữ cache)</li>
+              <li>• Dọn cache hết hạn và trùng lặp</li>
+              <li>• Chỉ cleanup aggressive khi storage đầy</li>
             </ul>
           </div>
           <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-blue-800 dark:text-blue-200 mb-2">🔒 Sẽ được giữ lại:</p>
+            <p className="font-semibold text-blue-800 dark:text-blue-200 mb-2">🚨 LUÔN giữ cho offline:</p>
             <ul className="text-sm space-y-1 text-blue-700 dark:text-blue-300">
-              <li>• Favorites (yêu thích)</li>
-              <li>• Grid view cache (cho offline)</li>
-              <li>• Chapter images (đọc offline)</li>
-              <li>• Recent items (giới hạn 15)</li>
+              <li>• <strong>Library cache</strong> (để vào app khi offline)</li>
+              <li>• <strong>Navigation cache</strong> (để điều hướng offline)</li>
+              <li>• <strong>Favorites cache</strong> (danh sách yêu thích)</li>
+              <li>• <strong>Grid view cache</strong> (xem danh sách offline)</li>
+              <li>• <strong>Chapter images</strong> (đọc manga offline)</li>
             </ul>
           </div>
         </div>

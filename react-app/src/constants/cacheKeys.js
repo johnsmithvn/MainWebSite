@@ -45,19 +45,27 @@ export const CACHE_CONFIG = {
   MUSIC: {
     CACHE_EXPIRATION: 30 * 60 * 1000, // 30 minutes
   },
-  // 🎯 Offline optimization settings
+  // 🎯 Offline optimization settings - CHỈ giảm cache thực sự không cần thiết
   OFFLINE_OPTIMIZATION: {
-    // Disable cache for these patterns when offline mode is not needed
-    DISABLE_RANDOM_CACHE: true,        // Tắt cache random khi không cần offline
-    DISABLE_INDEX_CACHE: true,         // Tắt cache danh sách index
-    DISABLE_RECENT_CACHE: false,       // Giữ recent cache (ít dữ liệu)
-    KEEP_FAVORITE_CACHE: true,         // Luôn giữ favorite cache
-    KEEP_GRIDVIEW_CACHE: true,         // Giữ cache cho grid view (cần cho offline)
-    KEEP_CHAPTER_IMAGES: true,         // Giữ chapter images (offline reading)
-    // Cache size limits
-    MAX_RANDOM_ITEMS: 10,              // Giảm từ 20 xuống 10 items
-    MAX_RECENT_ITEMS: 15,              // Giảm từ 20 xuống 15 items
-    CACHE_CLEANUP_INTERVAL: 5 * 60 * 1000, // 5 minutes cleanup interval
+    // ❌ Chỉ disable những cache này:
+    DISABLE_EXCESSIVE_RANDOM: true,    // Giảm số lượng random items (20→10)
+    DISABLE_API_RESPONSE_CACHE: true,  // Không cache API response (chỉ cache data)
+    CLEANUP_EXPIRED_CACHE: true,       // Dọn cache hết hạn
+    LIMIT_DUPLICATE_CACHE: true,       // Giới hạn cache trùng lặp
+    
+    // ✅ LUÔN GIỮ những cache này cho offline:
+    KEEP_LIBRARY_CACHE: true,          // 🚨 QUAN TRỌNG: Giữ library để vào offline
+    KEEP_NAVIGATION_CACHE: true,       // Giữ navigation cache
+    KEEP_FAVORITE_CACHE: true,         // Giữ favorite cache
+    KEEP_GRIDVIEW_CACHE: true,         // Giữ grid view cache
+    KEEP_CHAPTER_IMAGES: true,         // Giữ chapter images
+    KEEP_RECENT_CACHE: true,           // Giữ recent cache (giảm số lượng)
+    
+    // Cache size limits - CHỈ giảm số lượng, KHÔNG xóa hoàn toàn
+    MAX_RANDOM_ITEMS: 10,              // Giảm từ 20 → 10 (vẫn đủ dùng)
+    MAX_RECENT_ITEMS: 15,              // Giảm từ 20 → 15 (vẫn đủ dùng)
+    MAX_DUPLICATE_ENTRIES: 3,          // Giới hạn cache trùng lặp
+    CACHE_CLEANUP_INTERVAL: 10 * 60 * 1000, // 10 minutes cleanup interval
   }
 };
 

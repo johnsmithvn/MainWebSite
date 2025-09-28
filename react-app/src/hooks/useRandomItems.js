@@ -152,22 +152,23 @@ export const useRandomItems = (type, options = {}) => {
     return null;
   }, [cacheKey, staleTime, type, mangaStore, movieStore, musicStore]);
 
-  // Save data to localStorage cache (with optimization check)
+  // Save data to localStorage cache (LUÔN cache để offline hoạt động)
   const setCachedData = useCallback(async (data) => {
-    // 🎯 Check if we should cache random data
-    const offlineNeeded = await isOfflineModeNeeded();
-    if (CACHE_CONFIG.OFFLINE_OPTIMIZATION.DISABLE_RANDOM_CACHE && !offlineNeeded) {
-      console.log('🚫 Skipping random cache (optimization enabled, not offline)');
-      setLastUpdated(new Date());
-      return;
-    }
+    // 🚨 LUÔN cache để app hoạt động offline - chỉ giảm số lượng
+    const maxItems = CACHE_CONFIG.OFFLINE_OPTIMIZATION.MAX_RANDOM_ITEMS;
+    const optimizedData = data.slice(0, maxItems); // Chỉ giảm số lượng, không skip cache
     
     try {
       const timestamp = Date.now();
-      const cacheData = { timestamp, data };
+      const cacheData = { timestamp, data: optimizedData }; // Lưu data đã optimize
       localStorage.setItem(cacheKey, JSON.stringify(cacheData));
       setLastUpdated(new Date(timestamp));
-      console.log('💾 Cache saved:', { cacheKey, itemCount: data.length, timestamp: new Date(timestamp) });
+      console.log('💾 Cache saved (optimized):', { 
+        cacheKey, 
+        originalCount: data.length, 
+        optimizedCount: optimizedData.length, 
+        timestamp: new Date(timestamp) 
+      });
     } catch (error) {
       console.warn('Error saving cache:', error);
     }

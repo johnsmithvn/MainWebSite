@@ -1,18 +1,24 @@
-# 📋 Sổ Tay Tối Ưu Cache Manga Web - Giảm Cache Không Cần Thiết
+# 📋 Sổ Tay Tối Ưu Cache Manga Web - SAFE MODE (Giữ Offline Functionality)
 
-## 🎯 Mục Tiêu Hoàn Thành
+## 🚨 QUAN TRỌNG: App Cần Hoạt Động Offline
 
-✅ **Đã giảm cache cho:**
-- Random manga list (danh sách ngẫu nhiên): từ 20 → 10 items
-- Recent items: từ 20 → 15 items
-- Index/folder cache: chỉ cache khi cần offline
-- API responses: không cache random/index API khi online
+**Đã sửa lại logic để app vẫn hoạt động offline!**
 
-✅ **Đã giữ lại:**
-- Favorites cache (yêu thích)
-- Grid view cache (cho offline reading)
-- Chapter images (offline reading)
-- Essential offline assets
+## 🎯 Mục Tiêu Hoàn Thành (SAFE MODE)
+
+✅ **Đã tối ưu (không xóa cache):**
+- Random manga list: từ 20 → 10 items (vẫn cache để offline)
+- Recent items: từ 20 → 15 items (vẫn cache để offline)  
+- Dọn cache hết hạn và trùng lặp
+- Chỉ cleanup aggressive khi storage đầy (>80%)
+
+✅ **LUÔN giữ lại cho offline:**
+- **Library cache** (🚨 QUAN TRỌNG: để vào app khi offline)
+- **Navigation cache** (để điều hướng khi offline)
+- **Favorites cache** (danh sách yêu thích)
+- **Grid view cache** (xem danh sách offline)
+- **Chapter images** (đọc manga offline)
+- **API responses** (cần cho offline functionality)
 
 ## 🔧 Cách Thức Hoạt Động
 
