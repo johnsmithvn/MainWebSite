@@ -168,32 +168,43 @@ export default function OfflineMangaLibrary() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
-              Manga Offline Library
-            </h1>
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-              {chapters.length} chapter{chapters.length !== 1 ? 's' : ''} đã tải offline
-            </p>
-          </div>
+      <div className="mb-6">
+        <h1 className="sr-only">Manga Offline Library</h1>
 
-          {/* Actions */}
-          <div className="flex flex-wrap gap-2 justify-end">
-            {chapters.length > 0 && (
-              <Button
-                variant="outline"
-                onClick={() => setShowClearModal(true)}
-                className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
-              >
-                <Trash2 size={16} />
-                <span className="ml-1">Xóa tất cả</span>
-              </Button>
-            )}
-          </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
+            {chapters.length} chapter{chapters.length !== 1 ? 's' : ''} đã tải offline
+          </p>
+
+          {(storageStats || chapters.length > 0) && (
+            <div className="flex items-center justify-center sm:justify-end gap-2">
+              {storageStats && (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => setShowStorageInfoModal(true)}
+                  className="sm:hidden border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 gap-1.5"
+                >
+                  <Info size={14} />
+                  <span>Xem thông tin</span>
+                </Button>
+              )}
+
+              {chapters.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => setShowClearModal(true)}
+                  className="border-red-200 hover:bg-red-50 text-red-600 dark:border-red-800 dark:hover:bg-red-900/20 dark:text-red-400 gap-1.5 sm:px-3 sm:py-1.5 sm:text-sm"
+                >
+                  <Trash2 size={14} />
+                  <span>Xóa tất cả</span>
+                </Button>
+              )}
+            </div>
+          )}
         </div>
-        
+
         {/* Storage Statistics */}
         {storageStats && (
           <div className="hidden sm:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
@@ -251,41 +262,34 @@ export default function OfflineMangaLibrary() {
         )}
 
         {storageStats && (
-          <div className="sm:hidden flex justify-end">
-            <Button
-              variant="outline"
-              onClick={() => setShowStorageInfoModal(true)}
-              className="text-sm px-3 py-2"
-            >
-              <Info size={16} className="mr-2" />
-              Xem thông tin lưu trữ
-            </Button>
+          <div className="sm:hidden text-xs text-gray-500 dark:text-gray-400 text-center">
+            Cập nhật lần cuối: {storageStats?.generatedAt ? formatDate(storageStats.generatedAt) : 'Không xác định'}
           </div>
         )}
       </div>
 
       {/* Controls */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-5 mb-5">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center justify-between">
           {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <div className="relative w-full sm:flex-1 sm:max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
               placeholder="Tìm kiếm chapter..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
           />
         </div>
 
           {/* Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
             {/* Sort */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="newest">Mới nhất</option>
               <option value="oldest">Cũ nhất</option>
@@ -293,7 +297,7 @@ export default function OfflineMangaLibrary() {
             </select>
 
             {/* View Mode */}
-            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 sm:p-1">
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-2 rounded-md transition-colors ${
@@ -303,7 +307,7 @@ export default function OfflineMangaLibrary() {
                 }`}
                 title="Grid view"
               >
-                <Grid size={18} />
+                <Grid size={16} />
               </button>
               <button
                 onClick={() => setViewMode('list')}
@@ -314,7 +318,7 @@ export default function OfflineMangaLibrary() {
                 }`}
                 title="List view"
               >
-                <List size={18} />
+                <List size={16} />
               </button>
             </div>
           </div>
