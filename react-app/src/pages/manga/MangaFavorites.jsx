@@ -50,6 +50,8 @@ const MangaFavorites = () => {
   
       setError('');
       try {
+        // 🚫 Skip cache for favorites page - always fetch fresh data
+        console.log('🚫 Loading favorites without cache');
         await fetchFavorites();
       } catch (err) {
         setError('Failed to load favorite manga. Please try again.');

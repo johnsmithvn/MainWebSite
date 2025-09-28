@@ -22,6 +22,8 @@ export default function OfflineMangaLibrary() {
   const load = async () => {
     try {
       setLoading(true);
+      // 🚫 Skip cache for offline library - use direct offline data
+      console.log('🚫 Loading offline library without cache');
       const items = await getChapters();
       setChapters(items);
       

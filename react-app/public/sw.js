@@ -119,6 +119,11 @@ self.addEventListener('fetch', (event) => {
   if (isStaticAsset(request)) {
     event.respondWith(cacheFirstStrategy(request, STATIC_CACHE));
   } else if (isAPIRequest(request)) {
+    // 🚫 Skip caching for unnecessary API endpoints
+    if (shouldSkipAPICache(request)) {
+      event.respondWith(fetch(request));
+      return;
+    }
     event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE));
   } else if (isMangaImage(request)) {
     event.respondWith(mangaImageStrategy(request));
@@ -378,6 +383,31 @@ function isMangaImage(request) {
 
 function isNavigation(request) {
   return request.mode === 'navigate';
+}
+
+// 🚫 Skip caching for unnecessary API endpoints
+function shouldSkipAPICache(request) {
+  const url = new URL(request.url);
+  const pathname = url.pathname;
+  
+  // Skip caching for these endpoints that don't need offline support
+  const skipCachePatterns = [
+    '/api/manga/favorites',           // Favorite manga list
+    '/api/movie/favorites',           // Favorite movie list  
+    '/api/music/favorites',           // Favorite music list
+    '/api/manga/random',              // Random manga (not needed offline)
+    '/api/movie/random',              // Random movie (not needed offline)
+    '/api/music/random',              // Random music (not needed offline)
+    '/api/manga/top-view',            // Top view (not needed offline)
+    '/api/movie/top-view',            // Top view (not needed offline)
+    '/api/music/top-view',            // Top view (not needed offline)
+    '/api/manga/recent',              // Recent viewed (not needed offline)
+    '/api/movie/recent',              // Recent viewed (not needed offline)
+    '/api/music/recent'               // Recent viewed (not needed offline)
+  ];
+  
+  // Check if URL matches any skip pattern
+  return skipCachePatterns.some(pattern => pathname.includes(pattern));
 }
 
 function getResourceName(url) {

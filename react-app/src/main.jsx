@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Modal from 'react-modal';
 import App from './App';
 import './styles.css';
+import { initCacheOptimization } from './utils/cacheOptimizer.js';
 
 // Create a query client
 const queryClient = new QueryClient({
@@ -51,6 +52,8 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
         console.log('✅ SW registered:', registration);
+        // 🚀 Initialize cache optimization after SW registration
+        initCacheOptimization();
       })
       .catch((err) => {
         console.error('❌ SW registration failed:', err);

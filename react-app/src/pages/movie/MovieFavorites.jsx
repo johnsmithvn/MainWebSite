@@ -39,6 +39,8 @@ const MovieFavorites = () => {
     const loadFavorites = async () => {
       setLoading(true);
       try {
+        // 🚫 Skip cache for favorites page - always fetch fresh data
+        console.log('🚫 Loading movie favorites without cache');
         await fetchFavorites();
       } catch (err) {
         setError('Failed to load favorites');

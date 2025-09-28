@@ -24,8 +24,24 @@ const getEndpoint = (type, sourceKey, rootFolder, count = 20) => {
   }
 };
 
-// Ensure cache for a given type exists in localStorage; if missing or expired, fetch and seed it
+// 🚫 OPTIMIZED: Skip random cache for unnecessary pages
 export const ensureRandomCache = async (type, sourceKey, rootFolder, count = 20, staleTime = 5 * 60 * 1000) => {
+  // 🚫 Skip random cache for favorite pages and offline library
+  const currentPath = window.location.pathname;
+  const skipCachePaths = [
+    '/manga/favorites',
+    '/movie/favorites', 
+    '/music/favorites',
+    '/offline/manga-library',
+    '/offline/movie-library',
+    '/offline/music-library'
+  ];
+  
+  if (skipCachePaths.some(path => currentPath.includes(path))) {
+    console.log('🚫 Skipping random cache for unnecessary page:', currentPath);
+    return false;
+  }
+
   if (!sourceKey) return false;
   if (type === 'manga' && !rootFolder) return false;
 
