@@ -5,6 +5,7 @@ import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useUIStore, useMusicStore } from '@/store';
 import Layout from '@/components/common/Layout';
+import { startCacheOptimization, stopCacheOptimization } from '@/utils/cacheOptimizer';
 
 // Pages
 import Home from '@/pages/Home';
@@ -55,6 +56,17 @@ function App() {
       document.documentElement.setAttribute('data-theme', 'light');
     }
   }, [darkMode]);
+
+  // 🎯 Start cache optimization on app load
+  useEffect(() => {
+    console.log('🎯 Starting cache optimization system');
+    const optimizationId = startCacheOptimization();
+    
+    return () => {
+      console.log('🛑 Stopping cache optimization system');
+      stopCacheOptimization(optimizationId);
+    };
+  }, []);
 
   return (
     <Routes>

@@ -12,10 +12,18 @@ const DEFAULT_IMAGES = {
   favicon: '/default/favicon.png'
 };
 
-const CACHE_VERSION = 'v3.0.0';
+const CACHE_VERSION = 'v3.1.0'; // Updated for optimization
 const STATIC_CACHE = `offline-core-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `reader-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'chapter-images'; // Keep existing name for compatibility
+
+// 🎯 Cache optimization settings
+const CACHE_OPTIMIZATION = {
+  DISABLE_RANDOM_CACHE: true,    // Don't cache random API calls
+  DISABLE_INDEX_CACHE: true,     // Don't cache manga list API calls
+  KEEP_OFFLINE_ESSENTIALS: true, // Always cache offline essentials
+  MAX_DYNAMIC_ENTRIES: 50,       // Limit dynamic cache entries
+};
 
 // Offline essentials - only default images, no offline.html
 const OFFLINE_CORE_ASSETS = [
@@ -160,6 +168,23 @@ async function getCacheInstance(cacheName) {
   return cache;
 }
 
+// 🎯 Limit cache entries to prevent unlimited growth
+async function limitCacheEntries(cache, maxEntries) {
+  try {
+    const keys = await cache.keys();
+    if (keys.length > maxEntries) {
+      // Remove oldest entries (FIFO)
+      const entriesToRemove = keys.length - maxEntries;
+      const keysToRemove = keys.slice(0, entriesToRemove);
+      
+      await Promise.all(keysToRemove.map(key => cache.delete(key)));
+      console.log(`🗑️ Removed ${entriesToRemove} old cache entries to maintain limit of ${maxEntries}`);
+    }
+  } catch (error) {
+    console.warn('Error limiting cache entries:', error);
+  }
+}
+
 // Cache-first strategy for static assets with race condition protection
 async function cacheFirstStrategy(request, cacheName) {
   try {
@@ -193,7 +218,7 @@ async function cacheFirstStrategy(request, cacheName) {
   }
 }
 
-// Network-first with timeout for better UX
+// Network-first with timeout for better UX (with optimization)
 async function networkFirstWithTimeout(request, cacheName) {
   try {
     console.log('🌐 Network-first:', getResourceName(request.url));
@@ -207,8 +232,20 @@ async function networkFirstWithTimeout(request, cacheName) {
     const networkResponse = await Promise.race([networkPromise, timeoutPromise]);
     
     if (networkResponse.ok) {
+      // 🎯 Check if we should cache this API request
+      if (isAPIRequest(request) && !shouldCacheAPIRequest(request)) {
+        console.log('🚫 Not caching API request due to optimization');
+        return networkResponse;
+      }
+      
       // Use centralized cache instance getter
       const cache = await getCacheInstance(cacheName);
+      
+      // 🎯 Limit dynamic cache entries
+      if (cacheName === DYNAMIC_CACHE) {
+        await limitCacheEntries(cache, CACHE_OPTIMIZATION.MAX_DYNAMIC_ENTRIES);
+      }
+      
       cache.put(request, networkResponse.clone());
     }
     
@@ -367,6 +404,29 @@ function isStaticAsset(request) {
 
 function isAPIRequest(request) {
   return request.url.includes('/api/');
+}
+
+// 🎯 Check if API request should be cached
+function shouldCacheAPIRequest(request) {
+  const url = request.url;
+  
+  // Don't cache random API calls if optimization enabled
+  if (CACHE_OPTIMIZATION.DISABLE_RANDOM_CACHE && url.includes('random')) {
+    console.log('🚫 Skipping cache for random API:', url);
+    return false;
+  }
+  
+  // Don't cache index/list API calls if optimization enabled  
+  if (CACHE_OPTIMIZATION.DISABLE_INDEX_CACHE && (
+    url.includes('folder-cache') && !url.includes('random') ||
+    url.includes('video-cache') && !url.includes('random') ||
+    url.includes('audio-cache') && !url.includes('random')
+  )) {
+    console.log('🚫 Skipping cache for index API:', url);
+    return false;
+  }
+  
+  return true;
 }
 
 function isMangaImage(request) {

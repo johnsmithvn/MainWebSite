@@ -2,7 +2,8 @@
 // 🔄 Utilities to ensure random cache exists before rendering sections
 
 import api from './api';
-import { getRandomViewCacheKey } from '@/constants/cacheKeys';
+import { getRandomViewCacheKey, CACHE_CONFIG } from '@/constants/cacheKeys';
+import { isOfflineModeNeeded } from './cacheOptimizer';
 
 // Build the same cache key used by useRandomItems
 export const getRandomCacheKey = (type, sourceKey, rootFolder) => {
@@ -25,7 +26,7 @@ const getEndpoint = (type, sourceKey, rootFolder, count = 20) => {
 };
 
 // Ensure cache for a given type exists in localStorage; if missing or expired, fetch and seed it
-export const ensureRandomCache = async (type, sourceKey, rootFolder, count = 20, staleTime = 5 * 60 * 1000) => {
+export const ensureRandomCache = async (type, sourceKey, rootFolder, count = CACHE_CONFIG.OFFLINE_OPTIMIZATION.MAX_RANDOM_ITEMS, staleTime = 5 * 60 * 1000) => {
   if (!sourceKey) return false;
   if (type === 'manga' && !rootFolder) return false;
 
@@ -64,6 +65,13 @@ export const ensureRandomCache = async (type, sourceKey, rootFolder, count = 20,
     }
 
     if (Array.isArray(items) && items.length > 0) {
+      // 🎯 Check if we should cache random data
+      const offlineNeeded = await isOfflineModeNeeded();
+      if (CACHE_CONFIG.OFFLINE_OPTIMIZATION.DISABLE_RANDOM_CACHE && !offlineNeeded) {
+        console.log('🚫 Skipping random cache (optimization enabled, not offline)');
+        return true; // Return true to indicate data was fetched successfully
+      }
+      
       const payload = { timestamp: Date.now(), data: items };
       localStorage.setItem(cacheKey, JSON.stringify(payload));
       return true;

@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import { processThumbnails } from '@/utils/thumbnailUtils';
-import { getRecentViewedCacheKey } from '@/constants/cacheKeys';
+import { getRecentViewedCacheKey, CACHE_CONFIG } from '@/constants/cacheKeys';
 
 /**
  * Hook để quản lý recent viewed items với localStorage cache
@@ -26,8 +26,8 @@ export const useRecentItems = (type, options = {}) => {
   const queryClient = useQueryClient();
   const [lastUpdated, setLastUpdated] = useState(null);
   
-  // Use maxItems from store settings, fallback to options, then default
-  const effectiveMaxItems = mangaSettings.recentHistoryCount || maxItems || 20;
+  // Use maxItems from store settings, fallback to options, then optimized default
+  const effectiveMaxItems = mangaSettings.recentHistoryCount || maxItems || CACHE_CONFIG.OFFLINE_OPTIMIZATION.MAX_RECENT_ITEMS;
 
   // Stable query key - use useMemo to prevent re-creation
   const queryKey = useMemo(() => ['recentItems', type, sourceKey, rootFolder], [type, sourceKey, rootFolder]);

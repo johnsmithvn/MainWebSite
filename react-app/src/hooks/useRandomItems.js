@@ -6,7 +6,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/utils/api';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import { processThumbnails } from '@/utils/thumbnailUtils';
-import { getRandomViewCacheKey } from '@/constants/cacheKeys';
+import { getRandomViewCacheKey, CACHE_CONFIG } from '@/constants/cacheKeys';
+import { isOfflineModeNeeded } from '@/utils/cacheOptimizer';
 import toast from 'react-hot-toast';
 
 /**
@@ -20,7 +21,7 @@ export const useRandomItems = (type, options = {}) => {
     enabled = true,
     staleTime = 5 * 60 * 1000, // 5 minutes
     cacheTime = 10 * 60 * 1000, // 10 minutes
-    count = 20,
+    count = CACHE_CONFIG.OFFLINE_OPTIMIZATION.MAX_RANDOM_ITEMS, // Reduced from 20 to 10
     force = false
   } = options;
 
@@ -151,8 +152,16 @@ export const useRandomItems = (type, options = {}) => {
     return null;
   }, [cacheKey, staleTime, type, mangaStore, movieStore, musicStore]);
 
-  // Save data to localStorage cache
-  const setCachedData = useCallback((data) => {
+  // Save data to localStorage cache (with optimization check)
+  const setCachedData = useCallback(async (data) => {
+    // 🎯 Check if we should cache random data
+    const offlineNeeded = await isOfflineModeNeeded();
+    if (CACHE_CONFIG.OFFLINE_OPTIMIZATION.DISABLE_RANDOM_CACHE && !offlineNeeded) {
+      console.log('🚫 Skipping random cache (optimization enabled, not offline)');
+      setLastUpdated(new Date());
+      return;
+    }
+    
     try {
       const timestamp = Date.now();
       const cacheData = { timestamp, data };
@@ -233,7 +242,7 @@ export const useRandomItems = (type, options = {}) => {
         }
       }
       
-      setCachedData(items);
+      await setCachedData(items);
       return items;
     }
 

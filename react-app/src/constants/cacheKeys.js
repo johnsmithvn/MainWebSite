@@ -44,6 +44,20 @@ export const CACHE_CONFIG = {
   },
   MUSIC: {
     CACHE_EXPIRATION: 30 * 60 * 1000, // 30 minutes
+  },
+  // 🎯 Offline optimization settings
+  OFFLINE_OPTIMIZATION: {
+    // Disable cache for these patterns when offline mode is not needed
+    DISABLE_RANDOM_CACHE: true,        // Tắt cache random khi không cần offline
+    DISABLE_INDEX_CACHE: true,         // Tắt cache danh sách index
+    DISABLE_RECENT_CACHE: false,       // Giữ recent cache (ít dữ liệu)
+    KEEP_FAVORITE_CACHE: true,         // Luôn giữ favorite cache
+    KEEP_GRIDVIEW_CACHE: true,         // Giữ cache cho grid view (cần cho offline)
+    KEEP_CHAPTER_IMAGES: true,         // Giữ chapter images (offline reading)
+    // Cache size limits
+    MAX_RANDOM_ITEMS: 10,              // Giảm từ 20 xuống 10 items
+    MAX_RECENT_ITEMS: 15,              // Giảm từ 20 xuống 15 items
+    CACHE_CLEANUP_INTERVAL: 5 * 60 * 1000, // 5 minutes cleanup interval
   }
 };
 

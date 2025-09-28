@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useUIStore, useAuthStore, useMangaStore, useMusicStore, useMovieStore, useSharedSettingsStore } from '../../store';
 import { clearSourceCache, clearAllCache as clearAllCacheKeys, clearTypeCache, clearRecentViewCache, CACHE_PREFIXES } from '../../constants/cacheKeys';
+import { optimizeCache, getCacheStats } from '../../utils/cacheOptimizer';
 import { getContentTypeFromSourceKey } from '../../utils/databaseOperations';
 import DatabaseActions from './DatabaseActions';
 import { useModal } from './Modal';
@@ -73,6 +74,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
   const { clearAllCache: sharedClearAllCache, clearRecentHistory: sharedClearRecentHistory } = useSharedSettingsStore();
 
   const [activeTab, setActiveTab] = useState('appearance');
+  const [cacheStats, setCacheStats] = useState(null);
 
   // Modal hook
   const { 
@@ -86,6 +88,66 @@ const SettingsModal = ({ isOpen, onClose }) => {
   const getCurrentAuthState = () => {
     const { sourceKey, rootFolder } = useAuthStore.getState();
     return { sourceKey, rootFolder };
+  };
+
+  // 🎯 Handle cache optimization
+  const handleCacheOptimization = async () => {
+    confirmModal({
+      title: '🎯 Optimize Cache',
+      message: (
+        <div className="text-left space-y-3">
+          <p className="font-medium">Tối ưu cache để giảm dung lượng không cần thiết?</p>
+          <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+            <p className="font-semibold text-green-800 dark:text-green-200 mb-2">✅ Sẽ được tối ưu:</p>
+            <ul className="text-sm space-y-1 text-green-700 dark:text-green-300">
+              <li>• Xóa random cache không cần thiết</li>
+              <li>• Giảm recent items từ 20 → 15</li>
+              <li>• Xóa cache danh sách manga index</li>
+              <li>• Dọn dẹp cache hết hạn</li>
+            </ul>
+          </div>
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+            <p className="font-semibold text-blue-800 dark:text-blue-200 mb-2">🔒 Sẽ được giữ lại:</p>
+            <ul className="text-sm space-y-1 text-blue-700 dark:text-blue-300">
+              <li>• Favorites (yêu thích)</li>
+              <li>• Grid view cache (cho offline)</li>
+              <li>• Chapter images (đọc offline)</li>
+              <li>• Recent items (giới hạn 15)</li>
+            </ul>
+          </div>
+        </div>
+      ),
+      confirmText: 'Optimize Now',
+      cancelText: 'Cancel',
+      onConfirm: async () => {
+        try {
+          const cleared = await optimizeCache();
+          const stats = getCacheStats();
+          setCacheStats(stats);
+          
+          successModal({
+            title: '✅ Optimization Complete!',
+            message: (
+              <div className="text-left space-y-2">
+                <p>Cache đã được tối ưu thành công!</p>
+                <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                  <ul className="text-sm space-y-1">
+                    <li>• <strong>{cleared}</strong> items đã được xóa</li>
+                    <li>• Cache size: <strong>{(stats.size / 1024 / 1024).toFixed(2)} MB</strong></li>
+                    <li>• Total cache entries: <strong>{stats.total}</strong></li>
+                  </ul>
+                </div>
+              </div>
+            )
+          });
+        } catch (error) {
+          errorModal({
+            title: '❌ Error',
+            message: `Lỗi khi tối ưu cache: ${error.message}`
+          });
+        }
+      }
+    });
   };
 
   // Cache Clear Functions for Current Source
@@ -451,6 +513,22 @@ const SettingsModal = ({ isOpen, onClose }) => {
                   {/* Cache Action Buttons */}
                   <div className="grid grid-cols-1 gap-3">
                     <button
+                      onClick={handleCacheOptimization}
+                      className="flex items-center justify-between p-4 border border-green-300 dark:border-green-600 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-5 h-5 text-green-600">🎯</div>
+                        <div className="text-left">
+                          <div className="font-medium text-gray-900 dark:text-white">Optimize Cache</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            Giảm cache không cần thiết, giữ lại offline essentials
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-green-600 text-sm">Recommended</span>
+                    </button>
+
+                    <button
                       onClick={handleClearCurrentSourceCache}
                       className="flex items-center justify-between p-4 border border-blue-300 dark:border-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                     >
@@ -463,7 +541,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
                           </div>
                         </div>
                       </div>
-                      <span className="text-blue-600 text-sm">Recommended</span>
+                      <span className="text-blue-600 text-sm">Manual</span>
                     </button>
 
                     <button
