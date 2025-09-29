@@ -1,50 +1,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Search,
-  Trash2,
-  Info,
-  ArrowLeft,
-  Database,
-  HardDrive,
-  Layers,
-  Calendar,
-  ChevronRight
-} from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, Trash2, Calendar, Eye, Grid, List } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../constants';
 import Button from '../../components/common/Button';
-import {
-  getChapters,
-  deleteChapterCompletely,
-  clearAllOfflineData,
-  getStorageAnalysis
-} from '../../utils/offlineLibrary';
+import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis } from '../../utils/offlineLibrary';
 import { formatDate, formatSize } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
-const getMangaPathFromChapterId = (chapterId = '') => {
-  const cleanPath = chapterId.replace(/\/__self__$/, '');
-  const segments = cleanPath.split('/').filter(Boolean);
-  if (segments.length <= 1) return cleanPath;
-  return segments.slice(0, -1).join('/');
-};
-
-const decodeSegment = (segment = '') => {
-  try {
-    return decodeURIComponent(segment);
-  } catch (error) {
-    return segment;
-  }
-};
-
-const getFallbackMangaTitle = (mangaPath = '') => {
-  if (!mangaPath) return 'Manga không tên';
-  const segments = mangaPath.split('/').filter(Boolean);
-  if (segments.length === 0) return 'Manga không tên';
-  return decodeSegment(segments[segments.length - 1]) || 'Manga không tên';
-};
-
-const formatSourceLabel = (sourceKey) => {
+const formatSourceLabel = (sourceKey = '') => {
   if (!sourceKey) return 'Nguồn không xác định';
   const withoutPrefix = sourceKey.replace(/^(ROOT_|V_|M_)/, '');
   return withoutPrefix
@@ -54,34 +17,27 @@ const formatSourceLabel = (sourceKey) => {
     .join(' ');
 };
 
-const getFormattedSize = (bytes) => {
-  if (typeof bytes !== 'number' || Number.isNaN(bytes)) {
-    return 'Không rõ';
-  }
-  if (bytes <= 0) {
-    return '0 MB';
-  }
-  return formatSize(bytes);
-};
-
 export default function OfflineMangaLibrary() {
   const [chapters, setChapters] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'name'
+  const [viewMode, setViewMode] = useState('grid'); // 'grid', 'list'
   const [loading, setLoading] = useState(true);
   const [storageStats, setStorageStats] = useState(null);
   const [showClearModal, setShowClearModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [chapterToDelete, setChapterToDelete] = useState(null);
-  const [showStorageInfoModal, setShowStorageInfoModal] = useState(false);
-  const [activeSourceKey, setActiveSourceKey] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sourceFilter = searchParams.get('source');
 
   const load = async () => {
     try {
       setLoading(true);
       const items = await getChapters();
       setChapters(items);
-
+      
+      // Load storage statistics
       const stats = await getStorageAnalysis();
       setStorageStats(stats);
     } catch (err) {
@@ -96,107 +52,78 @@ export default function OfflineMangaLibrary() {
     load();
   }, []);
 
-  const sourcesData = useMemo(() => {
+  const availableSources = useMemo(() => {
     const map = new Map();
 
     chapters.forEach((chapter) => {
-      const sourceKey = chapter.sourceKey || 'UNKNOWN_SOURCE';
-      if (!map.has(sourceKey)) {
-        map.set(sourceKey, {
-          sourceKey,
-          displayName: formatSourceLabel(sourceKey),
-          bytes: 0,
-          latestUpdatedAt: 0,
-          chapters: [],
-          mangaMap: new Map(),
+      const key = chapter?.sourceKey || 'UNKNOWN_SOURCE';
+
+      if (!map.has(key)) {
+        map.set(key, {
+          sourceKey: key,
+          displayName: formatSourceLabel(key),
+          chapterCount: 0,
+          mangaTitles: new Set(),
         });
       }
 
-      const entry = map.get(sourceKey);
-      entry.chapters.push(chapter);
-      entry.bytes += chapter.bytes || 0;
-      const chapterUpdatedAt = chapter.updatedAt || chapter.createdAt || 0;
-      entry.latestUpdatedAt = Math.max(entry.latestUpdatedAt, chapterUpdatedAt);
-
-      const mangaPath = getMangaPathFromChapterId(chapter.id || '');
-      if (!entry.mangaMap.has(mangaPath)) {
-        entry.mangaMap.set(mangaPath, {
-          id: mangaPath,
-          title: chapter.mangaTitle || getFallbackMangaTitle(mangaPath),
-          coverImage: chapter.coverImage || chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover,
-          totalBytes: 0,
-          lastUpdatedAt: 0,
-          chapters: [],
-        });
-      }
-
-      const mangaEntry = entry.mangaMap.get(mangaPath);
-      mangaEntry.chapters.push(chapter);
-      mangaEntry.totalBytes += chapter.bytes || 0;
-      mangaEntry.lastUpdatedAt = Math.max(mangaEntry.lastUpdatedAt, chapterUpdatedAt);
-
-      if (!mangaEntry.coverImage) {
-        mangaEntry.coverImage = chapter.coverImage || chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover;
-      }
-      if (!mangaEntry.title || mangaEntry.title === 'Unknown' || mangaEntry.title === 'Unknown Manga') {
-        mangaEntry.title = chapter.mangaTitle || getFallbackMangaTitle(mangaPath);
+      const entry = map.get(key);
+      entry.chapterCount += 1;
+      if (chapter?.mangaTitle) {
+        entry.mangaTitles.add(chapter.mangaTitle);
       }
     });
 
-    const sources = Array.from(map.values()).map((entry) => {
-      const mangaList = Array.from(entry.mangaMap.values()).map((manga) => ({
-        ...manga,
-        chapters: manga.chapters
-          .slice()
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
-      }));
-
-      mangaList.sort((a, b) => (b.lastUpdatedAt || 0) - (a.lastUpdatedAt || 0));
-
-      return {
+    return Array.from(map.values())
+      .map((entry) => ({
         sourceKey: entry.sourceKey,
         displayName: entry.displayName,
-        bytes: entry.bytes,
-        latestUpdatedAt: entry.latestUpdatedAt,
-        chapterCount: entry.chapters.length,
-        mangaCount: mangaList.length,
-        mangaList,
-      };
-    });
-
-    return sources.sort((a, b) => (b.latestUpdatedAt || 0) - (a.latestUpdatedAt || 0));
+        chapterCount: entry.chapterCount,
+        mangaCount: entry.mangaTitles.size,
+      }))
+      .sort((a, b) => b.chapterCount - a.chapterCount);
   }, [chapters]);
 
-  useEffect(() => {
-    if (activeSourceKey && !sourcesData.some((source) => source.sourceKey === activeSourceKey)) {
-      setActiveSourceKey(null);
-    }
-  }, [activeSourceKey, sourcesData]);
+  const activeSourceInfo = useMemo(() => {
+    if (!sourceFilter) return null;
+    return availableSources.find((source) => source.sourceKey === sourceFilter) || null;
+  }, [availableSources, sourceFilter]);
 
-  useEffect(() => {
-    setSearchQuery('');
-  }, [activeSourceKey]);
+  // Filtered and sorted chapters
+  const filteredAndSortedChapters = useMemo(() => {
+    let filtered = chapters.filter((chapter) => {
+      if (sourceFilter) {
+        const key = chapter?.sourceKey || 'UNKNOWN_SOURCE';
+        if (key !== sourceFilter) {
+          return false;
+        }
+      }
 
-  const activeSource = useMemo(() => {
-    if (!activeSourceKey) return null;
-    return sourcesData.find((source) => source.sourceKey === activeSourceKey) || null;
-  }, [activeSourceKey, sourcesData]);
-
-  const filteredMangaList = useMemo(() => {
-    if (!activeSource) return [];
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return activeSource.mangaList;
-
-    return activeSource.mangaList.filter((manga) => {
-      const titleMatch = manga.title?.toLowerCase().includes(query);
-      if (titleMatch) return true;
-      return manga.chapters.some((chapter) => {
-        const haystack = `${chapter.chapterTitle || ''} ${chapter.mangaTitle || ''} ${chapter.id || ''}`.toLowerCase();
-        return haystack.includes(query);
-      });
+      const searchLower = searchQuery.toLowerCase();
+      const title = (chapter.mangaTitle || chapter.chapterTitle || chapter.id || '').toLowerCase();
+      return title.includes(searchLower);
     });
-  }, [activeSource, searchQuery]);
 
+    // Sort chapters
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        case 'oldest':
+          return (a.createdAt || 0) - (b.createdAt || 0);
+        case 'name':
+          const nameA = (a.mangaTitle || a.chapterTitle || a.id || '').toLowerCase();
+          const nameB = (b.mangaTitle || b.chapterTitle || b.id || '').toLowerCase();
+          return nameA.localeCompare(nameB);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [chapters, searchQuery, sortBy, sourceFilter]);
+
+  // 🗑️ Enhanced delete function with proper cache cleanup
   const handleDelete = async (id) => {
     try {
       const chapter = chapters.find((c) => c.id === id);
@@ -205,6 +132,7 @@ export default function OfflineMangaLibrary() {
         return;
       }
 
+      // Show delete confirmation modal
       setChapterToDelete(chapter);
       setShowDeleteModal(true);
     } catch (err) {
@@ -213,21 +141,25 @@ export default function OfflineMangaLibrary() {
     }
   };
 
+  // Actual delete function
   const handleConfirmDelete = async () => {
     if (!chapterToDelete) return;
-
+    
     try {
       setShowDeleteModal(false);
+      
+      // Show loading state
       toast.loading('Đang xóa chapter...', { id: 'delete-chapter' });
 
+      // Delete completely (metadata + images)
       const result = await deleteChapterCompletely(chapterToDelete.id);
-
+      
       if (result.success) {
-        await load();
+        await load(); // Reload data
         toast.success(
           `✅ Đã xóa thành công!\n` +
-            `${result.stats.deletedImages}/${result.stats.totalImages} ảnh đã xóa\n` +
-            `Tiết kiệm ${Math.round(result.stats.bytesFreed / (1024 * 1024) * 10) / 10} MB`,
+          `${result.stats.deletedImages}/${result.stats.totalImages} ảnh đã xóa\n` +
+          `Tiết kiệm ${Math.round(result.stats.bytesFreed / (1024 * 1024) * 10) / 10} MB`,
           { id: 'delete-chapter', duration: 4000 }
         );
       } else {
@@ -241,26 +173,28 @@ export default function OfflineMangaLibrary() {
     }
   };
 
+  // 🧹 Clear all offline data
   const handleClearAll = async () => {
     try {
       setShowClearModal(false);
-
+      
       if (chapters.length === 0) {
         toast.info('Không có dữ liệu để xóa');
         return;
       }
 
+      // Show loading state
       toast.loading('Đang xóa tất cả dữ liệu offline...', { id: 'clear-all' });
 
       const result = await clearAllOfflineData();
-
+      
       if (result.success) {
-        await load();
+        await load(); // Reload data
         toast.success(
           `🎉 Đã xóa tất cả!\n` +
-            `${result.chaptersDeleted} chapters\n` +
-            `${result.imagesDeleted} ảnh\n` +
-            `Tiết kiệm ${Math.round(result.bytesFreed / (1024 * 1024) * 10) / 10} MB`,
+          `${result.chaptersDeleted} chapters\n` +
+          `${result.imagesDeleted} ảnh\n` +
+          `Tiết kiệm ${Math.round(result.bytesFreed / (1024 * 1024) * 10) / 10} MB`,
           { id: 'clear-all', duration: 5000 }
         );
       } else {
@@ -276,132 +210,319 @@ export default function OfflineMangaLibrary() {
     navigate(`/manga/reader/${encodeURIComponent(chapter.id)}?offline=1`);
   };
 
-  const totalSources = sourcesData.length;
-  const totalChapters = chapters.length;
-  const totalSize = useMemo(
-    () => sourcesData.reduce((sum, source) => sum + (source.bytes || 0), 0),
-    [sourcesData]
-  );
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500 dark:text-gray-400">Đang tải...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-5 sm:p-6 shadow-sm">
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-300">
-            <span className="text-xl">📴</span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Manga Offline Library
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              {chapters.length} chapter{chapters.length !== 1 ? 's' : ''} đã tải offline
+            </p>
           </div>
-          <div className="flex-1">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-2 justify-end">
+            {chapters.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => setShowClearModal(true)}
+                className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+              >
+                <Trash2 size={16} />
+                <span className="ml-1">Xóa tất cả</span>
+              </Button>
+            )}
+          </div>
+        </div>
+        
+        {/* Storage Statistics */}
+        {storageStats && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">
-                  Chế độ Offline
-                </p>
-                <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
-                  Tiếp tục đọc manga đã tải xuống
-                </h1>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  Chọn nguồn đã lưu để xem danh sách manga và chapter tương ứng. Nội dung sẽ được tách riêng theo từng nguồn.
-                </p>
-              </div>
-              {storageStats?.formattedSize && (
-                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-gray-600 dark:bg-gray-700/60 dark:text-gray-300">
-                  Dung lượng đã dùng: {storageStats.formattedSize}
+                <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+                  {storageStats.chapters.count}
                 </div>
-              )}
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
-              <span>{totalSources} nguồn</span>
-              <span>{totalChapters} chapter offline</span>
-              <span>Tổng dung lượng: {getFormattedSize(totalSize)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          {storageStats?.generatedAt
-            ? `Cập nhật lần cuối: ${formatDate(storageStats.generatedAt)}`
-            : 'Chưa có thống kê chi tiết'}
-        </div>
-        <div className="flex items-center gap-2">
-          {storageStats && (
-            <Button
-              variant="outline"
-              size="xs"
-              className="gap-1.5 border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-200"
-              onClick={() => setShowStorageInfoModal(true)}
-            >
-              <Info size={14} />
-              <span>Xem thống kê</span>
-            </Button>
-          )}
-          {chapters.length > 0 && (
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={() => setShowClearModal(true)}
-              className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
-            >
-              <Trash2 size={14} />
-              <span>Xóa tất cả</span>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="mt-10 flex items-center justify-center rounded-2xl border border-dashed border-gray-300 p-16 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-          Đang tải dữ liệu offline...
-        </div>
-      ) : chapters.length === 0 ? (
-        <EmptyOfflineState />
-      ) : activeSource ? (
-        <SourceDetail
-          source={activeSource}
-          onBack={() => setActiveSourceKey(null)}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          mangaList={filteredMangaList}
-          onRead={handleRead}
-          onDelete={handleDelete}
-        />
-      ) : (
-        <SourcesOverview
-          sources={sourcesData}
-          onSelect={setActiveSourceKey}
-        />
-      )}
-
-      {showClearModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                <Trash2 className="h-5 w-5" />
+                <div className="text-sm text-gray-500 dark:text-gray-400">Chapters</div>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Xóa toàn bộ dữ liệu offline</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Thao tác này sẽ xóa {totalChapters} chapter trên {totalSources} nguồn đã lưu.
-                </p>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {storageStats.chapters.totalImages}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Ảnh</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {storageStats.formattedSize}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Dung lượng</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  {storageStats.quota ? `${storageStats.quota.percentage}%` : 'N/A'}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Đã dùng</div>
               </div>
             </div>
-
-            {storageStats && (
-              <div className="mb-6 space-y-2 rounded-lg bg-gray-50 p-4 text-sm text-gray-600 dark:bg-gray-700/40 dark:text-gray-300">
-                <div className="flex justify-between"><span>Tổng chapter:</span><span className="font-medium text-gray-900 dark:text-white">{storageStats.chapters.count}</span></div>
-                <div className="flex justify-between"><span>Tổng ảnh:</span><span className="font-medium text-gray-900 dark:text-white">{storageStats.chapters.totalImages}</span></div>
-                <div className="flex justify-between"><span>Dung lượng giải phóng:</span><span className="font-medium text-red-600 dark:text-red-400">{storageStats.formattedSize}</span></div>
+            
+            {/* Storage quota bar */}
+            {storageStats.quota && (
+              <div className="mt-4">
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  <span>Storage quota</span>
+                  <span>{storageStats.quota.percentage}% used</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      storageStats.quota.percentage > 90 ? 'bg-red-500' :
+                      storageStats.quota.percentage > 75 ? 'bg-yellow-500' :
+                      'bg-green-500'
+                    }`}
+                    style={{ width: `${Math.min(100, storageStats.quota.percentage)}%` }}
+                  ></div>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <span>Used: {formatSize(storageStats.quota.usage)}</span>
+                  <span>Available: {formatSize(storageStats.quota.available)}</span>
+                </div>
               </div>
             )}
+          </div>
+        )}
+      </div>
 
-            <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowClearModal(false)}>
+      {availableSources.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+          {sourceFilter ? (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">
+                  Đang xem nguồn
+                </p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {activeSourceInfo?.displayName || formatSourceLabel(sourceFilter)}
+                </p>
+                {activeSourceInfo && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {activeSourceInfo.chapterCount} chapter đã lưu
+                    {activeSourceInfo.mangaCount > 0 && ` · ${activeSourceInfo.mangaCount} manga`}
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="self-start sm:self-auto"
+                onClick={() => navigate('/offline')}
+              >
+                Chọn nguồn khác
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Đang hiển thị {chapters.length} chapter từ {availableSources.length} nguồn offline.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="self-start sm:self-auto"
+                onClick={() => navigate('/offline')}
+              >
+                Chọn theo nguồn
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Controls */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          {/* Search */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Tìm kiếm chapter..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center gap-3">
+            {/* Sort */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="newest">Mới nhất</option>
+              <option value="oldest">Cũ nhất</option>
+              <option value="name">Tên A-Z</option>
+            </select>
+
+            {/* View Mode */}
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+                title="Grid view"
+              >
+                <Grid size={18} />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+                title="List view"
+              >
+                <List size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Empty State */}
+      {filteredAndSortedChapters.length === 0 && (
+        <div className="text-center py-16">
+          <div className="text-6xl mb-4">📚</div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            {chapters.length === 0
+              ? 'Chưa có chapter nào'
+              : sourceFilter
+                ? 'Không tìm thấy chapter trong nguồn đã chọn'
+                : 'Không tìm thấy chapter'}
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400">
+            {chapters.length === 0
+              ? 'Hãy download một số chapter để đọc offline'
+              : sourceFilter
+                ? 'Hãy thử chọn nguồn khác hoặc kiểm tra lại dữ liệu đã tải'
+                : 'Thử thay đổi từ khóa tìm kiếm'}
+          </p>
+        </div>
+      )}
+
+      {/* Content */}
+      {filteredAndSortedChapters.length > 0 && (
+        <>
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {filteredAndSortedChapters.map((chapter) => (
+                <ChapterCard
+                  key={chapter.id}
+                  chapter={chapter}
+                  onRead={handleRead}
+                  onDelete={handleDelete}
+                  formatDate={formatDate}
+                  formatSize={formatSize}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredAndSortedChapters.map((chapter) => (
+                <ChapterListItem
+                  key={chapter.id}
+                  chapter={chapter}
+                  onRead={handleRead}
+                  onDelete={handleDelete}
+                  formatDate={formatDate}
+                  formatSize={formatSize}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+      
+      {/* Clear All Confirmation Modal */}
+      {showClearModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Xóa tất cả dữ liệu offline
+                </h3>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Bạn có chắc chắn muốn xóa tất cả {chapters.length} chapters đã tải offline không?
+              </p>
+              
+              {storageStats && (
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Chapters:</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {storageStats.chapters.count}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Ảnh:</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {storageStats.chapters.totalImages}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Dung lượng sẽ giải phóng:</span>
+                    <span className="font-medium text-red-600 dark:text-red-400">
+                      {storageStats.formattedSize}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              <p className="text-sm text-red-600 dark:text-red-400 mt-4 font-medium">
+                ⚠️ Hành động này không thể hoàn tác!
+              </p>
+            </div>
+            
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowClearModal(false)}
+              >
                 Hủy
               </Button>
-              <Button onClick={handleClearAll} className="bg-red-600 hover:bg-red-700 text-white">
+              <Button
+                onClick={handleClearAll}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
                 Xóa tất cả
               </Button>
             </div>
@@ -409,111 +530,87 @@ export default function OfflineMangaLibrary() {
         </div>
       )}
 
+      {/* Delete Chapter Confirmation Modal */}
       {showDeleteModal && chapterToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
-                <Trash2 className="h-5 w-5" />
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Xóa chapter khỏi thiết bị</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Bạn có chắc muốn xóa chapter này không?</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Xóa chapter
+                </h3>
               </div>
             </div>
-
-            <div className="mb-6 space-y-4">
-              <div className="flex items-start gap-3">
-                <img
-                  src={chapterToDelete.pageUrls?.[0] || DEFAULT_IMAGES.cover}
-                  alt="Chapter cover"
-                  className="h-20 w-16 rounded border border-gray-200 object-cover dark:border-gray-600"
-                  onError={(e) => {
-                    e.target.src = DEFAULT_IMAGES.cover;
-                  }}
-                />
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-gray-900 dark:text-white line-clamp-2" title={chapterToDelete.chapterTitle || chapterToDelete.id}>
-                    {chapterToDelete.chapterTitle || chapterToDelete.id}
-                  </h4>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Manga: {chapterToDelete.mangaTitle || getFallbackMangaTitle(getMangaPathFromChapterId(chapterToDelete.id))}
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Tải ngày: {chapterToDelete.createdAt ? formatDate(chapterToDelete.createdAt) : 'Không rõ'}
+            
+            <div className="mb-6">
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Bạn có chắc muốn xóa chapter này không?
+              </p>
+              
+              {/* Chapter Info */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <img 
+                    src={chapterToDelete.pageUrls?.[0] || DEFAULT_IMAGES.cover} 
+                    alt="Chapter cover"
+                    className="w-12 h-16 object-cover rounded border border-gray-200 dark:border-gray-600"
+                    onError={(e) => {
+                      e.target.src = DEFAULT_IMAGES.cover;
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-gray-900 dark:text-white line-clamp-2 mb-1">
+                      {chapterToDelete.mangaTitle || chapterToDelete.chapterTitle || 'Unknown'}
+                    </h4>
+                    <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+                      <div>{chapterToDelete.totalPages || 0} trang</div>
+                      <div>
+                        {chapterToDelete.bytes 
+                          ? `${Math.round(chapterToDelete.bytes / (1024 * 1024) * 10) / 10} MB` 
+                          : 'Unknown size'
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">Sẽ xóa:</span>{' '}
+                    {chapterToDelete.totalPages || 0} ảnh và{' '}
+                    {chapterToDelete.bytes 
+                      ? `${Math.round(chapterToDelete.bytes / (1024 * 1024) * 10) / 10} MB` 
+                      : 'Unknown'
+                    } dữ liệu
                   </p>
                 </div>
               </div>
-              {chapterToDelete.bytes && (
-                <div className="rounded-lg bg-gray-50 p-3 text-xs text-gray-600 dark:bg-gray-700/40 dark:text-gray-300">
-                  Dung lượng: {getFormattedSize(chapterToDelete.bytes)}
-                </div>
-              )}
+              
+              <p className="text-sm text-red-600 dark:text-red-400 mt-4 font-medium">
+                ⚠️ Hành động này không thể hoàn tác!
+              </p>
             </div>
-
-            <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+            
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setChapterToDelete(null);
+                }}
+              >
                 Hủy
               </Button>
-              <Button onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+              <Button
+                onClick={handleConfirmDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
                 Xóa chapter
               </Button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {showStorageInfoModal && storageStats && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Thống kê lưu trữ offline</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Cập nhật lần cuối: {storageStats?.generatedAt ? formatDate(storageStats.generatedAt) : 'Không xác định'}
-                </p>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => setShowStorageInfoModal(false)}>
-                Đóng
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-700/40">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white">Chapters</h4>
-                <p className="mt-1 text-2xl font-semibold text-primary-600 dark:text-primary-400">{storageStats.chapters.count}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{storageStats.chapters.totalImages} ảnh</p>
-              </div>
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-700/40">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white">Dung lượng</h4>
-                <p className="mt-1 text-2xl font-semibold text-green-600 dark:text-green-400">{storageStats.formattedSize}</p>
-                {storageStats.quota && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Đã dùng {storageStats.quota.percentage}% quota</p>
-                )}
-              </div>
-            </div>
-
-            {storageStats.quota && (
-              <div className="mt-6">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white">Dung lượng chi tiết</h4>
-                <div className="mt-2 h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
-                  <div
-                    className={`h-2 rounded-full ${
-                      storageStats.quota.percentage > 90
-                        ? 'bg-red-500'
-                        : storageStats.quota.percentage > 75
-                        ? 'bg-yellow-500'
-                        : 'bg-green-500'
-                    }`}
-                    style={{ width: `${Math.min(100, storageStats.quota.percentage)}%` }}
-                  ></div>
-                </div>
-                <div className="mt-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span>Đã dùng: {formatSize(storageStats.quota.usage)}</span>
-                  <span>Còn trống: {formatSize(storageStats.quota.available)}</span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -521,211 +618,131 @@ export default function OfflineMangaLibrary() {
   );
 }
 
-const EmptyOfflineState = () => (
-  <div className="mt-10 rounded-2xl border border-dashed border-gray-300 p-12 text-center text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
-    <div className="text-5xl mb-4">📚</div>
-    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Chưa có chapter nào được lưu</h3>
-    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-      Tải chapter yêu thích trong chế độ đọc để xem chúng tại đây khi không có kết nối.
-    </p>
-  </div>
-);
-
-const SourcesOverview = ({ sources, onSelect }) => (
-  <div className="mt-8 space-y-4">
-    <div>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Nguồn manga đã lưu</h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400">
-        Danh sách các nguồn hiện có dữ liệu offline. Chọn một nguồn để xem manga tương ứng.
-      </p>
-    </div>
-
-    <div className="space-y-3">
-      {sources.map((source) => (
-        <SourceCard key={source.sourceKey} source={source} onSelect={onSelect} />
-      ))}
-    </div>
-  </div>
-);
-
-const SourceCard = ({ source, onSelect }) => (
-  <button
-    onClick={() => onSelect(source.sourceKey)}
-    className="w-full rounded-xl border border-gray-200 bg-white p-4 text-left transition-all duration-200 hover:border-primary-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary-500"
-  >
-    <div className="flex items-start justify-between gap-3">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-300">
-          <Database size={18} />
-        </div>
-        <div>
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">{source.displayName}</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {source.mangaCount} manga · {source.chapterCount} chapter
-          </p>
-        </div>
-      </div>
-      <div className="text-right text-xs text-gray-500 dark:text-gray-400">
-        <div>Dung lượng: {getFormattedSize(source.bytes)}</div>
-        <div>Cập nhật: {source.latestUpdatedAt ? formatDate(source.latestUpdatedAt) : 'Không rõ'}</div>
-      </div>
-    </div>
-    <div className="mt-4 flex items-center justify-between text-sm font-medium text-primary-600 dark:text-primary-400">
-      <span>Xem danh sách manga</span>
-      <ChevronRight size={18} />
-    </div>
-  </button>
-);
-
-const SourceDetail = ({ source, onBack, searchQuery, onSearchChange, mangaList, onRead, onDelete }) => (
-  <div className="mt-8 space-y-6">
-    <div className="flex flex-wrap items-center gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        className="gap-1.5 border-gray-300 text-gray-700 dark:border-gray-600 dark:text-gray-200"
-        onClick={onBack}
-      >
-        <ArrowLeft size={16} />
-        Tất cả nguồn
-      </Button>
-      <span className="text-sm text-gray-500 dark:text-gray-400">Đang xem: {source.displayName}</span>
-    </div>
-
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tổng quan nguồn</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Nguồn này chứa {source.mangaCount} manga và {source.chapterCount} chapter offline.
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-4 sm:w-1/2">
-          <StatItem icon={Database} label="Manga" value={source.mangaCount} />
-          <StatItem icon={Layers} label="Chapter" value={source.chapterCount} />
-          <StatItem icon={HardDrive} label="Dung lượng" value={getFormattedSize(source.bytes)} />
-          <StatItem icon={Calendar} label="Cập nhật" value={source.latestUpdatedAt ? formatDate(source.latestUpdatedAt) : 'Không rõ'} />
-        </div>
-      </div>
-    </div>
-
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Tìm theo tên manga hoặc chapter..."
-          className="w-full rounded-xl border border-gray-200 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-        />
-      </div>
-      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-        Đang hiển thị {mangaList.length} / {source.mangaList.length} manga đã lưu.
-      </p>
-    </div>
-
-    {mangaList.length === 0 ? (
-      <div className="rounded-2xl border border-dashed border-gray-300 p-12 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-        Không tìm thấy manga phù hợp với từ khóa.
-      </div>
-    ) : (
-      <div className="space-y-4">
-        {mangaList.map((manga) => (
-          <MangaOfflineCard key={manga.id} manga={manga} onRead={onRead} onDelete={onDelete} />
-        ))}
-      </div>
-    )}
-  </div>
-);
-
-const StatItem = ({ icon: Icon, label, value }) => (
-  <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-700/40">
-    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm dark:bg-gray-800 dark:text-primary-400">
-      <Icon size={16} />
-    </div>
-    <div>
-      <div className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</div>
-      <div className="text-sm font-semibold text-gray-900 dark:text-white">{value}</div>
-    </div>
-  </div>
-);
-
-const MangaOfflineCard = ({ manga, onRead, onDelete }) => (
-  <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
-    <div className="flex flex-col gap-4 sm:flex-row">
-      <div className="flex h-28 w-full flex-shrink-0 overflow-hidden rounded-xl border border-gray-200 sm:w-24 dark:border-gray-600">
+// Chapter Card Component
+const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
+  const coverImage = chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover;
+  const title = chapter.mangaTitle || chapter.chapterTitle || chapter.id || 'Unknown';
+  
+  return (
+    <div className="group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-200">
+      {/* Cover Image */}
+      <div className="relative aspect-[3/4] bg-gray-100 dark:bg-gray-700">
         <img
-          src={manga.coverImage || DEFAULT_IMAGES.cover}
-          alt={manga.title}
-          className="h-full w-full object-cover"
+          src={coverImage}
+          alt={title}
+          className="w-full h-full object-cover"
+          loading="lazy"
           onError={(e) => {
             e.target.src = DEFAULT_IMAGES.cover;
           }}
         />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white line-clamp-2" title={manga.title}>
-              {manga.title}
-            </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {manga.chapters.length} chapter · {getFormattedSize(manga.totalBytes)}
-            </p>
-          </div>
-          <div className="text-right text-xs text-gray-500 dark:text-gray-400">
-            Cập nhật: {manga.lastUpdatedAt ? formatDate(manga.lastUpdatedAt) : 'Không rõ'}
+        
+        {/* Overlay on hover */}
+        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => onRead(chapter)}
+              className="bg-primary-600 hover:bg-primary-700 text-white"
+            >
+              <Eye size={16} />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onDelete(chapter.id)}
+              className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+            >
+              <Trash2 size={16} />
+            </Button>
           </div>
         </div>
+        
+        {/* Pages badge */}
+        <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-md text-xs font-medium">
+          {chapter.totalPages} trang
+        </div>
+      </div>
 
-        <div className="mt-4 space-y-2">
-          {manga.chapters.map((chapter) => (
-            <ChapterRow key={chapter.id} chapter={chapter} onRead={onRead} onDelete={onDelete} />
-          ))}
+      {/* Info */}
+      <div className="p-3">
+        <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-2">
+          {title}
+        </h3>
+        
+        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+          <div className="flex items-center gap-1">
+            <Calendar size={12} />
+            <span>{formatDate(chapter.createdAt)}</span>
+          </div>
+          {chapter.bytes && (
+            <div>Size: {formatSize(chapter.bytes)}</div>
+          )}
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
-const ChapterRow = ({ chapter, onRead, onDelete }) => {
-  const handleReadClick = (event) => {
-    event.stopPropagation();
-    onRead(chapter);
-  };
-
-  const handleDeleteClick = (event) => {
-    event.stopPropagation();
-    onDelete(chapter.id);
-  };
-
-  const chapterTitle = chapter.chapterTitle || decodeSegment(chapter.id?.split('/')?.pop() || '');
-
+// Chapter List Item Component
+const ChapterListItem = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
+  const coverImage = chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover;
+  const title = chapter.mangaTitle || chapter.chapterTitle || chapter.id || 'Unknown';
+  
   return (
-    <div
-      className="group flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm transition hover:border-primary-200 hover:bg-primary-50 dark:border-gray-600 dark:bg-gray-700/40 dark:hover:border-primary-500"
-      onClick={() => onRead(chapter)}
-    >
-      <div className="min-w-0 flex-1">
-        <p className="font-medium text-gray-900 dark:text-white line-clamp-1">{chapterTitle}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          {chapter.createdAt ? formatDate(chapter.createdAt) : 'Không rõ'}
-          {chapter.totalPages ? ` • ${chapter.totalPages} trang` : ''}
-          {chapter.bytes ? ` • ${getFormattedSize(chapter.bytes)}` : ''}
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button size="xs" onClick={handleReadClick}>
-          Đọc
-        </Button>
-        <button
-          onClick={handleDeleteClick}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-600 transition hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
-          title="Xóa chapter"
-        >
-          <Trash2 size={16} />
-        </button>
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-center gap-4">
+        {/* Thumbnail */}
+        <div className="flex-shrink-0 w-16 h-20 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">
+          <img
+            src={coverImage}
+            alt={title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={(e) => {
+              e.target.src = DEFAULT_IMAGES.cover;
+            }}
+          />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-gray-900 dark:text-white text-base line-clamp-1 mb-1">
+            {title}
+          </h3>
+          
+          <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+            <div className="flex items-center gap-4">
+              <span>{chapter.totalPages} trang</span>
+              {chapter.bytes && <span>{formatSize(chapter.bytes)}</span>}
+            </div>
+            <div className="flex items-center gap-1">
+              <Calendar size={14} />
+              <span>{formatDate(chapter.createdAt)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            onClick={() => onRead(chapter)}
+            className="bg-primary-600 hover:bg-primary-700 text-white"
+          >
+            <Eye size={16} />
+            <span className="hidden sm:inline ml-1">Đọc</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onDelete(chapter.id)}
+            className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+          >
+            <Trash2 size={16} />
+            <span className="hidden sm:inline ml-1">Xóa</span>
+          </Button>
+        </div>
       </div>
     </div>
   );

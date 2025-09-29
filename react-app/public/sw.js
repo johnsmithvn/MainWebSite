@@ -26,13 +26,6 @@ const OFFLINE_CORE_ASSETS = [
   DEFAULT_IMAGES.video
 ];
 
-const APP_SHELL_PATHS = ['/', '/index.html'];
-
-const STATIC_PRELOAD_ASSETS = Array.from(new Set([
-  ...OFFLINE_CORE_ASSETS,
-  ...APP_SHELL_PATHS
-]));
-
 // Network timeout for better UX
 const NETWORK_TIMEOUT = 5000;
 
@@ -48,7 +41,7 @@ self.addEventListener('install', (event) => {
       const cache = await caches.open(STATIC_CACHE);
       console.log('📦 Caching offline essentials...');
 
-      for (const asset of STATIC_PRELOAD_ASSETS) {
+      for (const asset of OFFLINE_CORE_ASSETS) {
         try {
           await cache.add(asset);
           console.log('✅ Cached offline asset:', asset);
@@ -118,19 +111,15 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-
+  
   // Skip non-GET requests
   if (request.method !== 'GET') return;
-
+  
   // Route to appropriate strategy
   if (isStaticAsset(request)) {
     event.respondWith(cacheFirstStrategy(request, STATIC_CACHE));
   } else if (isAPIRequest(request)) {
-    if (shouldUseDynamicCaching(request)) {
-      event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE));
-    } else {
-      event.respondWith(networkOnlyStrategy(request));
-    }
+    event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE));
   } else if (isMangaImage(request)) {
     event.respondWith(mangaImageStrategy(request));
   } else if (isNavigation(request)) {
@@ -274,7 +263,24 @@ async function navigationStrategy(request) {
     const networkResponse = await fetch(request);
 
     if (networkResponse && networkResponse.ok) {
-      await refreshAppShellCache(networkResponse.clone());
+      try {
+        const cache = await getCacheInstance(DYNAMIC_CACHE);
+
+        await cache.put(request, networkResponse.clone());
+
+        const appShellPaths = ['/', '/index.html'];
+        await Promise.all(
+          appShellPaths.map(async (path) => {
+            try {
+              await cache.put(path, networkResponse.clone());
+            } catch (cacheError) {
+              console.warn('⚠️ Failed to update app shell cache for', path, cacheError);
+            }
+          })
+        );
+      } catch (cacheError) {
+        console.warn('⚠️ Failed to cache navigation response:', cacheError);
+      }
     }
 
     return networkResponse;
@@ -282,10 +288,33 @@ async function navigationStrategy(request) {
     console.log('📴 Offline navigation fallback:', request.url);
 
     try {
-      const cachedShell = await getCachedAppShell();
-      if (cachedShell) {
-        console.log('✅ Serving cached app shell');
-        return cachedShell;
+      const dynamicCache = await getCacheInstance(DYNAMIC_CACHE);
+
+      // First: Try exact cached response for the route
+      const cachedResponse = await dynamicCache.match(request);
+      if (cachedResponse) {
+        console.log('✅ Serving cached navigation response');
+        return cachedResponse;
+      }
+
+      // Second: Try app shell - prefer React app over static offline.html
+      const appShellPaths = ['/', '/index.html'];
+      for (const path of appShellPaths) {
+        const appShell = await dynamicCache.match(path);
+        if (appShell) {
+          console.log('✅ Serving cached app shell fallback (React app)');
+          return appShell;
+        }
+      }
+
+      // Try static cache for app shell as well
+      const staticCache = await getCacheInstance(STATIC_CACHE);
+      for (const path of appShellPaths) {
+        const appShell = await staticCache.match(path);
+        if (appShell) {
+          console.log('✅ Serving static cached app shell');
+          return appShell;
+        }
       }
 
     } catch (cacheError) {
@@ -355,68 +384,6 @@ function getResourceName(url) {
   return url.split('/').pop() || url;
 }
 
-function shouldUseDynamicCaching(request) {
-  try {
-    const url = new URL(request.url);
-    const { pathname, searchParams } = url;
-
-    // Only allow caching for offline-critical cache endpoints
-    const isCacheEndpoint = /\/api\/(manga|movie|music)\/(folder|video|audio)-cache$/.test(pathname);
-    if (!isCacheEndpoint) {
-      return false;
-    }
-
-    const mode = searchParams.get('mode');
-    const allowedModes = new Set(['chapter', 'chapters', 'detail']);
-
-    if (!mode || !allowedModes.has(mode)) {
-      console.log('🚫 Skip cache for non-offline cache mode:', mode, request.url);
-      return false;
-    }
-
-    // Allow caching of specific chapter/detail payloads for offline reader prefetch
-    return true;
-  } catch (error) {
-    console.warn('⚠️ Failed to evaluate cache skip rules:', error);
-    return false;
-  }
-}
-
-async function refreshAppShellCache(response) {
-  try {
-    const cache = await getCacheInstance(STATIC_CACHE);
-
-    await Promise.all(
-      APP_SHELL_PATHS.map(async (path) => {
-        try {
-          await cache.put(path, response.clone());
-        } catch (cacheError) {
-          console.warn('⚠️ Failed to update app shell cache for', path, cacheError);
-        }
-      })
-    );
-  } catch (error) {
-    console.warn('⚠️ Failed to refresh app shell cache:', error);
-  }
-}
-
-async function getCachedAppShell() {
-  try {
-    const cache = await getCacheInstance(STATIC_CACHE);
-
-    for (const path of APP_SHELL_PATHS) {
-      const match = await cache.match(path);
-      if (match) {
-        return match;
-      }
-    }
-  } catch (error) {
-    console.warn('⚠️ Failed to read app shell from cache:', error);
-  }
-
-  return null;
-}
-
 async function updateCacheInBackground(request, cache) {
   try {
     const response = await fetch(request);
@@ -425,18 +392,6 @@ async function updateCacheInBackground(request, cache) {
     }
   } catch (error) {
     // Silent fail for background updates
-  }
-}
-
-async function networkOnlyStrategy(request) {
-  try {
-    const response = await fetch(request);
-    if (response && response.ok) {
-      return response;
-    }
-    return response || handleFetchError(request, new Error('Empty network response'));
-  } catch (error) {
-    return handleFetchError(request, error);
   }
 }
 
