@@ -20,6 +20,7 @@ const Layout = () => {
   const isHomePage = location.pathname === '/';
   const isSelectPage = location.pathname === '/manga/select';
   const isOffline = useOfflineStatus();
+  const isOfflineRoute = location.pathname.startsWith('/offline');
 
   useEffect(() => {
     if (isOffline && sidebarOpen) {
@@ -86,7 +87,11 @@ const Layout = () => {
         </AnimatePresence>
 
         <main className="flex-1 transition-all duration-200">
-          <div className="container mx-auto px-4 py-6">
+          <div
+            className={`container mx-auto px-4 ${
+              isOfflineRoute ? 'pt-2 pb-6 sm:pt-4 sm:pb-6' : 'py-6'
+            }`}
+          >
             <Outlet />
           </div>
         </main>
