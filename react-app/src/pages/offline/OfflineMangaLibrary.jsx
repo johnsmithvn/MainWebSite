@@ -5,17 +5,8 @@ import { DEFAULT_IMAGES } from '../../constants';
 import Button from '../../components/common/Button';
 import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis } from '../../utils/offlineLibrary';
 import { formatDate, formatSize } from '../../utils/formatters';
+import { formatSourceLabel } from '../../utils/offlineHelpers';
 import toast from 'react-hot-toast';
-
-const formatSourceLabel = (sourceKey = '') => {
-  if (!sourceKey) return 'Nguồn không xác định';
-  const withoutPrefix = sourceKey.replace(/^(ROOT_|V_|M_)/, '');
-  return withoutPrefix
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase())
-    .join(' ');
-};
 
 export default function OfflineMangaLibrary() {
   const [chapters, setChapters] = useState([]);

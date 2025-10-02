@@ -3,23 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '@/components/common/Button';
 import { getChapters } from '@/utils/offlineLibrary';
 import { formatDate, formatSize } from '@/utils/formatters';
-
-const getMangaPathFromChapterId = (chapterId = '') => {
-  const cleanPath = chapterId.replace(/\/__self__$/, '');
-  const segments = cleanPath.split('/').filter(Boolean);
-  if (segments.length <= 1) return cleanPath;
-  return segments.slice(0, -1).join('/');
-};
-
-const formatSourceLabel = (sourceKey = '') => {
-  if (!sourceKey) return 'Nguồn không xác định';
-  const withoutPrefix = sourceKey.replace(/^(ROOT_|V_|M_)/, '');
-  return withoutPrefix
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase())
-    .join(' ');
-};
+import { formatSourceLabel, getMangaPathFromChapterId } from '@/utils/offlineHelpers';
 
 const formatSizeSafe = (bytes) => {
   if (!bytes || Number.isNaN(bytes)) return '0 MB';
