@@ -1,229 +1,80 @@
-# Service Worker Implementation Analysis
+# Service Worker Implementation Analysis (v3.0.0)
 
-## 📊 **Tổng quan về Storage Impact**
+> TL;DR: phiên bản service worker hiện tại ưu tiên chạy nhẹ, chỉ giữ lại các asset dự phòng tối thiểu và đảm bảo trải nghiệm đọc offline qua cache chapter images/metadata riêng. Toàn bộ logic được triển khai trong [`react-app/public/sw.js`](../public/sw.js).
 
-### **Before vs After Service Worker Enhancement:**
+## 1. Kiến trúc cache hiện tại
 
-| Aspect | Before (Basic SW) | After (Enhanced SW) | Increase |
-|--------|------------------|---------------------|----------|
-| **App Shell Cache** | ~2-3MB | ~2-3MB | 0MB |
-| **SW Script Size** | ~1KB | ~15KB | +14KB |
-| **Dynamic API Cache** | 0MB | ~1-2MB | +1-2MB |
-| **Management UI** | 0KB | ~50KB | +50KB |
-| **Background Sync** | Not supported | Supported | 0MB |
-| **Total Overhead** | ~2-3MB | ~3-5MB | **~1-2MB** |
+| Cache | Nội dung | Ghi chú |
+|-------|----------|---------|
+| `offline-core-v3.0.0` | Bộ ảnh fallback mặc định (`/default/*.png|jpg`) | Không còn precache HTML/CSS/JS – giảm footprint và tránh lệ thuộc vào build cũ. |
+| `reader-dynamic-v3.0.0` | Kết quả điều hướng SPA và (optionally) phản hồi API GET | Được cập nhật mỗi lần điều hướng thành công để bảo đảm app shell còn dùng được khi offline. |
+| `chapter-images` | Ảnh các trang manga đã tải offline | Không bị đụng tới khi nâng version để tránh mất dữ liệu người dùng. |
 
-### **Storage Distribution:**
+Các cache cũ có prefix `manga-` hoặc `mainws-` sẽ bị dọn trong pha `activate` nhằm tránh để sót dữ liệu từ phiên bản service worker trước.
 
-```
-📦 Total Storage Usage:
-├── 🖼️ Chapter Images: 90-95% (User content - GB scale)
-├── 🌐 Dynamic Cache: 3-5% (~1-2MB)
-├── 📱 App Shell: 1-2% (~2-3MB)
-└── ⚙️ SW Management: <1% (~50KB)
-```
+## 2. Vòng đời service worker
 
-## 🎯 **Lợi ích vs Chi phí**
+1. **Install** – mở `offline-core-*` và thêm các asset fallback (favicon, ảnh cover mặc định…). Không còn precache `index.html`, bundle JS/CSS, hay template offline riêng.
+2. **Activate** – xóa mọi cache có prefix cũ, ghi nhớ các instance cache vào bộ nhớ tạm để tái sử dụng, rồi `clients.claim()` để kiểm soát toàn bộ tab đang mở.
+3. **Runtime** – mỗi request GET sẽ được định tuyến theo chiến lược riêng (chi tiết ở phần 3). Bộ nhớ đệm nội bộ (`cacheInstances`, `cachePromises`) giúp tránh mở cache song song nhiều lần.
+4. **Message & Sync** – nhận các command như `GET_CACHE_INFO`, `CLEAR_CACHE`, `REGISTER_BACKGROUND_SYNC` và forward signal `SW_ACTIVATED`/`BACKGROUND_SYNC` về client.
 
-### **✅ Lợi ích chính:**
+## 3. Chiến lược xử lý request
 
-1. **True Offline Access** 
-   - App hoạt động hoàn toàn offline
-   - Load nhanh kể cả khi mạng chậm
-   - Better user experience
+### 3.1 Static assets (`isStaticAsset`)
 
-2. **Intelligent Caching**
-   - Cache-first cho static assets
-   - Network-first cho API calls
-   - Special strategy cho manga images
+- Chỉ áp dụng cho tài nguyên cùng origin bên trong thư mục `/default/`.
+- **Chiến lược:** cache-first. Lần đầu fetch thành công sẽ lưu lại; các lần sau ưu tiên cache nhưng vẫn cập nhật ngầm khi đang online.
+- **Lý do:** đây là những fallback image được dùng rộng rãi trên web/app, cần sẵn sàng ngay cả khi offline.
 
-3. **Background Capabilities**
-   - Background sync cho failed downloads
-   - Automatic cache management
-   - Silent updates
+### 3.2 API (`isAPIRequest`)
 
-4. **Performance Improvements**
-   - Faster app startup (~2-3x)
-   - Reduced bandwidth usage
-   - Better perceived performance
+- Service worker vẫn dùng network-first + timeout 5s cho mọi `GET` trỏ tới `/api/`.
+- Khi mạng phản hồi trong giới hạn, response được lưu tạm vào `reader-dynamic-*` để có dữ liệu dự phòng trong lần tải lại kế tiếp (chủ yếu phục vụ các view đang mở).
+- Nếu mạng lỗi/timeout, worker thử tìm bản cache tương ứng; nếu không có sẽ trả fallback lỗi.
+- **Lưu ý:** mục tiêu sắp tới là bổ sung bộ lọc allowlist để loại các endpoint như random/favorites khỏi cache. Việc này chưa được triển khai trong `sw.js`; khi thêm mới cần cập nhật bảng ở mục 6.
 
-### **💰 Chi phí:**
+### 3.3 Ảnh manga (`isMangaImage`)
 
-1. **Storage Overhead**: +1-2MB (~0.1% of typical manga collection)
-2. **Complexity**: More code to maintain
-3. **Debugging**: Additional layer to debug
-4. **Battery**: Minimal impact from background tasks
+- Kiểm tra cache `chapter-images` trước (đây là nơi `offlineLibrary` lưu dữ liệu khi người dùng tải chapter).
+- Không tự động cache ảnh online; nếu request thất bại và không có bản offline thì để trình duyệt tự báo lỗi.
 
-## 🔧 **Technical Implementation Details**
+### 3.4 Điều hướng (`isNavigation`)
 
-### **Caching Strategies:**
+- Network-first. Khi có phản hồi thành công:
+  - Lưu bản sao vào `reader-dynamic-*` cho chính URL đó.
+  - Đồng thời cập nhật `'/index.html'` và `'/'` để tái sử dụng như app shell.
+- Nếu offline: lần lượt thử cache cụ thể của URL, sau đó tới app shell trong dynamic cache, rồi static cache. Cuối cùng mới render fallback HTML inline đơn giản.
 
-```javascript
-// 1. Static Assets (App Shell)
-Cache-First Strategy:
-- Check cache first
-- Fallback to network
-- Update cache in background
-- Assets: HTML, CSS, JS, icons
+## 4. Offline fallback & trải nghiệm người dùng
 
-// 2. API Calls
-Network-First with Timeout:
-- Try network (5s timeout)
-- Fallback to cache
-- Update cache on success
-- Endpoints: /api/manga/*, /api/movie/*
+- Không còn file `offline.html`; thay vào đó là trang HTML inline nhẹ (<1KB) hiển thị thông báo “App đang offline” và nút reload.
+- Ảnh fallback luôn sẵn nhờ static cache, giảm trường hợp thumbnail mất hình khi offline.
+- Background sync (`retry-failed-downloads`) chỉ thông báo client chuẩn bị retry; logic thực tế nằm ở phía React app.
 
-// 3. Manga Images
-Hybrid Strategy:
-- Check offline cache first (chapter-images)
-- Try network for online images
-- No auto-caching of online images
-- Fallback to default image
+## 5. Ước lượng footprint
 
-// 4. Navigation
-Network-First:
-- Try network first
-- Fallback to app shell
-- Enables SPA routing offline
-```
+| Thành phần | Ước lượng dung lượng | Ghi chú |
+|------------|----------------------|---------|
+| `offline-core-*` | ~300–500KB | 5 ảnh PNG/JPG mặc định. |
+| `reader-dynamic-*` | <1MB (tuỳ session) | Chủ yếu chứa 1–2 bản `index.html` và vài response API mới nhất. |
+| `chapter-images` | Phụ thuộc người dùng | Do người dùng tải chapter, có thể lên tới hàng trăm MB. |
 
-### **Cache Management:**
+Việc không precache bundle giúp giảm rủi ro “cache stale” khi deploy phiên bản mới và tránh lãng phí dung lượng với những trang (random, favorites…) không cần offline.
 
-```javascript
-Caches Structure:
-├── manga-static-v2.0.0     // App shell & static assets
-├── manga-dynamic-v2.0.0    // API responses
-└── chapter-images          // Offline manga (unchanged)
+## 6. Điểm cần lưu ý/kế hoạch mở rộng
 
-Cache Lifecycle:
-1. Install: Cache critical app shell
-2. Activate: Cleanup old versions
-3. Runtime: Intelligent strategy selection
-4. Update: Seamless cache migration
-```
+- **Selective API caching:** thêm hàm allowlist/denylist để bỏ qua các endpoint không cần lưu offline (ví dụ `/api/manga/folder-cache?mode=random`).
+- **Quota awareness:** phối hợp với `storageQuota` utilities để tránh cache thêm khi storage đã đầy.
+- **Monitoring:** `GET_CACHE_INFO` trả về số lượng entry từng cache; có thể log ra DevTools để kiểm tra khi debug.
+- **Version bump:** khi thay đổi cấu trúc cache, chỉ cần tăng `CACHE_VERSION`; `activate` sẽ tự dọn dẹp cache cũ (trừ `chapter-images`).
 
-## 📈 **Performance Metrics**
+## 7. Checklist QA nhanh
 
-### **Load Time Improvements:**
-
-| Scenario | Before SW | With SW | Improvement |
-|----------|-----------|---------|-------------|
-| **First Visit** | 2-3s | 2-3s | 0% (same) |
-| **Return Visit (Online)** | 1-2s | 0.5-1s | ~50% faster |
-| **Return Visit (Offline)** | ❌ Fails | ✅ 0.3-0.5s | ∞% better |
-| **Slow Network** | 5-10s | 0.5-2s | ~80% faster |
-
-### **Bandwidth Savings:**
-
-- **Static Assets**: 90% cache hit rate after first visit
-- **API Calls**: 70% cache hit rate for repeated requests
-- **Images**: Only offline images cached (no wastage)
-
-## 🚀 **Recommendation: DEFINITELY IMPLEMENT**
-
-### **Why you should implement this:**
-
-#### **1. Massive UX Improvement for Minimal Cost**
-- **Cost**: ~1-2MB storage (negligible)
-- **Benefit**: True offline app functionality
-- **ROI**: Extremely high
-
-#### **2. Future-Proof Architecture**
-- Progressive Web App ready
-- Modern web standards
-- Better mobile experience
-- App Store eligible
-
-#### **3. User Scenarios Where This Matters:**
-- ✈️ **Airplane/Subway**: Read downloaded manga offline
-- 📶 **Poor Connection**: App loads fast from cache
-- 💾 **Data Saving**: Reduced bandwidth usage
-- 🔄 **Network Outages**: App continues working
-
-#### **4. Technical Benefits:**
-- Better error handling
-- Automatic retry mechanisms
-- Seamless updates
-- Performance monitoring
-
-## 📝 **Implementation Timeline**
-
-### **Phase 1: Basic Enhancement** (Current PR)
-- ✅ Enhanced Service Worker with intelligent caching
-- ✅ Service Worker Manager utility
-- ✅ React hook for SW interaction
-- ✅ Status component for monitoring
-
-### **Phase 2: Advanced Features** (Future)
-- 🔲 Push notifications for chapter updates
-- 🔲 Background download scheduling
-- 🔲 Advanced cache strategies
-- 🔲 PWA manifest enhancements
-
-## 🔍 **How to Test**
-
-### **Testing Offline Functionality:**
-
-1. **Basic Test:**
-   ```bash
-   # Open app normally
-   # Download some chapters
-   # Go to DevTools > Network > Offline
-   # Refresh page - should work!
-   ```
-
-2. **Cache Inspection:**
-   ```bash
-   # DevTools > Application > Storage
-   # Check Cache Storage entries
-   # Verify chapter-images cache
-   ```
-
-3. **Service Worker Debug:**
-   ```bash
-   # DevTools > Application > Service Workers
-   # Check SW status and logs
-   # Test update mechanism
-   ```
-
-### **Console Commands for Testing:**
-```javascript
-// Check SW status
-navigator.serviceWorker.controller
-
-// Get cache info
-swManager.getCacheInfo()
-
-// Check offline capability
-swManager.checkOfflineCapability()
-
-// Force SW update
-swManager.checkForUpdate()
-```
-
-## 🎯 **Kết luận**
-
-Service Worker enhancement này là một **no-brainer**:
-
-- ✅ **Minimal storage cost** (~1-2MB)
-- ✅ **Massive UX improvement** (true offline)
-- ✅ **Future-proof architecture**
-- ✅ **Easy to implement** (infrastructure ready)
-- ✅ **Low maintenance** (well-structured code)
-
-**Recommendation: IMPLEMENT IMMEDIATELY**
-
-Overhead chỉ ~1-2MB so với potentially GB-scale manga storage, nhưng benefit là dramatic improvement trong user experience, đặc biệt cho mobile users và poor network conditions.
-
-## 📊 **Storage Quota Integration**
-
-Service Worker sẽ work perfectly với storage quota system:
-
-```javascript
-// SW respects existing quota management
-// No interference with chapter downloads
-// Better cache management capabilities
-// Integrated cleanup on storage pressure
-```
-
-User sẽ có full offline manga reader experience với minimal cost!
+1. Mở DevTools > Application > Service Workers, đảm bảo SW hiển thị version `v3.0.0`.
+2. Kiểm tra tab Cache Storage:
+   - `offline-core-v3.0.0` chỉ chứa ảnh fallback.
+   - `reader-dynamic-v3.0.0` có `index.html` sau khi load trang.
+   - `chapter-images` giữ nguyên dữ liệu người dùng.
+3. Ngắt mạng và truy cập lại `/offline` hoặc trang đang mở để xác nhận app shell vẫn chạy.
+4. Xem console để nhận log `SW_ACTIVATED`, `Background sync`, giúp xác nhận messaging hoạt động đúng.
