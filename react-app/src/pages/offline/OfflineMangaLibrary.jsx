@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Trash2, Calendar, Eye, Grid, List } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../constants';
 import Button from '../../components/common/Button';
 import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis } from '../../utils/offlineLibrary';
 import { formatDate, formatSize } from '../../utils/formatters';
+import { formatSourceLabel } from '../../utils/offlineHelpers';
 import toast from 'react-hot-toast';
 
 export default function OfflineMangaLibrary() {
@@ -18,6 +19,8 @@ export default function OfflineMangaLibrary() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [chapterToDelete, setChapterToDelete] = useState(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sourceFilter = searchParams.get('source');
 
   const load = async () => {
     try {
@@ -40,9 +43,53 @@ export default function OfflineMangaLibrary() {
     load();
   }, []);
 
+  const availableSources = useMemo(() => {
+    const map = new Map();
+
+    chapters.forEach((chapter) => {
+      const key = chapter?.sourceKey || 'UNKNOWN_SOURCE';
+
+      if (!map.has(key)) {
+        map.set(key, {
+          sourceKey: key,
+          displayName: formatSourceLabel(key),
+          chapterCount: 0,
+          mangaTitles: new Set(),
+        });
+      }
+
+      const entry = map.get(key);
+      entry.chapterCount += 1;
+      if (chapter?.mangaTitle) {
+        entry.mangaTitles.add(chapter.mangaTitle);
+      }
+    });
+
+    return Array.from(map.values())
+      .map((entry) => ({
+        sourceKey: entry.sourceKey,
+        displayName: entry.displayName,
+        chapterCount: entry.chapterCount,
+        mangaCount: entry.mangaTitles.size,
+      }))
+      .sort((a, b) => b.chapterCount - a.chapterCount);
+  }, [chapters]);
+
+  const activeSourceInfo = useMemo(() => {
+    if (!sourceFilter) return null;
+    return availableSources.find((source) => source.sourceKey === sourceFilter) || null;
+  }, [availableSources, sourceFilter]);
+
   // Filtered and sorted chapters
   const filteredAndSortedChapters = useMemo(() => {
-    let filtered = chapters.filter(chapter => {
+    let filtered = chapters.filter((chapter) => {
+      if (sourceFilter) {
+        const key = chapter?.sourceKey || 'UNKNOWN_SOURCE';
+        if (key !== sourceFilter) {
+          return false;
+        }
+      }
+
       const searchLower = searchQuery.toLowerCase();
       const title = (chapter.mangaTitle || chapter.chapterTitle || chapter.id || '').toLowerCase();
       return title.includes(searchLower);
@@ -65,7 +112,7 @@ export default function OfflineMangaLibrary() {
     });
 
     return filtered;
-  }, [chapters, searchQuery, sortBy]);
+  }, [chapters, searchQuery, sortBy, sourceFilter]);
 
   // 🗑️ Enhanced delete function with proper cache cleanup
   const handleDelete = async (id) => {
@@ -180,13 +227,6 @@ export default function OfflineMangaLibrary() {
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/offline')}
-              className="border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
-            >
-              ⬅️ Quay lại chế độ Offline
-            </Button>
             {chapters.length > 0 && (
               <Button
                 variant="outline"
@@ -257,6 +297,53 @@ export default function OfflineMangaLibrary() {
         )}
       </div>
 
+      {availableSources.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+          {sourceFilter ? (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">
+                  Đang xem nguồn
+                </p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {activeSourceInfo?.displayName || formatSourceLabel(sourceFilter)}
+                </p>
+                {activeSourceInfo && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {activeSourceInfo.chapterCount} chapter đã lưu
+                    {activeSourceInfo.mangaCount > 0 && ` · ${activeSourceInfo.mangaCount} manga`}
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="self-start sm:self-auto"
+                onClick={() => navigate('/offline')}
+              >
+                Chọn nguồn khác
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Đang hiển thị {chapters.length} chapter từ {availableSources.length} nguồn offline.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="self-start sm:self-auto"
+                onClick={() => navigate('/offline')}
+              >
+                Chọn theo nguồn
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Controls */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -319,13 +406,18 @@ export default function OfflineMangaLibrary() {
         <div className="text-center py-16">
           <div className="text-6xl mb-4">📚</div>
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {chapters.length === 0 ? 'Chưa có chapter nào' : 'Không tìm thấy chapter'}
+            {chapters.length === 0
+              ? 'Chưa có chapter nào'
+              : sourceFilter
+                ? 'Không tìm thấy chapter trong nguồn đã chọn'
+                : 'Không tìm thấy chapter'}
           </h3>
           <p className="text-gray-500 dark:text-gray-400">
-            {chapters.length === 0 
+            {chapters.length === 0
               ? 'Hãy download một số chapter để đọc offline'
-              : 'Thử thay đổi từ khóa tìm kiếm'
-            }
+              : sourceFilter
+                ? 'Hãy thử chọn nguồn khác hoặc kiểm tra lại dữ liệu đã tải'
+                : 'Thử thay đổi từ khóa tìm kiếm'}
           </p>
         </div>
       )}

@@ -1,333 +1,117 @@
-# Storage Quota Management Documentation
+# Storage Quota Management Documentation (2024 refresh)
 
-## Tổng quan
+## 1. Mục tiêu & phạm vi
 
-Hệ thống Storage Quota Management được thiết kế để kiểm tra và quản lý dung lượng storage trước khi download chapter, đảm bảo user experience tốt và tránh lỗi out-of-storage.
+Module quota được dùng cho mọi thao tác tải chapter trong reader. Bộ utility đặt trong [`react-app/src/utils/storageQuota.js`](../src/utils/storageQuota.js) và UI chính là [`StorageQuotaModal`](../src/components/common/StorageQuotaModal.jsx). Tài liệu này phản ánh đúng logic hiện tại sau các chỉnh sửa gần nhất.
 
-## Kiến trúc
+## 2. Thành phần chính
 
-### Core Components
+| Thành phần | Vai trò |
+|------------|--------|
+| `storageQuota.js` | Cung cấp API kiểm tra quota, ước lượng dung lượng chapter, validate trước khi download và helper tạo modal. |
+| `StorageQuotaModal.jsx` | Modal React tái sử dụng được, hiển thị thông tin quota + xác nhận tải. |
+| `MangaReader.jsx` | Gọi các hàm quota trước khi thực hiện lưu offline, quản lý state mở modal. |
 
-1. **`storageQuota.js`** - Utility functions chính
-2. **`StorageQuotaModal.jsx`** - React component hiển thị storage info
-3. **`MangaReader.jsx`** - Integration với download flow
+## 3. Ngưỡng & cấu hình
 
-### Storage Thresholds
+| Hằng số | Giá trị | Mô tả |
+|---------|---------|-------|
+| `STORAGE_WARNING_THRESHOLD` | `0.9` (90%) | Hiển thị cảnh báo nhưng vẫn cho phép tải. |
+| `STORAGE_CRITICAL_THRESHOLD` | `0.95` (95%) | Block thao tác tải. |
+| `STORAGE_INFO_THRESHOLD` | `0.75` (75%) | Dùng cho UI báo sớm (hiển thị màu sắc khác). |
+| `MIN_REQUIRED_SPACE` | 50 MB desktop / 25 MB mobile (tự động xác định) | Dung lượng tối thiểu phải còn trống sau khi tải xong. Có thể override bằng biến môi trường `VITE_MIN_STORAGE_SPACE` (đơn vị MB). |
 
-- **Warning Threshold**: 90% - Hiển thị cảnh báo nhưng vẫn cho phép download
-- **Critical Threshold**: 95% - Ngăn chặn download hoàn toàn  
-- **Minimum Buffer**: 50MB - Dung lượng tối thiểu phải còn lại
+## 4. API chi tiết
 
-## API Functions
+### 4.1 `checkStorageQuota()`
 
-### `checkStorageQuota()`
-
-Kiểm tra storage quota hiện tại của browser.
-
-```javascript
-const storageInfo = await checkStorageQuota();
-console.log(storageInfo);
-// {
-//   supported: true,
-//   quota: 120000000000,      // Total quota in bytes
-//   usage: 85000000000,       // Used space in bytes  
-//   available: 35000000000,   // Available space in bytes
-//   percentage: 0.708,        // Usage percentage (0-1)
-//   quotaFormatted: "111.76 GB",
-//   usageFormatted: "79.16 GB", 
-//   availableFormatted: "32.60 GB",
-//   percentageFormatted: "71%"
-// }
-```
-
-### `estimateChapterSize(pageUrls)`
-
-Ước tính dung lượng cần thiết cho chapter.
+- Kiểm tra `navigator.storage.estimate()` nếu browser hỗ trợ.
+- Trả về object gồm quota, usage, available, phần trăm và chuỗi đã format (dùng `formatBytes`).
+- Nếu API không hỗ trợ: `supported: false` và cho phép tiếp tục tải (fall-back logic vẫn đảm bảo user không bị chặn vô lý).
 
 ```javascript
-const pageUrls = [
-  'https://example.com/page1.jpg',
-  'https://example.com/page2.jpg',
-  // ... more pages
-];
-
-const estimatedBytes = await estimateChapterSize(pageUrls);
-console.log(`Estimated size: ${estimatedBytes} bytes`);
+const info = await checkStorageQuota();
+// { supported, quota, usage, available, percentage, quotaFormatted, ... }
 ```
 
-**Logic ước tính:**
-1. Lấy mẫu 3 trang đầu bằng HEAD requests
-2. Tính kích thước trung bình từ Content-Length headers
-3. Nhân với tổng số trang
-4. Fallback 500KB/page nếu không lấy được headers
+### 4.2 `estimateChapterSize(pageUrls)`
 
-### `checkStorageForDownload(pageUrls)`
+- Lấy tối đa 3 URL đầu để gửi HEAD request và đọc `Content-Length`.
+- Tính trung bình và nhân với tổng số trang.
+- Nếu tất cả HEAD thất bại: fallback cố định 500 KB/trang.
+- Log ra console để dễ debug (ví dụ `📊 Estimated chapter size: 42.3 MB`).
 
-Function chính để validate storage trước download.
+### 4.3 `checkStorageForDownload(pageUrls)`
+
+- Gọi hai hàm trên, sau đó áp các rule:
+  1. Block ngay nếu `%usage >= 95%` (`storage_critical`).
+  2. Block nếu dung lượng ước tính lớn hơn phần còn trống (`insufficient_space`).
+  3. Block nếu sau khi tải xong sẽ vượt 95% (`would_exceed_critical`).
+  4. Block nếu phần trống còn lại < `MIN_REQUIRED_SPACE` (`insufficient_buffer`).
+  5. Nếu vẫn ổn nhưng `%usage >= 90%` ⇒ gắn thêm `warning` để UI hiển thị cảnh báo.
 
 ```javascript
-const checkResult = await checkStorageForDownload(pageUrls);
-
-if (checkResult.canDownload) {
-  // Proceed with download
-  if (checkResult.warning) {
-    // Show warning but allow download
-    showWarningModal(checkResult);
-  } else {
-    // Direct download
-    proceedWithDownload();
-  }
-} else {
-  // Block download and show error
-  showErrorModal(checkResult);
-}
+const result = await checkStorageForDownload(pageUrls);
+// { canDownload, reason, message, warning?, storageInfo, estimatedSize, ... }
 ```
 
-**Return object:**
-```javascript
-{
-  canDownload: boolean,           // Main decision flag
-  reason: string,                 // Reason code
-  message: string,                // User-friendly message
-  warning?: string,               // Optional warning message
-  storageInfo: object,            // Full storage information
-  estimatedSize: number,          // Estimated download size
-  estimatedSizeFormatted: string  // Human-readable size
-}
-```
+### 4.4 Helper cho UI
 
-**Reason codes:**
-- `sufficient_space` - OK to download
-- `storage_critical` - Usage > 95%
-- `insufficient_space` - Not enough space for chapter
-- `would_exceed_critical` - Download would push > 95%
-- `insufficient_buffer` - Would leave < 50MB free
-- `storage_api_unsupported` - Browser doesn't support Storage API
+- `showStorageConfirmDialog(checkResult, modalConfirm)` – tạo confirm dialog (dùng modal nội bộ nếu truyền hàm, fallback sang `window.confirm/alert` nếu không).
+- `createStorageInfoModal(storageInfo)` – trả về payload để render modal thông tin quota nhanh (bao gồm màu sắc tương ứng với ngưỡng).
 
-## React Integration
+Hai helper trên hiện được `StorageQuotaModal` sử dụng trực tiếp, đồng thời cũng có thể tái dùng ở nơi khác nếu muốn hiển thị thông tin quota mà không cần modal mặc định.
 
-### StorageQuotaModal Component
+## 5. Luồng tích hợp trong MangaReader
 
-```jsx
-<StorageQuotaModal
-  isOpen={showStorageQuotaModal}
-  onClose={() => setShowStorageQuotaModal(false)}
-  storageInfo={storageCheckResult?.storageInfo || {}}
-  estimatedSize={storageCheckResult?.estimatedSize || 0}
-  canDownload={storageCheckResult?.canDownload || false}
-  message={storageCheckResult?.message || ''}
-  warning={storageCheckResult?.warning || ''}
-  chapterTitle="Chapter Title"
-  onConfirm={async () => {
-    setShowStorageQuotaModal(false);
-    await proceedWithDownload();
-  }}
-  onCancel={() => setShowStorageQuotaModal(false)}
-/>
-```
-
-### Download Flow Integration
+Pseudo-code (đã rút gọn từ `MangaReader.jsx`):
 
 ```javascript
 const handleDownloadChapter = async () => {
-  try {
-    // 1. Check storage quota first
-    const checkResult = await checkStorageForDownload(currentImages);
-    
-    if (!checkResult.canDownload) {
-      // Show error modal
-      setStorageCheckResult(checkResult);
-      setShowStorageQuotaModal(true);
-      return;
-    }
-    
-    if (checkResult.warning) {
-      // Show warning modal with confirm option
-      setStorageCheckResult(checkResult);
-      setShowStorageQuotaModal(true);
-      return;
-    }
-    
-    // 2. Proceed with download
-    await proceedWithDownload();
-    
-  } catch (error) {
-    console.error('Storage check failed:', error);
+  const checkResult = await checkStorageForDownload(currentImages);
+
+  if (!checkResult.canDownload) {
+    setStorageCheckResult(checkResult);
+    setShowStorageQuotaModal(true);
+    return;
   }
+
+  if (checkResult.warning) {
+    setStorageCheckResult(checkResult);
+    setShowStorageQuotaModal(true); // user phải xác nhận lại
+    return;
+  }
+
+  await proceedWithDownload();
 };
 ```
 
-## UI Components
+Modal nhận props `storageInfo`, `estimatedSize`, `message`, `warning`, và callback `onConfirm/onCancel` để tiếp tục/quay lại.
 
-### Progress Bar Color Coding
+## 6. UI & UX note
 
-```css
-/* Green: 0-75% usage */
-.storage-progress-green { background: #10b981; }
+- **Thanh tiến trình**: logic màu đặt trong component (xanh <75%, xanh dương 75–90%, vàng 90–95%, đỏ >95%).
+- **Icon trạng thái**: `CheckCircle` / `AlertTriangle` / `XCircle` tương ứng đủ dung lượng, cảnh báo, chặn.
+- **Thông điệp**: mọi message được build sẵn trong `storageQuota.js` nhằm thống nhất văn phong, tránh lặp lại ở nhiều nơi.
+- **Mobile UX**: modal được tối ưu padding nhỏ, hiển thị rõ dung lượng còn lại và kích thước chapter dự kiến.
 
-/* Blue: 75-90% usage */ 
-.storage-progress-blue { background: #3b82f6; }
+## 7. Xử lý lỗi & fallback
 
-/* Yellow: 90-95% usage (warning) */
-.storage-progress-yellow { background: #f59e0b; }
+| Tình huống | Hành vi hiện tại | Gợi ý xử lý |
+|------------|------------------|-------------|
+| Browser không hỗ trợ Storage API | Trả về `supported: false`, không chặn tải. | Có thể hiển thị toast “Không thể kiểm tra dung lượng” để user chủ động quản lý. |
+| HEAD request thất bại (CORS/timeout) | Log warning, dùng fallback 500 KB/trang. | Nếu server cung cấp size qua API riêng, có thể override hàm estimate. |
+| Người dùng bị chặn vì `%usage` cao | Modal hiển thị lý do + số MB cần thiết. | Gợi ý người dùng xóa chapter cũ trong trang Offline Library. |
 
-/* Red: 95%+ usage (critical) */
-.storage-progress-red { background: #ef4444; }
-```
+## 8. Kiểm thử nhanh
 
-### Status Icons
+1. Mở DevTools → Application → Storage để quan sát quota/usage thực tế.
+2. Trong console chạy `await checkStorageQuota()` để xem thông tin format đúng chưa.
+3. Giả lập warning bằng cách sửa tạm `STORAGE_WARNING_THRESHOLD` xuống 0.01 và thử tải chương → modal phải hiển thị cảnh báo.
+4. Dùng Chrome DevTools “Clear storage” để kiểm tra trường hợp API không hỗ trợ (trên Safari/iOS).
 
-- ✅ `CheckCircle` - OK to download
-- ⚠️ `AlertTriangle` - Warning (can download)
-- ❌ `XCircle` - Error (cannot download)
-- 💾 `HardDrive` - Storage icon
+## 9. Mẹo mở rộng
 
-## Error Handling
-
-### Network Errors
-```javascript
-// Handle HEAD request failures gracefully
-try {
-  const response = await fetch(url, { method: 'HEAD', mode: 'cors' });
-  // Process Content-Length
-} catch (err) {
-  console.warn('Failed to get size for:', url);
-  // Continue with fallback estimation
-}
-```
-
-### Browser Compatibility
-```javascript
-if (!('storage' in navigator) || !('estimate' in navigator.storage)) {
-  return {
-    supported: false,
-    canDownload: true, // Allow download if quota check unsupported
-    reason: 'storage_api_unsupported'
-  };
-}
-```
-
-### Quota API Errors
-```javascript
-try {
-  const estimate = await navigator.storage.estimate();
-  // Process estimate
-} catch (error) {
-  console.error('Storage estimate failed:', error);
-  // Return fallback result
-}
-```
-
-## Best Practices
-
-### Performance
-
-1. **Efficient Sampling**: Chỉ lấy mẫu 3 trang đầu thay vì tất cả
-2. **HEAD Requests**: Dùng HEAD thay vì GET để tiết kiệm bandwidth
-3. **Caching Results**: Cache estimation results trong session
-4. **Fallback Strategy**: Luôn có fallback estimate
-
-### User Experience
-
-1. **Progressive Disclosure**: Hiển thị info theo mức độ phù hợp
-2. **Clear Messaging**: Thông báo rõ ràng về lý do không thể download
-3. **Actionable Guidance**: Hướng dẫn cụ thể cách giải quyết (xóa data)
-4. **Non-blocking Warnings**: Warning không block action, chỉ inform
-
-### Error Recovery
-
-1. **Graceful Degradation**: Hoạt động được khi Storage API không có
-2. **Partial Failures**: Continue estimation khi một số pages fail
-3. **User Override**: Cho phép user force download trong emergency
-4. **Retry Logic**: Retry failed size checks với exponential backoff
-
-## Testing
-
-### Manual Testing
-
-1. Open browser DevTools Console
-2. Run test script từ `test-storage-quota.js`
-3. Test với different storage levels
-4. Verify modal behavior
-
-### Automated Testing
-
-```javascript
-// Test storage quota check
-describe('Storage Quota', () => {
-  test('should return storage info', async () => {
-    const result = await checkStorageQuota();
-    expect(result).toHaveProperty('supported');
-    expect(result).toHaveProperty('quota');
-  });
-  
-  test('should estimate chapter size', async () => {
-    const urls = ['url1', 'url2', 'url3'];
-    const size = await estimateChapterSize(urls);
-    expect(size).toBeGreaterThan(0);
-  });
-});
-```
-
-## Monitoring & Analytics
-
-### Console Logging
-
-```javascript
-console.log('📊 Storage Check:', {
-  canDownload: result.canDownload,
-  reason: result.reason,
-  usagePercentage: Math.round(result.storageInfo.percentage * 100),
-  estimatedMB: Math.round(result.estimatedSize / 1024 / 1024)
-});
-```
-
-### Error Tracking
-
-```javascript
-// Track storage-related errors
-if (!result.canDownload) {
-  analytics.track('download_blocked', {
-    reason: result.reason,
-    storageUsage: result.storageInfo.percentage,
-    estimatedSize: result.estimatedSize
-  });
-}
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **"Storage API không được hỗ trợ"**
-   - Browser cũ hoặc incognito mode
-   - Feature sẽ fallback và allow download
-
-2. **Size estimation không chính xác**
-   - CORS issues với image server
-   - Fallback to 500KB/page estimate
-
-3. **Modal không hiển thị**
-   - Check React state management
-   - Verify modal z-index và positioning
-
-4. **Download bị block nhầm**
-   - Check threshold constants
-   - Verify calculation logic
-   - Consider adjusting thresholds
-
-### Debug Commands
-
-```javascript
-// Check current storage in console
-const info = await checkStorageQuota();
-console.table(info);
-
-// Estimate specific chapter
-const size = await estimateChapterSize(pageUrls);
-console.log('Estimated:', size, 'bytes');
-
-// Full download check
-const check = await checkStorageForDownload(pageUrls);
-console.log('Download check:', check);
-```
+- Có thể cache kết quả `estimateChapterSize` theo URL chương trong session để tránh lặp HEAD request nếu user spam tải.
+- Kết hợp với service worker: khi chuẩn bị download hàng loạt, gọi `checkStorageQuota()` trước để cảnh báo sớm, tránh việc lưu dở dang giữa chừng.
+- Khi cần thay đổi ngưỡng cho từng user, thêm logic đọc cấu hình từ server và override các hằng số trước khi export.

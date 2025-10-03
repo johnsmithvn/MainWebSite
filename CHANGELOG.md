@@ -1,3 +1,15 @@
+# Changelog
+
+All notable changes to this project will be documented in this file. Dates use YYYY-MM-DD.
+
+## [Unreleased]
+
+### Documentation
+
+- 📚 [2025-09-22] Documented offline caching architecture → Added react-app/docs/OFFLINE-GUIDE.md covering service worker caches, IndexedDB schema, and maintenance workflows.
+
+## [2025-09-21]
+
 ### Fixed
 
 - 🐛 [2025-09-21] Fixed Service Worker cache cleanup redundant conditions → Simplified cache cleanup logic by removing redundant explicit cache name checks since they're already covered by managedPrefixes
