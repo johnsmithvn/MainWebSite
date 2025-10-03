@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Trash2, Calendar, Eye, Grid, List } from 'lucide-react';
+import { Search, Trash2, Calendar, Eye, Grid, List, Info } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../constants';
 import Button from '../../components/common/Button';
+import StorageInfoModal from '../../components/common/StorageInfoModal';
 import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis } from '../../utils/offlineLibrary';
 import { formatDate, formatSize } from '../../utils/formatters';
 import { formatSourceLabel } from '../../utils/offlineHelpers';
@@ -17,6 +18,7 @@ export default function OfflineMangaLibrary() {
   const [storageStats, setStorageStats] = useState(null);
   const [showClearModal, setShowClearModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showStorageModal, setShowStorageModal] = useState(false);
   const [chapterToDelete, setChapterToDelete] = useState(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -218,7 +220,7 @@ export default function OfflineMangaLibrary() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Manga Offline Library
+              📚 Manga Offline Library
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
               {chapters.length} chapter{chapters.length !== 1 ? 's' : ''} đã tải offline
@@ -227,6 +229,16 @@ export default function OfflineMangaLibrary() {
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2 justify-end">
+            {storageStats && (
+              <Button
+                variant="outline"
+                onClick={() => setShowStorageModal(true)}
+                className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20"
+              >
+                <Info size={16} />
+                <span className="ml-1">Thông tin lưu trữ</span>
+              </Button>
+            )}
             {chapters.length > 0 && (
               <Button
                 variant="outline"
@@ -239,62 +251,6 @@ export default function OfflineMangaLibrary() {
             )}
           </div>
         </div>
-        
-        {/* Storage Statistics */}
-        {storageStats && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-                  {storageStats.chapters.count}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Chapters</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {storageStats.chapters.totalImages}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Ảnh</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {storageStats.formattedSize}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Dung lượng</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {storageStats.quota ? `${storageStats.quota.percentage}%` : 'N/A'}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Đã dùng</div>
-              </div>
-            </div>
-            
-            {/* Storage quota bar */}
-            {storageStats.quota && (
-              <div className="mt-4">
-                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
-                  <span>Storage quota</span>
-                  <span>{storageStats.quota.percentage}% used</span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      storageStats.quota.percentage > 90 ? 'bg-red-500' :
-                      storageStats.quota.percentage > 75 ? 'bg-yellow-500' :
-                      'bg-green-500'
-                    }`}
-                    style={{ width: `${Math.min(100, storageStats.quota.percentage)}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  <span>Used: {formatSize(storageStats.quota.usage)}</span>
-                  <span>Available: {formatSize(storageStats.quota.available)}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {availableSources.length > 0 && (
@@ -605,6 +561,13 @@ export default function OfflineMangaLibrary() {
           </div>
         </div>
       )}
+      
+      {/* Storage Info Modal */}
+      <StorageInfoModal 
+        isOpen={showStorageModal}
+        onClose={() => setShowStorageModal(false)}
+        storageStats={storageStats}
+      />
     </div>
   );
 }

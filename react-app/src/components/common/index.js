@@ -17,5 +17,6 @@ export { default as Pagination } from './Pagination';
 export { default as DatabaseActions } from './DatabaseActions';
 export { default as DownloadProgressModal } from './DownloadProgressModal';
 export { default as StorageQuotaModal } from './StorageQuotaModal';
+export { default as StorageInfoModal } from './StorageInfoModal';
 export { default as ServiceWorkerStatus } from './ServiceWorkerStatus';
 export { default as BrowserSupportStatus } from './BrowserSupportStatus';

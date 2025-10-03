@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Added
+- ✨ [2025-10-04] Added StorageInfoModal component → Created dedicated modal to display offline storage statistics with modern card-based UI showing chapters, images, storage usage, and quota information
+- ✨ [2025-10-04] Enhanced OfflineMangaLibrary UI → Added "Thông tin lưu trữ" button to show storage modal, improved header layout with emoji icon, removed inline storage stats section for cleaner interface
+
 ### Documentation
 
 - 📚 [2025-09-22] Documented offline caching architecture → Added react-app/docs/OFFLINE-GUIDE.md covering service worker caches, IndexedDB schema, and maintenance workflows.
