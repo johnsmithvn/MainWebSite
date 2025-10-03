@@ -578,7 +578,7 @@ const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
   const title = chapter.mangaTitle || chapter.chapterTitle || chapter.id || 'Unknown';
   
   return (
-    <div className="group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-200">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-shadow duration-200">
       {/* Cover Image */}
       <div className="relative aspect-[3/4] bg-gray-100 dark:bg-gray-700">
         <img
@@ -591,28 +591,7 @@ const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
           }}
         />
         
-        {/* Overlay on hover */}
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() => onRead(chapter)}
-              className="bg-primary-600 hover:bg-primary-700 text-white"
-            >
-              <Eye size={16} />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onDelete(chapter.id)}
-              className="bg-red-600 hover:bg-red-700 text-white border-red-600"
-            >
-              <Trash2 size={16} />
-            </Button>
-          </div>
-        </div>
-        
-        {/* Pages badge */}
+        {/* Pages badge - Always visible */}
         <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-md text-xs font-medium">
           {chapter.totalPages} trang
         </div>
@@ -620,11 +599,11 @@ const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
 
       {/* Info */}
       <div className="p-3">
-        <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-2">
+        <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-3 mb-2 min-h-[3.6rem]">
           {title}
         </h3>
         
-        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1 mb-3">
           <div className="flex items-center gap-1">
             <Calendar size={12} />
             <span>{formatDate(chapter.createdAt)}</span>
@@ -632,6 +611,26 @@ const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
           {chapter.bytes && (
             <div>Size: {formatSize(chapter.bytes)}</div>
           )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            onClick={() => onRead(chapter)}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1.5"
+          >
+            <Eye size={14} />
+            <span className="ml-1">Đọc</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onDelete(chapter.id)}
+            className="flex-shrink-0 text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20 text-xs py-1.5 px-2"
+          >
+            <Trash2 size={14} />
+          </Button>
         </div>
       </div>
     </div>
