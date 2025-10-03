@@ -5,11 +5,6 @@ import { getChapters } from '@/utils/offlineLibrary';
 import { formatDate, formatSize } from '@/utils/formatters';
 import { formatSourceLabel, getMangaPathFromChapterId } from '@/utils/offlineHelpers';
 
-const formatSizeSafe = (bytes) => {
-  if (!bytes || Number.isNaN(bytes)) return '0 MB';
-  return formatSize(bytes);
-};
-
 const OfflineHome = () => {
   const navigate = useNavigate();
   const [chapters, setChapters] = useState([]);
@@ -46,6 +41,8 @@ const OfflineHome = () => {
   const sources = useMemo(() => {
     const map = new Map();
 
+    const mangaPathCache = new Map();
+
     chapters.forEach((chapter) => {
       const sourceKey = chapter?.sourceKey || 'UNKNOWN_SOURCE';
 
@@ -67,7 +64,16 @@ const OfflineHome = () => {
       const chapterUpdatedAt = chapter?.updatedAt || chapter?.createdAt || 0;
       entry.lastUpdated = Math.max(entry.lastUpdated, chapterUpdatedAt);
 
-      const mangaPath = getMangaPathFromChapterId(chapter?.id || '');
+      const chapterId = chapter?.id || '';
+      let mangaPath = '';
+      if (chapterId) {
+        if (mangaPathCache.has(chapterId)) {
+          mangaPath = mangaPathCache.get(chapterId);
+        } else {
+          mangaPath = getMangaPathFromChapterId(chapterId);
+          mangaPathCache.set(chapterId, mangaPath);
+        }
+      }
       if (mangaPath) {
         entry.mangaPaths.add(mangaPath);
       }
@@ -122,7 +128,7 @@ const OfflineHome = () => {
           {totalSummary.totalChapters} chapter đã lưu
         </span>
         <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1">
-          Tổng dung lượng: {formatSizeSafe(totalSummary.totalBytes)}
+          Tổng dung lượng: {formatSize(totalSummary.totalBytes)}
         </span>
       </div>
 
@@ -167,7 +173,7 @@ const OfflineHome = () => {
                 <p>
                   <span className="font-medium text-gray-900 dark:text-white">{source.chapterCount}</span> chapter đã lưu
                 </p>
-                <p>Dung lượng: {formatSizeSafe(source.bytes)}</p>
+                <p>Dung lượng: {formatSize(source.bytes)}</p>
                 {source.lastUpdated ? (
                   <p>Cập nhật lần cuối: {formatDate(source.lastUpdated)}</p>
                 ) : (

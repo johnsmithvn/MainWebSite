@@ -143,7 +143,12 @@ export const formatDate = (timestamp) => {
  * @returns {string} Size in MB
  */
 export const formatSize = (bytes) => {
-  if (!bytes) return 'Unknown';
-  const mb = bytes / (1024 * 1024);
+  const numericBytes = Number(bytes);
+
+  if (!Number.isFinite(numericBytes) || numericBytes <= 0) {
+    return '0 MB';
+  }
+
+  const mb = numericBytes / (1024 * 1024);
   return `${mb.toFixed(1)} MB`;
 };
