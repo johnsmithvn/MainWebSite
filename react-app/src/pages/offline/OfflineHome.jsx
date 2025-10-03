@@ -112,20 +112,14 @@ const OfflineHome = () => {
     <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
       <div className="text-center space-y-3">
         <div className="text-5xl">📚</div>
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-          Chọn nguồn manga đã tải xuống
-        </h1>
-        <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          Mỗi nguồn (root) chứa danh sách manga riêng biệt. Hãy chọn nguồn cần đọc để mở thư viện offline tương ứng.
-        </p>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-4 text-xs md:text-sm text-gray-500 dark:text-gray-400">
         <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1">
-          {totalSummary.totalSources} nguồn offline
+          {totalSummary.totalSources} source offline
         </span>
         <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1">
-          {totalSummary.totalChapters} chapter đã lưu
+          {totalSummary.totalChapters} Manga
         </span>
         <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1">
           Tổng dung lượng: {formatSize(totalSummary.totalBytes)}
