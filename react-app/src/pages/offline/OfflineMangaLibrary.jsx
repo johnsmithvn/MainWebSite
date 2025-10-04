@@ -798,10 +798,11 @@ const ChapterCard = ({ chapter, onRead, onDelete, onShowInfo }) => {
           <Button
             variant="outline"
             size="xs"
-            className="text-primary-600 hover:text-primary-700 border-primary-200 hover:bg-primary-50 dark:text-primary-400 dark:border-primary-800 dark:hover:bg-primary-900/20"
+            className="text-primary-600 hover:text-primary-700 border-primary-200 hover:bg-primary-50 dark:text-primary-400 dark:border-primary-800 dark:hover:bg-primary-900/20 flex items-center gap-1"
             onClick={() => onShowInfo(chapter)}
           >
             <Info size={14} />
+            <span className="text-xs font-medium">Thông tin</span>
           </Button>
         </div>
       </div>
@@ -863,7 +864,7 @@ const ChapterListItem = ({ chapter, onRead, onDelete, onShowInfo }) => {
             className="text-primary-600 border-primary-200 hover:bg-primary-50 dark:text-primary-400 dark:border-primary-800 dark:hover:bg-primary-900/20"
           >
             <Info size={16} />
-            <span className="hidden sm:inline ml-1">Thông tin</span>
+            <span className="ml-1">Thông tin</span>
           </Button>
         </div>
       </div>
