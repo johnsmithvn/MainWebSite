@@ -12,7 +12,7 @@ const DEFAULT_IMAGES = {
   favicon: '/default/favicon.png'
 };
 
-const CACHE_VERSION = 'v3.1.0';
+const CACHE_VERSION = 'v3.1.1';
 const STATIC_CACHE = `offline-core-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `reader-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'chapter-images'; // Keep existing name for compatibility
@@ -33,6 +33,10 @@ const OFFLINE_PAGES = [
   '/offline/manga'
 ];
 
+const OFFLINE_ROUTE_SET = new Set(
+  OFFLINE_PAGES.map((path) => normalizePath(new URL(path, self.location.origin).pathname))
+);
+
 // Network timeout for better UX
 const NETWORK_TIMEOUT = 5000;
 
@@ -41,7 +45,7 @@ const cacheInstances = new Map();
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('🔧 SW installing v3.1.0...');
+  console.log('🔧 SW installing v3.1.1...');
 
   event.waitUntil((async () => {
     try {
@@ -76,7 +80,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - cleanup old caches
 self.addEventListener('activate', (event) => {
-  console.log('🚀 SW activating v3.1.0...');
+  console.log('🚀 SW activating v3.1.1...');
 
   event.waitUntil(
     Promise.all([
@@ -275,93 +279,49 @@ async function mangaImageStrategy(request) {
 
 // Navigation strategy for SPA
 async function navigationStrategy(request) {
+  let url;
+  let normalizedPath;
+  let isOfflineRoute = false;
+
   try {
     console.log('🧭 Navigation:', request.url);
-    const networkResponse = await fetch(request);
+    url = new URL(request.url);
+    normalizedPath = normalizePath(url.pathname);
+    isOfflineRoute =
+      url.origin === self.location.origin && OFFLINE_ROUTE_SET.has(normalizedPath);
 
-    if (networkResponse && networkResponse.ok) {
-      try {
-        const cache = await getCacheInstance(DYNAMIC_CACHE);
+    if (isOfflineRoute) {
+      const networkResponse = await fetch(request);
 
-        await cache.put(request, networkResponse.clone());
-
-        const appShellPaths = ['/', '/index.html'];
-        await Promise.all(
-          appShellPaths.map(async (path) => {
-            try {
-              await cache.put(path, networkResponse.clone());
-            } catch (cacheError) {
-              console.warn('⚠️ Failed to update app shell cache for', path, cacheError);
-            }
-          })
-        );
-      } catch (cacheError) {
-        console.warn('⚠️ Failed to cache navigation response:', cacheError);
+      if (networkResponse && networkResponse.ok) {
+        const offlineCache = await getCacheInstance(STATIC_CACHE);
+        await offlineCache.put(request, networkResponse.clone());
       }
+
+      return networkResponse;
     }
 
-    return networkResponse;
+    return await fetch(request);
   } catch (error) {
-    console.log('📴 Offline navigation fallback:', request.url);
+    console.log(
+      `📴 Offline navigation fallback${isOfflineRoute ? ' (offline route)' : ''}:`,
+      request.url
+    );
 
-    try {
-      const dynamicCache = await getCacheInstance(DYNAMIC_CACHE);
+    if (isOfflineRoute && normalizedPath) {
+      try {
+        const offlineCache = await getCacheInstance(STATIC_CACHE);
+        const cachedResponse = await matchOfflineRoute(offlineCache, request, normalizedPath);
 
-      // First: Try exact cached response for the route
-      const cachedResponse = await dynamicCache.match(request);
-      if (cachedResponse) {
-        console.log('✅ Serving cached navigation response');
-        return cachedResponse;
-      }
-
-      // Second: Try app shell - prefer React app over static offline.html
-      const appShellPaths = ['/', '/index.html'];
-      for (const path of appShellPaths) {
-        const appShell = await dynamicCache.match(path);
-        if (appShell) {
-          console.log('✅ Serving cached app shell fallback (React app)');
-          return appShell;
+        if (cachedResponse) {
+          return cachedResponse;
         }
+      } catch (cacheError) {
+        console.warn('⚠️ Failed to serve cached offline route:', cacheError);
       }
-
-      // Try static cache for app shell as well
-      const staticCache = await getCacheInstance(STATIC_CACHE);
-      for (const path of appShellPaths) {
-        const appShell = await staticCache.match(path);
-        if (appShell) {
-          console.log('✅ Serving static cached app shell');
-          return appShell;
-        }
-      }
-
-    } catch (cacheError) {
-      console.warn('⚠️ Failed to read navigation cache:', cacheError);
     }
 
-    // Final fallback with inline HTML - no static offline.html needed
-    return new Response(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Offline - MainWebSite</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body { font-family: system-ui; text-align: center; padding: 50px; }
-            h1 { color: #333; }
-            button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-          </style>
-        </head>
-        <body>
-          <h1>📱 App đang offline</h1>
-          <p>Không thể kết nối server. Vui lòng kiểm tra kết nối mạng.</p>
-          <button onclick="window.location.reload()">🔄 Thử lại</button>
-        </body>
-      </html>
-    `, {
-      status: 200,
-      statusText: 'OK',
-      headers: { 'Content-Type': 'text/html' }
-    });
+    return offlineFallbackResponse();
   }
 }
 
@@ -398,7 +358,65 @@ function isNavigation(request) {
 }
 
 function getResourceName(url) {
-  return url.split('/').pop() || url;
+  try {
+    return new URL(url).pathname;
+  } catch (error) {
+    return url;
+  }
+}
+
+function normalizePath(pathname) {
+  if (!pathname) {
+    return '/';
+  }
+
+  const trimmed = pathname.replace(/\/+$/, '');
+  return trimmed === '' ? '/' : trimmed;
+}
+
+async function matchOfflineRoute(cache, request, normalizedPath) {
+  // Try matching the original request first
+  let response = await cache.match(request);
+
+  if (response) {
+    return response;
+  }
+
+  const offlineUrl = new URL(normalizedPath, self.location.origin);
+  response = await cache.match(offlineUrl.href);
+
+  if (response) {
+    return response;
+  }
+
+  return cache.match(offlineUrl.pathname);
+}
+
+function offlineFallbackResponse() {
+  return new Response(
+    `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Offline - MainWebSite</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      body { font-family: system-ui; text-align: center; padding: 50px; }
+      h1 { color: #333; }
+      button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <h1>📱 App đang offline</h1>
+    <p>Không thể kết nối server. Vui lòng kiểm tra kết nối mạng.</p>
+    <button onclick="window.location.reload()">🔄 Thử lại</button>
+  </body>
+</html>`,
+    {
+      status: 200,
+      statusText: 'OK',
+      headers: { 'Content-Type': 'text/html' }
+    }
+  );
 }
 
 async function updateCacheInBackground(request, cache) {
@@ -599,4 +617,4 @@ function getCacheType(cacheName) {
 
 // Performance monitoring logic moved to main fetch handler.
 
-console.log('🚀 Enhanced Service Worker v3.1.0 loaded');
+console.log('🚀 Enhanced Service Worker v3.1.1 loaded');
