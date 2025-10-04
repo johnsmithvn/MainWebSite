@@ -302,8 +302,6 @@ export async function getStorageAnalysisBySource(sourceKey) {
       return key === sourceKey;
     });
     
-    const cache = await caches.open('chapter-images');
-    
     let totalBytes = 0;
     let totalImages = 0;
     let totalChapters = chapters.length;

@@ -19,6 +19,7 @@ import { useUIStore, useAuthStore } from '../../store';
 import SearchModal from './SearchModal';
 import SettingsModal from './SettingsModal';
 import Button from './Button';
+import { formatSourceLabel } from '../../utils/offlineHelpers';
 
 const Header = () => {
   const location = useLocation();
@@ -50,15 +51,6 @@ const Header = () => {
   setSourceKey,
   clearLastKeys // Add this for debugging
   } = useAuthStore();
-
-  // Helper function to format source label
-  const formatSourceLabel = (source) => {
-    if (!source) return '';
-    return source
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  };
 
   // Get current display name based on page
   const currentDisplayName = useMemo(() => {

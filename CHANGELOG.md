@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Changed
 
+- 🔄 [2025-10-04] Refactored Header.jsx to use shared utility → Removed duplicate `formatSourceLabel` logic from Header component, now imports from `utils/offlineHelpers.js` for better maintainability and consistency across codebase
 - 🔄 [2025-10-04] Enhanced offline chapter cards interaction → Added click-to-read functionality on thumbnails for both grid and list views, showing hover effects (opacity change + eye icon overlay in grid view, opacity change in list view) to indicate clickable state
 - 🔄 [2025-10-04] Enhanced Header component dynamic title display → Header now shows source name/root folder based on current page: manga select shows sourceKey, manga pages show root folder name, movie/music show sourceKey, offline manga shows formatted source name, all display without conversion
 - 🔄 [2025-10-04] Improved Header navigation behavior → Offline manga pages now navigate to /offline when clicking header instead of home page
@@ -23,13 +24,13 @@ All notable changes to this project will be documented in this file. Dates use Y
 ### Changed
 - 🔄 [2025-10-04] Improved SettingsModal responsive design → Modal sidebar shows horizontal scroll with icons on mobile, vertical list on desktop; adjusted padding and button sizes for better mobile experience
 - 🔄 [2025-10-04] Improved Settings page responsive design → Sidebar now shows icon-only horizontal scroll on mobile, full labels on desktop; Quick Actions hidden on mobile for cleaner UI
-- 🔄 [2025-10-04] Removed success toast notification after manga chapter download → Modal auto-closes after 3 seconds, eliminating redundant success toast message
+- 🔄 [2025-10-04] Removed success toast notification after manga chapter download 
 - 🔄 [2025-10-04] Enhanced download flow with confirmation step → Download now requires user confirmation via modal before checking storage quota, with loading state during quota check and automatic cleanup of existing chapters on re-download
 
 ### Fixed
 - 🐛 [2025-10-04] Fixed manga title extraction in offline downloads → Changed logic to use folder name directly as manga title (ROOT/MangaName structure) instead of using parent folder, ensuring correct manga names are displayed and stored
 - 🐛 [2025-10-04] Fixed toast.info() error in OfflineMangaLibrary → Changed from non-existent toast.info() to toast() with custom icon for redirect notification
-- 🐛 [2025-10-04] Fixed manga title truncation in ChapterCard → Changed from Tailwind line-clamp-3 to inline style with proper minHeight (3.75rem) and lineHeight (1.25rem) to ensure 3 full lines display without cutting text
+- 🐛 [2025-10-04] Fixed manga title truncation in ChapterCard → Ensured consistent 3-line truncation using Tailwind line-clamp-3 and min-h utilities for manga titles, preventing text from being cut off mid-line
 
 ### Added
 - ✨ [2025-10-04] Added StorageInfoModal component → Created dedicated modal to display offline storage statistics with modern card-based UI showing chapters, images, storage usage, and quota information

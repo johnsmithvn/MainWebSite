@@ -66,7 +66,7 @@ export const extractTitlesFromPath = (mangaPath) => {
   // So folderName IS the manga title, not chapter title
   const mangaTitle = folderName;
   const chapterTitle = folderName; // Same as manga title since no separate chapter folders
-  
+  if (process.env.NODE_ENV !== 'production') {
   console.log('📖 Extract titles from path:', {
     originalPath: mangaPath,
     cleanPath,
@@ -75,6 +75,6 @@ export const extractTitlesFromPath = (mangaPath) => {
     chapterTitle,
     note: 'Using folder name as manga title directly'
   });
-  
+    }
   return { mangaTitle, chapterTitle };
 };
