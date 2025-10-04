@@ -431,7 +431,6 @@ export default function OfflineMangaLibrary() {
                   onRead={handleRead}
                   onDelete={handleDelete}
                   onShowInfo={handleShowInfo}
-                  formatDate={formatDate}
                 />
               ))}
             </div>
@@ -444,7 +443,6 @@ export default function OfflineMangaLibrary() {
                   onRead={handleRead}
                   onDelete={handleDelete}
                   onShowInfo={handleShowInfo}
-                  formatDate={formatDate}
                 />
               ))}
             </div>
@@ -734,7 +732,7 @@ export default function OfflineMangaLibrary() {
 }
 
 // Chapter Card Component
-const ChapterCard = ({ chapter, onRead, onDelete, onShowInfo, formatDate }) => {
+const ChapterCard = ({ chapter, onRead, onDelete, onShowInfo }) => {
   const coverImage = chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover;
   const title = chapter.mangaTitle || chapter.chapterTitle || chapter.id || 'Unknown';
 
@@ -772,21 +770,14 @@ const ChapterCard = ({ chapter, onRead, onDelete, onShowInfo, formatDate }) => {
       {/* Info */}
       <div className="mt-3 flex-1 flex flex-col">
         <h3
-          className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base mb-2 line-clamp-2 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400"
+          className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base mb-3 line-clamp-2 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400"
           onClick={() => onRead(chapter)}
           title={title}
         >
           {title}
         </h3>
 
-        <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
-          <div className="flex items-center gap-1">
-            <Calendar size={12} className="shrink-0" />
-            <span className="truncate">{formatDate(chapter.createdAt)}</span>
-          </div>
-        </div>
-
-        <div className="mt-3 flex gap-2">
+        <div className="mt-auto flex gap-2 pt-1">
           <Button
             variant="outline"
             size="xs"
@@ -819,7 +810,7 @@ const ChapterCard = ({ chapter, onRead, onDelete, onShowInfo, formatDate }) => {
 };
 
 // Chapter List Item Component
-const ChapterListItem = ({ chapter, onRead, onDelete, onShowInfo, formatDate }) => {
+const ChapterListItem = ({ chapter, onRead, onDelete, onShowInfo }) => {
   const coverImage = chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover;
   const title = chapter.mangaTitle || chapter.chapterTitle || chapter.id || 'Unknown';
 
@@ -841,16 +832,9 @@ const ChapterListItem = ({ chapter, onRead, onDelete, onShowInfo, formatDate }) 
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base line-clamp-1 mb-1">
+          <h3 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base line-clamp-1">
             {title}
           </h3>
-
-          <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-            <div className="flex items-center gap-1">
-              <Calendar size={14} className="shrink-0" />
-              <span className="truncate">{formatDate(chapter.createdAt)}</span>
-            </div>
-          </div>
         </div>
 
         {/* Actions */}
