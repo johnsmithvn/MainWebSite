@@ -654,12 +654,11 @@ const MangaReader = () => {
       
       // Update offline status
       setIsChapterOfflineAvailable(true);
-      toast.success('✅ Chapter downloaded successfully!');
       
       // Auto close modal after 3 seconds if completed
-      setTimeout(() => {
-        setShowDownloadModal(false);
-      }, 3000);
+      // setTimeout(() => {
+      //   setShowDownloadModal(false);
+      // }, 3000);
       
     } catch (err) {
       console.error('Download failed', err);

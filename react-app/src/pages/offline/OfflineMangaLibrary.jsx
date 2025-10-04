@@ -4,7 +4,7 @@ import { Search, Trash2, Calendar, Eye, Grid, List, Info } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../constants';
 import Button from '../../components/common/Button';
 import StorageInfoModal from '../../components/common/StorageInfoModal';
-import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis } from '../../utils/offlineLibrary';
+import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis, getStorageAnalysisBySource } from '../../utils/offlineLibrary';
 import { formatDate, formatSize } from '../../utils/formatters';
 import { formatSourceLabel } from '../../utils/offlineHelpers';
 import toast from 'react-hot-toast';
@@ -30,8 +30,13 @@ export default function OfflineMangaLibrary() {
       const items = await getChapters();
       setChapters(items);
       
-      // Load storage statistics
-      const stats = await getStorageAnalysis();
+      // Load storage statistics - based on source filter
+      let stats;
+      if (sourceFilter) {
+        stats = await getStorageAnalysisBySource(sourceFilter);
+      } else {
+        stats = await getStorageAnalysis();
+      }
       setStorageStats(stats);
     } catch (err) {
       console.error('Error loading chapters:', err);
@@ -42,8 +47,18 @@ export default function OfflineMangaLibrary() {
   };
 
   useEffect(() => {
+    // 🚫 Chặn xem tất cả - phải có source
+    if (!sourceFilter) {
+      navigate('/offline', { replace: true });
+      toast('Vui lòng chọn nguồn để xem chapters', {
+        icon: 'ℹ️',
+        duration: 3000,
+      });
+      return;
+    }
+    
     load();
-  }, []);
+  }, [sourceFilter, navigate]); // Re-load when source filter changes
 
   const availableSources = useMemo(() => {
     const map = new Map();
@@ -218,14 +233,7 @@ export default function OfflineMangaLibrary() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              📚 Manga Offline Library
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              {chapters.length} chapter{chapters.length !== 1 ? 's' : ''} đã tải offline
-            </p>
-          </div>
+       
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2 justify-end">
@@ -253,50 +261,28 @@ export default function OfflineMangaLibrary() {
         </div>
       </div>
 
-      {availableSources.length > 0 && (
+      {availableSources.length > 0 && sourceFilter && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          {sourceFilter ? (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">
-                  Đang xem nguồn
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                {activeSourceInfo?.displayName || formatSourceLabel(sourceFilter)}
+              </p>
+              {activeSourceInfo && (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {activeSourceInfo.mangaCount > 0 && `${activeSourceInfo.mangaCount} manga`}
                 </p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {activeSourceInfo?.displayName || formatSourceLabel(sourceFilter)}
-                </p>
-                {activeSourceInfo && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {activeSourceInfo.chapterCount} chapter đã lưu
-                    {activeSourceInfo.mangaCount > 0 && ` · ${activeSourceInfo.mangaCount} manga`}
-                  </p>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="self-start sm:self-auto"
-                onClick={() => navigate('/offline')}
-              >
-                Chọn nguồn khác
-              </Button>
+              )}
             </div>
-          ) : (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Đang hiển thị {chapters.length} chapter từ {availableSources.length} nguồn offline.
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="self-start sm:self-auto"
-                onClick={() => navigate('/offline')}
-              >
-                Chọn theo nguồn
-              </Button>
-            </div>
-          )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="self-start sm:self-auto"
+              onClick={() => navigate('/offline')}
+            >
+              Chọn nguồn khác
+            </Button>
+          </div>
         </div>
       )}
 

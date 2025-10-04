@@ -1,14 +1,21 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Button from '@/components/common/Button';
-import { getChapters } from '@/utils/offlineLibrary';
-import { formatDate, formatSize } from '@/utils/formatters';
-import { formatSourceLabel, getMangaPathFromChapterId } from '@/utils/offlineHelpers';
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Info } from "lucide-react";
+import Button from "@/components/common/Button";
+import StorageInfoModal from "@/components/common/StorageInfoModal";
+import { getChapters, getStorageAnalysis } from "@/utils/offlineLibrary";
+import { formatDate, formatSize } from "@/utils/formatters";
+import {
+  formatSourceLabel,
+  getMangaPathFromChapterId,
+} from "@/utils/offlineHelpers";
 
 const OfflineHome = () => {
   const navigate = useNavigate();
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [storageStats, setStorageStats] = useState(null);
+  const [showStorageModal, setShowStorageModal] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -19,8 +26,14 @@ const OfflineHome = () => {
         if (mounted) {
           setChapters(items || []);
         }
+
+        // Load total storage stats
+        const stats = await getStorageAnalysis();
+        if (mounted) {
+          setStorageStats(stats);
+        }
       } catch (error) {
-        console.error('Failed to load offline chapters', error);
+        console.error("Failed to load offline chapters", error);
         if (mounted) {
           setChapters([]);
         }
@@ -44,7 +57,7 @@ const OfflineHome = () => {
     const mangaPathCache = new Map();
 
     chapters.forEach((chapter) => {
-      const sourceKey = chapter?.sourceKey || 'UNKNOWN_SOURCE';
+      const sourceKey = chapter?.sourceKey || "UNKNOWN_SOURCE";
 
       if (!map.has(sourceKey)) {
         map.set(sourceKey, {
@@ -64,8 +77,8 @@ const OfflineHome = () => {
       const chapterUpdatedAt = chapter?.updatedAt || chapter?.createdAt || 0;
       entry.lastUpdated = Math.max(entry.lastUpdated, chapterUpdatedAt);
 
-      const chapterId = chapter?.id || '';
-      let mangaPath = '';
+      const chapterId = chapter?.id || "";
+      let mangaPath = "";
       if (chapterId) {
         if (mangaPathCache.has(chapterId)) {
           mangaPath = mangaPathCache.get(chapterId);
@@ -99,7 +112,10 @@ const OfflineHome = () => {
   const totalSummary = useMemo(() => {
     const totalChapters = chapters.length;
     const totalSources = sources.length;
-    const totalBytes = sources.reduce((acc, source) => acc + (source.bytes || 0), 0);
+    const totalBytes = sources.reduce(
+      (acc, source) => acc + (source.bytes || 0),
+      0
+    );
 
     return {
       totalChapters,
@@ -111,9 +127,10 @@ const OfflineHome = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-10 space-y-8">
       <div className="text-center space-y-3">
-        <div className="text-5xl">📚</div>
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+          Chọn nguồn manga đã tải xuống
+        </h1>
       </div>
-
       <div className="flex flex-wrap items-center justify-center gap-4 text-xs md:text-sm text-gray-500 dark:text-gray-400">
         <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1">
           {totalSummary.totalSources} source offline
@@ -126,6 +143,20 @@ const OfflineHome = () => {
         </span>
       </div>
 
+      {/* Storage Info Button */}
+      {storageStats && totalSummary.totalChapters > 0 && (
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            onClick={() => setShowStorageModal(true)}
+            className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20"
+          >
+            <Info size={16} />
+            <span className="ml-2">Thông tin lưu trữ tổng</span>
+          </Button>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-16">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-primary-500"></div>
@@ -133,11 +164,14 @@ const OfflineHome = () => {
       ) : sources.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900/40 text-center py-12 px-6 space-y-4">
           <div className="text-5xl">🗂️</div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Chưa có dữ liệu offline</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Chưa có dữ liệu offline
+          </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Hãy quay lại khi trực tuyến và tải xuống chapter để đọc offline. Sau khi tải, nguồn sẽ hiển thị tại đây.
+            Hãy quay lại khi trực tuyến và tải xuống chapter để đọc offline. Sau
+            khi tải, nguồn sẽ hiển thị tại đây.
           </p>
-          <Button onClick={() => navigate('/')}>Về trang chủ</Button>
+          <Button onClick={() => navigate("/")}>Về trang chủ</Button>
         </div>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2">
@@ -148,7 +182,9 @@ const OfflineHome = () => {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">Nguồn</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">
+                    Nguồn
+                  </p>
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {source.displayName}
                   </h2>
@@ -165,19 +201,30 @@ const OfflineHome = () => {
 
               <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                 <p>
-                  <span className="font-medium text-gray-900 dark:text-white">{source.chapterCount}</span> chapter đã lưu
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {source.chapterCount}
+                  </span>{" "}
+                  chapter đã lưu
                 </p>
                 <p>Dung lượng: {formatSize(source.bytes)}</p>
                 {source.lastUpdated ? (
                   <p>Cập nhật lần cuối: {formatDate(source.lastUpdated)}</p>
                 ) : (
-                  <p className="text-gray-400 dark:text-gray-500">Chưa có thời gian cập nhật</p>
+                  <p className="text-gray-400 dark:text-gray-500">
+                    Chưa có thời gian cập nhật
+                  </p>
                 )}
               </div>
 
               <Button
                 className="w-full justify-center"
-                onClick={() => navigate(`/offline/manga?source=${encodeURIComponent(source.sourceKey)}`)}
+                onClick={() =>
+                  navigate(
+                    `/offline/manga?source=${encodeURIComponent(
+                      source.sourceKey
+                    )}`
+                  )
+                }
               >
                 Mở thư viện
               </Button>
@@ -187,8 +234,17 @@ const OfflineHome = () => {
       )}
 
       <div className="text-center text-xs text-gray-500 dark:text-gray-400">
-        Lưu ý: nội dung offline chỉ hiển thị đúng với nguồn đã chọn. Hãy đảm bảo bạn đã tải chapter cho nguồn tương ứng trước khi chuyển sang chế độ offline.
+        Lưu ý: nội dung offline chỉ hiển thị đúng với nguồn đã chọn. Hãy đảm bảo
+        bạn đã tải chapter cho nguồn tương ứng trước khi chuyển sang chế độ
+        offline.
       </div>
+
+      {/* Storage Info Modal */}
+      <StorageInfoModal
+        isOpen={showStorageModal}
+        onClose={() => setShowStorageModal(false)}
+        storageStats={storageStats}
+      />
     </div>
   );
 };

@@ -4,12 +4,24 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Changed
+- 🔄 [2025-10-04] Removed success toast notification after manga chapter download → Modal auto-closes after 3 seconds, eliminating redundant success toast message
+
+### Fixed
+- 🐛 [2025-10-04] Fixed toast.info() error in OfflineMangaLibrary → Changed from non-existent toast.info() to toast() with custom icon for redirect notification
+- 🐛 [2025-10-04] Fixed manga title truncation in ChapterCard → Changed from Tailwind line-clamp-3 to inline style with proper minHeight (3.75rem) and lineHeight (1.25rem) to ensure 3 full lines display without cutting text
+
 ### Added
 - ✨ [2025-10-04] Added StorageInfoModal component → Created dedicated modal to display offline storage statistics with modern card-based UI showing chapters, images, storage usage, and quota information
 - ✨ [2025-10-04] Enhanced OfflineMangaLibrary UI → Added "Thông tin lưu trữ" button to show storage modal, improved header layout with emoji icon, removed inline storage stats section for cleaner interface
+- ✨ [2025-10-04] Added source-specific storage analysis → Created getStorageAnalysisBySource() function to calculate storage stats per source, OfflineMangaLibrary now shows stats for current source only
+- ✨ [2025-10-04] Added total storage info button to OfflineHome → Added "Thông tin lưu trữ tổng" button in OfflineHome page to view overall storage statistics across all sources
+- ✨ [2025-10-04] Added source filter requirement for OfflineMangaLibrary → Implemented auto-redirect to /offline when accessing manga library without source parameter, prevents viewing all chapters from mixed sources
 
 ### Changed
 - 🔄 [2025-10-04] Improved ChapterCard UI in OfflineMangaLibrary → Removed hover overlay state, moved action buttons outside card (always visible), changed title to max 3 lines display (line-clamp-3), pages badge now always visible for better UX
+- 🔄 [2025-10-04] Updated storage stats loading logic → OfflineMangaLibrary now dynamically loads stats based on sourceFilter parameter, re-calculates when switching sources
+- 🔄 [2025-10-04] Enforced source-based navigation flow → OfflineMangaLibrary now requires source parameter, users must select source from OfflineHome to view chapters
 
 ### Documentation
 
