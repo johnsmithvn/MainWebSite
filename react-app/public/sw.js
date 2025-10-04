@@ -196,8 +196,6 @@ async function cacheFirstStrategy(request, cacheName) {
 // Network-first with timeout for better UX
 async function networkFirstWithTimeout(request, cacheName) {
   try {
-    console.log('🌐 Network-first:', getResourceName(request.url));
-    
     // Race between network and timeout
     const networkPromise = fetch(request);
     const timeoutPromise = new Promise((_, reject) => 
@@ -214,14 +212,11 @@ async function networkFirstWithTimeout(request, cacheName) {
     
     return networkResponse;
   } catch (error) {
-    console.log('📦 Network failed, trying cache:', getResourceName(request.url));
-    
     // Use centralized cache instance getter
     const cache = await getCacheInstance(cacheName);
     const cachedResponse = await cache.match(request);
     
     if (cachedResponse) {
-      console.log('📦 Cache fallback success');
       return cachedResponse;
     }
     
@@ -237,13 +232,11 @@ async function mangaImageStrategy(request) {
     const cachedImage = await chapterCache.match(request);
     
     if (cachedImage) {
-      console.log('🖼️ Offline manga image:', getResourceName(request.url));
       return cachedImage;
     }
     
     // For online reading, try network without timeout or fallback
     // Let browser handle naturally - no interference for slow APIs
-    console.log('🌐 Online manga image (no timeout):', getResourceName(request.url));
     const networkResponse = await fetch(request);
     
     // Only return if network succeeds, otherwise let request fail naturally

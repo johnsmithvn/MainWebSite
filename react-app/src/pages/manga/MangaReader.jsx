@@ -293,7 +293,6 @@ const MangaReader = () => {
         // First, try pass-through cache from Home
         const isPrefetchValid = readerPrefetch && readerPrefetch.path === currentMangaPath && Array.isArray(readerPrefetch.images) && readerPrefetch.images.length > 0 && Date.now() - (readerPrefetch.ts || 0) < 5000;
         if (isPrefetchValid) {
-          console.log('⚡ Using readerPrefetch, skipping network');
           setCurrentPath(currentMangaPath);
           setCurrentImages(readerPrefetch.images);
           setLoading(false);
@@ -350,7 +349,6 @@ const MangaReader = () => {
 
   // Debug reader settings changes
   useEffect(() => {
-    console.log('🔧 Reader settings updated:', readerSettings);
   }, [readerSettings]);
 
   // Cleanup timers on unmount
@@ -872,7 +870,6 @@ const MangaReader = () => {
                       const perfCount = performance.getEntriesByName(imageSrc).length;
                       if (!window.__IMG_LOAD_STATS__) window.__IMG_LOAD_STATS__ = {};
                       window.__IMG_LOAD_STATS__[imageSrc] = { count: c, perf: perfCount };
-                      console.log(`🧪 Vertical load #${c} for ${globalIndex + 1} (${imageSrc.split('/').pop()}) perfEntries=${perfCount}`);
                     }}
                     onError={(e) => {
                       e.target.style.background = '#333';

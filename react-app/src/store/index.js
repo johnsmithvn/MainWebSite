@@ -263,7 +263,6 @@ export const useMangaStore = create(
         // 1. Try to get data from cache first
         const cachedData = getMangaCache(sourceKey, rootFolder, path);
         if (cachedData) {
-          console.log('📦 Using cached data for path:', path);
           set({ 
             mangaList: cachedData.mangaList,
             currentPath: path,
