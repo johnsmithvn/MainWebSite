@@ -12,7 +12,7 @@ const DEFAULT_IMAGES = {
   favicon: '/default/favicon.png'
 };
 
-const CACHE_VERSION = 'v3.0.0';
+const CACHE_VERSION = 'v3.1.0';
 const STATIC_CACHE = `offline-core-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `reader-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'chapter-images'; // Keep existing name for compatibility
@@ -26,6 +26,13 @@ const OFFLINE_CORE_ASSETS = [
   DEFAULT_IMAGES.video
 ];
 
+// Pre-cache only the manga-specific routes that should be available offline
+const OFFLINE_PAGES = [
+  '/manga/reader',
+  '/offline',
+  '/offline/manga'
+];
+
 // Network timeout for better UX
 const NETWORK_TIMEOUT = 5000;
 
@@ -34,7 +41,7 @@ const cacheInstances = new Map();
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('🔧 SW installing v3.0.0...');
+  console.log('🔧 SW installing v3.1.0...');
 
   event.waitUntil((async () => {
     try {
@@ -49,6 +56,16 @@ self.addEventListener('install', (event) => {
           console.warn('⚠️ Failed to cache offline asset:', asset, error);
         }
       }
+
+      console.log('📄 Pre-caching offline pages...');
+      for (const page of OFFLINE_PAGES) {
+        try {
+          await cache.add(page);
+          console.log('✅ Cached offline page:', page);
+        } catch (error) {
+          console.warn('⚠️ Failed to cache offline page:', page, error);
+        }
+      }
     } catch (error) {
       console.error('❌ Failed to prepare offline cache:', error);
     }
@@ -59,7 +76,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - cleanup old caches
 self.addEventListener('activate', (event) => {
-  console.log('🚀 SW activating v3.0.0...');
+  console.log('🚀 SW activating v3.1.0...');
 
   event.waitUntil(
     Promise.all([
@@ -582,4 +599,4 @@ function getCacheType(cacheName) {
 
 // Performance monitoring logic moved to main fetch handler.
 
-console.log('🚀 Enhanced Service Worker v3.0.0 loaded');
+console.log('🚀 Enhanced Service Worker v3.1.0 loaded');
