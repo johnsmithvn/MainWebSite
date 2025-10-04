@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Changed
 
+- 🔄 [2025-10-04] Enhanced offline chapter cards interaction → Added click-to-read functionality on thumbnails for both grid and list views, showing hover effects (opacity change + eye icon overlay in grid view, opacity change in list view) to indicate clickable state
+- 🔄 [2025-10-04] Enhanced Header component dynamic title display → Header now shows source name/root folder based on current page: manga select shows sourceKey, manga pages show root folder name, movie/music show sourceKey, offline manga shows formatted source name, all display without conversion
+- 🔄 [2025-10-04] Improved Header navigation behavior → Offline manga pages now navigate to /offline when clicking header instead of home page
+- 🔄 [2025-10-04] Enhanced Header mobile visibility → Source name now displays on all screen sizes including mobile, search button visible on all devices (icon only on mobile, with label on desktop)
+- 🔄 [2025-10-04] Improved storage size display format → formatBytes() automatically converts MB to GB when size exceeds 100MB for better readability across all components
+- 🔄 [2025-10-04] Refactored formatters utilities → Removed unused formatFileSize() and formatSize() functions, unified all formatting to use formatBytes() directly across all components (StorageInfoModal, OfflineMangaLibrary, OfflineHome), eliminating wrapper functions and ensuring consistent behavior
+- 🔄 [2025-10-04] Improved toast notifications position → Moved toast notifications from top-right to bottom-center for better visibility and less intrusive UX, especially on mobile devices
 - 🔄 [2025-10-04] Improved OfflineMangaLibrary UI/UX → Removed source info card wrapper, moved source name to clickable title at top (navigates to source selection), displayed manga count below title, centered action buttons for better visual hierarchy
 - 🔄 [2025-10-04] Enhanced Header dynamic title for offline pages → Header now displays source name (e.g. "💾 Root Dow") when viewing offline manga library with source parameter, shows "💾 Offline Library" for general offline pages
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, HardDrive, Database, Image, Package } from 'lucide-react';
-import { formatSize } from '../../utils/formatters';
+import { formatBytes } from '../../utils/formatters';
 
 const StorageInfoModal = ({ isOpen, onClose, storageStats }) => {
   if (!isOpen || !storageStats) return null;
@@ -113,19 +113,19 @@ const StorageInfoModal = ({ isOpen, onClose, storageStats }) => {
                 <div className="text-center">
                   <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Đã sử dụng</p>
                   <p className="font-semibold text-gray-900 dark:text-white">
-                    {formatSize(storageStats.quota.usage)}
+                    {formatBytes(storageStats.quota.usage)}
                   </p>
                 </div>
                 <div className="text-center border-x border-gray-300 dark:border-gray-600">
                   <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Còn lại</p>
                   <p className="font-semibold text-gray-900 dark:text-white">
-                    {formatSize(storageStats.quota.available)}
+                    {formatBytes(storageStats.quota.available)}
                   </p>
                 </div>
                 <div className="text-center">
                   <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Tổng</p>
                   <p className="font-semibold text-gray-900 dark:text-white">
-                    {formatSize(storageStats.quota.quota)}
+                    {formatBytes(storageStats.quota.quota)}
                   </p>
                 </div>
               </div>

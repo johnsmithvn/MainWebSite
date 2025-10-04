@@ -4,7 +4,7 @@ import { Info } from "lucide-react";
 import Button from "@/components/common/Button";
 import StorageInfoModal from "@/components/common/StorageInfoModal";
 import { getChapters, getStorageAnalysis } from "@/utils/offlineLibrary";
-import { formatDate, formatSize } from "@/utils/formatters";
+import { formatDate, formatBytes } from "@/utils/formatters";
 import {
   formatSourceLabel,
   getMangaPathFromChapterId,
@@ -139,7 +139,7 @@ const OfflineHome = () => {
           {totalSummary.totalChapters} Manga
         </span>
         <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1">
-          Tổng dung lượng: {formatSize(totalSummary.totalBytes)}
+          Tổng dung lượng: {formatBytes(totalSummary.totalBytes)}
         </span>
       </div>
 
@@ -206,7 +206,7 @@ const OfflineHome = () => {
                   </span>{" "}
                   chapter đã lưu
                 </p>
-                <p>Dung lượng: {formatSize(source.bytes)}</p>
+                <p>Dung lượng: {formatBytes(source.bytes)}</p>
                 {source.lastUpdated ? (
                   <p>Cập nhật lần cuối: {formatDate(source.lastUpdated)}</p>
                 ) : (

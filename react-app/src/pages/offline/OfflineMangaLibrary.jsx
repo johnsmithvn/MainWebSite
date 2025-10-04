@@ -5,7 +5,7 @@ import { DEFAULT_IMAGES } from '../../constants';
 import Button from '../../components/common/Button';
 import StorageInfoModal from '../../components/common/StorageInfoModal';
 import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis, getStorageAnalysisBySource } from '../../utils/offlineLibrary';
-import { formatDate, formatSize } from '../../utils/formatters';
+import { formatDate, formatBytes } from '../../utils/formatters';
 import { formatSourceLabel } from '../../utils/offlineHelpers';
 import toast from 'react-hot-toast';
 
@@ -352,7 +352,7 @@ export default function OfflineMangaLibrary() {
                   onRead={handleRead}
                   onDelete={handleDelete}
                   formatDate={formatDate}
-                  formatSize={formatSize}
+                  formatBytes={formatBytes}
                 />
               ))}
             </div>
@@ -365,7 +365,7 @@ export default function OfflineMangaLibrary() {
                   onRead={handleRead}
                   onDelete={handleDelete}
                   formatDate={formatDate}
-                  formatSize={formatSize}
+                  formatBytes={formatBytes}
                 />
               ))}
             </div>
@@ -535,23 +535,31 @@ export default function OfflineMangaLibrary() {
 }
 
 // Chapter Card Component
-const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
+const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatBytes }) => {
   const coverImage = chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover;
   const title = chapter.mangaTitle || chapter.chapterTitle || chapter.id || 'Unknown';
   
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-shadow duration-200">
       {/* Cover Image */}
-      <div className="relative aspect-[3/4] bg-gray-100 dark:bg-gray-700">
+      <div 
+        className="relative aspect-[3/4] bg-gray-100 dark:bg-gray-700 cursor-pointer group"
+        onClick={() => onRead(chapter)}
+      >
         <img
           src={coverImage}
           alt={title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-opacity group-hover:opacity-90"
           loading="lazy"
           onError={(e) => {
             e.target.src = DEFAULT_IMAGES.cover;
           }}
         />
+        
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+          <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" size={32} />
+        </div>
         
         {/* Pages badge - Always visible */}
         <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-md text-xs font-medium">
@@ -571,7 +579,7 @@ const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
             <span>{formatDate(chapter.createdAt)}</span>
           </div>
           {chapter.bytes && (
-            <div>Size: {formatSize(chapter.bytes)}</div>
+            <div>Size: {formatBytes(chapter.bytes)}</div>
           )}
         </div>
 
@@ -600,7 +608,7 @@ const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
 };
 
 // Chapter List Item Component
-const ChapterListItem = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
+const ChapterListItem = ({ chapter, onRead, onDelete, formatDate, formatBytes }) => {
   const coverImage = chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover;
   const title = chapter.mangaTitle || chapter.chapterTitle || chapter.id || 'Unknown';
   
@@ -608,11 +616,14 @@ const ChapterListItem = ({ chapter, onRead, onDelete, formatDate, formatSize }) 
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow">
       <div className="flex items-center gap-4">
         {/* Thumbnail */}
-        <div className="flex-shrink-0 w-16 h-20 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">
+        <div 
+          className="flex-shrink-0 w-16 h-20 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden cursor-pointer group"
+          onClick={() => onRead(chapter)}
+        >
           <img
             src={coverImage}
             alt={title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-opacity group-hover:opacity-75"
             loading="lazy"
             onError={(e) => {
               e.target.src = DEFAULT_IMAGES.cover;
@@ -629,7 +640,7 @@ const ChapterListItem = ({ chapter, onRead, onDelete, formatDate, formatSize }) 
           <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
             <div className="flex items-center gap-4">
               <span>{chapter.totalPages} trang</span>
-              {chapter.bytes && <span>{formatSize(chapter.bytes)}</span>}
+              {chapter.bytes && <span>{formatBytes(chapter.bytes)}</span>}
             </div>
             <div className="flex items-center gap-1">
               <Calendar size={14} />

@@ -91,7 +91,7 @@ const Layout = () => {
 
       {/* Toast notifications */}
       <Toaster
-        position="top-right"
+        position="bottom-center"
         toastOptions={{
           duration: 3000,
           style: {
