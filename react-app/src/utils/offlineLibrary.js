@@ -476,11 +476,8 @@ function extractMangaTitle(path) {
   const cleanPath = path.replace(/\/__self__$/, '');
   const parts = cleanPath.split('/').filter(Boolean);
   
-  if (parts.length >= 2) {
-    // Return parent folder as manga title
-    return parts[parts.length - 2] || 'Unknown Manga';
-  }
-  
+  // For this app: path structure is "ROOT/MangaName"
+  // So the last part IS the manga title, not parent folder
   return parts[parts.length - 1] || 'Unknown Manga';
 }
 
@@ -491,6 +488,6 @@ function extractChapterTitle(path) {
   const cleanPath = path.replace(/\/__self__$/, '');
   const parts = cleanPath.split('/').filter(Boolean);
   
-  // Return last folder as chapter title
+  // Return last folder as chapter title (same as manga title since no separate chapters)
   return parts[parts.length - 1] || 'Unknown Chapter';
 }

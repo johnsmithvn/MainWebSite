@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file. Dates use Y
 - 🔄 [2025-10-04] Enhanced download flow with confirmation step → Download now requires user confirmation via modal before checking storage quota, with loading state during quota check and automatic cleanup of existing chapters on re-download
 
 ### Fixed
+- 🐛 [2025-10-04] Fixed manga title extraction in offline downloads → Changed logic to use folder name directly as manga title (ROOT/MangaName structure) instead of using parent folder, ensuring correct manga names are displayed and stored
 - 🐛 [2025-10-04] Fixed toast.info() error in OfflineMangaLibrary → Changed from non-existent toast.info() to toast() with custom icon for redirect notification
 - 🐛 [2025-10-04] Fixed manga title truncation in ChapterCard → Changed from Tailwind line-clamp-3 to inline style with proper minHeight (3.75rem) and lineHeight (1.25rem) to ensure 3 full lines display without cutting text
 
