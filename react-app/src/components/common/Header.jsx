@@ -154,7 +154,7 @@ const Header = () => {
                 className="flex items-center space-x-2 text-xl font-bold text-primary-600 dark:text-primary-400"
               >
                 <span>📚</span>
-                <span className="hidden sm:inline">{currentDisplayName}</span>
+                <span>{currentDisplayName}</span>
               </Link>
             </div>
 
@@ -168,7 +168,6 @@ const Header = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setSearchModalOpen(true)}
-                  className="hidden sm:flex"
                 >
                   <FiSearch className="h-4 w-4" />
                   <span className="hidden lg:inline ml-2">Tìm kiếm</span>
