@@ -4,7 +4,13 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Changed
+
+- 🔄 [2025-10-04] Improved OfflineMangaLibrary UI/UX → Removed source info card wrapper, moved source name to clickable title at top (navigates to source selection), displayed manga count below title, centered action buttons for better visual hierarchy
+- 🔄 [2025-10-04] Enhanced Header dynamic title for offline pages → Header now displays source name (e.g. "💾 Root Dow") when viewing offline manga library with source parameter, shows "💾 Offline Library" for general offline pages
+
 ### Added
+
 - ✨ [2025-10-04] Added DownloadConfirmModal for manga chapter downloads → Created confirmation modal with loading state, re-download warning for already downloaded chapters, and automatic old chapter deletion before re-download
 
 ### Changed

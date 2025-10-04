@@ -230,61 +230,37 @@ export default function OfflineMangaLibrary() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-       
-
-          {/* Actions */}
-          <div className="flex flex-wrap gap-2 justify-end">
-            {storageStats && (
-              <Button
-                variant="outline"
-                onClick={() => setShowStorageModal(true)}
-                className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20"
-              >
-                <Info size={16} />
-                <span className="ml-1">Thông tin lưu trữ</span>
-              </Button>
-            )}
-            {chapters.length > 0 && (
-              <Button
-                variant="outline"
-                onClick={() => setShowClearModal(true)}
-                className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
-              >
-                <Trash2 size={16} />
-                <span className="ml-1">Xóa tất cả</span>
-              </Button>
-            )}
+      {/* Action Buttons - Centered */}
+      <div className="mb-6 flex flex-wrap gap-2 justify-center">
+        {activeSourceInfo && activeSourceInfo.mangaCount > 0 && (
+          <div className="w-full text-center mb-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {activeSourceInfo.mangaCount} manga
+            </p>
           </div>
-        </div>
+        )}
+        
+        {storageStats && (
+          <Button
+            variant="outline"
+            onClick={() => setShowStorageModal(true)}
+            className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20"
+          >
+            <Info size={16} />
+            <span className="ml-1">Thông tin lưu trữ</span>
+          </Button>
+        )}
+        {chapters.length > 0 && (
+          <Button
+            variant="outline"
+            onClick={() => setShowClearModal(true)}
+            className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+          >
+            <Trash2 size={16} />
+            <span className="ml-1">Xóa tất cả</span>
+          </Button>
+        )}
       </div>
-
-      {availableSources.length > 0 && sourceFilter && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                {activeSourceInfo?.displayName || formatSourceLabel(sourceFilter)}
-              </p>
-              {activeSourceInfo && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {activeSourceInfo.mangaCount > 0 && `${activeSourceInfo.mangaCount} manga`}
-                </p>
-              )}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="self-start sm:self-auto"
-              onClick={() => navigate('/offline')}
-            >
-              Chọn nguồn khác
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Controls */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">

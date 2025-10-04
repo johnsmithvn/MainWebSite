@@ -1,8 +1,8 @@
 // 📁 src/components/common/Header.jsx
 // 🎯 Header component
 
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useMemo } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   FiMenu, 
@@ -23,6 +23,7 @@ import Button from './Button';
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   // Only show search on specific sections, excluding /manga/select
@@ -31,6 +32,10 @@ const Header = () => {
   const homePath = '/';
   const isHomePage = pathname === '/';
   const isSelectPage = pathname === '/manga/select';
+  const isMangaPage = /^\/manga(?:\/|$)/.test(pathname) && !isSelectPage;
+  const isMoviePage = /^\/movie(?:\/|$)/.test(pathname);
+  const isMusicPage = /^\/music(?:\/|$)/.test(pathname);
+  const isOfflineMangaPage = pathname === '/offline/manga';
   
   const { 
     darkMode, 
@@ -45,6 +50,47 @@ const Header = () => {
   setSourceKey,
   clearLastKeys // Add this for debugging
   } = useAuthStore();
+
+  // Helper function to format source label
+  const formatSourceLabel = (source) => {
+    if (!source) return '';
+    return source
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Get current display name based on page
+  const currentDisplayName = useMemo(() => {
+    // Manga select page: show sourceKey
+    if (isSelectPage) {
+      return lastMangaKey || 'MainWebSite';
+    }
+    
+    // Manga page with root folder: show root folder name
+    if (isMangaPage) {
+      return lastMangaRootFolder || lastMangaKey || 'MainWebSite';
+    }
+    
+    // Movie page: show sourceKey
+    if (isMoviePage) {
+      return lastMovieKey || 'MainWebSite';
+    }
+    
+    // Music page: show sourceKey
+    if (isMusicPage) {
+      return lastMusicKey || 'MainWebSite';
+    }
+    
+    // Offline manga: show formatted source
+    if (isOfflineMangaPage) {
+      const source = searchParams.get('source');
+      return source ? formatSourceLabel(source) : 'MainWebSite';
+    }
+    
+    // Default: show MainWebSite
+    return 'MainWebSite';
+  }, [isSelectPage, isMangaPage, isMoviePage, isMusicPage, isOfflineMangaPage, lastMangaKey, lastMangaRootFolder, lastMovieKey, lastMusicKey, searchParams]);
 
   // Debug: Add temporary button to clear all last keys
   const handleDebugClear = () => {
@@ -102,12 +148,13 @@ const Header = () => {
                 </Button>
               )}
 
+              {/* Show dynamic source name based on current page */}
               <Link 
-                to={homePath} 
+                to={isOfflineMangaPage ? '/offline' : homePath} 
                 className="flex items-center space-x-2 text-xl font-bold text-primary-600 dark:text-primary-400"
               >
                 <span>📚</span>
-                <span className="hidden sm:inline">MainWebSite</span>
+                <span className="hidden sm:inline">{currentDisplayName}</span>
               </Link>
             </div>
 
