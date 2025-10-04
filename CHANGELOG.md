@@ -4,8 +4,14 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Added
+- ✨ [2025-10-04] Added DownloadConfirmModal for manga chapter downloads → Created confirmation modal with loading state, re-download warning for already downloaded chapters, and automatic old chapter deletion before re-download
+
 ### Changed
+- 🔄 [2025-10-04] Improved SettingsModal responsive design → Modal sidebar shows horizontal scroll with icons on mobile, vertical list on desktop; adjusted padding and button sizes for better mobile experience
+- 🔄 [2025-10-04] Improved Settings page responsive design → Sidebar now shows icon-only horizontal scroll on mobile, full labels on desktop; Quick Actions hidden on mobile for cleaner UI
 - 🔄 [2025-10-04] Removed success toast notification after manga chapter download → Modal auto-closes after 3 seconds, eliminating redundant success toast message
+- 🔄 [2025-10-04] Enhanced download flow with confirmation step → Download now requires user confirmation via modal before checking storage quota, with loading state during quota check and automatic cleanup of existing chapters on re-download
 
 ### Fixed
 - 🐛 [2025-10-04] Fixed toast.info() error in OfflineMangaLibrary → Changed from non-existent toast.info() to toast() with custom icon for redirect notification

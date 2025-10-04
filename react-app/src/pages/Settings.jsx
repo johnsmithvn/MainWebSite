@@ -1771,10 +1771,35 @@ const Settings = () => {
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar */}
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
+          {/* Sidebar - Mobile: Horizontal scroll with icons only, Desktop: Full labels */}
           <div className="w-full lg:w-64 flex-shrink-0">
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            {/* Mobile: Horizontal Scrollable Icons */}
+            <div className="lg:hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+              <nav className="flex p-2 gap-1">
+                {settingsTabs.map((tab) => {
+                  const IconComponent = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex-shrink-0 flex flex-col items-center justify-center p-3 rounded-md transition-colors min-w-[64px] ${
+                        activeTab === tab.id
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                      title={tab.label}
+                    >
+                      <IconComponent className="w-5 h-5" />
+                      <span className="text-[10px] mt-1 font-medium truncate max-w-[60px]">{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Desktop: Vertical List with Icons and Labels */}
+            <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <nav className="p-4 space-y-2">
                 {settingsTabs.map((tab) => {
                   const IconComponent = tab.icon;
@@ -1788,16 +1813,16 @@ const Settings = () => {
                           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                       }`}
                     >
-                      <IconComponent className="w-5 h-5 mr-3" />
-                      {tab.label}
+                      <IconComponent className="w-5 h-5 mr-3 flex-shrink-0" />
+                      <span className="truncate">{tab.label}</span>
                     </button>
                   );
                 })}
               </nav>
             </div>
 
-            {/* Quick Actions */}
-            <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+            {/* Quick Actions - Desktop only */}
+            <div className="hidden lg:block mt-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Quick Actions</h4>
               <div className="space-y-2">
                 <Button

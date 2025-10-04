@@ -16,6 +16,7 @@ export { default as Breadcrumb } from './Breadcrumb';
 export { default as Pagination } from './Pagination';
 export { default as DatabaseActions } from './DatabaseActions';
 export { default as DownloadProgressModal } from './DownloadProgressModal';
+export { default as DownloadConfirmModal } from './DownloadConfirmModal';
 export { default as StorageQuotaModal } from './StorageQuotaModal';
 export { default as StorageInfoModal } from './StorageInfoModal';
 export { default as ServiceWorkerStatus } from './ServiceWorkerStatus';
