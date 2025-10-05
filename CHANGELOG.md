@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Added
+
+- ✨ [2025-10-05] Added comprehensive code analysis documentation → Created REFACTOR_PLAN.md and CODE_ANALYSIS_REPORT.md documenting code quality issues, duplicate code patterns, dead code, long files, and refactoring strategies for react-app/src/ directory
+- ✨ [2025-10-05] Identified 15+ duplicate database operation handlers → Documented Settings.jsx handlers (handleMangaScan, handleMovieScan, handleMusicScan, etc.) for future refactoring using utils/databaseOperations.js
+- ✨ [2025-10-05] Identified 7 unused React hooks → Documented dead code in hooks/index.js (useVirtualizer, useAsync, useClickOutside, useKeyPress, useLocalStorage, useIntersectionObserver, useMediaQuery) for removal
+
 ### Changed
 
 - 🔄 [2025-10-04] Refactored Header.jsx to use shared utility → Removed duplicate `formatSourceLabel` logic from Header component, now imports from `utils/offlineHelpers.js` for better maintainability and consistency across codebase
