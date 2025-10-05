@@ -53,12 +53,28 @@ export const isRootLevel = (currentPath) => {
 export const extractTitlesFromPath = (mangaPath) => {
   if (!mangaPath) return { mangaTitle: '', chapterTitle: '' };
   
-  const folderName = getFolderName(mangaPath);
+  // Remove __self__ suffix
   const cleanPath = mangaPath.replace(/\/__self__$/, '');
+  
+  // Split path and filter empty parts
   const pathParts = cleanPath.split('/').filter(Boolean);
   
-  const mangaTitle = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : folderName;
-  const chapterTitle = folderName;
+  // Get folder name (last part of path) - this is the manga title
+  const folderName = pathParts[pathParts.length - 1] || '';
   
+  // For this app structure: path is just "ROOT/MangaName"
+  // So folderName IS the manga title, not chapter title
+  const mangaTitle = folderName;
+  const chapterTitle = folderName; // Same as manga title since no separate chapter folders
+  if (process.env.NODE_ENV !== 'production') {
+  console.log('📖 Extract titles from path:', {
+    originalPath: mangaPath,
+    cleanPath,
+    pathParts,
+    mangaTitle,
+    chapterTitle,
+    note: 'Using folder name as manga title directly'
+  });
+    }
   return { mangaTitle, chapterTitle };
 };

@@ -15,7 +15,15 @@ export const formatBytes = (bytes) => {
   
   if (i === 0) return bytes + ' B';
   
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  const value = bytes / Math.pow(k, i);
+  
+  // Nếu là MB và > 100MB thì chuyển sang GB
+  if (i === 2 && value > 100) {
+    const gb = bytes / Math.pow(k, 3);
+    return parseFloat(gb.toFixed(2)) + ' GB';
+  }
+  
+  return parseFloat(value.toFixed(2)) + ' ' + sizes[i];
 };
 
 /**
@@ -33,20 +41,6 @@ export const formatViewCount = (count) => {
   } else {
     return `${(count / 1000000).toFixed(1)}M`;
   }
-};
-
-/**
- * Format file size to readable format
- * @param {number} bytes - Size in bytes
- * @returns {string} Formatted string
- */
-export const formatFileSize = (bytes) => {
-  if (!bytes || bytes === 0) return '0 B';
-  
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
 };
 
 /**
@@ -137,18 +131,3 @@ export const formatDate = (timestamp) => {
   });
 };
 
-/**
- * Format bytes to MB format specifically
- * @param {number} bytes
- * @returns {string} Size in MB
- */
-export const formatSize = (bytes) => {
-  const numericBytes = Number(bytes);
-
-  if (!Number.isFinite(numericBytes) || numericBytes <= 0) {
-    return '0 MB';
-  }
-
-  const mb = numericBytes / (1024 * 1024);
-  return `${mb.toFixed(1)} MB`;
-};

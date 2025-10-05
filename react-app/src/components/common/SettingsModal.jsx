@@ -352,18 +352,18 @@ const SettingsModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] md:max-h-[80vh] overflow-hidden flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center space-x-3">
-            <Settings className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="flex items-center space-x-2 md:space-x-3">
+            <Settings className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+            <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
               Cài đặt
             </h2>
           </div>
@@ -375,9 +375,36 @@ const SettingsModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="flex">
-          {/* Sidebar */}
-          <div className="w-64 bg-gray-50 dark:bg-gray-900 p-4 border-r border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+          {/* Sidebar - Mobile: Horizontal scroll, Desktop: Vertical */}
+          {/* Mobile: Horizontal Scrollable Icons */}
+          <div className="md:hidden bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 overflow-x-auto flex-shrink-0">
+            <nav className="flex p-2 gap-1 min-w-max">
+              {settingsTabs.map((tab) => {
+                const IconComponent = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex-shrink-0 flex flex-col items-center justify-center p-2 rounded-lg transition-colors min-w-[60px] ${
+                      activeTab === tab.id
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                    title={typeof tab.label === 'string' ? tab.label : 'Setting'}
+                  >
+                    <IconComponent className="w-5 h-5" />
+                    <span className="text-[9px] mt-1 font-medium truncate max-w-[56px] text-center">
+                      {typeof tab.label === 'string' ? tab.label : 'Setting'}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Desktop: Vertical Sidebar */}
+          <div className="hidden md:block w-64 bg-gray-50 dark:bg-gray-900 p-4 border-r border-gray-200 dark:border-gray-700 overflow-y-auto flex-shrink-0">
             <nav className="space-y-2">
               {settingsTabs.map((tab) => {
                 const IconComponent = tab.icon;
@@ -391,8 +418,8 @@ const SettingsModal = ({ isOpen, onClose }) => {
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
-                    <IconComponent className="w-5 h-5 mr-3" />
-                    {tab.label}
+                    <IconComponent className="w-5 h-5 mr-3 flex-shrink-0" />
+                    <span className="truncate">{tab.label}</span>
                   </button>
                 );
               })}
@@ -400,7 +427,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
           </div>
 
           {/* Content */}
-          <div className="flex-1 p-6 overflow-y-auto max-h-[60vh]">
+          <div className="flex-1 p-4 md:p-6 overflow-y-auto">
             {activeTab === 'appearance' && (
               <div className="space-y-6">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -722,19 +749,20 @@ const SettingsModal = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+        <div className="flex items-center justify-end space-x-2 md:space-x-3 p-4 md:p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="px-3 md:px-4 py-2 text-sm md:text-base text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             Đóng
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center"
+            className="px-3 md:px-4 py-2 text-sm md:text-base bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center"
           >
-            <Save className="w-4 h-4 mr-2" />
-            Lưu cài đặt
+            <Save className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <span className="hidden sm:inline">Lưu cài đặt</span>
+            <span className="sm:hidden">Lưu</span>
           </button>
         </div>
       </motion.div>

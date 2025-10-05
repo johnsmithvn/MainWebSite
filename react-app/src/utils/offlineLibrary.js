@@ -291,6 +291,63 @@ export async function getStorageAnalysis() {
   }
 }
 
+// 📊 Get storage analysis by specific source
+export async function getStorageAnalysisBySource(sourceKey) {
+  try {
+    const allChapters = await getChapters();
+    
+    // Filter chapters by source
+    const chapters = allChapters.filter((chapter) => {
+      const key = chapter?.sourceKey || 'UNKNOWN_SOURCE';
+      return key === sourceKey;
+    });
+    
+    let totalBytes = 0;
+    let totalImages = 0;
+    let totalChapters = chapters.length;
+    
+    // Tính tổng từ metadata của source cụ thể
+    for (const chapter of chapters) {
+      totalBytes += chapter.bytes || 0;
+      totalImages += chapter.totalPages || 0;
+    }
+    
+    // Kiểm tra browser storage quota (vẫn lấy tổng cho toàn bộ storage)
+    let quotaInfo = null;
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+      try {
+        const estimate = await navigator.storage.estimate();
+        quotaInfo = {
+          quota: estimate.quota || 0,
+          usage: estimate.usage || 0,
+          available: (estimate.quota || 0) - (estimate.usage || 0),
+          percentage: estimate.quota ? Math.round((estimate.usage / estimate.quota) * 100) : 0
+        };
+      } catch (err) {
+        console.warn('⚠️ Failed to get storage estimate:', err);
+      }
+    }
+    
+    return {
+      chapters: {
+        count: totalChapters,
+        totalBytes,
+        totalImages,
+        averageBytesPerChapter: totalChapters > 0 ? Math.round(totalBytes / totalChapters) : 0,
+        averageImagesPerChapter: totalChapters > 0 ? Math.round(totalImages / totalChapters) : 0
+      },
+      quota: quotaInfo,
+      formattedSize: formatBytes(totalBytes),
+      sourceKey: sourceKey,
+      cacheStoreName: 'chapter-images'
+    };
+    
+  } catch (error) {
+    console.error('❌ Error analyzing storage by source:', error);
+    return null;
+  }
+}
+
 // Kiểm tra xem chapter đã được download hay chưa
 export async function isChapterDownloaded(id) {
   try {
@@ -417,11 +474,8 @@ function extractMangaTitle(path) {
   const cleanPath = path.replace(/\/__self__$/, '');
   const parts = cleanPath.split('/').filter(Boolean);
   
-  if (parts.length >= 2) {
-    // Return parent folder as manga title
-    return parts[parts.length - 2] || 'Unknown Manga';
-  }
-  
+  // For this app: path structure is "ROOT/MangaName"
+  // So the last part IS the manga title, not parent folder
   return parts[parts.length - 1] || 'Unknown Manga';
 }
 
@@ -432,6 +486,6 @@ function extractChapterTitle(path) {
   const cleanPath = path.replace(/\/__self__$/, '');
   const parts = cleanPath.split('/').filter(Boolean);
   
-  // Return last folder as chapter title
+  // Return last folder as chapter title (same as manga title since no separate chapters)
   return parts[parts.length - 1] || 'Unknown Chapter';
 }

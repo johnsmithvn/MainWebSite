@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Trash2, Calendar, Eye, Grid, List } from 'lucide-react';
+import { Search, Trash2, Calendar, Eye, Grid, List, Info } from 'lucide-react';
 import { DEFAULT_IMAGES } from '../../constants';
 import Button from '../../components/common/Button';
-import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis } from '../../utils/offlineLibrary';
-import { formatDate, formatSize } from '../../utils/formatters';
+import StorageInfoModal from '../../components/common/StorageInfoModal';
+import { getChapters, deleteChapterCompletely, clearAllOfflineData, getStorageAnalysis, getStorageAnalysisBySource } from '../../utils/offlineLibrary';
+import { formatDate, formatBytes } from '../../utils/formatters';
 import { formatSourceLabel } from '../../utils/offlineHelpers';
 import toast from 'react-hot-toast';
 
@@ -17,6 +18,7 @@ export default function OfflineMangaLibrary() {
   const [storageStats, setStorageStats] = useState(null);
   const [showClearModal, setShowClearModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showStorageModal, setShowStorageModal] = useState(false);
   const [chapterToDelete, setChapterToDelete] = useState(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -28,8 +30,13 @@ export default function OfflineMangaLibrary() {
       const items = await getChapters();
       setChapters(items);
       
-      // Load storage statistics
-      const stats = await getStorageAnalysis();
+      // Load storage statistics - based on source filter
+      let stats;
+      if (sourceFilter) {
+        stats = await getStorageAnalysisBySource(sourceFilter);
+      } else {
+        stats = await getStorageAnalysis();
+      }
       setStorageStats(stats);
     } catch (err) {
       console.error('Error loading chapters:', err);
@@ -40,8 +47,18 @@ export default function OfflineMangaLibrary() {
   };
 
   useEffect(() => {
+    // 🚫 Chặn xem tất cả - phải có source
+    if (!sourceFilter) {
+      navigate('/offline', { replace: true });
+      toast('Vui lòng chọn nguồn để xem chapters', {
+        icon: 'ℹ️',
+        duration: 3000,
+      });
+      return;
+    }
+    
     load();
-  }, []);
+  }, [sourceFilter, navigate]); // Re-load when source filter changes
 
   const availableSources = useMemo(() => {
     const map = new Map();
@@ -213,136 +230,37 @@ export default function OfflineMangaLibrary() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Manga Offline Library
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              {chapters.length} chapter{chapters.length !== 1 ? 's' : ''} đã tải offline
+      {/* Action Buttons - Centered */}
+      <div className="mb-6 flex flex-wrap gap-2 justify-center">
+        {activeSourceInfo && activeSourceInfo.mangaCount > 0 && (
+          <div className="w-full text-center mb-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {activeSourceInfo.mangaCount} manga
             </p>
           </div>
-
-          {/* Actions */}
-          <div className="flex flex-wrap gap-2 justify-end">
-            {chapters.length > 0 && (
-              <Button
-                variant="outline"
-                onClick={() => setShowClearModal(true)}
-                className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
-              >
-                <Trash2 size={16} />
-                <span className="ml-1">Xóa tất cả</span>
-              </Button>
-            )}
-          </div>
-        </div>
+        )}
         
-        {/* Storage Statistics */}
         {storageStats && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-                  {storageStats.chapters.count}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Chapters</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {storageStats.chapters.totalImages}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Ảnh</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {storageStats.formattedSize}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Dung lượng</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                  {storageStats.quota ? `${storageStats.quota.percentage}%` : 'N/A'}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Đã dùng</div>
-              </div>
-            </div>
-            
-            {/* Storage quota bar */}
-            {storageStats.quota && (
-              <div className="mt-4">
-                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
-                  <span>Storage quota</span>
-                  <span>{storageStats.quota.percentage}% used</span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      storageStats.quota.percentage > 90 ? 'bg-red-500' :
-                      storageStats.quota.percentage > 75 ? 'bg-yellow-500' :
-                      'bg-green-500'
-                    }`}
-                    style={{ width: `${Math.min(100, storageStats.quota.percentage)}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  <span>Used: {formatSize(storageStats.quota.usage)}</span>
-                  <span>Available: {formatSize(storageStats.quota.available)}</span>
-                </div>
-              </div>
-            )}
-          </div>
+          <Button
+            variant="outline"
+            onClick={() => setShowStorageModal(true)}
+            className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20"
+          >
+            <Info size={16} />
+            <span className="ml-1">Thông tin lưu trữ</span>
+          </Button>
+        )}
+        {chapters.length > 0 && (
+          <Button
+            variant="outline"
+            onClick={() => setShowClearModal(true)}
+            className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+          >
+            <Trash2 size={16} />
+            <span className="ml-1">Xóa tất cả</span>
+          </Button>
         )}
       </div>
-
-      {availableSources.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          {sourceFilter ? (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-400">
-                  Đang xem nguồn
-                </p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {activeSourceInfo?.displayName || formatSourceLabel(sourceFilter)}
-                </p>
-                {activeSourceInfo && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {activeSourceInfo.chapterCount} chapter đã lưu
-                    {activeSourceInfo.mangaCount > 0 && ` · ${activeSourceInfo.mangaCount} manga`}
-                  </p>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="self-start sm:self-auto"
-                onClick={() => navigate('/offline')}
-              >
-                Chọn nguồn khác
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Đang hiển thị {chapters.length} chapter từ {availableSources.length} nguồn offline.
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="self-start sm:self-auto"
-                onClick={() => navigate('/offline')}
-              >
-                Chọn theo nguồn
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Controls */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
@@ -434,7 +352,7 @@ export default function OfflineMangaLibrary() {
                   onRead={handleRead}
                   onDelete={handleDelete}
                   formatDate={formatDate}
-                  formatSize={formatSize}
+                  formatBytes={formatBytes}
                 />
               ))}
             </div>
@@ -447,7 +365,7 @@ export default function OfflineMangaLibrary() {
                   onRead={handleRead}
                   onDelete={handleDelete}
                   formatDate={formatDate}
-                  formatSize={formatSize}
+                  formatBytes={formatBytes}
                 />
               ))}
             </div>
@@ -605,51 +523,45 @@ export default function OfflineMangaLibrary() {
           </div>
         </div>
       )}
+      
+      {/* Storage Info Modal */}
+      <StorageInfoModal 
+        isOpen={showStorageModal}
+        onClose={() => setShowStorageModal(false)}
+        storageStats={storageStats}
+      />
     </div>
   );
 }
 
 // Chapter Card Component
-const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
+const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatBytes }) => {
   const coverImage = chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover;
   const title = chapter.mangaTitle || chapter.chapterTitle || chapter.id || 'Unknown';
   
   return (
-    <div className="group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all duration-200">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-shadow duration-200">
       {/* Cover Image */}
-      <div className="relative aspect-[3/4] bg-gray-100 dark:bg-gray-700">
+      <div 
+        className="relative aspect-[3/4] bg-gray-100 dark:bg-gray-700 cursor-pointer group"
+        onClick={() => onRead(chapter)}
+      >
         <img
           src={coverImage}
           alt={title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-opacity group-hover:opacity-90"
           loading="lazy"
           onError={(e) => {
             e.target.src = DEFAULT_IMAGES.cover;
           }}
         />
         
-        {/* Overlay on hover */}
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() => onRead(chapter)}
-              className="bg-primary-600 hover:bg-primary-700 text-white"
-            >
-              <Eye size={16} />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onDelete(chapter.id)}
-              className="bg-red-600 hover:bg-red-700 text-white border-red-600"
-            >
-              <Trash2 size={16} />
-            </Button>
-          </div>
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+          <Eye className="text-white opacity-0 group-hover:opacity-100 transition-opacity" size={32} />
         </div>
         
-        {/* Pages badge */}
+        {/* Pages badge - Always visible */}
         <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-md text-xs font-medium">
           {chapter.totalPages} trang
         </div>
@@ -657,18 +569,38 @@ const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
 
       {/* Info */}
       <div className="p-3">
-        <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-2">
+        <h3 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-3 mb-2 min-h-[3.6rem]">
           {title}
         </h3>
         
-        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1 mb-3">
           <div className="flex items-center gap-1">
             <Calendar size={12} />
             <span>{formatDate(chapter.createdAt)}</span>
           </div>
           {chapter.bytes && (
-            <div>Size: {formatSize(chapter.bytes)}</div>
+            <div>Size: {formatBytes(chapter.bytes)}</div>
           )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            onClick={() => onRead(chapter)}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1.5"
+          >
+            <Eye size={14} />
+            <span className="ml-1">Đọc</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onDelete(chapter.id)}
+            className="flex-shrink-0 text-red-600 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20 text-xs py-1.5 px-2"
+          >
+            <Trash2 size={14} />
+          </Button>
         </div>
       </div>
     </div>
@@ -676,7 +608,7 @@ const ChapterCard = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
 };
 
 // Chapter List Item Component
-const ChapterListItem = ({ chapter, onRead, onDelete, formatDate, formatSize }) => {
+const ChapterListItem = ({ chapter, onRead, onDelete, formatDate, formatBytes }) => {
   const coverImage = chapter.pageUrls?.[0] || DEFAULT_IMAGES.cover;
   const title = chapter.mangaTitle || chapter.chapterTitle || chapter.id || 'Unknown';
   
@@ -684,11 +616,14 @@ const ChapterListItem = ({ chapter, onRead, onDelete, formatDate, formatSize }) 
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow">
       <div className="flex items-center gap-4">
         {/* Thumbnail */}
-        <div className="flex-shrink-0 w-16 h-20 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">
+        <div 
+          className="flex-shrink-0 w-16 h-20 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden cursor-pointer group"
+          onClick={() => onRead(chapter)}
+        >
           <img
             src={coverImage}
             alt={title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-opacity group-hover:opacity-75"
             loading="lazy"
             onError={(e) => {
               e.target.src = DEFAULT_IMAGES.cover;
@@ -705,7 +640,7 @@ const ChapterListItem = ({ chapter, onRead, onDelete, formatDate, formatSize }) 
           <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
             <div className="flex items-center gap-4">
               <span>{chapter.totalPages} trang</span>
-              {chapter.bytes && <span>{formatSize(chapter.bytes)}</span>}
+              {chapter.bytes && <span>{formatBytes(chapter.bytes)}</span>}
             </div>
             <div className="flex items-center gap-1">
               <Calendar size={14} />

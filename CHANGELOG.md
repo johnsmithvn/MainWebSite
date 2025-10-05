@@ -4,6 +4,52 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Added
+
+- ✨ [2025-10-05] Added comprehensive code analysis documentation → Created REFACTOR_PLAN.md and CODE_ANALYSIS_REPORT.md documenting code quality issues, duplicate code patterns, dead code, long files, and refactoring strategies for react-app/src/ directory
+- ✨ [2025-10-05] Identified 15+ duplicate database operation handlers → Documented Settings.jsx handlers (handleMangaScan, handleMovieScan, handleMusicScan, etc.) for future refactoring using utils/databaseOperations.js
+- ✨ [2025-10-05] Identified 7 unused React hooks → Documented dead code in hooks/index.js (useVirtualizer, useAsync, useClickOutside, useKeyPress, useLocalStorage, useIntersectionObserver, useMediaQuery) for removal
+
+### Changed
+
+- 🔄 [2025-10-04] Refactored Header.jsx to use shared utility → Removed duplicate `formatSourceLabel` logic from Header component, now imports from `utils/offlineHelpers.js` for better maintainability and consistency across codebase
+- 🔄 [2025-10-04] Enhanced offline chapter cards interaction → Added click-to-read functionality on thumbnails for both grid and list views, showing hover effects (opacity change + eye icon overlay in grid view, opacity change in list view) to indicate clickable state
+- 🔄 [2025-10-04] Enhanced Header component dynamic title display → Header now shows source name/root folder based on current page: manga select shows sourceKey, manga pages show root folder name, movie/music show sourceKey, offline manga shows formatted source name, all display without conversion
+- 🔄 [2025-10-04] Improved Header navigation behavior → Offline manga pages now navigate to /offline when clicking header instead of home page
+- 🔄 [2025-10-04] Enhanced Header mobile visibility → Source name now displays on all screen sizes including mobile, search button visible on all devices (icon only on mobile, with label on desktop)
+- 🔄 [2025-10-04] Improved storage size display format → formatBytes() automatically converts MB to GB when size exceeds 100MB for better readability across all components
+- 🔄 [2025-10-04] Refactored formatters utilities → Removed unused formatFileSize() and formatSize() functions, unified all formatting to use formatBytes() directly across all components (StorageInfoModal, OfflineMangaLibrary, OfflineHome), eliminating wrapper functions and ensuring consistent behavior
+- 🔄 [2025-10-04] Improved toast notifications position → Moved toast notifications from top-right to bottom-center for better visibility and less intrusive UX, especially on mobile devices
+- 🔄 [2025-10-04] Improved OfflineMangaLibrary UI/UX → Removed source info card wrapper, moved source name to clickable title at top (navigates to source selection), displayed manga count below title, centered action buttons for better visual hierarchy
+- 🔄 [2025-10-04] Enhanced Header dynamic title for offline pages → Header now displays source name (e.g. "💾 Root Dow") when viewing offline manga library with source parameter, shows "💾 Offline Library" for general offline pages
+
+### Added
+
+- ✨ [2025-10-04] Added DownloadConfirmModal for manga chapter downloads → Created confirmation modal with loading state, re-download warning for already downloaded chapters, and automatic old chapter deletion before re-download
+
+### Changed
+- 🔄 [2025-10-04] Improved SettingsModal responsive design → Modal sidebar shows horizontal scroll with icons on mobile, vertical list on desktop; adjusted padding and button sizes for better mobile experience
+- 🔄 [2025-10-04] Improved Settings page responsive design → Sidebar now shows icon-only horizontal scroll on mobile, full labels on desktop; Quick Actions hidden on mobile for cleaner UI
+- 🔄 [2025-10-04] Removed success toast notification after manga chapter download 
+- 🔄 [2025-10-04] Enhanced download flow with confirmation step → Download now requires user confirmation via modal before checking storage quota, with loading state during quota check and automatic cleanup of existing chapters on re-download
+
+### Fixed
+- 🐛 [2025-10-04] Fixed manga title extraction in offline downloads → Changed logic to use folder name directly as manga title (ROOT/MangaName structure) instead of using parent folder, ensuring correct manga names are displayed and stored
+- 🐛 [2025-10-04] Fixed toast.info() error in OfflineMangaLibrary → Changed from non-existent toast.info() to toast() with custom icon for redirect notification
+- 🐛 [2025-10-04] Fixed manga title truncation in ChapterCard → Ensured consistent 3-line truncation using Tailwind line-clamp-3 and min-h utilities for manga titles, preventing text from being cut off mid-line
+
+### Added
+- ✨ [2025-10-04] Added StorageInfoModal component → Created dedicated modal to display offline storage statistics with modern card-based UI showing chapters, images, storage usage, and quota information
+- ✨ [2025-10-04] Enhanced OfflineMangaLibrary UI → Added "Thông tin lưu trữ" button to show storage modal, improved header layout with emoji icon, removed inline storage stats section for cleaner interface
+- ✨ [2025-10-04] Added source-specific storage analysis → Created getStorageAnalysisBySource() function to calculate storage stats per source, OfflineMangaLibrary now shows stats for current source only
+- ✨ [2025-10-04] Added total storage info button to OfflineHome → Added "Thông tin lưu trữ tổng" button in OfflineHome page to view overall storage statistics across all sources
+- ✨ [2025-10-04] Added source filter requirement for OfflineMangaLibrary → Implemented auto-redirect to /offline when accessing manga library without source parameter, prevents viewing all chapters from mixed sources
+
+### Changed
+- 🔄 [2025-10-04] Improved ChapterCard UI in OfflineMangaLibrary → Removed hover overlay state, moved action buttons outside card (always visible), changed title to max 3 lines display (line-clamp-3), pages badge now always visible for better UX
+- 🔄 [2025-10-04] Updated storage stats loading logic → OfflineMangaLibrary now dynamically loads stats based on sourceFilter parameter, re-calculates when switching sources
+- 🔄 [2025-10-04] Enforced source-based navigation flow → OfflineMangaLibrary now requires source parameter, users must select source from OfflineHome to view chapters
+
 ### Documentation
 
 - 📚 [2025-09-22] Documented offline caching architecture → Added react-app/docs/OFFLINE-GUIDE.md covering service worker caches, IndexedDB schema, and maintenance workflows.

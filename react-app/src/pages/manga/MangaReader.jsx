@@ -5,11 +5,11 @@ import { useMangaStore, useAuthStore } from '../../store';
 import { useRecentManager } from '../../hooks/useRecentManager';
 import { getFolderName, extractTitlesFromPath } from '../../utils/pathUtils';
 import { apiService } from '../../utils/api';
-import { downloadChapter, isChapterDownloaded, getChapter } from '../../utils/offlineLibrary';
+import { downloadChapter, isChapterDownloaded, getChapter, deleteChapterCompletely } from '../../utils/offlineLibrary';
 import { checkStorageForDownload } from '../../utils/storageQuota';
 import { isCachesAPISupported, getUnsupportedMessage } from '../../utils/browserSupport';
 import ReaderHeader from '../../components/manga/ReaderHeader';
-import { DownloadProgressModal, StorageQuotaModal } from '../../components/common';
+import { DownloadProgressModal, DownloadConfirmModal, StorageQuotaModal } from '../../components/common';
 import toast from 'react-hot-toast';
 
 import '../../styles/components/manga-reader.css';
@@ -59,6 +59,8 @@ const MangaReader = () => {
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0, status: 'idle' });
   const [isChapterOfflineAvailable, setIsChapterOfflineAvailable] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [showDownloadConfirmModal, setShowDownloadConfirmModal] = useState(false);
+  const [isCheckingStorage, setIsCheckingStorage] = useState(false);
   
   // Storage quota states
   const [showStorageQuotaModal, setShowStorageQuotaModal] = useState(false);
@@ -291,7 +293,6 @@ const MangaReader = () => {
         // First, try pass-through cache from Home
         const isPrefetchValid = readerPrefetch && readerPrefetch.path === currentMangaPath && Array.isArray(readerPrefetch.images) && readerPrefetch.images.length > 0 && Date.now() - (readerPrefetch.ts || 0) < 5000;
         if (isPrefetchValid) {
-          console.log('⚡ Using readerPrefetch, skipping network');
           setCurrentPath(currentMangaPath);
           setCurrentImages(readerPrefetch.images);
           setLoading(false);
@@ -348,7 +349,6 @@ const MangaReader = () => {
 
   // Debug reader settings changes
   useEffect(() => {
-    console.log('🔧 Reader settings updated:', readerSettings);
   }, [readerSettings]);
 
   // Cleanup timers on unmount
@@ -583,11 +583,33 @@ const MangaReader = () => {
       return;
     }
     
+    // Mở modal confirm
+    setShowDownloadConfirmModal(true);
+  };
+
+  const handleDownloadConfirm = async () => {
+    if (!currentImages.length || !currentMangaPath || isDownloading) return;
+    
     try {
-      // 1. Kiểm tra storage quota trước
+      // Hiển thị loading state trong confirm modal
+      setIsCheckingStorage(true);
+      
+      // Nếu đã download, xóa chapter cũ trước
+      if (isChapterOfflineAvailable) {
+        console.log('🗑️ Deleting old chapter before re-download...');
+        await deleteChapterCompletely(currentMangaPath);
+        setIsChapterOfflineAvailable(false);
+        console.log('✅ Old chapter deleted successfully');
+      }
+      
+      // 1. Kiểm tra storage quota
       console.log('🔍 Checking storage quota before download...');
       const checkResult = await checkStorageForDownload(currentImages);
       setStorageCheckResult(checkResult);
+      
+      // Đóng confirm modal
+      setShowDownloadConfirmModal(false);
+      setIsCheckingStorage(false);
       
       if (!checkResult.canDownload) {
         // Hiển thị modal thông báo lỗi storage
@@ -607,6 +629,10 @@ const MangaReader = () => {
     } catch (err) {
       console.error('❌ Error checking storage quota:', err);
       toast.error('❌ Lỗi kiểm tra dung lượng: ' + err.message);
+      
+      // Đóng confirm modal và hiển thị error
+      setShowDownloadConfirmModal(false);
+      setIsCheckingStorage(false);
       
       // Set error state for modal display
       setStorageCheckResult({
@@ -654,12 +680,11 @@ const MangaReader = () => {
       
       // Update offline status
       setIsChapterOfflineAvailable(true);
-      toast.success('✅ Chapter downloaded successfully!');
       
       // Auto close modal after 3 seconds if completed
-      setTimeout(() => {
-        setShowDownloadModal(false);
-      }, 3000);
+      // setTimeout(() => {
+      //   setShowDownloadModal(false);
+      // }, 3000);
       
     } catch (err) {
       console.error('Download failed', err);
@@ -845,7 +870,6 @@ const MangaReader = () => {
                       const perfCount = performance.getEntriesByName(imageSrc).length;
                       if (!window.__IMG_LOAD_STATS__) window.__IMG_LOAD_STATS__ = {};
                       window.__IMG_LOAD_STATS__[imageSrc] = { count: c, perf: perfCount };
-                      console.log(`🧪 Vertical load #${c} for ${globalIndex + 1} (${imageSrc.split('/').pop()}) perfEntries=${perfCount}`);
                     }}
                     onError={(e) => {
                       e.target.style.background = '#333';
@@ -1093,6 +1117,19 @@ const MangaReader = () => {
           </div>
         </div>
       )}
+      
+      {/* Download Confirm Modal */}
+      <DownloadConfirmModal
+        isOpen={showDownloadConfirmModal}
+        onClose={() => {
+          setShowDownloadConfirmModal(false);
+          setIsCheckingStorage(false);
+        }}
+        onConfirm={handleDownloadConfirm}
+        isLoading={isCheckingStorage}
+        isAlreadyDownloaded={isChapterOfflineAvailable}
+        chapterTitle={getFolderName(currentPath)}
+      />
       
       {/* Download Progress Modal */}
       <DownloadProgressModal
