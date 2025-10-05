@@ -12,7 +12,7 @@ import {
   FiSearch,
 } from 'react-icons/fi';
 import { useMusicStore, useAuthStore } from '@/store';
-import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
+import { processThumbnailUrl as buildThumbnailUrl } from '@/utils/thumbnailProcessor';
 import { useDebounceValue } from '@/hooks';
 import { DEFAULT_IMAGES } from '@/constants';
 import { apiService } from '@/utils/api';

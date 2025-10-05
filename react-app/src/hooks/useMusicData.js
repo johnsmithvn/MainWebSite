@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store';
 import { apiService } from '@/utils/api';
 import { getRecentViewedCacheKey } from '@/constants/cacheKeys';
-import { processThumbnails } from '@/utils/thumbnailUtils';
+import { processThumbnails } from '@/utils/thumbnailProcessor';
 import { DEFAULT_IMAGES } from '@/constants';
 
 /**

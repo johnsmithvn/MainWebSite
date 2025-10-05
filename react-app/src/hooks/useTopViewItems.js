@@ -4,7 +4,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import { apiService } from '@/utils/api';
-import { processThumbnails } from '@/utils/thumbnailUtils';
+import { processThumbnails } from '@/utils/thumbnailProcessor';
 import { useEffect } from 'react';
 
 export const useTopViewItems = (type = 'manga', options = {}) => {

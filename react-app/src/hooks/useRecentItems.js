@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
-import { processThumbnails } from '@/utils/thumbnailUtils';
+import { processThumbnails } from '@/utils/thumbnailProcessor';
 import { getRecentViewedCacheKey } from '@/constants/cacheKeys';
 
 /**

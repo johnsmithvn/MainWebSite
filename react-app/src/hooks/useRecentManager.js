@@ -3,7 +3,7 @@
 
 import { useCallback } from 'react';
 import { useAuthStore, useMangaStore } from '@/store';
-import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
+import { processThumbnailUrl as buildThumbnailUrl } from '@/utils/thumbnailProcessor';
 import { getRecentViewedCacheKey } from '@/constants/cacheKeys';
 
 /**

@@ -15,7 +15,7 @@ import { useAuthStore, useMusicStore, useUIStore } from '@/store';
 import { useRecentMusicManager } from '@/hooks/useMusicData';
 import { apiService } from '@/utils/api';
 import { DEFAULT_IMAGES } from '@/constants';
-import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
+import { processThumbnailUrl as buildThumbnailUrl } from '@/utils/thumbnailProcessor';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import PlayerFooter from '../../components/music/PlayerFooter';
 import PlayerHeader from '../../components/music/PlayerHeader';

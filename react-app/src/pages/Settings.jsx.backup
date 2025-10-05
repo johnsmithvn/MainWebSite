@@ -11,6 +11,7 @@ import { useUIStore, useAuthStore, useMangaStore, useMovieStore, useMusicStore, 
 import { clearSourceCache, clearAllCache as clearAllCacheKeys, clearTypeCache, clearRecentViewCache, CACHE_PREFIXES } from '@/constants/cacheKeys';
 import { isCachesAPISupported } from '@/utils/browserSupport';
 import { getContentTypeFromSourceKey } from '@/utils/databaseOperations';
+import { createMediaHandlers } from '@/utils/databaseHandlers';
 import Button from '@/components/common/Button';
 import DatabaseActions from '@/components/common/DatabaseActions';
 import { useModal } from '@/components/common/Modal';
@@ -221,160 +222,9 @@ const Settings = () => {
     });
   };
 
-  // Manga Database Operations
-  const handleMangaScan = () => {
-    const { sourceKey, rootFolder } = getCurrentAuthState();
-    confirmModal({
-      title: '🔍 Scan Manga Database',
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">Scan manga folders and update database?</p>
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-blue-800 dark:text-blue-200 mb-2">📋 What will happen:</p>
-            <ul className="text-sm space-y-1 text-blue-700 dark:text-blue-300">
-              <li>• Scan all folders in: <strong>{rootFolder || 'current root'}</strong></li>
-              <li>• Update database with new folders/files</li>
-              <li>• This will NOT delete existing data</li>
-            </ul>
-          </div>
-        </div>
-      ),
-      confirmText: '🔍 Start Scan',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        try {
-          const response = await fetch('/api/manga/scan', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ root: rootFolder, key: sourceKey })
-          });
-          const result = await response.json();
-          
-          if (result.success) {
-            successModal({
-              title: '✅ Scan Completed!',
-              message: `Manga scan completed successfully. Found ${result.stats?.total || 0} items.`
-            });
-          } else {
-            errorModal({
-              title: '❌ Scan Failed',
-              message: result.error || 'Unknown error occurred'
-            });
-          }
-        } catch (error) {
-          errorModal({
-            title: '❌ Network Error',
-            message: 'Failed to connect to server: ' + error.message
-          });
-        }
-      }
-    });
-  };
-
-  const handleMangaDelete = () => {
-    const { sourceKey, rootFolder } = getCurrentAuthState();
-    confirmModal({
-      title: '🗑️ Delete Manga Database',
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">Delete ALL manga database entries?</p>
-          <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-red-800 dark:text-red-200 mb-2">💀 What will be deleted:</p>
-            <ul className="text-sm space-y-1 text-red-700 dark:text-red-300">
-              <li>• ALL folders in database for: <strong>{rootFolder || 'current root'}</strong></li>
-              <li>• ALL view counts and statistics</li>
-              <li>• This will NOT affect your actual files</li>
-            </ul>
-          </div>
-          <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg border border-red-300 dark:border-red-700">
-            <p className="font-bold text-red-800 dark:text-red-200">
-              ❌ This action cannot be undone!
-            </p>
-          </div>
-        </div>
-      ),
-      confirmText: '🗑️ Delete Database',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        try {
-          const response = await fetch(`/api/manga/reset-cache?key=${sourceKey}&root=${rootFolder}&mode=delete`, {
-            method: 'DELETE'
-          });
-          const result = await response.json();
-          
-          if (result.success) {
-            successModal({
-              title: '✅ Database Deleted!',
-              message: 'Manga database entries deleted successfully.'
-            });
-          } else {
-            errorModal({
-              title: '❌ Delete Failed',
-              message: result.error || 'Unknown error occurred'
-            });
-          }
-        } catch (error) {
-          errorModal({
-            title: '❌ Network Error',
-            message: 'Failed to connect to server: ' + error.message
-          });
-        }
-      }
-    });
-  };
-
-  const handleMangaScanAndDelete = () => {
-    const { sourceKey, rootFolder } = getCurrentAuthState();
-    confirmModal({
-      title: '🔄 Reset Manga Database',
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">Delete existing data and scan fresh?</p>
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">🔄 What will happen:</p>
-            <ul className="text-sm space-y-1 text-yellow-700 dark:text-yellow-300">
-              <li>• Delete ALL existing database entries</li>
-              <li>• Scan all folders in: <strong>{rootFolder || 'current root'}</strong></li>
-              <li>• Rebuild database from scratch</li>
-              <li>• View counts will be reset to 0</li>
-            </ul>
-          </div>
-          <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg border border-yellow-300 dark:border-yellow-700">
-            <p className="font-bold text-yellow-800 dark:text-yellow-200">
-              ⚠️ This will reset all view counts and statistics!
-            </p>
-          </div>
-        </div>
-      ),
-      confirmText: '🔄 Reset & Scan',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        try {
-          const response = await fetch(`/api/manga/reset-cache?key=${sourceKey}&root=${rootFolder}&mode=reset`, {
-            method: 'DELETE'
-          });
-          const result = await response.json();
-          
-          if (result.success) {
-            successModal({
-              title: '✅ Reset Completed!',
-              message: `Database reset and scan completed. Found ${result.stats?.total || 0} items.`
-            });
-          } else {
-            errorModal({
-              title: '❌ Reset Failed',
-              message: result.error || 'Unknown error occurred'
-            });
-          }
-        } catch (error) {
-          errorModal({
-            title: '❌ Network Error',
-            message: 'Failed to connect to server: ' + error.message
-          });
-        }
-      }
-    });
-  };
+  // 📚 Manga Database Operations
+  // ✅ Handlers are now created using createMediaHandlers() factory function (see line ~930)
+  // Old handleMangaScan, handleMangaDelete, handleMangaScanAndDelete functions removed
 
   // Movie Cache Clear Functions (no rootFolder)
   const handleClearMovieCurrentSource = () => {
@@ -488,160 +338,9 @@ const Settings = () => {
     });
   };
 
-  // Movie Database Operations
-  const handleMovieScan = () => {
-    const { sourceKey } = getCurrentAuthState();
-    confirmModal({
-      title: '🔍 Scan Movie Database',
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">Scan movie folders and update database?</p>
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-blue-800 dark:text-blue-200 mb-2">📋 What will happen:</p>
-            <ul className="text-sm space-y-1 text-blue-700 dark:text-blue-300">
-              <li>• Scan all video files in: <strong>{sourceKey || 'current source'}</strong></li>
-              <li>• Update database with new movies/folders</li>
-              <li>• This will NOT delete existing data</li>
-            </ul>
-          </div>
-        </div>
-      ),
-      confirmText: '🔍 Start Scan',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        try {
-          const response = await fetch('/api/movie/scan-movie', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: sourceKey })
-          });
-          const result = await response.json();
-          
-          if (result.success) {
-            successModal({
-              title: '✅ Scan Completed!',
-              message: `Movie scan completed successfully. ${result.message || ''}`
-            });
-          } else {
-            errorModal({
-              title: '❌ Scan Failed',
-              message: result.error || 'Unknown error occurred'
-            });
-          }
-        } catch (error) {
-          errorModal({
-            title: '❌ Network Error',
-            message: 'Failed to connect to server: ' + error.message
-          });
-        }
-      }
-    });
-  };
-
-  const handleMovieDelete = () => {
-    const { sourceKey } = getCurrentAuthState();
-    confirmModal({
-      title: '🗑️ Delete Movie Database',
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">Delete ALL movie database entries?</p>
-          <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-red-800 dark:text-red-200 mb-2">💀 What will be deleted:</p>
-            <ul className="text-sm space-y-1 text-red-700 dark:text-red-300">
-              <li>• ALL movie database entries for: <strong>{sourceKey || 'current source'}</strong></li>
-              <li>• ALL view counts and statistics</li>
-              <li>• This will NOT affect your actual video files</li>
-            </ul>
-          </div>
-          <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg border border-red-300 dark:border-red-700">
-            <p className="font-bold text-red-800 dark:text-red-200">
-              ❌ This action cannot be undone!
-            </p>
-          </div>
-        </div>
-      ),
-      confirmText: '🗑️ Delete Database',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        try {
-          const response = await fetch(`/api/movie/reset-cache-movie?key=${sourceKey}&mode=delete`, {
-            method: 'DELETE'
-          });
-          const result = await response.json();
-          
-          if (result.success) {
-            successModal({
-              title: '✅ Database Deleted!',
-              message: 'Movie database entries deleted successfully.'
-            });
-          } else {
-            errorModal({
-              title: '❌ Delete Failed',
-              message: result.error || 'Unknown error occurred'
-            });
-          }
-        } catch (error) {
-          errorModal({
-            title: '❌ Network Error',
-            message: 'Failed to connect to server: ' + error.message
-          });
-        }
-      }
-    });
-  };
-
-  const handleMovieScanAndDelete = () => {
-    const { sourceKey } = getCurrentAuthState();
-    confirmModal({
-      title: '🔄 Reset Movie Database',
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">Delete existing data and scan fresh?</p>
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">🔄 What will happen:</p>
-            <ul className="text-sm space-y-1 text-yellow-700 dark:text-yellow-300">
-              <li>• Delete ALL existing movie database entries</li>
-              <li>• Scan all video files in: <strong>{sourceKey || 'current source'}</strong></li>
-              <li>• Rebuild database from scratch</li>
-              <li>• View counts will be reset to 0</li>
-            </ul>
-          </div>
-          <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg border border-yellow-300 dark:border-yellow-700">
-            <p className="font-bold text-yellow-800 dark:text-yellow-200">
-              ⚠️ This will reset all view counts and statistics!
-            </p>
-          </div>
-        </div>
-      ),
-      confirmText: '🔄 Reset & Scan',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        try {
-          const response = await fetch(`/api/movie/reset-cache-movie?key=${sourceKey}&mode=reset`, {
-            method: 'DELETE'
-          });
-          const result = await response.json();
-          
-          if (result.success) {
-            successModal({
-              title: '✅ Reset Completed!',
-              message: 'Movie database reset and scan completed successfully.'
-            });
-          } else {
-            errorModal({
-              title: '❌ Reset Failed',
-              message: result.error || 'Unknown error occurred'
-            });
-          }
-        } catch (error) {
-          errorModal({
-            title: '❌ Network Error',
-            message: 'Failed to connect to server: ' + error.message
-          });
-        }
-      }
-    });
-  };
+  // 🎬 Movie Database Operations
+  // ✅ Handlers are now created using createMediaHandlers() factory function (see line ~785)
+  // Old handleMovieScan, handleMovieDelete, handleMovieScanAndDelete functions removed
 
   // Music Cache Clear Functions (no rootFolder)
   const handleClearMusicCurrentSource = () => {
@@ -755,162 +454,9 @@ const Settings = () => {
     });
   };
 
-  // Music Database Operations
-  const handleMusicScan = () => {
-    const { sourceKey } = getCurrentAuthState();
-    confirmModal({
-      title: '🔍 Scan Music Database',
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">Scan music folders and update database?</p>
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-blue-800 dark:text-blue-200 mb-2">📋 What will happen:</p>
-            <ul className="text-sm space-y-1 text-blue-700 dark:text-blue-300">
-              <li>• Scan all audio files in: <strong>{sourceKey || 'current source'}</strong></li>
-              <li>• Update database with new songs/albums</li>
-              <li>• This will NOT delete existing data</li>
-            </ul>
-          </div>
-        </div>
-      ),
-      confirmText: '🔍 Start Scan',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        try {
-          const response = await fetch('/api/music/scan-music', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: sourceKey })
-          });
-          const result = await response.json();
-          
-          if (result.success) {
-            successModal({
-              title: '✅ Scan Completed!',
-              message: `Music scan completed successfully. ${result.message || ''}`
-            });
-          } else {
-            errorModal({
-              title: '❌ Scan Failed',
-              message: result.error || 'Unknown error occurred'
-            });
-          }
-        } catch (error) {
-          errorModal({
-            title: '❌ Network Error',
-            message: 'Failed to connect to server: ' + error.message
-          });
-        }
-      }
-    });
-  };
-
-  const handleMusicDelete = () => {
-    const { sourceKey } = getCurrentAuthState();
-    confirmModal({
-      title: '🗑️ Delete Music Database',
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">Delete ALL music database entries?</p>
-          <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-red-800 dark:text-red-200 mb-2">💀 What will be deleted:</p>
-            <ul className="text-sm space-y-1 text-red-700 dark:text-red-300">
-              <li>• ALL music database entries for: <strong>{sourceKey || 'current source'}</strong></li>
-              <li>• ALL view counts and statistics</li>
-              <li>• ALL playlists and playlist items</li>
-              <li>• This will NOT affect your actual audio files</li>
-            </ul>
-          </div>
-          <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg border border-red-300 dark:border-red-700">
-            <p className="font-bold text-red-800 dark:text-red-200">
-              ❌ This action cannot be undone!
-            </p>
-          </div>
-        </div>
-      ),
-      confirmText: '🗑️ Delete Database',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        try {
-          const response = await fetch(`/api/music/reset-cache-music?key=${sourceKey}&mode=delete`, {
-            method: 'DELETE'
-          });
-          const result = await response.json();
-          
-          if (result.success) {
-            successModal({
-              title: '✅ Database Deleted!',
-              message: 'Music database entries deleted successfully.'
-            });
-          } else {
-            errorModal({
-              title: '❌ Delete Failed',
-              message: result.error || 'Unknown error occurred'
-            });
-          }
-        } catch (error) {
-          errorModal({
-            title: '❌ Network Error',
-            message: 'Failed to connect to server: ' + error.message
-          });
-        }
-      }
-    });
-  };
-
-  const handleMusicScanAndDelete = () => {
-    const { sourceKey } = getCurrentAuthState();
-    confirmModal({
-      title: '🔄 Reset Music Database',
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">Delete existing data and scan fresh?</p>
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">🔄 What will happen:</p>
-            <ul className="text-sm space-y-1 text-yellow-700 dark:text-yellow-300">
-              <li>• Delete ALL existing music database entries</li>
-              <li>• Delete ALL playlists and playlist items</li>
-              <li>• Scan all audio files in: <strong>{sourceKey || 'current source'}</strong></li>
-              <li>• Rebuild database from scratch</li>
-              <li>• View counts will be reset to 0</li>
-            </ul>
-          </div>
-          <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg border border-yellow-300 dark:border-yellow-700">
-            <p className="font-bold text-yellow-800 dark:text-yellow-200">
-              ⚠️ This will reset all view counts, statistics, and playlists!
-            </p>
-          </div>
-        </div>
-      ),
-      confirmText: '🔄 Reset & Scan',
-      cancelText: 'Cancel',
-      onConfirm: async () => {
-        try {
-          const response = await fetch(`/api/music/reset-cache-music?key=${sourceKey}&mode=reset`, {
-            method: 'DELETE'
-          });
-          const result = await response.json();
-          
-          if (result.success) {
-            successModal({
-              title: '✅ Reset Completed!',
-              message: 'Music database reset and scan completed successfully.'
-            });
-          } else {
-            errorModal({
-              title: '❌ Reset Failed',
-              message: result.error || 'Unknown error occurred'
-            });
-          }
-        } catch (error) {
-          errorModal({
-            title: '❌ Network Error',
-            message: 'Failed to connect to server: ' + error.message
-          });
-        }
-      }
-    });
-  };
+  // 🎵 Music Database Operations
+  // ✅ Handlers are now created using createMediaHandlers() factory function (see line ~640)
+  // Old handleMusicScan, handleMusicDelete, handleMusicScanAndDelete functions removed
 
   const [activeTab, setActiveTab] = useState('appearance');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -925,6 +471,33 @@ const Settings = () => {
     errorModal,
     Modal: ModalComponent
   } = useModal();
+
+  // 🔥 Create unified database handlers using factory functions
+  const mangaHandlers = createMediaHandlers('manga', getCurrentAuthState(), { confirmModal, successModal, errorModal });
+  const movieHandlers = createMediaHandlers('movie', getCurrentAuthState(), { confirmModal, successModal, errorModal });
+  const musicHandlers = createMediaHandlers('music', getCurrentAuthState(), { confirmModal, successModal, errorModal });
+
+  // Extract handlers for easier usage
+  const {
+    handleScan: handleMangaScan,
+    handleDelete: handleMangaDelete,
+    handleReset: handleMangaReset,
+    handleScanAndDelete: handleMangaScanAndDelete
+  } = mangaHandlers;
+
+  const {
+    handleScan: handleMovieScan,
+    handleDelete: handleMovieDelete,
+    handleReset: handleMovieReset,
+    handleScanAndDelete: handleMovieScanAndDelete
+  } = movieHandlers;
+
+  const {
+    handleScan: handleMusicScan,
+    handleDelete: handleMusicDelete,
+    handleReset: handleMusicReset,
+    handleScanAndDelete: handleMusicScanAndDelete
+  } = musicHandlers;
 
   const settingsTabs = [
     { id: 'appearance', label: 'Appearance', icon: Palette },

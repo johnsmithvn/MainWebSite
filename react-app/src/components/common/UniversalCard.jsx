@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store';
 import { useRecentManager } from '@/hooks/useRecentManager';
 import { apiService } from '@/utils/api';
-import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
+import { processThumbnailUrl as buildThumbnailUrl } from '@/utils/thumbnailProcessor';
 import { 
   DEFAULT_IMAGES, 
   CARD_VARIANTS, 

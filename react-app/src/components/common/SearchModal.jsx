@@ -10,7 +10,7 @@ import { useDebounceValue } from '../../hooks';
 import { apiService } from '../../utils/api';
 import { useAuthStore } from '../../store';
 import Button from './Button';
-import { buildThumbnailUrl } from '../../utils/thumbnailUtils';
+import { processThumbnailUrl as buildThumbnailUrl } from '../../utils/thumbnailProcessor';
 import { DEFAULT_IMAGES } from '../../constants';
 
 // Supported search type options: all, folder, file/audio/video (normalized per section)

@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/utils/api';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
-import { processThumbnails } from '@/utils/thumbnailUtils';
+import { processThumbnails } from '@/utils/thumbnailProcessor';
 import { getRandomViewCacheKey } from '@/constants/cacheKeys';
 import toast from 'react-hot-toast';
 

@@ -13,7 +13,7 @@ import {
   FiRepeat,
 } from 'react-icons/fi';
 import { useMusicStore } from '@/store';
-import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
+import { processThumbnailUrl as buildThumbnailUrl } from '@/utils/thumbnailProcessor';
 import { DEFAULT_IMAGES } from '@/constants';
 
 const PlayerFooter = ({ 

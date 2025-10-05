@@ -18,7 +18,7 @@ import { DEFAULT_IMAGES } from '@/constants';
 import { useRecentMusicManager } from '@/hooks/useMusicData';
 import { useDebounceValue } from '@/hooks';
 import { apiService } from '@/utils/api';
-import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
+import { processThumbnailUrl as buildThumbnailUrl } from '@/utils/thumbnailProcessor';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import PlayerFooter from '../../components/music/PlayerFooter';
 import PlayerHeader from '../../components/music/PlayerHeader';

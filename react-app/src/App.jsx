@@ -19,7 +19,7 @@ import MusicHome from '@/pages/music/MusicHome';
 import MusicPlayer from '@/pages/music/MusicPlayer';
 import MusicPlayerV2 from '@/pages/music/MusicPlayerV2';
 import MusicPlaylists from '@/pages/music/MusicPlaylists';
-import Settings from '@/pages/Settings';
+import Settings from '@/pages/settings';
 import NotFound from '@/pages/NotFound';
 import OfflineHome from '@/pages/offline/OfflineHome';
 import OfflineMangaLibrary from '@/pages/offline/OfflineMangaLibrary';
