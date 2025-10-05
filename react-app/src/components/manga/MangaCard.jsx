@@ -96,6 +96,8 @@ const MangaCard = ({
           className="manga-card-image"
           wrapperClassName="manga-card-image-wrapper"
           placeholderSrc="/default/default-cover.jpg"
+          loading="lazy"
+          decoding="async"
         />
         
         {/* View count badge - always visible when showViews is true */}

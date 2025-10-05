@@ -54,6 +54,10 @@ const MangaReader = () => {
   const [jumpInput, setJumpInput] = useState('');
   const [jumpContext, setJumpContext] = useState('vertical'); // 'vertical' | 'horizontal'
   
+  // ✅ Track scroll position and current viewing image for mode switching
+  const scrollPositionRef = useRef(0);
+  const lastKnownImageIndexRef = useRef(0);
+  
   // Download states
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0, status: 'idle' });
@@ -473,30 +477,133 @@ const MangaReader = () => {
   };
 
   const toggleReadingMode = () => {
+    const newMode = readerSettings.readingMode === 'vertical' ? 'horizontal' : 'vertical';
+    
+    // ✅ If switching from vertical, force update lastKnownImageIndex NOW
+    if (readerSettings.readingMode === 'vertical') {
+      const images = document.querySelectorAll('.scroll-img');
+      if (images.length > 0) {
+        const viewportCenter = window.innerHeight / 2;
+        let closestIndex = 0;
+        let minDistance = Infinity;
+        
+        images.forEach((img, idx) => {
+          const rect = img.getBoundingClientRect();
+          const imageCenter = rect.top + (rect.height / 2);
+          const distance = Math.abs(imageCenter - viewportCenter);
+          
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestIndex = scrollPageIndex * imagesPerScrollPage + idx;
+          }
+        });
+        
+        lastKnownImageIndexRef.current = closestIndex;
+        console.log(`🎯 Force-updated lastKnownImageIndex to: ${closestIndex}`);
+      }
+    }
+    
+    console.log('🔄 Toggling reading mode:', {
+      from: readerSettings.readingMode,
+      to: newMode,
+      currentPage,
+      scrollPageIndex,
+      lastKnownImageIndex: lastKnownImageIndexRef.current,
+      totalImages: currentImages.length
+    });
+    
+    if (newMode === 'horizontal') {
+      // ✅ Vertical → Horizontal: Set currentPage from last known scroll position
+      // If lastKnownImageIndexRef is 0 (not yet tracked), use currentPage as fallback
+      let targetPage = lastKnownImageIndexRef.current;
+      
+      // Fallback: if ref is 0 and we're not at the start, calculate from scrollPageIndex
+      if (targetPage === 0 && scrollPageIndex > 0) {
+        targetPage = scrollPageIndex * imagesPerScrollPage;
+        console.log(`⚠️ Using fallback calculation from scrollPageIndex: ${targetPage}`);
+      }
+      
+      targetPage = Math.max(0, Math.min(currentImages.length - 1, targetPage));
+      console.log(`📖 Switch to horizontal mode, jumping to page ${targetPage + 1}/${currentImages.length}`);
+      setCurrentPage(targetPage);
+    } else {
+      // ✅ Horizontal → Vertical: Calculate scrollPageIndex from currentPage
+      const targetScrollPage = Math.floor(currentPage / imagesPerScrollPage);
+      const offsetInPage = currentPage % imagesPerScrollPage;
+      
+      console.log(`📜 Switch to vertical mode, chunk ${targetScrollPage + 1}/${totalScrollPages}, offset ${offsetInPage}, currentPage=${currentPage}`);
+      setScrollPageIndex(targetScrollPage);
+      
+      // ✅ Wait for DOM render, then scroll to exact image position with retry
+      const scrollToTarget = (attempt = 1, maxAttempts = 5) => {
+        const images = document.querySelectorAll('.scroll-img');
+        console.log(`🔍 Attempt ${attempt}: Found ${images.length} images in DOM, looking for offset ${offsetInPage}`);
+        
+        if (images.length === 0 && attempt < maxAttempts) {
+          // DOM not ready, retry after delay
+          console.log(`⏳ DOM not ready, retrying in ${50 * attempt}ms...`);
+          setTimeout(() => scrollToTarget(attempt + 1, maxAttempts), 50 * attempt);
+          return;
+        }
+        
+        const targetImage = images[offsetInPage];
+        if (targetImage) {
+          targetImage.scrollIntoView({ behavior: 'instant', block: 'start' });
+          console.log(`✅ Scrolled to image ${offsetInPage + 1} in chunk ${targetScrollPage + 1}`);
+        } else {
+          console.warn(`⚠️ Target image ${offsetInPage} not found in ${images.length} images, scrolling to top`);
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+      };
+      
+      // Start scroll attempt after mode switch
+      setTimeout(() => scrollToTarget(), 150);
+    }
+    
     updateReaderSettings({
       ...readerSettings,
-      readingMode: readerSettings.readingMode === 'vertical' ? 'horizontal' : 'vertical',
+      readingMode: newMode,
     });
   };
 
   const onTouchStart = (e) => {
+    // ✅ Ignore multi-touch (zoom gesture)
+    if (e.touches.length > 1) {
+      setTouchStart(null);
+      setTouchEnd(null);
+      return;
+    }
+    
     setTouchEnd(null); // otherwise the swipe is fired even with a single touch
     setTouchStart(e.targetTouches[0].clientX);
   };
 
-  const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+  const onTouchMove = (e) => {
+    // ✅ Ignore multi-touch (zoom gesture)
+    if (e.touches.length > 1 || !touchStart) {
+      return;
+    }
+    
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
 
   const onTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
+    
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
+    
     if (isLeftSwipe) {
       goToNextPage();
     }
     if (isRightSwipe) {
       goToPrevPage();
     }
+    
+    // ✅ Clear touch state
+    setTouchStart(null);
+    setTouchEnd(null);
   };
 
   // Keyboard navigation for horizontal mode (ArrowLeft/ArrowRight)
@@ -705,9 +812,68 @@ const MangaReader = () => {
   // Keep currentPage aligned to start of scroll chunk in vertical mode
   useEffect(() => {
     if (readerSettings.readingMode === 'vertical') {
-      setCurrentPage(scrollPageIndex * imagesPerScrollPage);
+      // ✅ Only set base page if currentPage is outside current chunk (avoid override during mode switch)
+      const basePage = scrollPageIndex * imagesPerScrollPage;
+      if (currentPage < basePage || currentPage >= basePage + imagesPerScrollPage) {
+        setCurrentPage(basePage);
+      }
     }
   }, [scrollPageIndex, readerSettings.readingMode, imagesPerScrollPage]);
+
+  // ✅ Track scroll position in vertical mode for accurate mode switching
+  useEffect(() => {
+    if (readerSettings.readingMode !== 'vertical') return;
+    
+    const handleScroll = () => {
+      scrollPositionRef.current = window.scrollY;
+      
+      // Calculate current viewing image index based on scroll position
+      const images = document.querySelectorAll('.scroll-img');
+      if (images.length === 0) return;
+      
+      let closestIndex = 0;
+      let minDistance = Infinity;
+      
+      // Find image closest to viewport center (not top)
+      const viewportCenter = window.innerHeight / 2;
+      
+      images.forEach((img, idx) => {
+        const rect = img.getBoundingClientRect();
+        // Calculate distance from image center to viewport center
+        const imageCenter = rect.top + (rect.height / 2);
+        const distance = Math.abs(imageCenter - viewportCenter);
+        
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = scrollPageIndex * imagesPerScrollPage + idx;
+        }
+      });
+      
+      lastKnownImageIndexRef.current = closestIndex;
+      
+      // Debug log
+      console.log(`📍 Vertical scroll tracking: image ${closestIndex + 1}/${currentImages.length} (chunk ${scrollPageIndex + 1}, offset ${closestIndex % imagesPerScrollPage})`);
+    };
+    
+    // Throttle scroll event for performance
+    let ticking = false;
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    
+    window.addEventListener('scroll', onScroll, { passive: true });
+    
+    // Initial calculation
+    handleScroll();
+    
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [readerSettings.readingMode, scrollPageIndex, imagesPerScrollPage]);
 
   const goToPrevScrollPage = () => {
     setScrollPageIndex((p) => Math.max(0, p - 1));

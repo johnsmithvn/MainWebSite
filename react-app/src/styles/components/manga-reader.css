@@ -7,6 +7,8 @@
   /* Allow browser zoom to affect the entire reader */
   transform-origin: center center;
   /* overflow is handled by the child or a modifier class */
+  /* ✅ Enable pinch zoom + vertical pan */
+  touch-action: pan-y pinch-zoom;
 }
 
 .manga-reader:not(.scroll-mode-active) {
@@ -29,6 +31,25 @@
   .reader {
     padding-top: 56px;
   }
+  
+  /* ✅ Ensure touch-action works properly on mobile */
+  .manga-reader {
+    touch-action: pan-y pinch-zoom;
+  }
+  
+  .zoom-wrapper {
+    touch-action: pinch-zoom;
+  }
+  
+  .reader-image-fullsize {
+    touch-action: pinch-zoom;
+  }
+  
+  /* Allow vertical panning in scroll mode */
+  .reader.scroll-mode .zoom-wrapper,
+  .reader.scroll-mode .scroll-img {
+    touch-action: pan-y pinch-zoom;
+  }
 }
 
 @media (max-width: 480px) {
@@ -41,6 +62,8 @@
 .reader.scroll-mode {
   overflow-y: auto;
   overflow-x: hidden;
+  /* ✅ Enable vertical scroll + pinch zoom */
+  touch-action: pan-y pinch-zoom;
 }
 
 .scroll-container {
@@ -70,6 +93,10 @@
   background: transparent;
   /* Allow browser zoom to affect the image */
   transform-origin: center center;
+  /* ✅ Enable pinch zoom on image */
+  touch-action: pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .scroll-img.loading {
@@ -82,6 +109,8 @@
   width: 100%;
   height: 100%;
   background-color: #000;
+  /* ✅ Enable pinch zoom in swiper */
+  touch-action: pinch-zoom;
 }
 
 .swiper-wrapper {
@@ -127,6 +156,9 @@
   cursor: pointer;
   background: transparent;
   border: none;
+  /* ✅ Allow only tap/click, not zoom (zoom handled by image below) */
+  touch-action: manipulation;
+  pointer-events: auto;
 }
 
 .navigation-zone.left {
@@ -409,6 +441,12 @@
   cursor: pointer;
   /* Allow browser zoom to affect the image */
   transform-origin: center center;
+  /* ✅ Enable pinch zoom directly on image */
+  touch-action: pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  z-index: 5; /* Higher than nav zones when zooming */
 }
 
 .horizontal-reader-container {
@@ -419,6 +457,8 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  /* ✅ Enable pinch zoom in horizontal mode */
+  touch-action: pinch-zoom;
 }
 
 .image-container {
@@ -442,6 +482,11 @@
   height: 100%;
   /* This wrapper will respond to browser zoom */
   transform-origin: center center;
+  /* ✅ Inherit touch behavior from parent */
+  touch-action: inherit;
+  /* Enable smooth zoom transitions */
+  transition: transform 0.1s ease-out;
+  will-change: transform;
 }
 
 .image-container.slide-left {
@@ -506,6 +551,11 @@
   z-index: 10;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  /* ✅ Allow only single-touch navigation, zoom handled by image */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: auto;
 }
 
 .nav-zone:active {
@@ -537,6 +587,9 @@
   /* Enable hardware acceleration for smoother zoom */
   transform: translateZ(0);
   will-change: transform;
+  
+  /* ✅ Critical: Enable pinch zoom on images */
+  touch-action: pinch-zoom;
 }
 
 /* Prevent zoom conflicts with navigation */
@@ -544,5 +597,11 @@
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* ✅ Vertical scroll mode: allow both scroll and zoom */
+.reader.scroll-mode .zoom-wrapper,
+.reader.scroll-mode .scroll-img {
+  touch-action: pan-y pinch-zoom;
 }
 
