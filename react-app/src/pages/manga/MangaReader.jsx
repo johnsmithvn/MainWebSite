@@ -464,57 +464,40 @@ const MangaReader = () => {
     setShowControls(!showControls);
   };
 
+  // ✅ Extracted navigation helper to reduce code duplication
+  const navigateToPage = useCallback((targetPage) => {
+    const targetSrc = currentImages[targetPage];
+    
+    // ✅ Check if target image is preloaded
+    const isPreloaded = preloadedImagesRef.current.has(targetSrc);
+    
+    if (!isPreloaded) {
+      console.log(`⚠️ Navigating to page ${targetPage + 1} but image not preloaded yet`);
+    }
+    
+    // ✅ Set loading state if image not preloaded
+    setIsImageLoading(!isPreloaded);
+    setCurrentPage(targetPage);
+    
+    // ✅ Safety timeout only if not preloaded
+    if (!isPreloaded) {
+      if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
+      imageLoadTimeoutRef.current = setTimeout(() => {
+        setIsImageLoading(false);
+        console.warn('⚠️ Image load timeout after 5s, forcing loading state off');
+      }, 5000);
+    }
+  }, [currentImages]);
+
   const goToPrevPage = () => {
     if (currentPage > 0) {
-      const targetPage = currentPage - 1;
-      const targetSrc = currentImages[targetPage];
-      
-      // ✅ Check if target image is preloaded
-      const isPreloaded = preloadedImagesRef.current.has(targetSrc);
-      
-      if (!isPreloaded) {
-        console.log(`⚠️ Navigating to page ${targetPage + 1} but image not preloaded yet`);
-      }
-      
-      // ✅ Set loading state if image not preloaded
-      setIsImageLoading(!isPreloaded);
-      setCurrentPage(targetPage);
-      
-      // ✅ Safety timeout only if not preloaded
-      if (!isPreloaded) {
-        if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
-        imageLoadTimeoutRef.current = setTimeout(() => {
-          setIsImageLoading(false);
-          console.warn('⚠️ Image load timeout after 5s, forcing loading state off');
-        }, 5000);
-      }
+      navigateToPage(currentPage - 1);
     }
   };
 
   const goToNextPage = () => {
     if (currentPage < currentImages.length - 1) {
-      const targetPage = currentPage + 1;
-      const targetSrc = currentImages[targetPage];
-      
-      // ✅ Check if target image is preloaded
-      const isPreloaded = preloadedImagesRef.current.has(targetSrc);
-      
-      if (!isPreloaded) {
-        console.log(`⚠️ Navigating to page ${targetPage + 1} but image not preloaded yet`);
-      }
-      
-      // ✅ Set loading state if image not preloaded
-      setIsImageLoading(!isPreloaded);
-      setCurrentPage(targetPage);
-      
-      // ✅ Safety timeout only if not preloaded
-      if (!isPreloaded) {
-        if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
-        imageLoadTimeoutRef.current = setTimeout(() => {
-          setIsImageLoading(false);
-          console.warn('⚠️ Image load timeout after 5s, forcing loading state off');
-        }, 5000);
-      }
+      navigateToPage(currentPage + 1);
     }
   };
 
@@ -899,8 +882,6 @@ const MangaReader = () => {
       
       lastKnownImageIndexRef.current = closestIndex;
       
-      // Debug log
-      console.log(`📍 Vertical scroll tracking: image ${closestIndex + 1}/${currentImages.length} (chunk ${scrollPageIndex + 1}, offset ${closestIndex % imagesPerScrollPage})`);
     };
     
     // Throttle scroll event for performance
@@ -1145,7 +1126,8 @@ const MangaReader = () => {
                       imageLoadTimeoutRef.current = null;
                     }
                     
-                    const src = currentImages[currentPage];
+                    // ✅ Fixed: Use actual loaded image src to avoid race condition
+                    const src = e.currentTarget.currentSrc || e.currentTarget.src;
                     const wasPreloaded = preloadedImagesRef.current.has(src);
                     const loadCount = (loadCountRef.current.get(src) || 0) + 1;
                     loadCountRef.current.set(src, loadCount);
