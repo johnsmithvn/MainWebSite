@@ -131,19 +131,7 @@ export const formatDate = (timestamp) => {
 
 ## 🟢 PHASE 3: STRUCTURE IMPROVEMENTS (Ưu tiên thấp)
 
-### 3.1 Reorganize Offline Pages
 
-**Cấu trúc mới:**
-```
-pages/offline/
-  ├── index.jsx (OfflineHome)
-  ├── MangaLibrary.jsx (rename từ OfflineMangaLibrary)
-  ├── MovieLibrary.jsx (rename từ OfflineMovieLibrary)  
-  ├── MusicLibrary.jsx (rename từ OfflineMusicLibrary)
-  └── components/
-      ├── OfflineCard.jsx (Shared card component)
-      └── DownloadProgress.jsx (Shared progress component)
-```
 
 ### 3.2 Create Shared Components
 
