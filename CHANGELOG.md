@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-10-05] Fixed touch event null check bug in MangaReader → Replaced falsy checks (!touchStart || !touchEnd) with explicit null checks (=== null) to prevent false positive when touch coordinates are 0 (left edge of screen), ensuring swipe gestures work correctly from screen edges
 - 🐛 [2025-10-05] Fixed image loading delay on slow networks in horizontal mode → Added loading state (isImageLoading) with smart preload checking: only shows loading spinner if target image not yet cached, implemented 5-second timeout safety mechanism, added loading state clear on image onLoad/onError events
 - 🐛 [2025-10-05] Fixed pinch-to-zoom not working in MangaReader WebView → Added `touch-action: pinch-zoom` CSS property to all image elements and zoom wrappers in both vertical and horizontal reading modes, enabling proper 2-finger zoom gestures on mobile devices
 - 🐛 [2025-10-05] Fixed touch gesture conflicts in MangaReader → Modified touch event handlers to check `e.touches.length > 1` and ignore multi-touch events, preventing swipe navigation from interfering with pinch-zoom gestures

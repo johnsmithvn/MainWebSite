@@ -626,7 +626,8 @@ const MangaReader = () => {
 
   const onTouchMove = (e) => {
     // ✅ Ignore multi-touch (zoom gesture)
-    if (e.touches.length > 1 || !touchStart) {
+    // ✅ Fixed: Check null explicitly to avoid false positive at x=0
+    if (e.touches.length > 1 || touchStart === null) {
       return;
     }
     
@@ -634,7 +635,8 @@ const MangaReader = () => {
   };
 
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    // ✅ Fixed: Check null explicitly to avoid false positive at x=0
+    if (touchStart === null || touchEnd === null) return;
     
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
