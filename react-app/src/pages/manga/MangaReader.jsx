@@ -31,6 +31,9 @@ const MangaReader = () => {
   const [error, setError] = useState(null);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  // ✅ Loading state cho horizontal image navigation
+  const [isImageLoading, setIsImageLoading] = useState(false);
+  const imageLoadTimeoutRef = useRef(null);
   // Use ref (not state) for preloaded images so StrictMode double-mount doesn't flush the cache
   // and we avoid unnecessary re-renders when the Set changes.
   const preloadedImagesRef = useRef(new Set());
@@ -359,6 +362,7 @@ const MangaReader = () => {
   useEffect(() => {
     return () => {
       if (viewDebounceRef.current) clearTimeout(viewDebounceRef.current);
+      if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
       if (folderAbortRef.current) {
         try { folderAbortRef.current.abort(); } catch {}
       }
@@ -462,13 +466,55 @@ const MangaReader = () => {
 
   const goToPrevPage = () => {
     if (currentPage > 0) {
-      setCurrentPage(currentPage - 1);
+      const targetPage = currentPage - 1;
+      const targetSrc = currentImages[targetPage];
+      
+      // ✅ Check if target image is preloaded
+      const isPreloaded = preloadedImagesRef.current.has(targetSrc);
+      
+      if (!isPreloaded) {
+        console.log(`⚠️ Navigating to page ${targetPage + 1} but image not preloaded yet`);
+      }
+      
+      // ✅ Set loading state if image not preloaded
+      setIsImageLoading(!isPreloaded);
+      setCurrentPage(targetPage);
+      
+      // ✅ Safety timeout only if not preloaded
+      if (!isPreloaded) {
+        if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
+        imageLoadTimeoutRef.current = setTimeout(() => {
+          setIsImageLoading(false);
+          console.warn('⚠️ Image load timeout after 5s, forcing loading state off');
+        }, 5000);
+      }
     }
   };
 
   const goToNextPage = () => {
     if (currentPage < currentImages.length - 1) {
-      setCurrentPage(currentPage + 1);
+      const targetPage = currentPage + 1;
+      const targetSrc = currentImages[targetPage];
+      
+      // ✅ Check if target image is preloaded
+      const isPreloaded = preloadedImagesRef.current.has(targetSrc);
+      
+      if (!isPreloaded) {
+        console.log(`⚠️ Navigating to page ${targetPage + 1} but image not preloaded yet`);
+      }
+      
+      // ✅ Set loading state if image not preloaded
+      setIsImageLoading(!isPreloaded);
+      setCurrentPage(targetPage);
+      
+      // ✅ Safety timeout only if not preloaded
+      if (!isPreloaded) {
+        if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
+        imageLoadTimeoutRef.current = setTimeout(() => {
+          setIsImageLoading(false);
+          console.warn('⚠️ Image load timeout after 5s, forcing loading state off');
+        }, 5000);
+      }
     }
   };
 
@@ -1059,6 +1105,28 @@ const MangaReader = () => {
             {/* Current Image with zoom wrapper */}
             <div className="image-container">
               <div className="zoom-wrapper">
+                {/* ✅ Loading overlay for horizontal mode */}
+                {isImageLoading && (
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    zIndex: 100,
+                    backdropFilter: 'blur(4px)'
+                  }}>
+                    <div style={{
+                      width: '50px',
+                      height: '50px',
+                      border: '4px solid rgba(255, 255, 255, 0.3)',
+                      borderTop: '4px solid white',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                  </div>
+                )}
                 <img
                   src={currentImages[currentPage]}
                   alt={`Page ${currentPage + 1}`}
@@ -1067,6 +1135,14 @@ const MangaReader = () => {
                   onClick={handleImageClick}
                   onLoad={(e) => {
                     e.target.classList.remove('loading');
+                    
+                    // ✅ Clear loading state when image loads
+                    setIsImageLoading(false);
+                    if (imageLoadTimeoutRef.current) {
+                      clearTimeout(imageLoadTimeoutRef.current);
+                      imageLoadTimeoutRef.current = null;
+                    }
+                    
                     const src = currentImages[currentPage];
                     const wasPreloaded = preloadedImagesRef.current.has(src);
                     const loadCount = (loadCountRef.current.get(src) || 0) + 1;
@@ -1124,6 +1200,13 @@ const MangaReader = () => {
                   onError={(e) => {
                     e.target.style.background = '#333';
                     e.target.alt = 'Lỗi tải ảnh';
+                    
+                    // ✅ Clear loading state on error
+                    setIsImageLoading(false);
+                    if (imageLoadTimeoutRef.current) {
+                      clearTimeout(imageLoadTimeoutRef.current);
+                      imageLoadTimeoutRef.current = null;
+                    }
                   }}
                 />
               </div>

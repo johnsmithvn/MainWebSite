@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-10-05] Fixed image loading delay on slow networks in horizontal mode → Added loading state (isImageLoading) with smart preload checking: only shows loading spinner if target image not yet cached, implemented 5-second timeout safety mechanism, added loading state clear on image onLoad/onError events
 - 🐛 [2025-10-05] Fixed pinch-to-zoom not working in MangaReader WebView → Added `touch-action: pinch-zoom` CSS property to all image elements and zoom wrappers in both vertical and horizontal reading modes, enabling proper 2-finger zoom gestures on mobile devices
 - 🐛 [2025-10-05] Fixed touch gesture conflicts in MangaReader → Modified touch event handlers to check `e.touches.length > 1` and ignore multi-touch events, preventing swipe navigation from interfering with pinch-zoom gestures
 - 🐛 [2025-10-05] Fixed reading mode switching not preserving page position → Added scroll position tracking in vertical mode with viewport center calculation to detect current viewing image, implemented bidirectional sync logic: vertical→horizontal uses tracked image index with fallback calculation, horizontal→vertical calculates chunk index and scrolls to exact image using `scrollIntoView()`
@@ -13,8 +14,13 @@ All notable changes to this project will be documented in this file. Dates use Y
 - 🐛 [2025-10-05] Fixed horizontal→vertical scroll target not found error → Added retry mechanism with exponential backoff (up to 5 attempts) to wait for DOM render before scrollIntoView, preventing "Found 0 images" error when React hasn't finished rendering vertical mode images yet
 - 🐛 [2025-10-05] Fixed currentPage state sync issues during mode toggle → Modified vertical mode effect to only update `currentPage` when outside current chunk range, preventing unwanted resets during mode switching transitions
 
+### Added
+
+- ✨ [2025-10-05] Added loading overlay UI for horizontal mode navigation → Created backdrop-blur spinner overlay with CSS animation (spin keyframe) to indicate image loading state when navigating next/prev on slow networks, preventing user confusion when page number changes but image hasn't rendered yet
+
 ### Changed
 
+- 🔄 [2025-10-05] Optimized navigation loading state logic → Navigation buttons now check if target image already preloaded (preloadedImagesRef), only show loading state if image not cached, improved user experience by avoiding unnecessary loading indicators for already-loaded images
 - 🔄 [2025-10-05] Enhanced MangaReader touch-action CSS hierarchy → Updated all reader containers (.manga-reader, .reader.scroll-mode, .horizontal-reader-container, .zoom-wrapper, images) with appropriate `touch-action` values: `pan-y pinch-zoom` for vertical scroll, `pinch-zoom` for horizontal mode, `manipulation` for navigation zones only
 - 🔄 [2025-10-05] Improved zoom wrapper transitions → Added `transition: transform 0.1s ease-out` and `will-change: transform` to .zoom-wrapper for smoother pinch-zoom experience with hardware acceleration
 - 🔄 [2025-10-05] Enhanced mobile responsiveness for touch gestures → Added media query for mobile devices (<768px) to ensure consistent `touch-action` behavior across all touch-enabled components
