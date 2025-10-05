@@ -1090,16 +1090,20 @@ const MangaReader = () => {
               <div className="zoom-wrapper">
                 {/* ✅ Loading overlay for horizontal mode */}
                 {isImageLoading && (
-                  <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                    zIndex: 100,
-                    backdropFilter: 'blur(4px)'
-                  }}>
+                  <div 
+                    role="status" 
+                    aria-live="polite"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                      zIndex: 100,
+                      backdropFilter: 'blur(4px)'
+                    }}
+                  >
                     <div style={{
                       width: '50px',
                       height: '50px',

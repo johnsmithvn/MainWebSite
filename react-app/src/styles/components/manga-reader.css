@@ -44,12 +44,6 @@
   .reader-image-fullsize {
     touch-action: pinch-zoom;
   }
-  
-  /* Allow vertical panning in scroll mode */
-  .reader.scroll-mode .zoom-wrapper,
-  .reader.scroll-mode .scroll-img {
-    touch-action: pan-y pinch-zoom;
-  }
 }
 
 @media (max-width: 480px) {
@@ -277,10 +271,10 @@
     touch-action: pinch-zoom;
   }
   
-  /* Allow vertical panning in scroll mode */
+  /* ✅ Allow vertical panning + pinch zoom in scroll mode */
   .reader.scroll-mode .zoom-wrapper,
   .reader.scroll-mode .scroll-img {
-    touch-action: auto;
+    touch-action: pan-y pinch-zoom;
   }
 }
 

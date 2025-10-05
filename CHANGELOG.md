@@ -6,9 +6,15 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-10-05] Fixed duplicate touch-action declaration in manga-reader.css → Removed redundant touch-action: auto line in scroll mode media query (lines 277-278), keeping only touch-action: pan-y pinch-zoom to enable both vertical scrolling and pinch-to-zoom on mobile devices
+- 🐛 [2025-10-05] Fixed duplicate touch-action CSS rule in manga-reader.css → Removed redundant touch-action: pan-y pinch-zoom declaration from @media (max-width: 768px) as it was already defined globally for .reader.scroll-mode selectors (lines 603-606)
 - 🐛 [2025-10-05] Fixed race condition in MangaReader image onLoad handler → Changed from using currentImages[currentPage] to e.currentTarget.currentSrc to get actual loaded image URL, preventing bugs when currentPage state changes before onLoad event fires
 - 🐛 [2025-10-05] Fixed touch event null check bug in MangaReader → Replaced falsy checks (!touchStart || !touchEnd) with explicit null checks (=== null) to prevent false positive when touch coordinates are 0 (left edge of screen), ensuring swipe gestures work correctly from screen edges
 - 🐛 [2025-10-05] Fixed image loading delay on slow networks in horizontal mode → Added loading state (isImageLoading) with smart preload checking: only shows loading spinner if target image not yet cached, implemented 5-second timeout safety mechanism, added loading state clear on image onLoad/onError events
+
+### Added
+
+- ✨ [2025-10-05] Added accessibility attributes to loading overlay in MangaReader → Added role="status" and aria-live="polite" to loading spinner overlay for better screen reader support, following WCAG guidelines for dynamic content announcements
 
 ### Changed
 
