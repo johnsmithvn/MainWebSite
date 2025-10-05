@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-10-05] Fixed zoom not working on Android WebView → Added WebView zoom settings in MainActivity.java (setSupportZoom, setBuiltInZoomControls, setDisplayZoomControls, setUseWideViewPort, setLoadWithOverviewMode) and updated viewport meta tag in index.html with user-scalable=yes and maximum-scale=5.0
 - 🐛 [2025-10-05] Fixed duplicate touch-action declaration in manga-reader.css → Removed redundant touch-action: auto line in scroll mode media query (lines 277-278), keeping only touch-action: pan-y pinch-zoom to enable both vertical scrolling and pinch-to-zoom on mobile devices
 - 🐛 [2025-10-05] Fixed duplicate touch-action CSS rule in manga-reader.css → Removed redundant touch-action: pan-y pinch-zoom declaration from @media (max-width: 768px) as it was already defined globally for .reader.scroll-mode selectors (lines 603-606)
 - 🐛 [2025-10-05] Fixed race condition in MangaReader image onLoad handler → Changed from using currentImages[currentPage] to e.currentTarget.currentSrc to get actual loaded image URL, preventing bugs when currentPage state changes before onLoad event fires
