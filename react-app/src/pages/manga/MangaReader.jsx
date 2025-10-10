@@ -8,6 +8,7 @@ import { apiService } from '../../utils/api';
 import { downloadChapter, isChapterDownloaded, getChapter, deleteChapterCompletely } from '../../utils/offlineLibrary';
 import { checkStorageForDownload } from '../../utils/storageQuota';
 import { isCachesAPISupported, getUnsupportedMessage } from '../../utils/browserSupport';
+import { READER } from '../../constants';
 import ReaderHeader from '../../components/manga/ReaderHeader';
 import { DownloadProgressModal, DownloadConfirmModal, StorageQuotaModal } from '../../components/common';
 import toast from 'react-hot-toast';
@@ -31,6 +32,9 @@ const MangaReader = () => {
   const [error, setError] = useState(null);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  // ✅ Loading state cho horizontal image navigation
+  const [isImageLoading, setIsImageLoading] = useState(false);
+  const imageLoadTimeoutRef = useRef(null);
   // Use ref (not state) for preloaded images so StrictMode double-mount doesn't flush the cache
   // and we avoid unnecessary re-renders when the Set changes.
   const preloadedImagesRef = useRef(new Set());
@@ -54,6 +58,10 @@ const MangaReader = () => {
   const [jumpInput, setJumpInput] = useState('');
   const [jumpContext, setJumpContext] = useState('vertical'); // 'vertical' | 'horizontal'
   
+  // ✅ Track scroll position and current viewing image for mode switching
+  const scrollPositionRef = useRef(0);
+  const lastKnownImageIndexRef = useRef(0);
+  
   // Download states
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0, status: 'idle' });
@@ -65,6 +73,20 @@ const MangaReader = () => {
   // Storage quota states
   const [showStorageQuotaModal, setShowStorageQuotaModal] = useState(false);
   const [storageCheckResult, setStorageCheckResult] = useState(null);
+
+  // Zoom states for horizontal mode
+  const [zoomLevel, setZoomLevel] = useState(READER.ZOOM_LEVEL_DEFAULT);
+  const [zoomOrigin, setZoomOrigin] = useState({ x: READER.ZOOM_ORIGIN_CENTER, y: READER.ZOOM_ORIGIN_CENTER }); // Fixed origin point for zoom
+  // ✅ Use ref instead of state for pan position to avoid re-renders during pan
+  const panPositionRef = useRef({ x: 0, y: 0 }); // Pan offset
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
+  const clickTimeoutRef = useRef(null);
+  const lastClickTimeRef = useRef(0);
+  const panStartRef = useRef(null); // Store initial touch position for pan delta calculation
+  // ✅ Refs for imperative DOM manipulation
+  const imgRef = useRef(null); // Reference to the image element
+  const frameRef = useRef(null); // RAF frame ID for throttling
 
   // Debug cache status function
   const getCacheStatus = useCallback(() => {
@@ -88,7 +110,7 @@ const MangaReader = () => {
   }, [getCacheStatus]);
 
   // the required distance between touchStart and touchEnd to be detected as a swipe
-  const minSwipeDistance = 50;
+  const minSwipeDistance = READER.MIN_SWIPE_DISTANCE;
 
   // Memoize current path to avoid unnecessary effect reruns
   const currentMangaPath = useMemo(() => {
@@ -99,14 +121,6 @@ const MangaReader = () => {
 
   const isOfflineMode = searchParams.get('offline') === '1';
 
-  // 🐛 DEBUG: Log component initialization
-  console.log('🎯 MangaReader Component Init:', {
-    folderId,
-    isOfflineMode,
-    searchParams: Object.fromEntries(searchParams),
-    sourceKey,
-    rootFolder
-  });
 
   // Memoize stable auth keys to prevent effect reruns
   const stableAuthKeys = useMemo(() => ({
@@ -178,7 +192,7 @@ const MangaReader = () => {
           preloadedImagesRef.current.add(src);
           console.log(`✅ Preloaded (link): ${src.split('/').pop()}`);
           // Clean up after successful preload
-          setTimeout(() => link.remove(), 1000);
+          setTimeout(() => link.remove(), READER.PRELOAD_LINK_CLEANUP_DELAY);
           resolve(src);
         };
         
@@ -291,7 +305,7 @@ const MangaReader = () => {
         lastLoadKeyRef.current = loadKey;
 
         // First, try pass-through cache from Home
-        const isPrefetchValid = readerPrefetch && readerPrefetch.path === currentMangaPath && Array.isArray(readerPrefetch.images) && readerPrefetch.images.length > 0 && Date.now() - (readerPrefetch.ts || 0) < 5000;
+        const isPrefetchValid = readerPrefetch && readerPrefetch.path === currentMangaPath && Array.isArray(readerPrefetch.images) && readerPrefetch.images.length > 0 && Date.now() - (readerPrefetch.ts || 0) < READER.PREFETCH_CACHE_TTL;
         if (isPrefetchValid) {
           setCurrentPath(currentMangaPath);
           setCurrentImages(readerPrefetch.images);
@@ -351,10 +365,13 @@ const MangaReader = () => {
   useEffect(() => {
   }, [readerSettings]);
 
-  // Cleanup timers on unmount
+  // Cleanup timers and RAF on unmount
   useEffect(() => {
     return () => {
       if (viewDebounceRef.current) clearTimeout(viewDebounceRef.current);
+      if (imageLoadTimeoutRef.current) clearTimeout(imageLoadTimeoutRef.current);
+      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
       if (folderAbortRef.current) {
         try { folderAbortRef.current.abort(); } catch {}
       }
@@ -444,6 +461,21 @@ const MangaReader = () => {
     }
   }, [currentImages, currentPage, readerSettings.readingMode, readerSettings.preloadCount, preloadImage]);
 
+  // ✅ Apply transform directly to DOM using refs (no re-render)
+  // MUST be defined BEFORE any useEffect or callback that uses it
+  const applyTransform = useCallback((zoom, origin, pan) => {
+    if (!imgRef.current) return;
+    
+    const transform = zoom > 1 
+      ? `scale(${zoom}) translate(${pan.x}%, ${pan.y}%)` 
+      : 'scale(1) translate(0, 0)';
+    
+    const transformOrigin = `${origin.x}% ${origin.y}%`;
+    
+    imgRef.current.style.transform = transform;
+    imgRef.current.style.transformOrigin = transformOrigin;
+  }, []);
+
   // Effect to preload images when currentPage changes with optimized timing
   useEffect(() => {
     if (currentImages.length > 0 && readerSettings.readingMode === 'horizontal') {
@@ -452,51 +484,337 @@ const MangaReader = () => {
     }
   }, [currentImages.length, currentPage, readerSettings.readingMode, preloadImagesAroundCurrentPage]);
 
+  // ✅ Sync transform when zoom/origin changes (not during pan for performance)
+  useEffect(() => {
+    if (imgRef.current && readerSettings.readingMode === 'horizontal') {
+      applyTransform(zoomLevel, zoomOrigin, panPositionRef.current);
+    }
+  }, [zoomLevel, zoomOrigin, readerSettings.readingMode, applyTransform]);
+
   const toggleControls = () => {
     setShowControls(!showControls);
   };
 
-  const goToPrevPage = () => {
-    if (currentPage > 0) {
-      setCurrentPage(currentPage - 1);
+  // Zoom functions for horizontal mode - optimized for image-only zoom
+  const handleDoubleClick = useCallback((e) => {
+    if (readerSettings.readingMode !== 'horizontal') return;
+
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    if (isZoomed) {
+      // Zoom out
+      const newZoom = READER.ZOOM_LEVEL_DEFAULT;
+      const newOrigin = { x: READER.ZOOM_ORIGIN_CENTER, y: READER.ZOOM_ORIGIN_CENTER };
+      const newPan = { x: 0, y: 0 };
+      
+      setZoomLevel(newZoom);
+      setZoomOrigin(newOrigin);
+      panPositionRef.current = newPan;
+      setIsZoomed(false);
+      
+      // ✅ Apply transform immediately via DOM
+      applyTransform(newZoom, newOrigin, newPan);
+    } else {
+      // Zoom in to clicked position
+      const newZoom = READER.ZOOM_LEVEL_2X;
+      const newOrigin = { x, y };
+      const newPan = { x: 0, y: 0 };
+      
+      setZoomLevel(newZoom);
+      setZoomOrigin(newOrigin);
+      panPositionRef.current = newPan;
+      setIsZoomed(true);
+      
+      // ✅ Apply transform immediately via DOM
+      applyTransform(newZoom, newOrigin, newPan);
     }
+  }, [readerSettings.readingMode, isZoomed, applyTransform]);
+
+  // ✅ Optimized pan handler using RAF and refs for 60fps smooth performance
+  const handleTouchMoveZoom = useCallback((e) => {
+    if (!isZoomed || readerSettings.readingMode !== 'horizontal') return;
+
+    if (e.touches.length === 1) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = e.currentTarget.getBoundingClientRect();
+
+      // Calculate current touch position as percentage
+      const touchX = ((touch.clientX - rect.left) / rect.width) * 100;
+      const touchY = ((touch.clientY - rect.top) / rect.height) * 100;
+
+      // Initialize pan start position on first touch move
+      if (!panStartRef.current) {
+        panStartRef.current = {
+          x: touchX,
+          y: touchY,
+          initialPan: { ...panPositionRef.current }
+        };
+      }
+
+      // Calculate delta from initial touch position (relative movement)
+      const deltaX = touchX - panStartRef.current.x;
+      const deltaY = touchY - panStartRef.current.y;
+
+      // ✅ Apply damping factor to reduce sensitivity
+      const dampingFactor = READER.PAN_DAMPING_FACTOR;
+      const dampedDeltaX = deltaX * dampingFactor;
+      const dampedDeltaY = deltaY * dampingFactor;
+
+      // Apply damped delta to initial pan position for smooth relative panning
+      const newPanX = panStartRef.current.initialPan.x + dampedDeltaX;
+      const newPanY = panStartRef.current.initialPan.y + dampedDeltaY;
+
+      // ✅ Calculate proper bounds based on zoom level
+      const maxPanPercent = READER.PAN_MAX_PERCENT_FACTOR / zoomLevel;
+      
+      // Constrain pan within calculated bounds to keep image within reasonable view
+      const constrainedX = Math.max(-maxPanPercent, Math.min(maxPanPercent, newPanX));
+      const constrainedY = Math.max(-maxPanPercent, Math.min(maxPanPercent, newPanY));
+
+      // ✅ Use RAF to throttle DOM updates to 60fps
+      if (frameRef.current) {
+        cancelAnimationFrame(frameRef.current);
+      }
+      
+      frameRef.current = requestAnimationFrame(() => {
+        panPositionRef.current = { x: constrainedX, y: constrainedY };
+        applyTransform(zoomLevel, zoomOrigin, panPositionRef.current);
+      });
+    }
+  }, [isZoomed, readerSettings.readingMode, zoomLevel, zoomOrigin, applyTransform]);
+
+  // Modified image click handler - requires 4 clicks to toggle controls, but allows double-click for zoom
+  const handleImageClick = useCallback((e) => {
+    // ✅ Prevent event bubbling to avoid double execution
+    e?.stopPropagation();
+    
+    if (readerSettings.readingMode !== 'horizontal') {
+      toggleControls();
+      return;
+    }
+    
+    // ✅ Ignore clicks when zoomed to avoid conflict with pan gestures
+    if (isZoomed) {
+      return;
+    }
+    
+    const now = Date.now();
+    const timeSinceLastClick = now - lastClickTimeRef.current;
+    
+    // ✅ If double-click detected (within DOUBLE_CLICK_THRESHOLD), reset everything and ignore
+    if (timeSinceLastClick > 0 && timeSinceLastClick < READER.DOUBLE_CLICK_THRESHOLD) {
+      // This is a double-click, let onDoubleClick handler take care of zoom
+      // Reset click count to avoid interference
+      setClickCount(0);
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+        clickTimeoutRef.current = null;
+      }
+      // ✅ Reset lastClickTimeRef to 0 to ensure next click is a completely fresh start
+      lastClickTimeRef.current = 0;
+      if (import.meta.env.DEV) {
+        console.log('🔍 Double-click detected, resetting all counters and ignoring for UI toggle');
+      }
+      return;
+    }
+    
+    // ✅ Update lastClickTimeRef for single click tracking
+    lastClickTimeRef.current = now;
+    
+    // Clear existing timeout
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+    
+    setClickCount(prev => {
+      const newCount = prev + 1;
+      if (import.meta.env.DEV) {
+        console.log(`👆 Click ${newCount}/4 (Controls: ${showControls ? 'visible' : 'hidden'})`);
+      }
+      if (newCount >= 4) {
+        // 4 clicks reached, toggle controls visibility
+        if (import.meta.env.DEV) {
+          console.log(`✅ 4 clicks reached, toggling UI from ${showControls ? 'visible' : 'hidden'} to ${!showControls ? 'visible' : 'hidden'}`);
+        }
+        // ✅ Toggle controls using state setter to ensure correct behavior
+        setShowControls(prev => !prev);
+        return 0;
+      } else {
+        // Set timeout to reset click count (FOUR_CLICK_WINDOW for more lenient timing)
+        clickTimeoutRef.current = setTimeout(() => {
+          if (import.meta.env.DEV) {
+            console.log('⏱️ Click timeout, resetting count');
+          }
+          setClickCount(0);
+        }, READER.FOUR_CLICK_WINDOW);
+        return newCount;
+      }
+    });
+  }, [readerSettings.readingMode, isZoomed, showControls]);
+
+  // Navigation functions for horizontal mode
+  const goToPrevPage = () => {
+    setCurrentPage((prev) => Math.max(0, prev - 1));
   };
 
   const goToNextPage = () => {
-    if (currentPage < currentImages.length - 1) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const handleImageClick = () => {
-    toggleControls();
+    setCurrentPage((prev) => Math.min(currentImages.length - 1, prev + 1));
   };
 
   const toggleReadingMode = () => {
+    const newMode = readerSettings.readingMode === 'vertical' ? 'horizontal' : 'vertical';
+    
+    // ✅ If switching from vertical, force update lastKnownImageIndex NOW
+    if (readerSettings.readingMode === 'vertical') {
+      const images = document.querySelectorAll('.scroll-img');
+      if (images.length > 0) {
+        const viewportCenter = window.innerHeight / 2;
+        let closestIndex = 0;
+        let minDistance = Infinity;
+        
+        images.forEach((img, idx) => {
+          const rect = img.getBoundingClientRect();
+          const imageCenter = rect.top + (rect.height / 2);
+          const distance = Math.abs(imageCenter - viewportCenter);
+          
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestIndex = scrollPageIndex * imagesPerScrollPage + idx;
+          }
+        });
+        
+        lastKnownImageIndexRef.current = closestIndex;
+        console.log(`🎯 Force-updated lastKnownImageIndex to: ${closestIndex}`);
+      }
+    }
+    
+    console.log('🔄 Toggling reading mode:', {
+      from: readerSettings.readingMode,
+      to: newMode,
+      currentPage,
+      scrollPageIndex,
+      lastKnownImageIndex: lastKnownImageIndexRef.current,
+      totalImages: currentImages.length
+    });
+    
+    if (newMode === 'horizontal') {
+      // ✅ Vertical → Horizontal: Set currentPage from last known scroll position
+      // If lastKnownImageIndexRef is 0 (not yet tracked), use currentPage as fallback
+      let targetPage = lastKnownImageIndexRef.current;
+      
+      // Fallback: if ref is 0 and we're not at the start, calculate from scrollPageIndex
+      if (targetPage === 0 && scrollPageIndex > 0) {
+        targetPage = scrollPageIndex * imagesPerScrollPage;
+        console.log(`⚠️ Using fallback calculation from scrollPageIndex: ${targetPage}`);
+      }
+      
+      targetPage = Math.max(0, Math.min(currentImages.length - 1, targetPage));
+      console.log(`📖 Switch to horizontal mode, jumping to page ${targetPage + 1}/${currentImages.length}`);
+      setCurrentPage(targetPage);
+    } else {
+      // ✅ Horizontal → Vertical: Calculate scrollPageIndex from currentPage
+      const targetScrollPage = Math.floor(currentPage / imagesPerScrollPage);
+      const offsetInPage = currentPage % imagesPerScrollPage;
+      
+      console.log(`📜 Switch to vertical mode, chunk ${targetScrollPage + 1}/${totalScrollPages}, offset ${offsetInPage}, currentPage=${currentPage}`);
+      setScrollPageIndex(targetScrollPage);
+      
+      // ✅ Wait for DOM render, then scroll to exact image position with retry
+      const scrollToTarget = (attempt = 1, maxAttempts = READER.MODE_SWITCH_MAX_RETRIES) => {
+        const images = document.querySelectorAll('.scroll-img');
+        console.log(`🔍 Attempt ${attempt}: Found ${images.length} images in DOM, looking for offset ${offsetInPage}`);
+        
+        if (images.length === 0 && attempt < maxAttempts) {
+          // DOM not ready, retry after delay with exponential backoff
+          const retryDelay = READER.MODE_SWITCH_RETRY_DELAY_BASE * attempt;
+          console.log(`⏳ DOM not ready, retrying in ${retryDelay}ms...`);
+          setTimeout(() => scrollToTarget(attempt + 1, maxAttempts), retryDelay);
+          return;
+        }
+        
+        const targetImage = images[offsetInPage];
+        if (targetImage) {
+          targetImage.scrollIntoView({ behavior: 'instant', block: 'start' });
+          console.log(`✅ Scrolled to image ${offsetInPage + 1} in chunk ${targetScrollPage + 1}`);
+        } else {
+          console.warn(`⚠️ Target image ${offsetInPage} not found in ${images.length} images, scrolling to top`);
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+      };
+      
+      // Start scroll attempt after mode switch
+      setTimeout(() => scrollToTarget(), READER.MODE_SWITCH_SCROLL_DELAY);
+    }
+    
     updateReaderSettings({
       ...readerSettings,
-      readingMode: readerSettings.readingMode === 'vertical' ? 'horizontal' : 'vertical',
+      readingMode: newMode,
     });
   };
 
   const onTouchStart = (e) => {
+    // ✅ Only disable swipe navigation when zoomed, but allow pan gestures
+    if (e.touches.length > 1) {
+      setTouchStart(null);
+      setTouchEnd(null);
+      return;
+    }
+
+    // When zoomed, reset pan start reference for new touch
+    if (isZoomed) {
+      panStartRef.current = null; // Reset for new pan gesture
+      return;
+    }
+
     setTouchEnd(null); // otherwise the swipe is fired even with a single touch
     setTouchStart(e.targetTouches[0].clientX);
   };
 
-  const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
+  const onTouchMove = (e) => {
+    // ✅ Handle zoom pan if zoomed, otherwise handle swipe
+    if (isZoomed) {
+      handleTouchMoveZoom(e);
+      return;
+    }
+    
+    // ✅ Ignore multi-touch (zoom gesture)
+    // ✅ Fixed: Check null explicitly to avoid false positive at x=0
+    if (e.touches.length > 1 || touchStart === null) {
+      return;
+    }
+    
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
 
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    // ✅ Don't handle swipe navigation when zoomed
+    if (isZoomed) {
+      // Clear pan start reference when touch ends
+      panStartRef.current = null;
+      return;
+    }
+
+    // ✅ Fixed: Check null explicitly to avoid false positive at x=0
+    if (touchStart === null || touchEnd === null) return;
+
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
+
     if (isLeftSwipe) {
       goToNextPage();
     }
     if (isRightSwipe) {
       goToPrevPage();
     }
+
+    // ✅ Clear touch state
+    setTouchStart(null);
+    setTouchEnd(null);
   };
 
   // Keyboard navigation for horizontal mode (ArrowLeft/ArrowRight)
@@ -705,9 +1023,66 @@ const MangaReader = () => {
   // Keep currentPage aligned to start of scroll chunk in vertical mode
   useEffect(() => {
     if (readerSettings.readingMode === 'vertical') {
-      setCurrentPage(scrollPageIndex * imagesPerScrollPage);
+      // ✅ Only set base page if currentPage is outside current chunk (avoid override during mode switch)
+      const basePage = scrollPageIndex * imagesPerScrollPage;
+      if (currentPage < basePage || currentPage >= basePage + imagesPerScrollPage) {
+        setCurrentPage(basePage);
+      }
     }
   }, [scrollPageIndex, readerSettings.readingMode, imagesPerScrollPage]);
+
+  // ✅ Track scroll position in vertical mode for accurate mode switching
+  useEffect(() => {
+    if (readerSettings.readingMode !== 'vertical') return;
+    
+    const handleScroll = () => {
+      scrollPositionRef.current = window.scrollY;
+      
+      // Calculate current viewing image index based on scroll position
+      const images = document.querySelectorAll('.scroll-img');
+      if (images.length === 0) return;
+      
+      let closestIndex = 0;
+      let minDistance = Infinity;
+      
+      // Find image closest to viewport center (not top)
+      const viewportCenter = window.innerHeight / 2;
+      
+      images.forEach((img, idx) => {
+        const rect = img.getBoundingClientRect();
+        // Calculate distance from image center to viewport center
+        const imageCenter = rect.top + (rect.height / 2);
+        const distance = Math.abs(imageCenter - viewportCenter);
+        
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = scrollPageIndex * imagesPerScrollPage + idx;
+        }
+      });
+      
+      lastKnownImageIndexRef.current = closestIndex;
+      
+    };
+    
+    // Throttle scroll event for performance
+    let ticking = false;
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    
+    window.addEventListener('scroll', onScroll, { passive: true });
+    
+    // Initial calculation
+    handleScroll();
+    
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [readerSettings.readingMode, scrollPageIndex, imagesPerScrollPage]);
 
   const goToPrevScrollPage = () => {
     setScrollPageIndex((p) => Math.max(0, p - 1));
@@ -892,16 +1267,61 @@ const MangaReader = () => {
             
             {/* Current Image with zoom wrapper */}
             <div className="image-container">
-              <div className="zoom-wrapper">
+              <div 
+                className="zoom-wrapper"
+                onTouchMove={handleTouchMoveZoom}
+                onDoubleClick={handleDoubleClick}
+              >
+                {/* ✅ Loading overlay for horizontal mode */}
+                {isImageLoading && (
+                  <div 
+                    role="status" 
+                    aria-live="polite"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                      zIndex: 100,
+                      backdropFilter: 'blur(4px)'
+                    }}
+                  >
+                    <div style={{
+                      width: '50px',
+                      height: '50px',
+                      border: '4px solid rgba(255, 255, 255, 0.3)',
+                      borderTop: '4px solid white',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                  </div>
+                )}
                 <img
+                  ref={imgRef}
                   src={currentImages[currentPage]}
                   alt={`Page ${currentPage + 1}`}
                   className="reader-image-fullsize"
+                  style={{
+                    cursor: isZoomed ? 'grab' : 'pointer',
+                    transition: isZoomed ? 'none' : 'transform 0.2s ease-out',
+                    willChange: 'transform'
+                  }}
                   loading={mangaSettings.lazyLoad ? "lazy" : "eager"}
                   onClick={handleImageClick}
                   onLoad={(e) => {
                     e.target.classList.remove('loading');
-                    const src = currentImages[currentPage];
+                    
+                    // ✅ Clear loading state when image loads
+                    setIsImageLoading(false);
+                    if (imageLoadTimeoutRef.current) {
+                      clearTimeout(imageLoadTimeoutRef.current);
+                      imageLoadTimeoutRef.current = null;
+                    }
+                    
+                    // ✅ Fixed: Use actual loaded image src with optional chaining to avoid race condition
+                    const src = e.currentTarget?.currentSrc || e.currentTarget?.src;
                     const wasPreloaded = preloadedImagesRef.current.has(src);
                     const loadCount = (loadCountRef.current.get(src) || 0) + 1;
                     loadCountRef.current.set(src, loadCount);
@@ -958,6 +1378,13 @@ const MangaReader = () => {
                   onError={(e) => {
                     e.target.style.background = '#333';
                     e.target.alt = 'Lỗi tải ảnh';
+                    
+                    // ✅ Clear loading state on error
+                    setIsImageLoading(false);
+                    if (imageLoadTimeoutRef.current) {
+                      clearTimeout(imageLoadTimeoutRef.current);
+                      imageLoadTimeoutRef.current = null;
+                    }
                   }}
                 />
               </div>

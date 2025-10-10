@@ -37,7 +37,29 @@ export const READER = {
   ZOOM_STEP: 0.1,
   MIN_ZOOM: 0.5,
   MAX_ZOOM: 3.0,
-  DOUBLE_CLICK_THRESHOLD: 300
+  
+  // Gesture timing thresholds (ms)
+  DOUBLE_CLICK_THRESHOLD: 100,         // Max time between clicks to be considered double-click (was 300ms)
+  FOUR_CLICK_WINDOW: 2000,             // Max time window for 4-click gesture sequence (2 seconds)
+  
+  // Touch/Swipe settings
+  MIN_SWIPE_DISTANCE: 50,              // Minimum pixel distance to trigger swipe navigation
+  
+  // Zoom settings
+  ZOOM_LEVEL_DEFAULT: 1,               // No zoom (100%)
+  ZOOM_LEVEL_2X: 2,                    // 2x zoom level
+  ZOOM_ORIGIN_CENTER: 50,              // Center position for zoom origin (50% = center)
+  PAN_MAX_PERCENT_FACTOR: 50,          // Factor for calculating max pan distance: (zoomLevel - 1) * 50%
+  PAN_DAMPING_FACTOR: 0.5,             // Damping factor to reduce pan sensitivity (0.5 = 50% speed)
+  
+  // Prefetch & Cache settings
+  PREFETCH_CACHE_TTL: 5000,            // Time-to-live for prefetch cache (5 seconds)
+  PRELOAD_LINK_CLEANUP_DELAY: 1000,    // Delay before removing <link> preload tags (1 second)
+  
+  // Mode switching retry settings
+  MODE_SWITCH_RETRY_DELAY_BASE: 50,    // Base delay for mode switch DOM retry (ms)
+  MODE_SWITCH_MAX_RETRIES: 5,          // Max attempts to find DOM elements after mode switch
+  MODE_SWITCH_SCROLL_DELAY: 150,       // Delay before scrolling after mode switch (ms)
 };
 
 /**

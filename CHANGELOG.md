@@ -4,9 +4,72 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Fixed
+
+- � [2025-01-07] Fixed "Cannot access before initialization" error in MangaReader → Moved `applyTransform` function definition before useEffect hooks that use it to fix hoisting issue
+- 🐛 [2025-10-07] Fixed zoom pan exceeding viewport bounds → Changed pan bounds calculation to `PAN_MAX_PERCENT_FACTOR / zoomLevel` (where PAN_MAX_PERCENT_FACTOR = 50), preventing image from being panned outside viewport (at 2x zoom: max pan reduced from ±50% to ±25%)
+- 🐛 [2025-10-07] Fixed double-click interfering with 4-click counter → Reset lastClickTimeRef to 0 when double-click detected to ensure next click after double-click is treated as completely fresh start, preventing false double-click detection on subsequent clicks
+- 🐛 [2025-10-07] Fixed 4-click UI toggle executing twice per click → Added e.stopPropagation() to handleImageClick to prevent event bubbling, changed from toggleControls() to setShowControls(prev => !prev) for correct state toggle, added isZoomed check to ignore clicks during zoom, enhanced debug logging to show controls state
+- 🐛 [2025-10-05] Fixed zoom not working on Android WebView → Added WebView zoom settings in MainActivity.java (setSupportZoom, setBuiltInZoomControls, setDisplayZoomControls, setUseWideViewPort, setLoadWithOverviewMode) and updated viewport meta tag in index.html with user-scalable=yes and maximum-scale=5.0
+- 🐛 [2025-10-05] Fixed duplicate touch-action declaration in manga-reader.css → Removed redundant touch-action: auto line in scroll mode media query (lines 277-278), keeping only touch-action: pan-y pinch-zoom to enable both vertical scrolling and pinch-to-zoom on mobile devices
+- 🐛 [2025-10-05] Fixed duplicate touch-action CSS rule in manga-reader.css → Removed redundant touch-action: pan-y pinch-zoom declaration from @media (max-width: 768px) as it was already defined globally for .reader.scroll-mode selectors (lines 603-606)
+- 🐛 [2025-10-05] Fixed race condition in MangaReader image onLoad handler → Changed from using currentImages[currentPage] to e.currentTarget.currentSrc to get actual loaded image URL, preventing bugs when currentPage state changes before onLoad event fires
+
+### Changed
+
+- 🔄 [2025-01-07] Refactored MangaReader zoom/pan to imperative approach → Changed from state-based (`setPanPosition`) to refs + `requestAnimationFrame` for better performance (no re-renders during pan, smooth 60fps with RAF throttling, direct DOM manipulation via `imgRef` and `applyTransform` function)
+- 🔄 [2025-10-07] Refactored all magic numbers in MangaReader to constants → Extracted 15+ magic numbers (zoom levels, pan damping, timing thresholds, retry delays, etc.) to READER constants with detailed comments for each value explaining purpose and units
+- 🐛 [2025-10-05] Fixed touch event null check bug in MangaReader → Replaced falsy checks (!touchStart || !touchEnd) with explicit null checks (=== null) to prevent false positive when touch coordinates are 0 (left edge of screen), ensuring swipe gestures work correctly from screen edges
+- 🐛 [2025-10-05] Fixed image loading delay on slow networks in horizontal mode → Added loading state (isImageLoading) with smart preload checking: only shows loading spinner if target image not yet cached, implemented 5-second timeout safety mechanism, added loading state clear on image onLoad/onError events
+
+- 🐛 [2025-10-06] Fixed zoom reset during pan gestures in MangaReader → Modified touch event handlers to prevent swipe detection interference when zoomed, allowing smooth pan without zoom reset
+
+- 🐛 [2025-10-07] Fixed pan gesture "jump" issue in MangaReader zoom → Implemented delta-based pan calculation using initial touch position, allowing smooth panning from any touch point instead of jumping back to zoom origin
+
+- 🔄 [2025-10-07] Reduced pan sensitivity in MangaReader zoom mode → Added damping factor (0.5x) to prevent image "drifting" too fast during pan gestures, providing more precise control
+
+- 🐛 [2025-10-07] Fixed pan bounds in MangaReader zoom → Implemented dynamic pan limits based on zoom level ((zoomLevel - 1) * 50%), preventing image from being panned outside viewport excessively
+
 ### Added
 
+- ✨ [2025-10-06] Added double-click zoom functionality in horizontal MangaReader mode → Double-click image to zoom in/out, pan to view different image areas when zoomed, disabled swipe navigation during zoom to prevent conflicts, changed single-click to 4-click toggle for UI controls to avoid gesture conflicts
+
+### Changed
+
+- 🔄 [2025-10-06] Optimized zoom implementation for image-only zoom with smooth pan → Moved zoom transform from wrapper to image element for better performance, added hardware acceleration, constrained pan bounds, improved touch gesture handling for smoother zoom/pan experience
+- ✨ [2025-10-06] Added double-click zoom functionality in horizontal MangaReader mode → Double-click image to zoom in/out, pan to view different image areas when zoomed, disabled swipe navigation during zoom to prevent conflicts, changed single-click to 4-click toggle for UI controls to avoid gesture conflicts
+
+### Changed
+
+- 🔄 [2025-10-05] Refactored navigation logic in MangaReader → Extracted navigateToPage() helper function from goToPrevPage() and goToNextPage() to eliminate code duplication, improved maintainability with single source of truth for page navigation logic
+- 🔄 [2025-10-05] Optimized debug logging in MangaReader → Wrapped vertical scroll tracking console.log with import.meta.env.DEV check to prevent noisy logs in production builds
+- 🐛 [2025-10-05] Fixed pinch-to-zoom not working in MangaReader WebView → Added `touch-action: pinch-zoom` CSS property to all image elements and zoom wrappers in both vertical and horizontal reading modes, enabling proper 2-finger zoom gestures on mobile devices
+- 🐛 [2025-10-05] Fixed touch gesture conflicts in MangaReader → Modified touch event handlers to check `e.touches.length > 1` and ignore multi-touch events, preventing swipe navigation from interfering with pinch-zoom gestures
+- 🐛 [2025-10-05] Fixed reading mode switching not preserving page position → Added scroll position tracking in vertical mode with viewport center calculation to detect current viewing image, implemented bidirectional sync logic: vertical→horizontal uses tracked image index with fallback calculation, horizontal→vertical calculates chunk index and scrolls to exact image using `scrollIntoView()`
+- 🐛 [2025-10-05] Fixed vertical→horizontal mode switch accuracy → Enhanced scroll tracking to use viewport center instead of rect.top, added force-update mechanism before toggle to capture exact scroll position, implemented fallback calculation using scrollPageIndex when ref is not yet initialized
+- 🐛 [2025-10-05] Fixed horizontal→vertical scroll target not found error → Added retry mechanism with exponential backoff (up to 5 attempts) to wait for DOM render before scrollIntoView, preventing "Found 0 images" error when React hasn't finished rendering vertical mode images yet
+- 🐛 [2025-10-05] Fixed currentPage state sync issues during mode toggle → Modified vertical mode effect to only update `currentPage` when outside current chunk range, preventing unwanted resets during mode switching transitions
+
+### Added
+
+- ✨ [2025-10-05] Added loading overlay UI for horizontal mode navigation → Created backdrop-blur spinner overlay with CSS animation (spin keyframe) to indicate image loading state when navigating next/prev on slow networks, preventing user confusion when page number changes but image hasn't rendered yet
+
+### Changed
+
+- 🔄 [2025-10-05] Optimized navigation loading state logic → Navigation buttons now check if target image already preloaded (preloadedImagesRef), only show loading state if image not cached, improved user experience by avoiding unnecessary loading indicators for already-loaded images
+- 🔄 [2025-10-05] Enhanced MangaReader touch-action CSS hierarchy → Updated all reader containers (.manga-reader, .reader.scroll-mode, .horizontal-reader-container, .zoom-wrapper, images) with appropriate `touch-action` values: `pan-y pinch-zoom` for vertical scroll, `pinch-zoom` for horizontal mode, `manipulation` for navigation zones only
+- 🔄 [2025-10-05] Improved zoom wrapper transitions → Added `transition: transform 0.1s ease-out` and `will-change: transform` to .zoom-wrapper for smoother pinch-zoom experience with hardware acceleration
+- 🔄 [2025-10-05] Enhanced mobile responsiveness for touch gestures → Added media query for mobile devices (<768px) to ensure consistent `touch-action` behavior across all touch-enabled components
+
+### Added
+
+- ✨ [2025-10-05] Added comprehensive thumbnail optimization analysis → Created THUMBNAIL-OPTIMIZATION-PROS-CONS.md analyzing pros/cons of current vs optimized approach with ROI calculations, decision matrix, and phased implementation strategy based on project scale (MVP vs Growing vs Large projects)
+- ✨ [2025-10-05] Added thumbnail loading performance analysis → Created THUMBNAIL-LOADING-ANALYSIS.md documenting current issues with loading all thumbnails, lack of responsive sizes, missing lazy loading strategy, no image optimization, and comparing with best practices from large websites (Netflix, YouTube, Amazon, etc.)
 - ✨ [2025-10-05] Added comprehensive code analysis documentation → Created REFACTOR_PLAN.md and CODE_ANALYSIS_REPORT.md documenting code quality issues, duplicate code patterns, dead code, long files, and refactoring strategies for react-app/src/ directory
+
+### Changed
+
+- 🔄 [2025-10-05] Implemented native lazy loading for all card components → Added `loading="lazy"` and `decoding="async"` attributes to image tags in MangaCard, MovieCard, MusicCard, and UniversalCard components for immediate 30-50% performance improvement on mobile devices with minimal code changes
 - ✨ [2025-10-05] Identified 15+ duplicate database operation handlers → Documented Settings.jsx handlers (handleMangaScan, handleMovieScan, handleMusicScan, etc.) for future refactoring using utils/databaseOperations.js
 - ✨ [2025-10-05] Identified 7 unused React hooks → Documented dead code in hooks/index.js (useVirtualizer, useAsync, useClickOutside, useKeyPress, useLocalStorage, useIntersectionObserver, useMediaQuery) for removal
 

@@ -268,6 +268,7 @@ const UniversalCard = ({
           alt={itemData.displayName}
           className={IMAGE_STYLES.base}
           loading="lazy"
+          decoding="async"
           onError={(e) => {
             if (type === 'movie') {
               const isVideo = item.type === 'video' || item.type === 'file';

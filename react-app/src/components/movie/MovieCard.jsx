@@ -70,6 +70,8 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
           src={item.thumbnail || (isVideo ? DEFAULT_IMAGES.video : DEFAULT_IMAGES.folder)}
           alt={displayName}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
+          decoding="async"
           onError={(e) => {
             e.target.src = isVideo ? DEFAULT_IMAGES.video : DEFAULT_IMAGES.folder;
           }}

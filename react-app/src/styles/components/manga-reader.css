@@ -7,6 +7,8 @@
   /* Allow browser zoom to affect the entire reader */
   transform-origin: center center;
   /* overflow is handled by the child or a modifier class */
+  /* ✅ Enable pinch zoom + vertical pan */
+  touch-action: pan-y pinch-zoom;
 }
 
 .manga-reader:not(.scroll-mode-active) {
@@ -29,6 +31,19 @@
   .reader {
     padding-top: 56px;
   }
+  
+  /* ✅ Ensure touch-action works properly on mobile */
+  .manga-reader {
+    touch-action: pan-y pinch-zoom;
+  }
+  
+  .zoom-wrapper {
+    touch-action: pinch-zoom;
+  }
+  
+  .reader-image-fullsize {
+    touch-action: pinch-zoom;
+  }
 }
 
 @media (max-width: 480px) {
@@ -41,6 +56,8 @@
 .reader.scroll-mode {
   overflow-y: auto;
   overflow-x: hidden;
+  /* ✅ Enable vertical scroll + pinch zoom */
+  touch-action: pan-y pinch-zoom;
 }
 
 .scroll-container {
@@ -70,6 +87,10 @@
   background: transparent;
   /* Allow browser zoom to affect the image */
   transform-origin: center center;
+  /* ✅ Enable pinch zoom on image */
+  touch-action: pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .scroll-img.loading {
@@ -82,6 +103,8 @@
   width: 100%;
   height: 100%;
   background-color: #000;
+  /* ✅ Enable pinch zoom in swiper */
+  touch-action: pinch-zoom;
 }
 
 .swiper-wrapper {
@@ -127,6 +150,9 @@
   cursor: pointer;
   background: transparent;
   border: none;
+  /* ✅ Allow only tap/click, not zoom (zoom handled by image below) */
+  touch-action: manipulation;
+  pointer-events: auto;
 }
 
 .navigation-zone.left {
@@ -245,10 +271,10 @@
     touch-action: pinch-zoom;
   }
   
-  /* Allow vertical panning in scroll mode */
+  /* ✅ Allow vertical panning + pinch zoom in scroll mode */
   .reader.scroll-mode .zoom-wrapper,
   .reader.scroll-mode .scroll-img {
-    touch-action: auto;
+    touch-action: pan-y pinch-zoom;
   }
 }
 
@@ -409,6 +435,18 @@
   cursor: pointer;
   /* Allow browser zoom to affect the image */
   transform-origin: center center;
+  /* ✅ Enable pinch zoom directly on image */
+  touch-action: pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  z-index: 5; /* Higher than nav zones when zooming */
+  /* Hardware acceleration for smooth zoom/pan */
+  transform: translateZ(0);
+  will-change: transform;
+  /* Prevent image distortion during zoom */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 .horizontal-reader-container {
@@ -419,6 +457,8 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  /* ✅ Enable pinch zoom in horizontal mode */
+  touch-action: pinch-zoom;
 }
 
 .image-container {
@@ -428,9 +468,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.3s ease-out;
-  /* Create a zoom-responsive container */
-  overflow: hidden;
+  overflow: hidden; /* Prevent zoomed image from overflowing */
 }
 
 .zoom-wrapper {
@@ -440,8 +478,9 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  /* This wrapper will respond to browser zoom */
-  transform-origin: center center;
+  /* Enable hardware acceleration for smooth zoom */
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .image-container.slide-left {
@@ -502,10 +541,15 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 25%; /* 1/4 of the screen */
+  width: 10%; /* 1/10 of the screen (reduced from 25%) */
   z-index: 10;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  /* ✅ Allow only single-touch navigation, zoom handled by image */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: auto;
 }
 
 .nav-zone:active {
@@ -537,6 +581,9 @@
   /* Enable hardware acceleration for smoother zoom */
   transform: translateZ(0);
   will-change: transform;
+  
+  /* ✅ Critical: Enable pinch zoom on images */
+  touch-action: pinch-zoom;
 }
 
 /* Prevent zoom conflicts with navigation */
@@ -544,5 +591,16 @@
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
+}
+
+
+/* ========== LOADING SPINNER ANIMATION ========== */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 

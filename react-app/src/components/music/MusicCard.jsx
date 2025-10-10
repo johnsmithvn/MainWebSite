@@ -103,6 +103,7 @@ const MusicCard = ({
           alt={displayName}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
+          decoding="async"
           onError={(e) => {
             e.target.src = isAudio ? DEFAULT_IMAGES.music : DEFAULT_IMAGES.folder;
           }}
