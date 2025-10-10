@@ -441,6 +441,12 @@
   -webkit-user-select: none;
   position: relative;
   z-index: 5; /* Higher than nav zones when zooming */
+  /* Hardware acceleration for smooth zoom/pan */
+  transform: translateZ(0);
+  will-change: transform;
+  /* Prevent image distortion during zoom */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 .horizontal-reader-container {
@@ -462,9 +468,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.3s ease-out;
-  /* Create a zoom-responsive container */
-  overflow: hidden;
+  overflow: hidden; /* Prevent zoomed image from overflowing */
 }
 
 .zoom-wrapper {
@@ -474,12 +478,8 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  /* This wrapper will respond to browser zoom */
-  transform-origin: center center;
-  /* ✅ Inherit touch behavior from parent */
-  touch-action: inherit;
-  /* Enable smooth zoom transitions */
-  transition: transform 0.1s ease-out;
+  /* Enable hardware acceleration for smooth zoom */
+  transform: translateZ(0);
   will-change: transform;
 }
 

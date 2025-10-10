@@ -6,16 +6,38 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- � [2025-01-07] Fixed "Cannot access before initialization" error in MangaReader → Moved `applyTransform` function definition before useEffect hooks that use it to fix hoisting issue
+- 🐛 [2025-10-07] Fixed zoom pan exceeding viewport bounds → Changed pan bounds calculation from (zoomLevel - 1) * 50% to 50% / zoomLevel, preventing image from being panned outside viewport (at 2x zoom: max pan reduced from ±50% to ±25%)
+- 🐛 [2025-10-07] Fixed double-click interfering with 4-click counter → Reset lastClickTimeRef to 0 when double-click detected to ensure next click after double-click is treated as completely fresh start, preventing false double-click detection on subsequent clicks
+- 🐛 [2025-10-07] Fixed 4-click UI toggle executing twice per click → Added e.stopPropagation() to handleImageClick to prevent event bubbling, changed from toggleControls() to setShowControls(prev => !prev) for correct state toggle, added isZoomed check to ignore clicks during zoom, enhanced debug logging to show controls state
 - 🐛 [2025-10-05] Fixed zoom not working on Android WebView → Added WebView zoom settings in MainActivity.java (setSupportZoom, setBuiltInZoomControls, setDisplayZoomControls, setUseWideViewPort, setLoadWithOverviewMode) and updated viewport meta tag in index.html with user-scalable=yes and maximum-scale=5.0
 - 🐛 [2025-10-05] Fixed duplicate touch-action declaration in manga-reader.css → Removed redundant touch-action: auto line in scroll mode media query (lines 277-278), keeping only touch-action: pan-y pinch-zoom to enable both vertical scrolling and pinch-to-zoom on mobile devices
 - 🐛 [2025-10-05] Fixed duplicate touch-action CSS rule in manga-reader.css → Removed redundant touch-action: pan-y pinch-zoom declaration from @media (max-width: 768px) as it was already defined globally for .reader.scroll-mode selectors (lines 603-606)
 - 🐛 [2025-10-05] Fixed race condition in MangaReader image onLoad handler → Changed from using currentImages[currentPage] to e.currentTarget.currentSrc to get actual loaded image URL, preventing bugs when currentPage state changes before onLoad event fires
+
+### Changed
+
+- 🔄 [2025-01-07] Refactored MangaReader zoom/pan to imperative approach → Changed from state-based (`setPanPosition`) to refs + `requestAnimationFrame` for better performance (no re-renders during pan, smooth 60fps with RAF throttling, direct DOM manipulation via `imgRef` and `applyTransform` function)
+- 🔄 [2025-10-07] Refactored all magic numbers in MangaReader to constants → Extracted 15+ magic numbers (zoom levels, pan damping, timing thresholds, retry delays, etc.) to READER constants with detailed comments for each value explaining purpose and units
 - 🐛 [2025-10-05] Fixed touch event null check bug in MangaReader → Replaced falsy checks (!touchStart || !touchEnd) with explicit null checks (=== null) to prevent false positive when touch coordinates are 0 (left edge of screen), ensuring swipe gestures work correctly from screen edges
 - 🐛 [2025-10-05] Fixed image loading delay on slow networks in horizontal mode → Added loading state (isImageLoading) with smart preload checking: only shows loading spinner if target image not yet cached, implemented 5-second timeout safety mechanism, added loading state clear on image onLoad/onError events
 
+- 🐛 [2025-10-06] Fixed zoom reset during pan gestures in MangaReader → Modified touch event handlers to prevent swipe detection interference when zoomed, allowing smooth pan without zoom reset
+
+- 🐛 [2025-10-07] Fixed pan gesture "jump" issue in MangaReader zoom → Implemented delta-based pan calculation using initial touch position, allowing smooth panning from any touch point instead of jumping back to zoom origin
+
+- 🔄 [2025-10-07] Reduced pan sensitivity in MangaReader zoom mode → Added damping factor (0.5x) to prevent image "drifting" too fast during pan gestures, providing more precise control
+
+- 🐛 [2025-10-07] Fixed pan bounds in MangaReader zoom → Implemented dynamic pan limits based on zoom level ((zoomLevel - 1) * 50%), preventing image from being panned outside viewport excessively
+
 ### Added
 
-- ✨ [2025-10-05] Added accessibility attributes to loading overlay in MangaReader → Added role="status" and aria-live="polite" to loading spinner overlay for better screen reader support, following WCAG guidelines for dynamic content announcements
+- ✨ [2025-10-06] Added double-click zoom functionality in horizontal MangaReader mode → Double-click image to zoom in/out, pan to view different image areas when zoomed, disabled swipe navigation during zoom to prevent conflicts, changed single-click to 4-click toggle for UI controls to avoid gesture conflicts
+
+### Changed
+
+- 🔄 [2025-10-06] Optimized zoom implementation for image-only zoom with smooth pan → Moved zoom transform from wrapper to image element for better performance, added hardware acceleration, constrained pan bounds, improved touch gesture handling for smoother zoom/pan experience
+- ✨ [2025-10-06] Added double-click zoom functionality in horizontal MangaReader mode → Double-click image to zoom in/out, pan to view different image areas when zoomed, disabled swipe navigation during zoom to prevent conflicts, changed single-click to 4-click toggle for UI controls to avoid gesture conflicts
 
 ### Changed
 
