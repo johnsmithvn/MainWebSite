@@ -1320,8 +1320,8 @@ const MangaReader = () => {
                       imageLoadTimeoutRef.current = null;
                     }
                     
-                    // ✅ Fixed: Use actual loaded image src to avoid race condition
-                    const src = e.currentTarget.currentSrc || e.currentTarget.src;
+                    // ✅ Fixed: Use actual loaded image src with optional chaining to avoid race condition
+                    const src = e.currentTarget?.currentSrc || e.currentTarget?.src;
                     const wasPreloaded = preloadedImagesRef.current.has(src);
                     const loadCount = (loadCountRef.current.get(src) || 0) + 1;
                     loadCountRef.current.set(src, loadCount);

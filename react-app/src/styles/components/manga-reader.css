@@ -593,11 +593,6 @@
   -webkit-user-select: none;
 }
 
-/* ✅ Vertical scroll mode: allow both scroll and zoom */
-.reader.scroll-mode .zoom-wrapper,
-.reader.scroll-mode .scroll-img {
-  touch-action: pan-y pinch-zoom;
-}
 
 /* ========== LOADING SPINNER ANIMATION ========== */
 @keyframes spin {

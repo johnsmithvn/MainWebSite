@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file. Dates use Y
 ### Fixed
 
 - � [2025-01-07] Fixed "Cannot access before initialization" error in MangaReader → Moved `applyTransform` function definition before useEffect hooks that use it to fix hoisting issue
-- 🐛 [2025-10-07] Fixed zoom pan exceeding viewport bounds → Changed pan bounds calculation from (zoomLevel - 1) * 50% to 50% / zoomLevel, preventing image from being panned outside viewport (at 2x zoom: max pan reduced from ±50% to ±25%)
+- 🐛 [2025-10-07] Fixed zoom pan exceeding viewport bounds → Changed pan bounds calculation to `PAN_MAX_PERCENT_FACTOR / zoomLevel` (where PAN_MAX_PERCENT_FACTOR = 50), preventing image from being panned outside viewport (at 2x zoom: max pan reduced from ±50% to ±25%)
 - 🐛 [2025-10-07] Fixed double-click interfering with 4-click counter → Reset lastClickTimeRef to 0 when double-click detected to ensure next click after double-click is treated as completely fresh start, preventing false double-click detection on subsequent clicks
 - 🐛 [2025-10-07] Fixed 4-click UI toggle executing twice per click → Added e.stopPropagation() to handleImageClick to prevent event bubbling, changed from toggleControls() to setShowControls(prev => !prev) for correct state toggle, added isZoomed check to ignore clicks during zoom, enhanced debug logging to show controls state
 - 🐛 [2025-10-05] Fixed zoom not working on Android WebView → Added WebView zoom settings in MainActivity.java (setSupportZoom, setBuiltInZoomControls, setDisplayZoomControls, setUseWideViewPort, setLoadWithOverviewMode) and updated viewport meta tag in index.html with user-scalable=yes and maximum-scale=5.0
