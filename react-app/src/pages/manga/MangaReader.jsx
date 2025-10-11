@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { BookOpen, PanelLeft } from 'lucide-react';
 import { useMangaStore, useAuthStore } from '../../store';
+import useDownloadQueueStore, { DOWNLOAD_STATUS } from '../../store/downloadQueueStore';
 import { useRecentManager } from '../../hooks/useRecentManager';
 import { getFolderName, extractTitlesFromPath } from '../../utils/pathUtils';
 import { apiService } from '../../utils/api';
@@ -23,6 +24,14 @@ const MangaReader = () => {
   const { readerSettings, updateReaderSettings, mangaSettings, favorites, toggleFavorite, readerPrefetch, setReaderPrefetch } = useMangaStore();
   const { sourceKey, rootFolder } = useAuthStore();
   const { addRecentItem } = useRecentManager('manga');
+  
+  // Download Queue Store
+  const { 
+    addToQueue, 
+    findTaskByChapter, 
+    getTask,
+    tasks: queueTasks
+  } = useDownloadQueueStore();
   
   const [currentImages, setCurrentImages] = useState([]);
   const [currentPage, setCurrentPage] = useState(0); // index within current group for horizontal OR global index in vertical
@@ -73,6 +82,10 @@ const MangaReader = () => {
   // Storage quota states
   const [showStorageQuotaModal, setShowStorageQuotaModal] = useState(false);
   const [storageCheckResult, setStorageCheckResult] = useState(null);
+  
+  // Download Queue states
+  const [activeQueueTask, setActiveQueueTask] = useState(null);
+  const [showQueueMenu, setShowQueueMenu] = useState(false);
 
   // Zoom states for horizontal mode
   const [zoomLevel, setZoomLevel] = useState(READER.ZOOM_LEVEL_DEFAULT);
@@ -1013,6 +1026,134 @@ const MangaReader = () => {
     }
   };
 
+  // ============================================================================
+  // DOWNLOAD QUEUE: Add to Queue Handler
+  // ============================================================================
+  
+  const handleAddToQueue = async () => {
+    if (!currentImages.length || !currentMangaPath) {
+      toast.error('❌ Không có chapter để tải');
+      return;
+    }
+    
+    // Kiểm tra Caches API có sẵn không
+    if (!isCachesAPISupported()) {
+      toast.error('❌ ' + getUnsupportedMessage('Offline download'));
+      return;
+    }
+    
+    try {
+      // 1. Check if chapter already in queue
+      const mangaId = currentMangaPath.split('/').filter(Boolean)[0] || '';
+      const chapterId = currentMangaPath.split('/').filter(Boolean)[1] || '';
+      
+      const existingTask = findTaskByChapter(sourceKey, mangaId, chapterId);
+      
+      if (existingTask) {
+        // Task already exists
+        if (existingTask.status === DOWNLOAD_STATUS.COMPLETED) {
+          toast('ℹ️ Chapter đã được tải xuống', { icon: '✅' });
+        } else if (existingTask.status === DOWNLOAD_STATUS.DOWNLOADING) {
+          toast('ℹ️ Chapter đang được tải trong queue', { icon: '⏳' });
+        } else if (existingTask.status === DOWNLOAD_STATUS.PENDING) {
+          toast('ℹ️ Chapter đã có trong queue', { icon: '📋' });
+        } else {
+          toast(`ℹ️ Chapter đã có trong queue (${existingTask.status})`, { icon: '📋' });
+        }
+        
+        // Navigate to downloads page
+        navigate('/downloads');
+        return;
+      }
+      
+      // 2. Check storage quota (simplified check)
+      const estimatedSize = currentImages.length * 0.5; // 500KB per image estimate
+      const checkResult = await checkStorageForDownload(currentImages);
+      
+      if (!checkResult.canDownload) {
+        setStorageCheckResult(checkResult);
+        setShowStorageQuotaModal(true);
+        return;
+      }
+      
+      // 3. Extract titles from path
+      const { mangaTitle, chapterTitle } = extractTitlesFromPath(currentMangaPath);
+      
+      // 4. Add to queue
+      const taskId = addToQueue({
+        source: sourceKey,
+        mangaId,
+        mangaTitle: mangaTitle || mangaId,
+        chapterId,
+        chapterTitle: chapterTitle || chapterId,
+        totalPages: currentImages.length
+      });
+      
+      console.log('✅ Added to download queue:', taskId);
+      
+      // 5. Show success toast with link to downloads page
+      toast.success(
+        (t) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span>✅ Đã thêm vào queue download</span>
+            <button
+              onClick={() => {
+                navigate('/downloads');
+                toast.dismiss(t.id);
+              }}
+              style={{
+                background: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              📋 Xem Queue
+            </button>
+          </div>
+        ),
+        {
+          duration: 5000,
+          position: 'bottom-center'
+        }
+      );
+      
+    } catch (error) {
+      console.error('❌ Error adding to queue:', error);
+      toast.error('❌ Lỗi khi thêm vào queue: ' + error.message);
+    }
+  };
+
+  // ============================================================================
+  // DOWNLOAD QUEUE: Subscribe to Queue Updates
+  // ============================================================================
+  
+  useEffect(() => {
+    if (!currentMangaPath || !sourceKey) return;
+    
+    // Extract manga/chapter IDs
+    const pathParts = currentMangaPath.split('/').filter(Boolean);
+    if (pathParts.length < 2) return;
+    
+    const mangaId = pathParts[0];
+    const chapterId = pathParts[1];
+    
+    // Check if current chapter has active queue task
+    const task = findTaskByChapter(sourceKey, mangaId, chapterId);
+    
+    if (task && [DOWNLOAD_STATUS.DOWNLOADING, DOWNLOAD_STATUS.PENDING].includes(task.status)) {
+      setActiveQueueTask(task);
+    } else {
+      setActiveQueueTask(null);
+    }
+    
+    // Note: This will re-run when queueTasks changes (Zustand reactivity)
+  }, [currentMangaPath, sourceKey, queueTasks, findTaskByChapter]);
+
   // ===== Derived pagination (vertical mode) - must be before any conditional returns for hook order stability =====
   const imagesPerScrollPage = readerSettings.scrollImagesPerPage || 200;
   const totalScrollPages = Math.ceil(currentImages.length / imagesPerScrollPage);
@@ -1214,9 +1355,11 @@ const MangaReader = () => {
           onToggleFavorite={handleToggleFavorite}
           onSetThumbnail={handleSetThumbnail}
           onDownload={!isOfflineMode ? handleDownloadChapter : undefined}
+          onAddToQueue={!isOfflineMode ? handleAddToQueue : undefined}
           isDownloading={isDownloading}
           downloadProgress={downloadProgress}
           isOfflineAvailable={isChapterOfflineAvailable}
+          activeQueueTask={activeQueueTask}
         />
       )}
 

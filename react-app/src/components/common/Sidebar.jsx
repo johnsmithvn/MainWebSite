@@ -12,15 +12,20 @@ import {
   FiStar, 
   FiSettings,
   FiHeart,
-  FiList
+  FiList,
+  FiDownload
 } from 'react-icons/fi';
 import { useAuthStore } from '../../store';
+import useDownloadQueueStore from '../../store/downloadQueueStore';
 import { getContentTypeFromSourceKey } from '../../utils/databaseOperations';
 import DatabaseActions from './DatabaseActions';
 
 const Sidebar = ({ isOpen = false, onClose, type }) => {
   const location = useLocation();
   const { sourceKey, rootFolder } = useAuthStore();
+  
+  // Subscribe to download queue for badge count
+  const activeDownloadsCount = useDownloadQueueStore(state => state.activeDownloads.size);
   
   // Auto-detect content type from current sourceKey
   const currentContentType = getContentTypeFromSourceKey(sourceKey);
@@ -42,6 +47,7 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
         { path: '/manga', icon: FiBook, label: 'Manga' },
         { path: '/movie', icon: FiFilm, label: 'Movie' },
         { path: '/music', icon: FiMusic, label: 'Music' },
+        { path: '/downloads', icon: FiDownload, label: 'Downloads', count: activeDownloadsCount },
       ]
     },
     {

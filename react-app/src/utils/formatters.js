@@ -26,6 +26,9 @@ export const formatBytes = (bytes) => {
   return parseFloat(value.toFixed(2)) + ' ' + sizes[i];
 };
 
+// Alias for backward compatibility and consistency
+export const formatFileSize = formatBytes;
+
 /**
  * Format view count number to readable format
  * @param {number} count - The view count

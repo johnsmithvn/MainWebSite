@@ -25,6 +25,7 @@ import OfflineHome from '@/pages/offline/OfflineHome';
 import OfflineMangaLibrary from '@/pages/offline/OfflineMangaLibrary';
 import OfflineMovieLibrary from '@/pages/offline/OfflineMovieLibrary';
 import OfflineMusicLibrary from '@/pages/offline/OfflineMusicLibrary';
+import DownloadManager from '@/pages/downloads/DownloadManager';
 
 function MusicPlayerRouter() {
   const { playerSettings } = useMusicStore();
@@ -88,6 +89,10 @@ function App() {
         
         {/* Settings */}
         <Route path="settings" element={<Settings />} />
+        
+        {/* Downloads */}
+        <Route path="downloads" element={<DownloadManager />} />
+        
         <Route path="offline">
           <Route index element={<OfflineHome />} />
           <Route path="manga" element={<OfflineMangaLibrary />} />
