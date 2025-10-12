@@ -26,6 +26,16 @@ const getTypeFromKey = (sourceKey = '') => {
 export const useSharedSettingsStore = create(
   persist(
     (set, get) => ({
+      // Download settings (configurable chunking)
+      downloadSettings: {
+        chunkSize: 2,      // 1-10 images per chunk (default: 2)
+        chunkDelay: 100,   // 50-500ms delay between chunks (default: 100)
+      },
+      
+      updateDownloadSettings: (settings) => set((state) => ({
+        downloadSettings: { ...state.downloadSettings, ...settings }
+      })),
+      
       // Common cache management
       clearAllCache: () => {
         try {
@@ -69,7 +79,9 @@ export const useSharedSettingsStore = create(
     }),
     {
       name: 'shared-settings-storage',
-      partialize: (state) => ({}), // Don't persist anything for now
+      partialize: (state) => ({
+        downloadSettings: state.downloadSettings,
+      }),
     }
   )
 );

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { BookOpen, PanelLeft } from 'lucide-react';
 import { useMangaStore, useAuthStore } from '../../store';
+import useDownloadQueueStore, { DOWNLOAD_STATUS } from '../../store/downloadQueueStore';
 import { useRecentManager } from '../../hooks/useRecentManager';
 import { getFolderName, extractTitlesFromPath } from '../../utils/pathUtils';
 import { apiService } from '../../utils/api';
@@ -23,6 +24,16 @@ const MangaReader = () => {
   const { readerSettings, updateReaderSettings, mangaSettings, favorites, toggleFavorite, readerPrefetch, setReaderPrefetch } = useMangaStore();
   const { sourceKey, rootFolder } = useAuthStore();
   const { addRecentItem } = useRecentManager('manga');
+  
+  // Download Queue Store
+  const { 
+    addToQueue, 
+    findTaskByChapter, 
+    getTask,
+    tasks: queueTasks,
+    activeDownloads,
+    stats
+  } = useDownloadQueueStore();
   
   const [currentImages, setCurrentImages] = useState([]);
   const [currentPage, setCurrentPage] = useState(0); // index within current group for horizontal OR global index in vertical
@@ -73,6 +84,10 @@ const MangaReader = () => {
   // Storage quota states
   const [showStorageQuotaModal, setShowStorageQuotaModal] = useState(false);
   const [storageCheckResult, setStorageCheckResult] = useState(null);
+  
+  // Download Queue states - Modal "Đã cho vào hàng chờ"
+  const [showQueuedModal, setShowQueuedModal] = useState(false);
+  const [queuedTaskInfo, setQueuedTaskInfo] = useState(null);
 
   // Zoom states for horizontal mode
   const [zoomLevel, setZoomLevel] = useState(READER.ZOOM_LEVEL_DEFAULT);
@@ -92,21 +107,44 @@ const MangaReader = () => {
   const getCacheStatus = useCallback(() => {
     const total = currentImages.length;
     const preloaded = preloadedImagesRef.current.size;
+    const loading = loadingImagesRef.current.size;
+    const activeLinks = activePreloadLinksRef.current.size;
     const currentSrc = currentImages[currentPage];
-    const currentPreloaded = currentSrc ? preloadedImagesRef.current.has(currentSrc) : false;
+    const normalizedCurrentSrc = normalizeImageUrl(currentSrc);
+    const currentPreloaded = currentSrc ? preloadedImagesRef.current.has(normalizedCurrentSrc) : false;
     
     return {
       total,
       preloaded,
+      loading,
+      activeLinks,
       percentage: total > 0 ? Math.round((preloaded / total) * 100) : 0,
       currentPreloaded,
-      currentSrc: currentSrc?.split('/').pop()
+      currentSrc: currentSrc?.split('/').pop(),
+      // ✅ Additional debug info
+      isTabVisible: !document.hidden,
+      mode: readerSettings.readingMode,
+      preloadCount: readerSettings.preloadCount
     };
-  }, [currentImages, currentPage]);
+  }, [currentImages, currentPage, readerSettings.readingMode, readerSettings.preloadCount, normalizeImageUrl]);
 
   // Make cache status available globally for debugging
   useEffect(() => {
     window.__MANGA_CACHE_STATUS__ = getCacheStatus;
+    window.__MANGA_DEBUG__ = {
+      getCacheStatus,
+      clearCache: () => {
+        preloadedImagesRef.current.clear();
+        loadingImagesRef.current.clear();
+        activePreloadLinksRef.current.forEach(link => link.remove());
+        activePreloadLinksRef.current.clear();
+        linkMapRef.current.clear();
+        console.log('✅ Cache cleared manually');
+      },
+      getLoadStats: () => window.__IMG_LOAD_STATS__,
+      // ✅ Toggle preload on/off for debugging
+      disablePreload: false
+    };
   }, [getCacheStatus]);
 
   // the required distance between touchStart and touchEnd to be detected as a swipe
@@ -169,58 +207,137 @@ const MangaReader = () => {
     
     checkOfflineStatus();
   }, [currentMangaPath]);
+  
+  // ✅ Re-check offline status when download completes
+  useEffect(() => {
+    const checkOfflineStatus = async () => {
+      if (!currentMangaPath) return;
+      try {
+        const isAvailable = await isChapterDownloaded(currentMangaPath);
+        console.log('[Reader] 🔍 Re-checking offline status:', { 
+          currentMangaPath, 
+          isAvailable,
+          totalDownloaded: stats.totalDownloaded 
+        });
+        setIsChapterOfflineAvailable(isAvailable);
+      } catch (err) {
+        console.error('Error re-checking offline status after download:', err);
+      }
+    };
+    
+    // Re-check when any download completes (stats.totalDownloaded changes)
+    checkOfflineStatus();
+  }, [stats.totalDownloaded, currentMangaPath]); // ← Trigger khi có download complete
 
   // Enhanced preload using link preload for better browser cache integration
-  const preloadImage = useCallback((src) => {
+  // ✅ Track active preload links for cancellation
+  const activePreloadLinksRef = useRef(new Set());
+  // ✅ Track để tránh duplicate link với URL normalized
+  const linkMapRef = useRef(new Map()); // normalizedUrl -> link element
+
+  /**
+   * 🔧 Normalize URL for consistent matching
+   * Giải quyết vấn đề: So khớp link chưa chuẩn hóa (#2)
+   */
+  const normalizeImageUrl = useCallback((url) => {
+    if (!url) return '';
+    try {
+      // Remove query params and hash for consistent matching
+      const urlObj = new URL(url, window.location.origin);
+      return urlObj.origin + urlObj.pathname;
+    } catch {
+      return url;
+    }
+  }, []);
+
+  const preloadImage = useCallback((src, cancelledRef) => {
     return new Promise((resolve, reject) => {
       if (!src) return resolve(src);
-      if (preloadedImagesRef.current.has(src)) return resolve(src);
-      if (loadingImagesRef.current.has(src)) return resolve(src); // already in-flight
       
-      loadingImagesRef.current.add(src);
+      const normalizedSrc = normalizeImageUrl(src);
+      
+      if (preloadedImagesRef.current.has(normalizedSrc)) return resolve(src);
+      if (loadingImagesRef.current.has(normalizedSrc)) return resolve(src); // already in-flight
+      
+      // ✅ Check cancellation BEFORE starting
+      if (cancelledRef?.current) {
+        return resolve(src);
+      }
+      
+      // ✅ Check visibility before preload (Điểm #7 - Tab nền gây lãng phí)
+      if (document.hidden) {
+        console.log(`🛑 Preload skipped (tab hidden): ${src.split('/').pop()}`);
+        return resolve(src);
+      }
+      
+      loadingImagesRef.current.add(normalizedSrc);
       
       // Strategy 1: Use <link rel="preload"> for better cache integration
-      const existingLink = document.querySelector(`link[href="${src}"]`);
+      // ✅ Check linkMapRef instead of querySelector (faster & more reliable)
+      const existingLink = linkMapRef.current.get(normalizedSrc);
       if (!existingLink) {
         const link = document.createElement('link');
         link.rel = 'preload';
         link.as = 'image';
         link.href = src;
+        // ✅ Set crossOrigin for CORS images (Điểm #1)
+        link.crossOrigin = 'anonymous';
+        
+        // ✅ Track link for cleanup
+        activePreloadLinksRef.current.add(link);
+        linkMapRef.current.set(normalizedSrc, link);
         
         link.onload = () => {
-          loadingImagesRef.current.delete(src);
-          preloadedImagesRef.current.add(src);
+          loadingImagesRef.current.delete(normalizedSrc);
+          preloadedImagesRef.current.add(normalizedSrc);
+          activePreloadLinksRef.current.delete(link);
+          linkMapRef.current.delete(normalizedSrc);
           console.log(`✅ Preloaded (link): ${src.split('/').pop()}`);
           // Clean up after successful preload
-          setTimeout(() => link.remove(), READER.PRELOAD_LINK_CLEANUP_DELAY);
+          setTimeout(() => {
+            try { link.remove(); } catch {}
+          }, READER.PRELOAD_LINK_CLEANUP_DELAY);
           resolve(src);
         };
         
         link.onerror = () => {
-          loadingImagesRef.current.delete(src);
+          loadingImagesRef.current.delete(normalizedSrc);
+          activePreloadLinksRef.current.delete(link);
+          linkMapRef.current.delete(normalizedSrc);
           console.warn(`❌ Link preload failed: ${src.split('/').pop()}`);
-          link.remove();
+          try { link.remove(); } catch {}
           
-          // Fallback to Image object
+          // Fallback to Image object (Safari/iOS quirks - Điểm #6)
           const img = new Image();
+          img.crossOrigin = 'anonymous'; // ✅ Also set for fallback
+          
           img.onload = () => {
-            preloadedImagesRef.current.add(src);
+            loadingImagesRef.current.delete(normalizedSrc);
+            preloadedImagesRef.current.add(normalizedSrc);
             console.log(`✅ Preloaded (img fallback): ${src.split('/').pop()}`);
             resolve(src);
           };
-          img.onerror = reject;
+          
+          img.onerror = () => {
+            loadingImagesRef.current.delete(normalizedSrc);
+            console.error(`❌ Image fallback failed: ${src.split('/').pop()}`);
+            reject(new Error(`Failed to preload: ${src}`));
+          };
+          
+          // ✅ Set decoding for async (Điểm #5 - Fallback abort handling)
+          img.decoding = 'async';
           img.src = src;
         };
         
         document.head.appendChild(link);
       } else {
         // Link already exists
-        loadingImagesRef.current.delete(src);
-        preloadedImagesRef.current.add(src);
+        loadingImagesRef.current.delete(normalizedSrc);
+        preloadedImagesRef.current.add(normalizedSrc);
         resolve(src);
       }
     });
-  }, []);
+  }, [normalizeImageUrl]);
 
   const loadFolderData = useCallback(async (path) => {
     // Abort previous in-flight request
@@ -377,6 +494,26 @@ const MangaReader = () => {
       }
     };
   }, []);
+  
+  // ✅ Điểm #7 - Visibilitychange: Resume preload khi tab visible lại
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && readerSettings.readingMode === 'horizontal' && currentImages.length > 0) {
+        console.log('👁️ Tab visible again, resuming preload...');
+        // Re-trigger preload for current page
+        const cancelledRef = { current: false };
+        preloadImagesAroundCurrentPage(cancelledRef);
+      } else if (document.hidden) {
+        console.log('🙈 Tab hidden, preload will be paused');
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [readerSettings.readingMode, currentImages.length, currentPage, preloadImagesAroundCurrentPage]);
 
   // Handle browser back button
   useEffect(() => {
@@ -396,10 +533,22 @@ const MangaReader = () => {
   }, [navigate, searchParams]);
 
   // Optimized preload function - intelligent cache-aware preloading
-  const preloadImagesAroundCurrentPage = useCallback(async () => {
+  const preloadImagesAroundCurrentPage = useCallback(async (cancelledRef) => {
     // Skip entirely in vertical mode – the images are already in DOM (with lazy loading)
     if (readerSettings.readingMode === 'vertical') return;
     if (!currentImages.length) return;
+    
+    // ✅ Debug toggle: Allow disabling preload for testing
+    if (window.__MANGA_DEBUG__?.disablePreload) {
+      console.log('🛑 Preload disabled by debug flag');
+      return;
+    }
+    
+    // ✅ Điểm #7 - Skip preload nếu tab đang ẩn (tránh lãng phí bandwidth)
+    if (document.hidden) {
+      console.log('🛑 Preload skipped: tab is hidden');
+      return;
+    }
     
     // Use actual user setting for preload count (1-20)
     const preloadCount = Math.max(1, Math.min(20, Number(readerSettings.preloadCount) || 10));
@@ -417,7 +566,8 @@ const MangaReader = () => {
     const forwardEnd = Math.min(currentImages.length - 1, currentPage + preloadCount);
     for (let i = forwardStart; i <= forwardEnd; i++) {
       const src = currentImages[i];
-      if (src && !preloadedImagesRef.current.has(src) && !loadingImagesRef.current.has(src)) {
+      const normalizedSrc = normalizeImageUrl(src);
+      if (src && !preloadedImagesRef.current.has(normalizedSrc) && !loadingImagesRef.current.has(normalizedSrc)) {
         imagesToPreload.push({ src, type: 'forward', index: i });
       }
     }
@@ -427,7 +577,8 @@ const MangaReader = () => {
     const backwardEnd = currentPage - 1;
     for (let i = backwardEnd; i >= backwardStart; i--) {
       const src = currentImages[i];
-      if (src && !preloadedImagesRef.current.has(src) && !loadingImagesRef.current.has(src)) {
+      const normalizedSrc = normalizeImageUrl(src);
+      if (src && !preloadedImagesRef.current.has(normalizedSrc) && !loadingImagesRef.current.has(normalizedSrc)) {
         imagesToPreload.push({ src, type: 'backward', index: i });
       }
     }
@@ -441,25 +592,59 @@ const MangaReader = () => {
       imagesToPreload.map(img => `${img.type}:${img.index + 1}`).join(', '));
     
     try {
-      // Preload with priority: forward images first, then backward
+      // ✅ SEQUENTIAL preload với adaptive delay (Điểm #11 - Tối ưu delay)
       const forwardImages = imagesToPreload.filter(img => img.type === 'forward');
       const backwardImages = imagesToPreload.filter(img => img.type === 'backward');
       
-      // Preload forward images first (more likely to be needed)
-      if (forwardImages.length > 0) {
-        await Promise.allSettled(forwardImages.map(img => preloadImage(img.src)));
+      // ✅ Điểm #11 - Adaptive delay dựa trên connection speed
+      const getAdaptiveDelay = () => {
+        // Check Network Information API (nếu có)
+        if ('connection' in navigator && navigator.connection) {
+          const effectiveType = navigator.connection.effectiveType;
+          // '4g' -> 20ms, '3g' -> 50ms, '2g' -> 100ms, 'slow-2g' -> 150ms
+          switch (effectiveType) {
+            case '4g': return 20;
+            case '3g': return 50;
+            case '2g': return 100;
+            case 'slow-2g': return 150;
+            default: return 50;
+          }
+        }
+        // Fallback: Use config or default 50ms
+        return READER.PRELOAD_STEP_DELAY || 50;
+      };
+      
+      const delay = getAdaptiveDelay();
+      console.log(`⏱️ Using adaptive delay: ${delay}ms`);
+      
+      // Preload forward images SEQUENTIALLY (không song song)
+      for (const img of forwardImages) {
+        // ✅ Check cancellation AND visibility before each preload
+        if (cancelledRef?.current || document.hidden) {
+          console.log('🛑 Preload cancelled (unmount or tab hidden)');
+          return;
+        }
+        await preloadImage(img.src, cancelledRef); // ✅ Pass cancelledRef
+        // ✅ Adaptive delay between images
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
       
-      // Then preload backward images
-      if (backwardImages.length > 0) {
-        await Promise.allSettled(backwardImages.map(img => preloadImage(img.src)));
+      // Then preload backward images SEQUENTIALLY
+      for (const img of backwardImages) {
+        // ✅ Check cancellation AND visibility before each preload
+        if (cancelledRef?.current || document.hidden) {
+          console.log('🛑 Preload cancelled (unmount or tab hidden)');
+          return;
+        }
+        await preloadImage(img.src, cancelledRef); // ✅ Pass cancelledRef
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
       
       console.log(`✅ Preload complete. Total cached: ${preloadedImagesRef.current.size}/${currentImages.length}`);
     } catch (error) {
       console.error('❌ Error preloading images:', error);
     }
-  }, [currentImages, currentPage, readerSettings.readingMode, readerSettings.preloadCount, preloadImage]);
+  }, [currentImages, currentPage, readerSettings.readingMode, readerSettings.preloadCount, preloadImage, normalizeImageUrl]);
 
   // ✅ Apply transform directly to DOM using refs (no re-render)
   // MUST be defined BEFORE any useEffect or callback that uses it
@@ -478,11 +663,66 @@ const MangaReader = () => {
 
   // Effect to preload images when currentPage changes with optimized timing
   useEffect(() => {
-    if (currentImages.length > 0 && readerSettings.readingMode === 'horizontal') {
-      // Immediate preload for better UX (no delay)
-      preloadImagesAroundCurrentPage();
+    if (currentImages.length === 0 || readerSettings.readingMode !== 'horizontal') {
+      return;
     }
+    
+    // ✅ Cancellation flag using ref (checked in async loop)
+    const cancelledRef = { current: false };
+    
+    const preloadAsync = async () => {
+      await preloadImagesAroundCurrentPage(cancelledRef);
+    };
+    
+    preloadAsync();
+    
+    // ✅ Cleanup: Set flag + remove pending <link> elements (Điểm #3 - Rò rỉ <link>)
+    return () => {
+      cancelledRef.current = true;
+      
+      // Remove all active preload links from DOM
+      activePreloadLinksRef.current.forEach(link => {
+        try {
+          link.remove();
+          console.log(`🗑️ Removed preload link: ${link.href.split('/').pop()}`);
+        } catch (err) {
+          console.warn('Error removing link:', err);
+        }
+      });
+      activePreloadLinksRef.current.clear();
+      linkMapRef.current.clear(); // ✅ Also clear map
+      
+      console.log('🧹 Preload cancelled on unmount/page change');
+    };
   }, [currentImages.length, currentPage, readerSettings.readingMode, preloadImagesAroundCurrentPage]);
+  
+  // ✅ Điểm #9 - Memory Management: Giới hạn preloaded cache để tránh memory leak
+  useEffect(() => {
+    const MAX_CACHED_IMAGES = 300; // Giới hạn 300 URL trong cache
+    
+    if (preloadedImagesRef.current.size > MAX_CACHED_IMAGES) {
+      console.warn(`🧹 Cache size (${preloadedImagesRef.current.size}) exceeded limit, clearing old entries...`);
+      
+      // Convert Set to Array to slice
+      const cachedUrls = Array.from(preloadedImagesRef.current);
+      
+      // Keep only recent 200 images (remove oldest 100+)
+      const toKeep = new Set(cachedUrls.slice(-200));
+      preloadedImagesRef.current = toKeep;
+      
+      console.log(`✅ Cache cleared, now ${preloadedImagesRef.current.size} images`);
+    }
+  }, [currentPage, currentImages.length]);
+  
+  // ✅ Điểm #9 - Clear cache khi rời chapter (unmount)
+  useEffect(() => {
+    return () => {
+      console.log('🧹 Clearing preload cache on chapter unmount...');
+      preloadedImagesRef.current.clear();
+      loadingImagesRef.current.clear();
+      linkMapRef.current.clear();
+    };
+  }, [currentMangaPath]); // ✅ Trigger khi đổi chapter
 
   // ✅ Sync transform when zoom/origin changes (not during pan for performance)
   useEffect(() => {
@@ -883,85 +1123,86 @@ const MangaReader = () => {
   const handleDownloadChapter = async () => {
     if (!currentImages.length || !currentMangaPath || isDownloading) return;
     
-    // Kiểm tra Caches API có sẵn không
-    if (!isCachesAPISupported()) {
-      toast.error('❌ ' + getUnsupportedMessage('Offline download'));
-      
-      // Hiển thị modal với thông tin browser support
-      setStorageCheckResult({
-        canDownload: false,
-        warning: false, 
-        error: true,
-        errorMessage: getUnsupportedMessage('Offline download'),
-        message: 'Browser không hỗ trợ offline download',
-        quota: null,
-        required: currentImages ? currentImages.length * 0.5 : 0,
-      });
-      setShowStorageQuotaModal(true);
-      return;
-    }
+    // ✅ BƯỚC 1: Hiện loading NGAY KHI CLICK
+    setIsCheckingStorage(true);
+    setShowDownloadConfirmModal(true); // Show modal với loading spinner
     
-    // Mở modal confirm
-    setShowDownloadConfirmModal(true);
+    try {
+      // Kiểm tra Caches API có sẵn không
+      if (!isCachesAPISupported()) {
+        setIsCheckingStorage(false);
+        setShowDownloadConfirmModal(false);
+        toast.error('❌ ' + getUnsupportedMessage('Offline download'));
+        
+        setStorageCheckResult({
+          canDownload: false,
+          warning: false, 
+          error: true,
+          errorMessage: getUnsupportedMessage('Offline download'),
+          message: 'Browser không hỗ trợ offline download',
+          quota: null,
+          required: currentImages ? currentImages.length * 0.5 : 0,
+        });
+        setShowStorageQuotaModal(true);
+        return;
+      }
+      
+      // ✅ BƯỚC 2: Check storage TRƯỚC (với loading)
+      const checkPromise = checkStorageForDownload(currentImages);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Storage check timeout after 10s')), 10000)
+      );
+      
+      const checkResult = await Promise.race([checkPromise, timeoutPromise]);
+      setStorageCheckResult(checkResult);
+      setIsCheckingStorage(false); // Tắt loading
+      
+      // Nếu không đủ storage hoặc có warning
+      if (!checkResult.canDownload || checkResult.warning) {
+        setShowDownloadConfirmModal(false);
+        setShowStorageQuotaModal(true);
+        return;
+      }
+      
+      // ✅ BƯỚC 3: Storage OK → Check active downloads
+      const activeDownloadCount = activeDownloads.size;
+      
+      if (activeDownloadCount >= 2) {
+        // 2+ active downloads → Add to queue only (không confirm)
+        setShowDownloadConfirmModal(false);
+        await handleAutoAddToQueue();
+        return;
+      }
+      
+      // ✅ BƯỚC 4: < 2 active → Hiện modal confirm (loading đã tắt, sẵn sàng confirm)
+      // Modal vẫn đang mở, chờ user click confirm
+      
+    } catch (err) {
+      setIsCheckingStorage(false);
+      setShowDownloadConfirmModal(false);
+      toast.error('❌ Lỗi: ' + (err.message || 'Unknown error'));
+    }
   };
 
   const handleDownloadConfirm = async () => {
     if (!currentImages.length || !currentMangaPath || isDownloading) return;
     
     try {
-      // Hiển thị loading state trong confirm modal
-      setIsCheckingStorage(true);
+      // Đóng confirm modal ngay
+      setShowDownloadConfirmModal(false);
       
       // Nếu đã download, xóa chapter cũ trước
       if (isChapterOfflineAvailable) {
-        console.log('🗑️ Deleting old chapter before re-download...');
         await deleteChapterCompletely(currentMangaPath);
         setIsChapterOfflineAvailable(false);
-        console.log('✅ Old chapter deleted successfully');
       }
       
-      // 1. Kiểm tra storage quota
-      console.log('🔍 Checking storage quota before download...');
-      const checkResult = await checkStorageForDownload(currentImages);
-      setStorageCheckResult(checkResult);
-      
-      // Đóng confirm modal
-      setShowDownloadConfirmModal(false);
-      setIsCheckingStorage(false);
-      
-      if (!checkResult.canDownload) {
-        // Hiển thị modal thông báo lỗi storage
-        setShowStorageQuotaModal(true);
-        return;
-      }
-      
-      // 2. Nếu có warning, hiển thị modal xác nhận
-      if (checkResult.warning) {
-        setShowStorageQuotaModal(true);
-        return; // Chờ user xác nhận trong modal
-      }
-      
-      // 3. Tiếp tục download nếu quota OK
-      await proceedWithDownload();
+      // 🔥 Add to queue với auto-start (storage đã check rồi)
+      await handleAddToQueueWithAutoStart();
       
     } catch (err) {
-      console.error('❌ Error checking storage quota:', err);
-      toast.error('❌ Lỗi kiểm tra dung lượng: ' + err.message);
-      
-      // Đóng confirm modal và hiển thị error
-      setShowDownloadConfirmModal(false);
-      setIsCheckingStorage(false);
-      
-      // Set error state for modal display
-      setStorageCheckResult({
-        canDownload: false,
-        warning: false,
-        error: true,
-        errorMessage: err.message || 'Unknown error',
-        quota: null,
-        required: currentImages ? currentImages.length * 0.5 : 0,
-      });
-      setShowStorageQuotaModal(true);
+      console.error('❌ Error in handleDownloadConfirm:', err);
+      toast.error('❌ Lỗi: ' + (err.message || 'Unknown error'));
     }
   };
 
@@ -1012,6 +1253,302 @@ const MangaReader = () => {
       setIsDownloading(false);
     }
   };
+
+  // ============================================================================
+  // HELPER: Check Queue Status
+  // ============================================================================
+
+  /**
+   * Check if current chapter is in download queue
+   * @returns {boolean} True if chapter exists in queue (any status)
+   */
+  const checkIfChapterInQueue = () => {
+    if (!currentMangaPath) return false;
+    
+    const cleanPath = currentMangaPath.replace(/\/__self__$/, '');
+    const pathParts = cleanPath.split('/').filter(Boolean);
+    const mangaId = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : '';
+    const chapterId = pathParts[pathParts.length - 1] || cleanPath;
+    
+    const task = findTaskByChapter(sourceKey, mangaId, chapterId);
+    
+    // ✅ CHỈ hiện queue indicator nếu task đang PENDING hoặc DOWNLOADING
+    // Nếu COMPLETED → Đã được handle bởi isOfflineAvailable
+    if (!task) return false;
+    
+    return task.status === DOWNLOAD_STATUS.PENDING || task.status === DOWNLOAD_STATUS.DOWNLOADING;
+  };
+
+  // ============================================================================
+  // DOWNLOAD QUEUE: Add to Queue Handlers
+  // ============================================================================
+  
+  // 🔥 ADD TO QUEUE WITH AUTO-START: When 0-1 downloads are active
+  // This function adds to queue and lets worker auto-start immediately
+  // Modal CAN be closed, download continues in background
+  const handleAddToQueueWithAutoStart = async () => {
+    try {
+      // ✅ Nếu đã vào được reader page → ĐÃ LÀ CHAPTER RỒI, parse path thôi
+      const cleanPath = currentMangaPath.replace(/\/__self__$/, '');
+      const pathParts = cleanPath.split('/').filter(Boolean);
+      
+      // Extract mangaId and chapterId
+      const mangaId = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : '';
+      const chapterId = pathParts[pathParts.length - 1] || cleanPath;
+      
+      console.log('📊 Download:', { path: cleanPath, mangaId, chapterId });
+      
+      // Kiểm tra nếu đã có trong queue
+      const existingTask = findTaskByChapter(sourceKey, mangaId, chapterId);
+      if (existingTask) {
+        console.log('ℹ️ Task already exists in queue:', existingTask.id);
+        toast('ℹ️ Chapter đã có trong hàng chờ', { 
+          icon: '📋',
+          duration: 3000,
+          action: {
+            label: 'Xem',
+            onClick: () => navigate('/downloads')
+          }
+        });
+        return;
+      }
+      
+      // Extract titles từ path
+      const { mangaTitle, chapterTitle } = extractTitlesFromPath(currentMangaPath);
+      
+      // Add to queue (will auto-start immediately since < 2 active)
+      const taskId = addToQueue({
+        source: sourceKey,
+        rootFolder: stableAuthKeys.rootFolder, // ✅ REQUIRED for API
+        mangaId,
+        mangaTitle: mangaTitle || mangaId,
+        chapterId,
+        chapterTitle: chapterTitle || chapterId,
+        totalPages: currentImages.length
+      });
+      
+      console.log('✅ Added to queue with auto-start:', {
+        taskId,
+        source: sourceKey,
+        mangaId,
+        chapterId,
+        totalPages: currentImages.length
+      });
+      
+      // Show success toast với action button
+      toast.success('✅ Đã bắt đầu tải xuống', {
+        duration: 4000,
+        action: {
+          label: 'Xem tiến trình',
+          onClick: () => navigate('/downloads')
+        }
+      });
+      
+      // Ghi log view (tương tự như direct download)
+      try {
+        await fetch(`${API_BASE_URL}/api/increase-view`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            source: sourceKey,
+            mangaPath: currentMangaPath
+          })
+        });
+      } catch (err) {
+        console.warn('⚠️ Failed to increase view count:', err);
+        // Non-critical error, continue
+      }
+      
+    } catch (err) {
+      console.error('❌ Error adding to queue:', err);
+      toast.error('❌ Lỗi thêm vào hàng chờ: ' + err.message);
+    }
+  };
+  
+  // 🔥 AUTO ADD TO QUEUE: When 2+ downloads are active
+  const handleAutoAddToQueue = async () => {
+    if (!currentImages.length || !currentMangaPath) {
+      toast.error('❌ Không có chapter để tải');
+      return;
+    }
+    
+    try {
+      // Parse path
+      const cleanPath = currentMangaPath.replace(/\/__self__$/, '');
+      const pathParts = cleanPath.split('/').filter(Boolean);
+      const mangaId = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : '';
+      const chapterId = pathParts[pathParts.length - 1] || cleanPath;
+      
+      const existingTask = findTaskByChapter(sourceKey, mangaId, chapterId);
+      
+      if (existingTask) {
+        // Task already exists
+        if (existingTask.status === DOWNLOAD_STATUS.COMPLETED) {
+          toast('ℹ️ Chapter đã được tải xuống', { icon: '✅' });
+        } else if (existingTask.status === DOWNLOAD_STATUS.DOWNLOADING) {
+          toast('ℹ️ Chapter đang được tải trong queue', { icon: '⏳' });
+        } else if (existingTask.status === DOWNLOAD_STATUS.PENDING) {
+          toast('ℹ️ Chapter đã có trong queue', { icon: '📋' });
+        } else {
+          toast(`ℹ️ Chapter đã có trong queue (${existingTask.status})`, { icon: '📋' });
+        }
+        
+        // Navigate to downloads page
+        navigate('/downloads');
+        return;
+      }
+      
+      // 2. Check storage quota (simplified check)
+      const checkResult = await checkStorageForDownload(currentImages);
+      
+      if (!checkResult.canDownload) {
+        setStorageCheckResult(checkResult);
+        setShowStorageQuotaModal(true);
+        return;
+      }
+      
+      // 3. Extract titles from path
+      const { mangaTitle, chapterTitle } = extractTitlesFromPath(currentMangaPath);
+      
+      // 4. Add to queue
+      const taskId = addToQueue({
+        source: sourceKey,
+        rootFolder: stableAuthKeys.rootFolder, // ✅ REQUIRED for API
+        mangaId,
+        mangaTitle: mangaTitle || mangaId,
+        chapterId,
+        chapterTitle: chapterTitle || chapterId,
+        totalPages: currentImages.length
+      });
+      
+      console.log('✅ Auto-added to download queue:', taskId);
+      
+      // 5. Show "Đã cho vào hàng chờ" modal
+      setQueuedTaskInfo({
+        taskId,
+        mangaTitle: mangaTitle || mangaId,
+        chapterTitle: chapterTitle || chapterId,
+        totalPages: currentImages.length
+      });
+      setShowQueuedModal(true);
+      
+      // 6. Also show toast notification
+      toast.success('✅ Đã thêm vào hàng chờ download', {
+        duration: 3000,
+        position: 'bottom-center'
+      });
+      
+    } catch (error) {
+      console.error('❌ Error auto-adding to queue:', error);
+      toast.error('❌ Lỗi khi thêm vào queue: ' + error.message);
+    }
+  };
+  
+  const handleAddToQueue = async () => {
+    if (!currentImages.length || !currentMangaPath) {
+      toast.error('❌ Không có chapter để tải');
+      return;
+    }
+    
+    // Kiểm tra Caches API có sẵn không
+    if (!isCachesAPISupported()) {
+      toast.error('❌ ' + getUnsupportedMessage('Offline download'));
+      return;
+    }
+    
+    try {
+      // Parse path
+      const cleanPath = currentMangaPath.replace(/\/__self__$/, '');
+      const pathParts = cleanPath.split('/').filter(Boolean);
+      const mangaId = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : '';
+      const chapterId = pathParts[pathParts.length - 1] || cleanPath;
+      
+      const existingTask = findTaskByChapter(sourceKey, mangaId, chapterId);
+      
+      if (existingTask) {
+        // Task already exists
+        if (existingTask.status === DOWNLOAD_STATUS.COMPLETED) {
+          toast('ℹ️ Chapter đã được tải xuống', { icon: '✅' });
+        } else if (existingTask.status === DOWNLOAD_STATUS.DOWNLOADING) {
+          toast('ℹ️ Chapter đang được tải trong queue', { icon: '⏳' });
+        } else if (existingTask.status === DOWNLOAD_STATUS.PENDING) {
+          toast('ℹ️ Chapter đã có trong queue', { icon: '📋' });
+        } else {
+          toast(`ℹ️ Chapter đã có trong queue (${existingTask.status})`, { icon: '📋' });
+        }
+        
+        // Navigate to downloads page
+        navigate('/downloads');
+        return;
+      }
+      
+      // 2. Check storage quota (simplified check)
+      const estimatedSize = currentImages.length * 0.5; // 500KB per image estimate
+      const checkResult = await checkStorageForDownload(currentImages);
+      
+      if (!checkResult.canDownload) {
+        setStorageCheckResult(checkResult);
+        setShowStorageQuotaModal(true);
+        return;
+      }
+      
+      // 3. Extract titles from path
+      const { mangaTitle, chapterTitle } = extractTitlesFromPath(currentMangaPath);
+      
+      // 4. Add to queue
+      const taskId = addToQueue({
+        source: sourceKey,
+        rootFolder: stableAuthKeys.rootFolder, // ✅ REQUIRED for API
+        mangaId,
+        mangaTitle: mangaTitle || mangaId,
+        chapterId,
+        chapterTitle: chapterTitle || chapterId,
+        totalPages: currentImages.length
+      });
+      
+      console.log('✅ Added to download queue:', taskId);
+      
+      // 5. Show success toast with link to downloads page
+      toast.success(
+        (t) => (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span>✅ Đã thêm vào queue download</span>
+            <button
+              onClick={() => {
+                navigate('/downloads');
+                toast.dismiss(t.id);
+              }}
+              style={{
+                background: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              📋 Xem Queue
+            </button>
+          </div>
+        ),
+        {
+          duration: 5000,
+          position: 'bottom-center'
+        }
+      );
+      
+    } catch (error) {
+      console.error('❌ Error adding to queue:', error);
+      toast.error('❌ Lỗi khi thêm vào queue: ' + error.message);
+    }
+  };
+
+  // ============================================================================
+  // DOWNLOAD QUEUE: Subscribe to Queue Updates (REMOVED - Not needed)
+  // Smart logic now only checks activeDownloads.size in handleDownloadChapter
+  // ============================================================================
 
   // ===== Derived pagination (vertical mode) - must be before any conditional returns for hook order stability =====
   const imagesPerScrollPage = readerSettings.scrollImagesPerPage || 200;
@@ -1217,6 +1754,8 @@ const MangaReader = () => {
           isDownloading={isDownloading}
           downloadProgress={downloadProgress}
           isOfflineAvailable={isChapterOfflineAvailable}
+          isInQueue={checkIfChapterInQueue()}
+          isPreparingDownload={showDownloadConfirmModal && !isCheckingStorage}
         />
       )}
 
@@ -1583,6 +2122,172 @@ const MangaReader = () => {
         }}
         onCancel={() => setShowStorageQuotaModal(false)}
       />
+      
+      {/* Queued Modal - Hiển thị khi chapter được thêm vào queue */}
+      {showQueuedModal && queuedTaskInfo && (
+        <div 
+          className="modal-overlay"
+          onClick={() => setShowQueuedModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
+          }}
+        >
+          <div 
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-secondary, #2a2a2a)',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+              border: '1px solid var(--border-color, #3a3a3a)'
+            }}
+          >
+            {/* Header */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px',
+              marginBottom: '16px'
+            }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+                flexShrink: 0
+              }}>
+                ⏳
+              </div>
+              <div>
+                <h3 style={{ 
+                  margin: 0, 
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: 'var(--text-primary, #fff)'
+                }}>
+                  Đã cho vào hàng chờ
+                </h3>
+                <p style={{
+                  margin: 0,
+                  fontSize: '14px',
+                  color: 'var(--text-secondary, #aaa)',
+                  marginTop: '4px'
+                }}>
+                  Chapter sẽ được tải sau
+                </p>
+              </div>
+            </div>
+            
+            {/* Task Info */}
+            <div style={{
+              background: 'var(--bg-tertiary, #1f1f1f)',
+              borderRadius: '8px',
+              padding: '12px',
+              marginBottom: '20px'
+            }}>
+              <div style={{ 
+                fontSize: '14px',
+                color: 'var(--text-primary, #fff)',
+                fontWeight: '500',
+                marginBottom: '6px',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}>
+                {queuedTaskInfo.mangaTitle}
+              </div>
+              <div style={{
+                fontSize: '13px',
+                color: 'var(--text-secondary, #aaa)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span>📖 {queuedTaskInfo.chapterTitle}</span>
+                <span>•</span>
+                <span>{queuedTaskInfo.totalPages} trang</span>
+              </div>
+            </div>
+            
+            {/* Actions */}
+            <div style={{
+              display: 'flex',
+              gap: '12px'
+            }}>
+              <button
+                onClick={() => setShowQueuedModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: 'var(--bg-tertiary, #3a3a3a)',
+                  color: 'var(--text-primary, #fff)',
+                  border: '1px solid var(--border-color, #4a4a4a)',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-hover, #4a4a4a)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-tertiary, #3a3a3a)';
+                }}
+              >
+                Đóng
+              </button>
+              
+              <button
+                onClick={() => {
+                  setShowQueuedModal(false);
+                  navigate('/downloads');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+              >
+                <span>📋</span>
+                <span>Xem Downloads</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
