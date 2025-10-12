@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file. Dates use Y
 ### Fixed
 
 - 🐛 [2025-01-11] **CRITICAL MEMORY LEAK FIX: Image Preload Continues After Unmount**
-  - **Vấn đề:** 
+  - **Vấn đề:**
     - Vào trang reader → Load images → Thoát ra
     - DevTools Network tab: Hàng trăm requests vẫn status="pending"
     - Memory leak: Mỗi lần vào reader → Orphaned requests tích lũy
@@ -22,7 +22,7 @@ All notable changes to this project will be documented in this file. Dates use Y
     2. Check `cancelledRef.current` trước mỗi preload iteration
     3. `preloadImage()` check cancellation BEFORE starting
     4. Track active `<link>` elements trong `activePreloadLinksRef`
-    5. useEffect cleanup: 
+    5. useEffect cleanup:
        - Set `cancelledRef.current = true`
        - **Remove ALL active `<link>` elements từ DOM**
        - Clear `activePreloadLinksRef` Set
@@ -33,7 +33,8 @@ All notable changes to this project will be documented in this file. Dates use Y
     - Console log: "🛑 Preload cancelled by unmount"
     - Log: "🗑️ Removed preload link: [filename]"
     - NO memory leak, NO orphaned requests
-  - **Files changed:** `react-app/src/pages/manga/MangaReader.jsx`
+  - **Files changed:** `react-app/src/pages/manga/MangaReader.jsx` (Lines 208-565)
+  - **Documentation:** `react-app/docs/PERFORMANCE-FIXES-SUMMARY.md`
 
 ### Changed
 
