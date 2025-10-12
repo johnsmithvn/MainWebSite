@@ -9,7 +9,7 @@
  * - File size formatting
  */
 
-import { DOWNLOAD_STATUS } from '../constants';
+import { DOWNLOAD_STATUS } from '../constants/index';
 
 /**
  * Extract manga title from folder path
@@ -105,12 +105,14 @@ export function formatDownloadStatus(status) {
     [DOWNLOAD_STATUS?.COMPLETED]: 'Completed',
     [DOWNLOAD_STATUS?.FAILED]: 'Failed',
     [DOWNLOAD_STATUS?.CANCELLED]: 'Cancelled',
+    [DOWNLOAD_STATUS?.INTERRUPTED]: 'Interrupted',
     pending: 'Pending',
     downloading: 'Downloading',
     paused: 'Paused',
     completed: 'Completed',
     failed: 'Failed',
     cancelled: 'Cancelled',
+    interrupted: 'Interrupted',
   };
 
   return statusMap[status] || 'Unknown';
@@ -345,6 +347,7 @@ export function getStatusColor(status) {
     completed: 'text-green-500',
     failed: 'text-red-500',
     cancelled: 'text-gray-400',
+    interrupted: 'text-orange-500',
   };
 
   return colorMap[status] || 'text-gray-500';
@@ -368,6 +371,7 @@ export function getStatusIcon(status) {
     completed: 'CheckCircle',
     failed: 'XCircle',
     cancelled: 'X',
+    interrupted: 'AlertCircle',
   };
 
   return iconMap[status] || 'HelpCircle';

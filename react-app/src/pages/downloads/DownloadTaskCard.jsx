@@ -102,6 +102,12 @@ const DownloadTaskCard = ({ task }) => {
       text: 'Đã hủy',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-100 dark:bg-gray-700'
+    },
+    [DOWNLOAD_STATUS.INTERRUPTED]: {
+      icon: XCircle,
+      text: 'Bị gián đoạn',
+      color: 'text-orange-600 dark:text-orange-400',
+      bg: 'bg-orange-100 dark:bg-orange-900/30'
     }
   };
 
@@ -155,13 +161,22 @@ const DownloadTaskCard = ({ task }) => {
   };
 
   const handleViewChapter = () => {
+    // ✅ ROOT CAUSE FIX: Validate data at source
+    // This defensive check indicates data integrity issues that should be fixed upstream
+    if (!task || typeof task !== 'object') {
+      toast.error('❌ Dữ liệu task không hợp lệ');
+      console.error('Invalid task object:', task);
+      return;
+    }
+
     // ✅ Validate and encode path components
     const source = typeof task.source === 'string' ? task.source : '';
     const mangaId = typeof task.mangaId === 'string' ? task.mangaId : '';
     const chapterId = typeof task.chapterId === 'string' ? task.chapterId : '';
     
     if (!source || !mangaId || !chapterId) {
-      toast.error('Không thể mở chapter: thông tin không hợp lệ');
+      toast.error('❌ Không thể mở chapter: thông tin không hợp lệ');
+      console.error('Missing required fields:', { source, mangaId, chapterId, task });
       return;
     }
     

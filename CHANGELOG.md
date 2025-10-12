@@ -6,6 +6,50 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-01-12] **Fixed 3 Additional Issues from GitHub Copilot Review**
+  
+  **Issue #1 - Import path specificity:**
+  - **Vấn đề:** Import `DOWNLOAD_STATUS` từ `'../constants'` thay vì `'../constants/index'`
+  - **Giải pháp:** Sửa import path thành `'../constants/index'` cho rõ ràng
+  - **Files:** `downloadHelpers.js`
+  - **Mức độ:** Style improvement (code vẫn chạy được)
+  
+  **Issue #2 - Default export pattern:**
+  - **Vấn đề:** Import `{ useDownloadQueueStore }` với destructuring nhưng store export default
+  - **Giải pháp:** Đổi thành `import useDownloadQueueStore from '...'` (không destructuring)
+  - **Files:** `useDownloadQueue.js`
+  - **Mức độ:** Pattern consistency
+  
+  **Issue #5 - INTERRUPTED status (HIGH PRIORITY):**
+  - **Vấn đề:** Tasks đang "downloading" reset về "pending" khi app restart → Không phân biệt interrupted vs new pending tasks
+  - **Nguyên nhân:** User muốn biết task nào bị gián đoạn vs task nào pending chưa chạy
+  - **Giải pháp:**
+    - Thêm `DOWNLOAD_STATUS.INTERRUPTED` constant
+    - Tasks đang "downloading" → mark "interrupted" (không phải "pending") khi load
+    - Set error: "Download interrupted by app restart"
+    - UI hiển thị status "Bị gián đoạn" với màu cam
+  - **Files:**
+    - `downloadQueueStore.js`: Thêm INTERRUPTED status, update merge logic
+    - `DownloadTaskCard.jsx`: Thêm UI config cho interrupted status
+    - `downloadHelpers.js`: Thêm interrupted vào formatDownloadStatus, getStatusColor, getStatusIcon
+  - **Kết quả:**
+    - ✅ Users nhìn thấy tasks bị interrupted khác với pending
+    - ✅ Better UX: biết được task nào cần retry
+    - ✅ Orange color + "Bị gián đoạn" text
+  
+  **Issue #6 - Data integrity validation (SECURITY):**
+  - **Vấn đề:** Defensive type checking trong UI suggests data integrity issues at source
+  - **Root cause:** Data validation nên làm upstream (khi tạo task), không chỉ defensive ở UI
+  - **Giải pháp:**
+    - Keep defensive checks trong `handleViewChapter()`
+    - Thêm validation task object trước validation fields
+    - Thêm console.error với full task object để debug
+    - Improve error messages với emoji
+  - **Kết quả:**
+    - ✅ Better debugging với detailed error logs
+    - ✅ User feedback rõ ràng hơn
+    - ✅ Highlight technical debt (nên fix validation at source)
+
 - 🐛 [2025-01-12] **CRITICAL: Fixed 4 Download Queue Issues from Copilot Review**
   
   **Issue #1 - Pause/Cancel không stop downloads (CRITICAL):**

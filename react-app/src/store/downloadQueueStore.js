@@ -24,7 +24,8 @@ export const DOWNLOAD_STATUS = {
   COMPLETED: 'completed',
   FAILED: 'failed',
   PAUSED: 'paused',
-  CANCELLED: 'cancelled'
+  CANCELLED: 'cancelled',
+  INTERRUPTED: 'interrupted' // ✅ NEW: For tasks interrupted by app restart
 };
 
 export const MAX_CONCURRENT_DOWNLOADS = 2;
@@ -43,7 +44,7 @@ export const RETRY_DELAY_BASE = 1000; // 1 second, will use exponential backoff
  * @property {string} mangaTitle - Manga display name
  * @property {string} chapterId - Chapter folder name
  * @property {string} chapterTitle - Chapter display name
- * @property {'pending'|'downloading'|'completed'|'failed'|'paused'|'cancelled'} status
+ * @property {'pending'|'downloading'|'completed'|'failed'|'paused'|'cancelled'|'interrupted'} status
  * @property {number} progress - Progress percentage (0-100)
  * @property {number} currentPage - Current downloaded page
  * @property {number} totalPages - Total pages in chapter
@@ -672,10 +673,15 @@ const useDownloadQueueStore = create(
       merge: (persistedState, currentState) => {
         const tasks = new Map(persistedState.tasks || []);
         
-        // Reset any "downloading" tasks to "pending" on load
+        // ✅ Mark "downloading" tasks as "interrupted" on load (app restart/crash)
         tasks.forEach((task, id) => {
           if (task.status === DOWNLOAD_STATUS.DOWNLOADING) {
-            tasks.set(id, { ...task, status: DOWNLOAD_STATUS.PENDING, abortController: null });
+            tasks.set(id, { 
+              ...task, 
+              status: DOWNLOAD_STATUS.INTERRUPTED, 
+              abortController: null,
+              error: 'Download interrupted by app restart'
+            });
           }
         });
         
