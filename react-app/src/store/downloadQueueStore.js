@@ -288,7 +288,11 @@ const useDownloadQueueStore = create(
           return;
         }
 
-        // Abort if downloading
+        // ✅ FIX: Call worker to cancel the actual download
+        const { downloadWorker } = require('../workers/downloadWorker');
+        downloadWorker.cancelTask(taskId);
+
+        // Also abort store's controller (defensive)
         if (task.abortController && task.status === DOWNLOAD_STATUS.DOWNLOADING) {
           task.abortController.abort();
         }
@@ -342,7 +346,11 @@ const useDownloadQueueStore = create(
           return;
         }
 
-        // Abort current download
+        // ✅ FIX: Call worker to cancel the actual download
+        const { downloadWorker } = require('../workers/downloadWorker');
+        downloadWorker.cancelTask(taskId);
+
+        // Also abort store's controller (defensive)
         if (task.abortController) {
           task.abortController.abort();
         }
@@ -474,7 +482,8 @@ const useDownloadQueueStore = create(
                 // Update progress normally
                 get().updateProgress(taskId, progress.current, progress.total, 0);
               } else if (typeof progress === 'number') {
-                // Old format: (currentPage, totalPages, downloadedSize)
+                // ⚠️ DEPRECATED: Old format (3 args) - Will be removed in v2.0
+                console.warn('[DownloadQueue] DEPRECATED: Old progress format (3 args) detected. Please use object format: { current, total, status }');
                 const totalPages = args[1];
                 const downloadedSize = args[2];
                 get().updateProgress(taskId, progress, totalPages, downloadedSize);

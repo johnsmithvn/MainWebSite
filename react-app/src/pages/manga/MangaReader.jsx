@@ -107,21 +107,44 @@ const MangaReader = () => {
   const getCacheStatus = useCallback(() => {
     const total = currentImages.length;
     const preloaded = preloadedImagesRef.current.size;
+    const loading = loadingImagesRef.current.size;
+    const activeLinks = activePreloadLinksRef.current.size;
     const currentSrc = currentImages[currentPage];
-    const currentPreloaded = currentSrc ? preloadedImagesRef.current.has(currentSrc) : false;
+    const normalizedCurrentSrc = normalizeImageUrl(currentSrc);
+    const currentPreloaded = currentSrc ? preloadedImagesRef.current.has(normalizedCurrentSrc) : false;
     
     return {
       total,
       preloaded,
+      loading,
+      activeLinks,
       percentage: total > 0 ? Math.round((preloaded / total) * 100) : 0,
       currentPreloaded,
-      currentSrc: currentSrc?.split('/').pop()
+      currentSrc: currentSrc?.split('/').pop(),
+      // ✅ Additional debug info
+      isTabVisible: !document.hidden,
+      mode: readerSettings.readingMode,
+      preloadCount: readerSettings.preloadCount
     };
-  }, [currentImages, currentPage]);
+  }, [currentImages, currentPage, readerSettings.readingMode, readerSettings.preloadCount, normalizeImageUrl]);
 
   // Make cache status available globally for debugging
   useEffect(() => {
     window.__MANGA_CACHE_STATUS__ = getCacheStatus;
+    window.__MANGA_DEBUG__ = {
+      getCacheStatus,
+      clearCache: () => {
+        preloadedImagesRef.current.clear();
+        loadingImagesRef.current.clear();
+        activePreloadLinksRef.current.forEach(link => link.remove());
+        activePreloadLinksRef.current.clear();
+        linkMapRef.current.clear();
+        console.log('✅ Cache cleared manually');
+      },
+      getLoadStats: () => window.__IMG_LOAD_STATS__,
+      // ✅ Toggle preload on/off for debugging
+      disablePreload: false
+    };
   }, [getCacheStatus]);
 
   // the required distance between touchStart and touchEnd to be detected as a swipe
@@ -209,68 +232,112 @@ const MangaReader = () => {
   // Enhanced preload using link preload for better browser cache integration
   // ✅ Track active preload links for cancellation
   const activePreloadLinksRef = useRef(new Set());
+  // ✅ Track để tránh duplicate link với URL normalized
+  const linkMapRef = useRef(new Map()); // normalizedUrl -> link element
+
+  /**
+   * 🔧 Normalize URL for consistent matching
+   * Giải quyết vấn đề: So khớp link chưa chuẩn hóa (#2)
+   */
+  const normalizeImageUrl = useCallback((url) => {
+    if (!url) return '';
+    try {
+      // Remove query params and hash for consistent matching
+      const urlObj = new URL(url, window.location.origin);
+      return urlObj.origin + urlObj.pathname;
+    } catch {
+      return url;
+    }
+  }, []);
 
   const preloadImage = useCallback((src, cancelledRef) => {
     return new Promise((resolve, reject) => {
       if (!src) return resolve(src);
-      if (preloadedImagesRef.current.has(src)) return resolve(src);
-      if (loadingImagesRef.current.has(src)) return resolve(src); // already in-flight
+      
+      const normalizedSrc = normalizeImageUrl(src);
+      
+      if (preloadedImagesRef.current.has(normalizedSrc)) return resolve(src);
+      if (loadingImagesRef.current.has(normalizedSrc)) return resolve(src); // already in-flight
       
       // ✅ Check cancellation BEFORE starting
       if (cancelledRef?.current) {
-        console.log(`🛑 Preload skipped (cancelled): ${src.split('/').pop()}`);
         return resolve(src);
       }
       
-      loadingImagesRef.current.add(src);
+      // ✅ Check visibility before preload (Điểm #7 - Tab nền gây lãng phí)
+      if (document.hidden) {
+        console.log(`🛑 Preload skipped (tab hidden): ${src.split('/').pop()}`);
+        return resolve(src);
+      }
+      
+      loadingImagesRef.current.add(normalizedSrc);
       
       // Strategy 1: Use <link rel="preload"> for better cache integration
-      const existingLink = document.querySelector(`link[href="${src}"]`);
+      // ✅ Check linkMapRef instead of querySelector (faster & more reliable)
+      const existingLink = linkMapRef.current.get(normalizedSrc);
       if (!existingLink) {
         const link = document.createElement('link');
         link.rel = 'preload';
         link.as = 'image';
         link.href = src;
+        // ✅ Set crossOrigin for CORS images (Điểm #1)
+        link.crossOrigin = 'anonymous';
         
         // ✅ Track link for cleanup
         activePreloadLinksRef.current.add(link);
+        linkMapRef.current.set(normalizedSrc, link);
         
         link.onload = () => {
-          loadingImagesRef.current.delete(src);
-          preloadedImagesRef.current.add(src);
+          loadingImagesRef.current.delete(normalizedSrc);
+          preloadedImagesRef.current.add(normalizedSrc);
           activePreloadLinksRef.current.delete(link);
+          linkMapRef.current.delete(normalizedSrc);
           console.log(`✅ Preloaded (link): ${src.split('/').pop()}`);
           // Clean up after successful preload
-          setTimeout(() => link.remove(), READER.PRELOAD_LINK_CLEANUP_DELAY);
+          setTimeout(() => {
+            try { link.remove(); } catch {}
+          }, READER.PRELOAD_LINK_CLEANUP_DELAY);
           resolve(src);
         };
         
         link.onerror = () => {
-          loadingImagesRef.current.delete(src);
+          loadingImagesRef.current.delete(normalizedSrc);
           activePreloadLinksRef.current.delete(link);
+          linkMapRef.current.delete(normalizedSrc);
           console.warn(`❌ Link preload failed: ${src.split('/').pop()}`);
-          link.remove();
+          try { link.remove(); } catch {}
           
-          // Fallback to Image object
+          // Fallback to Image object (Safari/iOS quirks - Điểm #6)
           const img = new Image();
+          img.crossOrigin = 'anonymous'; // ✅ Also set for fallback
+          
           img.onload = () => {
-            preloadedImagesRef.current.add(src);
+            loadingImagesRef.current.delete(normalizedSrc);
+            preloadedImagesRef.current.add(normalizedSrc);
             console.log(`✅ Preloaded (img fallback): ${src.split('/').pop()}`);
             resolve(src);
           };
-          img.onerror = reject;
+          
+          img.onerror = () => {
+            loadingImagesRef.current.delete(normalizedSrc);
+            console.error(`❌ Image fallback failed: ${src.split('/').pop()}`);
+            reject(new Error(`Failed to preload: ${src}`));
+          };
+          
+          // ✅ Set decoding for async (Điểm #5 - Fallback abort handling)
+          img.decoding = 'async';
           img.src = src;
         };
         
         document.head.appendChild(link);
       } else {
         // Link already exists
-        loadingImagesRef.current.delete(src);
-        preloadedImagesRef.current.add(src);
+        loadingImagesRef.current.delete(normalizedSrc);
+        preloadedImagesRef.current.add(normalizedSrc);
         resolve(src);
       }
     });
-  }, []);
+  }, [normalizeImageUrl]);
 
   const loadFolderData = useCallback(async (path) => {
     // Abort previous in-flight request
@@ -427,6 +494,26 @@ const MangaReader = () => {
       }
     };
   }, []);
+  
+  // ✅ Điểm #7 - Visibilitychange: Resume preload khi tab visible lại
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && readerSettings.readingMode === 'horizontal' && currentImages.length > 0) {
+        console.log('👁️ Tab visible again, resuming preload...');
+        // Re-trigger preload for current page
+        const cancelledRef = { current: false };
+        preloadImagesAroundCurrentPage(cancelledRef);
+      } else if (document.hidden) {
+        console.log('🙈 Tab hidden, preload will be paused');
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [readerSettings.readingMode, currentImages.length, currentPage, preloadImagesAroundCurrentPage]);
 
   // Handle browser back button
   useEffect(() => {
@@ -451,6 +538,18 @@ const MangaReader = () => {
     if (readerSettings.readingMode === 'vertical') return;
     if (!currentImages.length) return;
     
+    // ✅ Debug toggle: Allow disabling preload for testing
+    if (window.__MANGA_DEBUG__?.disablePreload) {
+      console.log('🛑 Preload disabled by debug flag');
+      return;
+    }
+    
+    // ✅ Điểm #7 - Skip preload nếu tab đang ẩn (tránh lãng phí bandwidth)
+    if (document.hidden) {
+      console.log('🛑 Preload skipped: tab is hidden');
+      return;
+    }
+    
     // Use actual user setting for preload count (1-20)
     const preloadCount = Math.max(1, Math.min(20, Number(readerSettings.preloadCount) || 10));
     
@@ -467,7 +566,8 @@ const MangaReader = () => {
     const forwardEnd = Math.min(currentImages.length - 1, currentPage + preloadCount);
     for (let i = forwardStart; i <= forwardEnd; i++) {
       const src = currentImages[i];
-      if (src && !preloadedImagesRef.current.has(src) && !loadingImagesRef.current.has(src)) {
+      const normalizedSrc = normalizeImageUrl(src);
+      if (src && !preloadedImagesRef.current.has(normalizedSrc) && !loadingImagesRef.current.has(normalizedSrc)) {
         imagesToPreload.push({ src, type: 'forward', index: i });
       }
     }
@@ -477,7 +577,8 @@ const MangaReader = () => {
     const backwardEnd = currentPage - 1;
     for (let i = backwardEnd; i >= backwardStart; i--) {
       const src = currentImages[i];
-      if (src && !preloadedImagesRef.current.has(src) && !loadingImagesRef.current.has(src)) {
+      const normalizedSrc = normalizeImageUrl(src);
+      if (src && !preloadedImagesRef.current.has(normalizedSrc) && !loadingImagesRef.current.has(normalizedSrc)) {
         imagesToPreload.push({ src, type: 'backward', index: i });
       }
     }
@@ -491,38 +592,59 @@ const MangaReader = () => {
       imagesToPreload.map(img => `${img.type}:${img.index + 1}`).join(', '));
     
     try {
-      // ✅ SEQUENTIAL preload với delay để tránh overwhelm backend
+      // ✅ SEQUENTIAL preload với adaptive delay (Điểm #11 - Tối ưu delay)
       const forwardImages = imagesToPreload.filter(img => img.type === 'forward');
       const backwardImages = imagesToPreload.filter(img => img.type === 'backward');
       
+      // ✅ Điểm #11 - Adaptive delay dựa trên connection speed
+      const getAdaptiveDelay = () => {
+        // Check Network Information API (nếu có)
+        if ('connection' in navigator && navigator.connection) {
+          const effectiveType = navigator.connection.effectiveType;
+          // '4g' -> 20ms, '3g' -> 50ms, '2g' -> 100ms, 'slow-2g' -> 150ms
+          switch (effectiveType) {
+            case '4g': return 20;
+            case '3g': return 50;
+            case '2g': return 100;
+            case 'slow-2g': return 150;
+            default: return 50;
+          }
+        }
+        // Fallback: Use config or default 50ms
+        return READER.PRELOAD_STEP_DELAY || 50;
+      };
+      
+      const delay = getAdaptiveDelay();
+      console.log(`⏱️ Using adaptive delay: ${delay}ms`);
+      
       // Preload forward images SEQUENTIALLY (không song song)
       for (const img of forwardImages) {
-        // ✅ Check cancellation before each preload
-        if (cancelledRef?.current) {
-          console.log('🛑 Preload cancelled by unmount');
+        // ✅ Check cancellation AND visibility before each preload
+        if (cancelledRef?.current || document.hidden) {
+          console.log('🛑 Preload cancelled (unmount or tab hidden)');
           return;
         }
         await preloadImage(img.src, cancelledRef); // ✅ Pass cancelledRef
-        // Small delay between images
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // ✅ Adaptive delay between images
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
       
       // Then preload backward images SEQUENTIALLY
       for (const img of backwardImages) {
-        // ✅ Check cancellation before each preload
-        if (cancelledRef?.current) {
-          console.log('🛑 Preload cancelled by unmount');
+        // ✅ Check cancellation AND visibility before each preload
+        if (cancelledRef?.current || document.hidden) {
+          console.log('🛑 Preload cancelled (unmount or tab hidden)');
           return;
         }
         await preloadImage(img.src, cancelledRef); // ✅ Pass cancelledRef
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
       
       console.log(`✅ Preload complete. Total cached: ${preloadedImagesRef.current.size}/${currentImages.length}`);
     } catch (error) {
       console.error('❌ Error preloading images:', error);
     }
-  }, [currentImages, currentPage, readerSettings.readingMode, readerSettings.preloadCount, preloadImage]);
+  }, [currentImages, currentPage, readerSettings.readingMode, readerSettings.preloadCount, preloadImage, normalizeImageUrl]);
 
   // ✅ Apply transform directly to DOM using refs (no re-render)
   // MUST be defined BEFORE any useEffect or callback that uses it
@@ -554,7 +676,7 @@ const MangaReader = () => {
     
     preloadAsync();
     
-    // ✅ Cleanup: Set flag + remove pending <link> elements
+    // ✅ Cleanup: Set flag + remove pending <link> elements (Điểm #3 - Rò rỉ <link>)
     return () => {
       cancelledRef.current = true;
       
@@ -568,10 +690,39 @@ const MangaReader = () => {
         }
       });
       activePreloadLinksRef.current.clear();
+      linkMapRef.current.clear(); // ✅ Also clear map
       
       console.log('🧹 Preload cancelled on unmount/page change');
     };
   }, [currentImages.length, currentPage, readerSettings.readingMode, preloadImagesAroundCurrentPage]);
+  
+  // ✅ Điểm #9 - Memory Management: Giới hạn preloaded cache để tránh memory leak
+  useEffect(() => {
+    const MAX_CACHED_IMAGES = 300; // Giới hạn 300 URL trong cache
+    
+    if (preloadedImagesRef.current.size > MAX_CACHED_IMAGES) {
+      console.warn(`🧹 Cache size (${preloadedImagesRef.current.size}) exceeded limit, clearing old entries...`);
+      
+      // Convert Set to Array to slice
+      const cachedUrls = Array.from(preloadedImagesRef.current);
+      
+      // Keep only recent 200 images (remove oldest 100+)
+      const toKeep = new Set(cachedUrls.slice(-200));
+      preloadedImagesRef.current = toKeep;
+      
+      console.log(`✅ Cache cleared, now ${preloadedImagesRef.current.size} images`);
+    }
+  }, [currentPage, currentImages.length]);
+  
+  // ✅ Điểm #9 - Clear cache khi rời chapter (unmount)
+  useEffect(() => {
+    return () => {
+      console.log('🧹 Clearing preload cache on chapter unmount...');
+      preloadedImagesRef.current.clear();
+      loadingImagesRef.current.clear();
+      linkMapRef.current.clear();
+    };
+  }, [currentMangaPath]); // ✅ Trigger khi đổi chapter
 
   // ✅ Sync transform when zoom/origin changes (not during pan for performance)
   useEffect(() => {

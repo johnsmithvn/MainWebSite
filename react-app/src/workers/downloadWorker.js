@@ -17,13 +17,38 @@
 import { getChapter, saveChapter } from '../utils/offlineLibrary';
 import { isCachesAPISupported } from '../utils/browserSupport';
 import { CACHE } from '../constants/index';
+import { useSharedSettingsStore } from '../store';
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
-const CHUNK_SIZE = 2; // Process images in chunks of 2 (reduced from 5 to avoid overwhelming backend)
-const CHUNK_DELAY = 100; // 100ms delay between chunks to throttle requests
+/**
+ * Get chunk size from settings store (configurable)
+ * @returns {number} - Chunk size (1-10)
+ */
+const getChunkSize = () => {
+  try {
+    const settings = useSharedSettingsStore.getState().downloadSettings;
+    return Math.max(1, Math.min(10, settings?.chunkSize || 2));
+  } catch {
+    return 2; // Fallback default
+  }
+};
+
+/**
+ * Get chunk delay from settings store (configurable)
+ * @returns {number} - Delay in ms (50-500)
+ */
+const getChunkDelay = () => {
+  try {
+    const settings = useSharedSettingsStore.getState().downloadSettings;
+    return Math.max(50, Math.min(500, settings?.chunkDelay || 100));
+  } catch {
+    return 100; // Fallback default
+  }
+};
+
 const PROGRESS_UPDATE_INTERVAL = 500; // Update progress every 500ms
 const CORS_CHECK_TIMEOUT = 2000; // 2s timeout for CORS check
 
@@ -225,6 +250,12 @@ class DownloadWorker {
 
       // Report starting
       this.updateProgress(id, onProgress, currentPage, totalPages, downloadedSize);
+
+      // ✅ Get configurable chunk size and delay from settings
+      const CHUNK_SIZE = getChunkSize();
+      const CHUNK_DELAY = getChunkDelay();
+      
+      console.log(`[DownloadWorker] Using chunk settings: size=${CHUNK_SIZE}, delay=${CHUNK_DELAY}ms`);
 
       // Download images in chunks for better performance
       for (let i = 0; i < pageUrls.length; i += CHUNK_SIZE) {

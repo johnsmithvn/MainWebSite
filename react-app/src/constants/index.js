@@ -55,6 +55,7 @@ export const READER = {
   // Prefetch & Cache settings
   PREFETCH_CACHE_TTL: 5000,            // Time-to-live for prefetch cache (5 seconds)
   PRELOAD_LINK_CLEANUP_DELAY: 1000,    // Delay before removing <link> preload tags (1 second)
+  PRELOAD_STEP_DELAY: 50,              // Default delay between preload steps (ms) - configurable & adaptive
   
   // Mode switching retry settings
   MODE_SWITCH_RETRY_DELAY_BASE: 50,    // Base delay for mode switch DOM retry (ms)

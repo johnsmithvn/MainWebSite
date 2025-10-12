@@ -155,12 +155,26 @@ const DownloadTaskCard = ({ task }) => {
   };
 
   const handleViewChapter = () => {
+    // ✅ Validate and encode path components
+    const source = typeof task.source === 'string' ? task.source : '';
+    const mangaId = typeof task.mangaId === 'string' ? task.mangaId : '';
+    const chapterId = typeof task.chapterId === 'string' ? task.chapterId : '';
+    
+    if (!source || !mangaId || !chapterId) {
+      toast.error('Không thể mở chapter: thông tin không hợp lệ');
+      return;
+    }
+    
+    const encodedSource = encodeURIComponent(source);
+    const encodedMangaId = encodeURIComponent(mangaId);
+    const encodedChapterId = encodeURIComponent(chapterId);
+    
     // Navigate to manga reader with this chapter
-    navigate(`/manga/reader/${task.chapterId}`, {
+    navigate(`/manga/reader/${encodedChapterId}`, {
       state: {
-        source: task.source,
-        mangaPath: `${task.source}/${task.mangaId}`,
-        chapterPath: `${task.source}/${task.mangaId}/${task.chapterId}`
+        source: encodedSource,
+        mangaPath: `${encodedSource}/${encodedMangaId}`,
+        chapterPath: `${encodedSource}/${encodedMangaId}/${encodedChapterId}`
       }
     });
   };

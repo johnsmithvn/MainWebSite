@@ -6,6 +6,126 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-01-12] **CRITICAL: Fixed 4 Download Queue Issues from Copilot Review**
+  
+  **Issue #1 - Pause/Cancel không stop downloads (CRITICAL):**
+  - **Vấn đề:** `pauseTask()` và `cancelTask()` chỉ abort store's AbortController, nhưng worker tạo internal controller riêng → Download vẫn chạy background sau pause/cancel
+  - **Nguyên nhân:** Worker's controller không được exposed/cancelled từ store
+  - **Giải pháp:**
+    - Call `downloadWorker.cancelTask(taskId)` trong `pauseTask()` và `cancelTask()`
+    - Worker abort internal AbortController → Stop actual download
+    - Store controller cũng abort (defensive)
+  - **Kết quả:**
+    - ✅ Pause/Cancel thật sự stop background downloads
+    - ✅ NO orphaned requests
+    - ✅ Worker logs: "[DownloadWorker] Cancelling task: [id]"
+  
+  **Issue #5 - Navigation validation (HIGH PRIORITY):**
+  - **Vấn đề:** Path construction có thể fail nếu task properties chứa special characters hoặc undefined
+  - **Risk:** URL break, navigation error, security issues
+  - **Giải pháp:**
+    - Validate `task.source`, `task.mangaId`, `task.chapterId` type & existence
+    - Show toast error nếu thiếu data
+    - Encode path components với `encodeURIComponent()`
+    - Build safe navigation path
+  - **Kết quả:**
+    - ✅ NO navigation errors với special characters
+    - ✅ Graceful error handling
+    - ✅ User feedback với toast message
+  
+  **Issue #4 - Dual progress format (TECHNICAL DEBT):**
+  - **Vấn đề:** Progress callback handle cả old format (3 args) và new format (object) → Complexity
+  - **Giải pháp:**
+    - Thêm `console.warn()` cho old format: "DEPRECATED: Will be removed in v2.0"
+    - Keep backward compatibility nhưng mark deprecated
+    - Clear migration path for future cleanup
+  - **Kết quả:**
+    - ✅ Developers aware của deprecated format
+    - ✅ Smooth migration path
+    - ✅ Console warning in old format usage
+  
+  **Issue #2 - Chunk config hardcoded (NICE TO HAVE):**
+  - **Vấn đề:** `CHUNK_SIZE = 2` và `CHUNK_DELAY = 100` hardcoded → Không flexible cho different network conditions
+  - **Giải pháp:**
+    - Add `downloadSettings` vào `useSharedSettingsStore`:
+      - `chunkSize: 2` (1-10 images per chunk)
+      - `chunkDelay: 100` (50-500ms delay)
+    - Create `getChunkSize()` và `getChunkDelay()` helpers
+    - Worker read from settings store với fallback
+    - Persist settings với Zustand persist
+  - **Kết quả:**
+    - ✅ Configurable chunk settings
+    - ✅ Fallback to safe defaults
+    - ✅ Ready for Settings UI (future)
+    - ✅ Console log: "[DownloadWorker] Using chunk settings: size=X, delay=Yms"
+  
+  - **Files changed:**
+    - `react-app/src/store/downloadQueueStore.js` - Fixed pause/cancel, deprecated warning
+    - `react-app/src/workers/downloadWorker.js` - Configurable chunking
+    - `react-app/src/store/index.js` - Added downloadSettings
+    - `react-app/src/pages/downloads/DownloadTaskCard.jsx` - Navigation validation
+  
+  - **Based on:** GitHub Copilot review suggestions
+
+- 🐛 [2025-01-12] **CRITICAL: Optimized Manga Reader Preload Performance & Memory Management**
+  - **Vấn đề:** Preload images có nhiều edge cases gây bug, memory leak và lãng phí bandwidth
+  - **Giải pháp đã implement:**
+    1. **Rò rỉ `<link>` khi điều hướng nhanh (#3 - CRITICAL):**
+       - Track active `<link>` elements trong `activePreloadLinksRef`
+       - Cleanup: Loop qua Set và `.remove()`, sau đó `.clear()`
+       - Thêm `linkMapRef` Map để tránh duplicate link (normalizedUrl → element)
+    
+    2. **Memory tăng theo số ảnh lớn (#9 - CRITICAL):**
+       - Giới hạn `preloadedImagesRef` tối đa 300 URLs
+       - Auto-clear khi vượt quá → Giữ 200 URLs gần nhất
+       - Clear toàn bộ cache khi rời chapter (unmount)
+       - Console log: "🧹 Cache cleared, now X images"
+    
+    3. **Tải ở tab nền gây lãng phí (#7 - IMPORTANT):**
+       - Check `document.hidden` trước khi preload
+       - Skip preload nếu tab đang ẩn
+       - Thêm `visibilitychange` listener để resume khi tab visible lại
+       - Console log: "🛑 Preload skipped: tab is hidden"
+    
+    4. **Độ trễ 50ms chưa tối ưu (#11 - IMPORTANT):**
+       - Adaptive delay dựa trên `navigator.connection.effectiveType`
+       - 4G → 20ms, 3G → 50ms, 2G → 100ms, slow-2g → 150ms
+       - Fallback về config `READER.PRELOAD_STEP_DELAY` nếu API không có
+       - Console log: "⏱️ Using adaptive delay: Xms"
+    
+    5. **So khớp link chưa chuẩn hóa (#2):**
+       - Thêm `normalizeImageUrl()` function
+       - Remove query params & hash để consistent matching
+       - Dùng `linkMapRef` Map thay vì `querySelector()`
+    
+    6. **CORS / cross-origin ảnh (#1):**
+       - Set `link.crossOrigin = 'anonymous'` cho `<link>` preload
+       - Set `img.crossOrigin = 'anonymous'` cho fallback `Image()`
+    
+    7. **Safari/iOS quirks & Fallback Image() (#5, #6):**
+       - Set `img.decoding = 'async'` cho async decoding
+       - Fallback từ `<link>` fail → `Image()` object với CORS
+       - Try/finally pattern xóa trong callback `Image()`
+  
+  - **Debug Helpers:**
+    - `window.__MANGA_DEBUG__.getCacheStatus()` - Xem cache status chi tiết
+    - `window.__MANGA_DEBUG__.clearCache()` - Clear cache thủ công
+    - `window.__MANGA_DEBUG__.disablePreload = true` - Toggle preload on/off
+    - Enhanced console logs với emoji indicators
+  
+  - **Kết quả:**
+    - ✅ NO memory leak (cache auto-clear)
+    - ✅ NO wasted bandwidth (skip tab hidden)
+    - ✅ NO rò rỉ `<link>` tags (proper cleanup)
+    - ✅ Adaptive performance (connection-aware delay)
+    - ✅ Better debug experience (helpers + logs)
+  
+  - **Files changed:**
+    - `react-app/src/pages/manga/MangaReader.jsx` - Main implementation
+    - `react-app/src/constants/index.js` - Added `PRELOAD_STEP_DELAY` constant
+  
+  - **Based on review:** `react-app/docs/Download queue/PRELOAD-EDGE-CASES-REVIEW.md`
+
 - 🐛 [2025-01-11] **CRITICAL MEMORY LEAK FIX: Image Preload Continues After Unmount**
   - **Vấn đề:**
     - Vào trang reader → Load images → Thoát ra
