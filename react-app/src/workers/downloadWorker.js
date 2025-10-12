@@ -22,7 +22,8 @@ import { CACHE } from '../constants/index';
 // CONSTANTS
 // ============================================================================
 
-const CHUNK_SIZE = 5; // Process images in chunks of 5
+const CHUNK_SIZE = 2; // Process images in chunks of 2 (reduced from 5 to avoid overwhelming backend)
+const CHUNK_DELAY = 100; // 100ms delay between chunks to throttle requests
 const PROGRESS_UPDATE_INTERVAL = 500; // Update progress every 500ms
 const CORS_CHECK_TIMEOUT = 2000; // 2s timeout for CORS check
 
@@ -167,7 +168,7 @@ class DownloadWorker {
    * @returns {Promise<void>}
    */
   async processTask(task, onProgress, onComplete, onError) {
-    const { id, source, mangaId, chapterId } = task;
+    const { id, source, rootFolder, mangaId, chapterId } = task;
     
     console.log('[DownloadWorker] Processing task:', id);
 
@@ -190,8 +191,26 @@ class DownloadWorker {
     this.lastProgressUpdate.set(id, 0);
 
     try {
-      // Fetch chapter data from API
-      const pageUrls = await this.fetchChapterPages(source, mangaId, chapterId);
+      // ✅ Check if task already has pageUrls (from previous pause/resume)
+      let pageUrls = task.pageUrls;
+      
+      if (!pageUrls || pageUrls.length === 0) {
+        // Fetch chapter data from API (first time only)
+        console.log('[DownloadWorker] Fetching chapter pages from API...');
+        pageUrls = await this.fetchChapterPages(source, rootFolder, mangaId, chapterId);
+        
+        // ✅ SAVE pageUrls to task via callback for future resume
+        if (onProgress) {
+          onProgress({
+            current: 0,
+            total: pageUrls.length,
+            status: 'fetching',
+            pageUrls: pageUrls // ← Pass pageUrls to store
+          });
+        }
+      } else {
+        console.log('[DownloadWorker] ✅ Using cached pageUrls from task (', pageUrls.length, 'pages)');
+      }
       
       if (!pageUrls || pageUrls.length === 0) {
         throw new Error('No pages found for this chapter');
@@ -235,6 +254,11 @@ class DownloadWorker {
             console.error(`[DownloadWorker] Failed to download page ${i + j + 1}:`, result.reason);
             // Continue with other pages instead of failing entire download
           }
+        }
+        
+        // ✅ ADD DELAY between chunks to avoid overwhelming backend
+        if (i + CHUNK_SIZE < pageUrls.length) {
+          await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY));
         }
       }
 
@@ -299,27 +323,68 @@ class DownloadWorker {
    * @param {string} chapterId - Chapter folder ID
    * @returns {Promise<string[]>}
    */
-  async fetchChapterPages(source, mangaId, chapterId) {
+  async fetchChapterPages(source, rootFolder, mangaId, chapterId) {
     try {
-      // Construct API URL (same as MangaReader)
+      // Construct API URL - Use /folder-cache endpoint (same as MangaReader)
       const path = `${mangaId}/${chapterId}`;
-      const response = await fetch(`/api/manga/folders?source=${source}&path=${encodeURIComponent(path)}`);
+      
+      // Build query params (match apiService.manga.getFolders)
+      const params = new URLSearchParams({
+        mode: 'path',
+        path: path,
+        key: source,
+        root: rootFolder, // ✅ REQUIRED by backend
+        useDb: '1' // Default to using DB cache
+      });
+      
+      const apiUrl = `/api/manga/folder-cache?${params.toString()}`;
+      console.log('[DownloadWorker] Fetching chapter pages:', apiUrl);
+      
+      const response = await fetch(apiUrl);
       
       if (!response.ok) {
         throw new Error(`API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('[DownloadWorker] API response:', { 
+        type: data.type, 
+        hasImages: !!data.images, 
+        imagesCount: data.images?.length,
+        hasItems: !!data.items,
+        itemsCount: data.items?.length,
+        hasFolders: !!data.folders,
+        foldersCount: data.folders?.length
+      });
       
-      // Extract image URLs from files
-      const pageUrls = data.items
-        .filter(item => item.type === 'file' && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.name))
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-        .map(item => item.url);
-
-      console.log('[DownloadWorker] Fetched', pageUrls.length, 'pages for', chapterId);
+      // ❌ ERROR: User trying to download a folder (not a chapter)
+      if (data.type === 'folder') {
+        throw new Error('Cannot download folder - Please open a chapter first, then download');
+      }
       
-      return pageUrls;
+      // Extract image URLs from reader response
+      // Response format: { type: 'reader', images: [...] }
+      if (data.type === 'reader' && Array.isArray(data.images) && data.images.length > 0) {
+        console.log('[DownloadWorker] ✅ Fetched', data.images.length, 'pages for', chapterId);
+        return data.images;
+      }
+      
+      // Fallback: Extract from items (folder format)
+      if (Array.isArray(data.items) && data.items.length > 0) {
+        const pageUrls = data.items
+          .filter(item => item.type === 'file' && /\.(jpg|jpeg|png|gif|webp)$/i.test(item.name))
+          .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+          .map(item => item.url);
+        
+        if (pageUrls.length > 0) {
+          console.log('[DownloadWorker] ✅ Fetched', pageUrls.length, 'pages (items format) for', chapterId);
+          return pageUrls;
+        }
+      }
+      
+      // Log full response for debugging
+      console.error('[DownloadWorker] ❌ Invalid response:', JSON.stringify(data, null, 2));
+      throw new Error('Invalid response format: missing images or items');
 
     } catch (error) {
       console.error('[DownloadWorker] Failed to fetch chapter pages:', error);

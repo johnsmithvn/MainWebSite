@@ -101,7 +101,7 @@ const useDownloadQueueStore = create(
        * @returns {string} Task ID
        */
       addToQueue: (taskData) => {
-        const { source, mangaId, mangaTitle, chapterId, chapterTitle, totalPages } = taskData;
+        const { source, rootFolder, mangaId, mangaTitle, chapterId, chapterTitle, totalPages } = taskData;
         
         // Generate unique task ID
         const taskId = `${source}_${mangaId}_${chapterId}_${Date.now()}`;
@@ -110,6 +110,7 @@ const useDownloadQueueStore = create(
         const task = {
           id: taskId,
           source,
+          rootFolder, // ✅ REQUIRED for API calls
           mangaId,
           mangaTitle,
           chapterId,
@@ -450,8 +451,37 @@ const useDownloadQueueStore = create(
           await downloadWorker.processTask(
             task,
             // Progress callback
-            (currentPage, totalPages, downloadedSize) => {
-              get().updateProgress(taskId, currentPage, totalPages, downloadedSize);
+            (...args) => {
+              const progress = args[0];
+              
+              // ✅ Handle both old format (3 args) and new format (object)
+              if (typeof progress === 'object' && progress.pageUrls) {
+                // New format: { current, total, status, pageUrls }
+                // Save pageUrls to task for future resume
+                set((state) => {
+                  const newTasks = new Map(state.tasks);
+                  const existingTask = newTasks.get(taskId);
+                  if (existingTask) {
+                    newTasks.set(taskId, {
+                      ...existingTask,
+                      pageUrls: progress.pageUrls, // ✅ SAVE for resume
+                      totalPages: progress.total || existingTask.totalPages
+                    });
+                  }
+                  return { tasks: newTasks };
+                });
+                
+                // Update progress normally
+                get().updateProgress(taskId, progress.current, progress.total, 0);
+              } else if (typeof progress === 'number') {
+                // Old format: (currentPage, totalPages, downloadedSize)
+                const totalPages = args[1];
+                const downloadedSize = args[2];
+                get().updateProgress(taskId, progress, totalPages, downloadedSize);
+              } else {
+                // Progress object without pageUrls
+                get().updateProgress(taskId, progress.current, progress.total, progress.downloadedSize || 0);
+              }
             },
             // Complete callback
             (result) => {
@@ -462,6 +492,9 @@ const useDownloadQueueStore = create(
               if (state.settings.showNotifications) {
                 console.log('[DownloadQueue] Notification: Download completed -', task.chapterTitle);
               }
+              
+              // ✅ Process next pending task in queue
+              setTimeout(() => get().processQueue(), 100);
             },
             // Error callback
             (error) => {
@@ -486,6 +519,9 @@ const useDownloadQueueStore = create(
               } else {
                 // Max retries reached
                 get().updateStatus(taskId, DOWNLOAD_STATUS.FAILED, error.message);
+                
+                // ✅ Process next pending task in queue even if this failed
+                setTimeout(() => get().processQueue(), 100);
               }
             }
           );
@@ -493,6 +529,9 @@ const useDownloadQueueStore = create(
         } catch (error) {
           console.error('[DownloadQueue] Unexpected error during download:', taskId, error);
           get().updateStatus(taskId, DOWNLOAD_STATUS.FAILED, error.message);
+          
+          // ✅ Process next pending task in queue
+          setTimeout(() => get().processQueue(), 100);
         }
       },
 

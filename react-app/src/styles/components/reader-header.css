@@ -187,6 +187,14 @@
   opacity: 0.8;
 }
 
+/* Preparing state - while modal is loading */
+.download-btn.preparing {
+  pointer-events: none;
+  opacity: 0.7;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
 .download-btn.offline-available {
   background: rgba(34, 197, 94, 0.2);
   border: 1px solid rgba(34, 197, 94, 0.4);
@@ -194,6 +202,16 @@
 
 .download-btn.offline-available:hover {
   background: rgba(34, 197, 94, 0.3);
+}
+
+/* In queue state - orange/amber color */
+.download-btn.in-queue {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.download-btn.in-queue:hover {
+  background: rgba(245, 158, 11, 0.25);
 }
 
 .download-progress {
@@ -234,6 +252,29 @@
   font-weight: bold;
 }
 
+/* Queue indicator - hourglass icon */
+.queue-indicator {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  background: #f59e0b;
+  border-radius: 50%;
+  color: white;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -258,5 +299,11 @@
     width: 10px;
     height: 10px;
     font-size: 7px;
+  }
+  
+  .queue-indicator {
+    width: 12px;
+    height: 12px;
+    font-size: 8px;
   }
 }

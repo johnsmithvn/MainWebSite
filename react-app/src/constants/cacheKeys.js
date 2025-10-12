@@ -62,9 +62,10 @@ export const CACHE_KEYS = {
 
   /**
    * Recent viewed cache keys
+   * NOTE: manga key format is `rootFolder::rootFolder` (legacy duplicate) for backward compatibility
    */
   recentViewed: {
-    manga: (sourceKey, rootFolder) => `${CACHE_PREFIXES.RECENT_VIEWED_MANGA}::${rootFolder}::${rootFolder}`,
+    manga: (sourceKey, rootFolder) => `${CACHE_PREFIXES.RECENT_VIEWED_MANGA}::${rootFolder}::${rootFolder}`, // ⚠️ Legacy format (duplicate rootFolder)
     movie: (sourceKey) => `${CACHE_PREFIXES.RECENT_VIEWED_VIDEO}::${sourceKey}`,
     music: (sourceKey) => `${CACHE_PREFIXES.RECENT_VIEWED_MUSIC}::${sourceKey}`
   },

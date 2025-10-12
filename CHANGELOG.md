@@ -4,6 +4,268 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛 [2025-01-11] **CRITICAL MEMORY LEAK FIX: Image Preload Continues After Unmount**
+  - **Vấn đề:** 
+    - Vào trang reader → Load images → Thoát ra
+    - DevTools Network tab: Hàng trăm requests vẫn status="pending"
+    - Memory leak: Mỗi lần vào reader → Orphaned requests tích lũy
+  - **Nguyên nhân:**
+    - `useEffect` call `preloadImagesAroundCurrentPage()` async loop
+    - KHÔNG có cleanup function khi unmount
+    - Sequential loop (`await preloadImage()`) KHÔNG thể abort
+    - **Root cause:** `preloadImage()` dùng `<link rel="preload">` tags
+    - Browser KHÔNG cancel `<link>` requests khi remove element
+  - **Giải pháp:**
+    1. Pass `cancelledRef` object vào preload function
+    2. Check `cancelledRef.current` trước mỗi preload iteration
+    3. `preloadImage()` check cancellation BEFORE starting
+    4. Track active `<link>` elements trong `activePreloadLinksRef`
+    5. useEffect cleanup: 
+       - Set `cancelledRef.current = true`
+       - **Remove ALL active `<link>` elements từ DOM**
+       - Clear `activePreloadLinksRef` Set
+    6. Async loop detect flag → Early return, stop preload
+  - **Kết quả:**
+    - Navigate away → Pending `<link>` elements removed từ DOM
+    - Browser cancel pending requests (no more download)
+    - Console log: "🛑 Preload cancelled by unmount"
+    - Log: "🗑️ Removed preload link: [filename]"
+    - NO memory leak, NO orphaned requests
+  - **Files changed:** `react-app/src/pages/manga/MangaReader.jsx`
+
+### Changed
+
+- 🎨 [2025-01-11] **UI: Enhanced Download Button with Queue Status**
+  - Added `isInQueue` prop to ReaderHeader component
+  - Download button shows different states:
+    - ✅ Green badge + background: Chapter downloaded offline
+    - ⏳ Amber/orange badge + background: Chapter in queue (pending/downloading)
+    - Default: Ready to download
+  - Queue indicator has subtle pulse animation
+  - Tooltip shows appropriate message based on state
+  - Files changed:
+    - `react-app/src/components/manga/ReaderHeader.jsx` - Added isInQueue prop + queue-indicator
+    - `react-app/src/pages/manga/MangaReader.jsx` - Added isChapterInQueue computed value
+    - `react-app/src/styles/components/reader-header.css` - Added queue styles
+
+- 🎨 [2025-01-11] **UI: Restored Download Badge Animations**
+  - Restored `animate-pulse` on counter badge (visual feedback)
+  - Restored `animate-ping` background animation (attention grabber)
+  - File changed: `react-app/src/components/common/DownloadBadge.jsx`
+
+### Fixed
+
+- 🐛 [2025-01-11] **UX FIX: Reader Download Icon Not Updating After Download Complete**
+  - **Vấn đề:** Download xong nhưng icon vẫn hiện ⏳ (in queue) thay vì ✓ (offline)
+  - **Nguyên nhân:**
+    1. `checkIfChapterInQueue()` check tồn tại task nhưng KHÔNG check status
+    2. `isOfflineAvailable` chỉ check 1 lần khi mount, không re-check khi download xong
+  - **Giải pháp:**
+    1. `checkIfChapterInQueue()`: Chỉ return true nếu status = PENDING/DOWNLOADING
+    2. Thêm useEffect listen `stats.totalDownloaded` → Re-check khi có download complete
+    3. Subscribe `stats` từ store để có thể track totalDownloaded
+  - **Kết quả:**
+    - Download xong → Badge ⏳ biến mất
+    - Icon ✓ xuất hiện (offline available)
+    - UI update real-time khi download complete
+  - **Files changed:** `react-app/src/pages/manga/MangaReader.jsx`
+
+- 🐛 [2025-01-11] **CRITICAL PERFORMANCE FIX: Backend Overwhelmed by Concurrent Requests**
+  - **Vấn đề:** 
+    - 3958+ requests pending → Backend timeout & 503 errors
+    - Download worker: CHUNK_SIZE = 5 → 2 downloads = 10 images đồng thời
+    - Reader preload: Promise.allSettled → 10-20 images cùng lúc
+    - **Total:** 20-30 concurrent requests → Backend crash
+  - **Giải pháp:**
+    1. **Download Worker:**
+       - Giảm CHUNK_SIZE: 5 → 2 (max 4 concurrent nếu 2 downloads)
+       - Thêm CHUNK_DELAY: 100ms giữa các chunks
+    2. **Reader Preload:**
+       - Đổi từ `Promise.allSettled` (parallel) → Sequential loop
+       - Thêm 50ms delay giữa mỗi image preload
+  - **Kết quả:** 
+    - Max ~6-8 concurrent requests (2 downloads + reader)
+    - Backend không bị overwhelm
+    - Tránh 503 Service Unavailable
+  - **Files changed:**
+    - `react-app/src/workers/downloadWorker.js`
+    - `react-app/src/pages/manga/MangaReader.jsx`
+
+- 🐛 [2025-01-11] **UX FIX: Download Flow - Show Loading & Confirm Modal Immediately**
+  - **Vấn đề:** Click download → Không có feedback → Đợi lâu mới thấy modal
+  - **Nguyên nhân:** Storage check chạy TRƯỚC khi hiện modal → User không thấy gì đang xảy ra
+  - **Giải pháp mới:**
+    1. Click download → Hiện modal + loading spinner NGAY LẬP TỨC
+    2. Check storage/prepare trong background (với timeout 10s)
+    3. Loading tắt → Hiện confirm button
+    4. User confirm → Add vào queue
+  - **Flow:**
+    ```
+    Click → Modal + Loading (ngay) → Check storage (background) → 
+    Loading tắt → Confirm button → User click → Add to queue
+    ```
+  - **Kết quả:** User thấy feedback ngay, không bị "đơ" khi click
+  - **Files changed:** `react-app/src/pages/manga/MangaReader.jsx`
+
+- 🐛 [2025-01-11] **CLEAN: Standardized Path Parsing Across All Download Functions**
+  - **Vấn đề:** 4 functions dùng 3 cách parse path khác nhau → Inconsistent, dễ bug
+  - **Functions cleaned:**
+    - `handleAddToQueueWithAutoStart()` ✅
+    - `handleAutoAddToQueue()` ✅
+    - `handleAddToQueue()` ✅
+    - `checkIfChapterInQueue()` ✅
+  - **Logic thống nhất:**
+    ```javascript
+    const cleanPath = currentMangaPath.replace(/\/__self__$/, '');
+    const pathParts = cleanPath.split('/').filter(Boolean);
+    const mangaId = pathParts.length > 1 ? pathParts.slice(0, -1).join('/') : '';
+    const chapterId = pathParts[pathParts.length - 1] || cleanPath;
+    ```
+  - **Result:** Consistent parsing, support both root & nested chapters
+  - **Files changed:** `react-app/src/pages/manga/MangaReader.jsx`
+
+- 🐛 [2025-01-11] **SIMPLIFY: Download Path Parsing - Remove Unnecessary Validation**
+  - **Logic cũ:** Check path depth, validate >= 1, conditional parsing phức tạp
+  - **Logic mới:** **Nếu đã vào reader → ĐÃ LÀ CHAPTER → Parse thẳng!**
+  - **Đơn giản hóa:**
+    - Xóa validation check `pathParts.length < 1`
+    - Xóa if/else conditional parsing
+    - Parse trực tiếp: mangaId = all except last (or ''), chapterId = last part
+  - **Code từ 25 lines → 4 lines**
+  - **Files changed:** `react-app/src/pages/manga/MangaReader.jsx`
+
+- 🐛 [2025-01-11] **FIX: Download Root-Level Chapters**
+  - **Vấn đề:** Không thể download chapter ở root level (path chỉ có 1 cấp)
+  - **Validation cũ:** Yêu cầu `pathParts.length >= 2` → Chặn chapters ở root
+  - **Ví dụ:** Path `[Akao Anaran] Chapter 9` → length = 1 → Bị chặn
+  - **Giải pháp:** 
+    - Đổi validation từ `< 2` thành `< 1`
+    - Xử lý conditional: nếu length = 1 → mangaId = '', chapterId = path
+    - Nếu length > 1 → parse bình thường (all except last / last)
+  - **Kết quả:** Hỗ trợ cả root-level và nested chapters
+  - **Files changed:** `react-app/src/pages/manga/MangaReader.jsx`
+
+- 🐛 [2025-01-11] **CRITICAL FIX: Download Path Parsing Error**
+  - **Vấn đề:** API trả về folder response thay vì chapter images → Download fail
+  - **Nguyên nhân:** Path parsing sai - chỉ lấy 2 phần đầu thay vì split đúng manga/chapter
+  - **Ví dụ sai:** `(4)/New folder (2)` → Missing chapter folder
+  - **Ví dụ đúng:** `(4)/New folder (2)/[Chapter Name]`
+  - **Giải pháp:** Parse full path, mangaId = all except last, chapterId = last part
+  - **Files changed:**
+    - `react-app/src/pages/manga/MangaReader.jsx` - Fixed path parsing logic
+
+- 🐛 [2025-01-11] **CRITICAL FIX: Arrow Function Arguments Error**
+  - **Vấn đề:** Download crash với "ReferenceError: arguments is not defined"
+  - **Nguyên nhân:** Arrow function không có `arguments` object
+  - **Giải pháp:** Đổi từ arrow function sang rest parameters `(...args)`
+  - **Files changed:**
+    - `react-app/src/store/downloadQueueStore.js` - Changed progress callback to use rest params
+
+- 🐛 [2025-01-11] **PERFORMANCE FIX: Cache PageURLs for Pause/Resume**
+  - **Vấn đề 1:** API response validation fail → "Invalid response format: missing images"
+  - **Vấn đề 2:** Pause/Resume phải fetch API lại → Loading mãi, lãng phí bandwidth
+  - **Giải pháp:**
+    - Enhanced API response validation với detailed logs
+    - Lưu `pageUrls` vào task sau fetch đầu tiên
+    - Resume sử dụng cached pageUrls thay vì gọi API lại
+  - **Files changed:**
+    - `react-app/src/workers/downloadWorker.js` - Cache pageUrls, enhanced logging
+    - `react-app/src/store/downloadQueueStore.js` - Save pageUrls from progress callback
+
+- 🐛 [2025-01-11] **CRITICAL FIX: Download Confirm Modal Not Showing**
+  - **Vấn đề:** Click download button → Auto add to queue luôn, không có modal confirm
+  - **Nguyên nhân:** `setShowDownloadConfirmModal(true)` được gọi sau các logic check, state chưa kịp update
+  - **Giải pháp:** Set `showDownloadConfirmModal = true` NGAY ĐẦU function để hiện loading state trước
+  - **Files changed:**
+    - `react-app/src/pages/manga/MangaReader.jsx` - Moved modal state to top of function
+
+- 🐛 [2025-01-11] **UX FIX: Download Button Loading State**
+  - **Vấn đề:** Khi click download, không biết modal đang khởi động hay không (không có feedback)
+  - **Giải pháp:** Thêm loading spinner ở download button khi modal đang chuẩn bị hiện
+  - **Files changed:**
+    - `react-app/src/pages/manga/MangaReader.jsx` - Added isPreparingDownload state
+    - `react-app/src/components/manga/ReaderHeader.jsx` - Added preparing state + spinner
+    - `react-app/src/styles/components/reader-header.css` - Added .preparing styles
+
+- 🐛 [2025-01-11] **PERFORMANCE FIX: Download Confirm Timeout**
+  - **Vấn đề:** Click confirm download thì loading mãi, không có phản hồi gì
+  - **Nguyên nhân:** `checkStorageForDownload()` có thể chạy chậm hoặc bị stuck, không có timeout
+  - **Giải pháp:** Thêm timeout 10s cho storage check + detailed console logs để debug
+  - **File changed:**
+    - `react-app/src/pages/manga/MangaReader.jsx` - Added timeout và enhanced error handling
+
+- 🐛 [2025-01-11] **BUILD ERROR FIX: React Hoisting Issue**
+  - **Vấn đề:** Build crash với error "Cannot access 'tt' before initialization"
+  - **Nguyên nhân:** `useMemo` hook `isChapterInQueue` truy cập `currentMangaPath` trước khi variable được khởi tạo (React hook order violation)
+  - **Giải pháp:** Chuyển từ `useMemo` sang helper function `checkIfChapterInQueue()` được tạo sau tất cả hooks/effects
+  - **File changed:**
+    - `react-app/src/pages/manga/MangaReader.jsx` - Removed useMemo, added helper function
+
+- 🐛 [2025-01-11] **CRITICAL BUG FIX: Download Queue Auto-Processing**
+  - **Vấn đề:** Sau khi download hoàn thành/failed, pending tasks không tự động start
+  - **Nguyên nhân:** Thiếu gọi `processQueue()` sau khi task kết thúc (completed/failed)
+  - **Giải pháp:** Thêm `processQueue()` callback sau mọi trạng thái kết thúc
+    - Complete callback: `setTimeout(() => get().processQueue(), 100)` sau COMPLETED
+    - Failed callback: `setTimeout(() => get().processQueue(), 100)` sau max retries
+    - Catch block: `setTimeout(() => get().processQueue(), 100)` sau unexpected error
+  - **File thay đổi:** `react-app/src/store/downloadQueueStore.js`
+    - Modified: `startDownload()` method - Added 3 processQueue() triggers
+  - **Result:** Queue tự động xử lý pending tasks khi có slot trống (FIFO)
+
+- 🐛 [2025-01-11] **CRITICAL BUG FIX: Download Worker Missing rootFolder Parameter**
+  - **Vấn đề:** Worker gọi API thiếu param `root` → Backend trả về 400 Bad Request
+  - **Nguyên nhân:** Backend yêu cầu `root` và `mode`, nhưng worker chỉ gửi `mode`, `path`, `key`, `useDb`
+  - **Giải pháp:** Thêm `rootFolder` vào toàn bộ download flow
+    - **MangaReader.jsx:** Thêm `rootFolder: stableAuthKeys.rootFolder` vào tất cả `addToQueue()` calls (3 chỗ)
+    - **downloadQueueStore.js:** Thêm `rootFolder` vào task object và destructure từ `taskData`
+    - **downloadWorker.js:** Thêm `rootFolder` parameter vào `processTask()` và `fetchChapterPages()`
+  - **File thay đổi:**
+    - `react-app/src/pages/manga/MangaReader.jsx` - Added rootFolder to 3 addToQueue calls
+    - `react-app/src/store/downloadQueueStore.js` - Added rootFolder to task object
+    - `react-app/src/workers/downloadWorker.js` - Added rootFolder param to processTask + fetchChapterPages
+  - **Result:** Worker gọi API thành công với đầy đủ params: `mode=path&path=...&key=...&root=...&useDb=1`
+
+- 🐛 [2025-01-11] **CRITICAL BUG FIX: Download Worker API Endpoint**
+  - **Vấn đề:** Worker gọi sai API endpoint `/api/manga/folders` → 404 Not Found
+  - **Nguyên nhân:** Backend không có endpoint này, đúng là `/api/manga/folder-cache`
+  - **Giải pháp:** Refactor `fetchChapterPages()` trong downloadWorker.js
+    - Changed: `/api/manga/folders` → `/api/manga/folder-cache`
+    - Added: Query params match MangaReader (mode=path, key, useDb)
+    - Added: Support both response formats (reader.images + items fallback)
+    - Added: Detailed error logging
+  - **File thay đổi:** `react-app/src/workers/downloadWorker.js`
+    - Modified: `fetchChapterPages()` method (~50 lines)
+  - **Result:** Worker có thể fetch chapter pages thành công, download hoạt động bình thường
+
+- 🐛 [2025-01-11] **CRITICAL BUG FIX: Download Queue Integration**
+  - **Vấn đề:** Download lần đầu (khi có 0-1 active downloads) sử dụng logic direct download cũ, không qua queue system
+    - Modal download không thể đóng (blocking UI)
+    - Download dừng khi user navigate đi trang khác
+    - Không xuất hiện trong Download Manager
+    - Không được worker theo dõi và quản lý
+  - **Giải pháp:** Refactor `handleDownloadConfirm` để LUÔN add vào queue
+    - Created: `handleAddToQueueWithAutoStart()` - New unified handler
+    - Removed: `proceedWithDownload()` call - Old direct download
+    - Logic mới:
+      * Check if chapter already in queue → Show toast + navigate
+      * Extract manga/chapter titles from path
+      * Add to queue via `addToQueue()` (worker auto-starts immediately)
+      * Show success toast with "Xem tiến trình" action button
+      * Track view count (same as before)
+      * Modal CAN be closed, download continues in background
+  - **File thay đổi:** `react-app/src/pages/manga/MangaReader.jsx`
+    - Modified: `handleDownloadConfirm()` (line ~920-990)
+    - Added: `handleAddToQueueWithAutoStart()` (~75 lines)
+    - Result: Tất cả downloads đều thông qua queue system (consistent behavior)
+  - **User Experience:**
+    - ✅ Modal có thể đóng được ngay lập tức
+    - ✅ Download tiếp tục trong background qua worker
+    - ✅ Xuất hiện trong Download Manager với progress tracking
+    - ✅ Toast notification với action button
+    - ✅ Navigate tự do mà download không bị gián đoạn
+
 ### Added
 
 - ✨ [2025-01-11] **Download Queue System - PHASE 3 COMPLETED + PERFORMANCE OPTIMIZATION**
