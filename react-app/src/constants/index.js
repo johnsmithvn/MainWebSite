@@ -141,6 +141,61 @@ export const SEARCH = {
 };
 
 /**
+ * 📥 Download Queue Settings
+ */
+export const DOWNLOAD_QUEUE = {
+  // Concurrent downloads
+  MAX_CONCURRENT: 2,                    // Maximum concurrent downloads
+  
+  // Retry settings
+  MAX_RETRIES: 3,                       // Maximum retry attempts for failed downloads
+  RETRY_DELAY_BASE: 1000,               // Base delay for exponential backoff (ms)
+  RETRY_DELAY_MAX: 30000,               // Maximum retry delay (ms)
+  
+  // Progress updates
+  PROGRESS_UPDATE_INTERVAL: 500,        // Progress update throttle interval (ms)
+  PROGRESS_DEBOUNCE: 100,               // Progress callback debounce (ms)
+  
+  // Download settings
+  CHUNK_SIZE: 5,                        // Number of images to download per chunk
+  DOWNLOAD_TIMEOUT: 30000,              // Download timeout per image (ms)
+  
+  // Storage settings
+  STORAGE_CHECK_INTERVAL: 1000,         // Storage quota check interval (ms)
+  STORAGE_RESERVE_MB: 100,              // Reserved storage space (MB)
+  STORAGE_WARNING_THRESHOLD: 0.9,       // Warning threshold (90%)
+  
+  // Auto-delete settings
+  AUTO_DELETE_OPTIONS: [
+    { value: 'never', label: 'Never' },
+    { value: '1d', label: '1 Day' },
+    { value: '7d', label: '7 Days' },
+    { value: '30d', label: '30 Days' },
+  ],
+  AUTO_DELETE_DEFAULT: 'never',
+  
+  // Notification settings
+  SHOW_NOTIFICATIONS: true,             // Show toast notifications
+  SHOW_BROWSER_NOTIFICATIONS: false,    // Show browser notifications (requires permission)
+  
+  // Queue persistence
+  PERSIST_KEY: 'download-queue',        // LocalStorage key for queue persistence
+  PERSIST_DEBOUNCE: 1000,               // Debounce delay for persistence (ms)
+};
+
+/**
+ * 📥 Download Status Constants
+ */
+export const DOWNLOAD_STATUS = {
+  PENDING: 'pending',                   // Waiting in queue
+  DOWNLOADING: 'downloading',           // Currently downloading
+  PAUSED: 'paused',                     // Paused by user
+  COMPLETED: 'completed',               // Successfully completed
+  FAILED: 'failed',                     // Failed with error
+  CANCELLED: 'cancelled',               // Cancelled by user
+};
+
+/**
  * 📱 Responsive Settings
  */
 export const RESPONSIVE = {
