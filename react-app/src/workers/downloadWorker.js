@@ -17,37 +17,15 @@
 import { getChapter, saveChapter } from '../utils/offlineLibrary';
 import { isCachesAPISupported } from '../utils/browserSupport';
 import { CACHE } from '../constants/index';
-import { useSharedSettingsStore } from '../store';
+import {
+  DEFAULT_DOWNLOAD_SETTINGS,
+  sanitizeChunkDelay,
+  sanitizeChunkSize
+} from '../utils/downloadSettings';
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-/**
- * Get chunk size from settings store (configurable)
- * @returns {number} - Chunk size (1-10)
- */
-const getChunkSize = () => {
-  try {
-    const settings = useSharedSettingsStore.getState().downloadSettings;
-    return Math.max(1, Math.min(10, settings?.chunkSize || 2));
-  } catch {
-    return 2; // Fallback default
-  }
-};
-
-/**
- * Get chunk delay from settings store (configurable)
- * @returns {number} - Delay in ms (50-500)
- */
-const getChunkDelay = () => {
-  try {
-    const settings = useSharedSettingsStore.getState().downloadSettings;
-    return Math.max(50, Math.min(500, settings?.chunkDelay || 100));
-  } catch {
-    return 100; // Fallback default
-  }
-};
 
 const PROGRESS_UPDATE_INTERVAL = 500; // Update progress every 500ms
 const CORS_CHECK_TIMEOUT = 2000; // 2s timeout for CORS check
@@ -192,7 +170,7 @@ class DownloadWorker {
    * @param {Function} onError - Error callback
    * @returns {Promise<void>}
    */
-  async processTask(task, onProgress, onComplete, onError) {
+  async processTask(task, onProgress, onComplete, onError, options = {}) {
     const { id, source, rootFolder, mangaId, chapterId } = task;
     
     console.log('[DownloadWorker] Processing task:', id);
@@ -251,9 +229,14 @@ class DownloadWorker {
       // Report starting
       this.updateProgress(id, onProgress, currentPage, totalPages, downloadedSize);
 
-      // ✅ Get configurable chunk size and delay from settings
-      const CHUNK_SIZE = getChunkSize();
-      const CHUNK_DELAY = getChunkDelay();
+      // ✅ Get configurable chunk size and delay from provided options (with safe fallbacks)
+      const {
+        chunkSize = DEFAULT_DOWNLOAD_SETTINGS.chunkSize,
+        chunkDelay = DEFAULT_DOWNLOAD_SETTINGS.chunkDelay
+      } = options;
+
+      const CHUNK_SIZE = sanitizeChunkSize(chunkSize);
+      const CHUNK_DELAY = sanitizeChunkDelay(chunkDelay);
       
       console.log(`[DownloadWorker] Using chunk settings: size=${CHUNK_SIZE}, delay=${CHUNK_DELAY}ms`);
 

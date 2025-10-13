@@ -13,6 +13,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import downloadWorker from '../workers/downloadWorker';
+import { useSharedSettingsStore } from '../store';
+import { normalizeDownloadSettings } from '../utils/downloadSettings';
 
 // ============================================================================
 // CONSTANTS
@@ -290,7 +292,6 @@ const useDownloadQueueStore = create(
         }
 
         // ✅ FIX: Call worker to cancel the actual download
-        const { downloadWorker } = require('../workers/downloadWorker');
         downloadWorker.cancelTask(taskId);
 
         // Also abort store's controller (defensive)
@@ -348,7 +349,6 @@ const useDownloadQueueStore = create(
         }
 
         // ✅ FIX: Call worker to cancel the actual download
-        const { downloadWorker } = require('../workers/downloadWorker');
         downloadWorker.cancelTask(taskId);
 
         // Also abort store's controller (defensive)
@@ -457,6 +457,10 @@ const useDownloadQueueStore = create(
 
         // Use downloadWorker instead of direct downloadChapter call
         try {
+          const { chunkSize, chunkDelay } = normalizeDownloadSettings(
+            useSharedSettingsStore.getState().downloadSettings
+          );
+
           await downloadWorker.processTask(
             task,
             // Progress callback
@@ -533,6 +537,10 @@ const useDownloadQueueStore = create(
                 // ✅ Process next pending task in queue even if this failed
                 setTimeout(() => get().processQueue(), 100);
               }
+            },
+            {
+              chunkSize,
+              chunkDelay
             }
           );
 
