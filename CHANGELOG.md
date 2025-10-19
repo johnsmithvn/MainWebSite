@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2024-12-19] Fixed music search chỉ tìm được tên file → Có thể search theo artist, album, genre từ metadata
+
+### Enhanced  
+- ✨ [2024-12-19] Enhanced music search API - JOIN bảng folders với songs để search metadata đầy đủ
+
+### Fixed
+
 - 🐛 [2025-01-11] **CRITICAL MEMORY LEAK FIX: Image Preload Continues After Unmount**
   - **Vấn đề:**
     - Vào trang reader → Load images → Thoát ra

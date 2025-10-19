@@ -63,6 +63,7 @@ router.get("/audio-cache", async (req, res) => {
       const searchType = req.query.type || "audio";
       const lim = parseInt(limit) > 0 ? parseInt(limit) : 50;
       const off = parseInt(offset) > 0 ? parseInt(offset) : 0;
+      
       if (searchType === "folder") {
         rows = db.prepare(`
           SELECT name, path, thumbnail, type, viewCount, isFavorite
@@ -74,24 +75,42 @@ router.get("/audio-cache", async (req, res) => {
           LIMIT ? OFFSET ?
         `).all(`%${q}%`, lim, off);
       } else if (searchType === "all") {
+        // ✨ ENHANCED: Search cả folder và file audio với metadata
         rows = db.prepare(`
-          SELECT name, path, thumbnail, type, viewCount, isFavorite
-          FROM folders
-          WHERE name != '.thumbnail'
-            AND name LIKE ?
-          ORDER BY name COLLATE NOCASE ASC
+          SELECT DISTINCT 
+            f.name, f.path, f.thumbnail, f.type, f.viewCount, f.isFavorite,
+            s.artist, s.album, s.genre
+          FROM folders f
+          LEFT JOIN songs s ON f.path = s.path
+          WHERE f.name != '.thumbnail'
+            AND (
+              f.name LIKE ? OR 
+              COALESCE(s.artist, '') LIKE ? OR 
+              COALESCE(s.album, '') LIKE ? OR 
+              COALESCE(s.genre, '') LIKE ?
+            )
+          ORDER BY f.name COLLATE NOCASE ASC
           LIMIT ? OFFSET ?
-        `).all(`%${q}%`, lim, off);
+        `).all(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, lim, off);
       } else {
+        // ✨ ENHANCED: Search chỉ file audio với metadata  
         rows = db.prepare(`
-          SELECT name, path, thumbnail, type, viewCount, isFavorite
-          FROM folders
-          WHERE (type = 'audio' OR type = 'file')
-            AND name != '.thumbnail'
-            AND name LIKE ?
-          ORDER BY name COLLATE NOCASE ASC
+          SELECT DISTINCT 
+            f.name, f.path, f.thumbnail, f.type, f.viewCount, f.isFavorite,
+            s.artist, s.album, s.genre
+          FROM folders f
+          LEFT JOIN songs s ON f.path = s.path
+          WHERE (f.type = 'audio' OR f.type = 'file')
+            AND f.name != '.thumbnail'
+            AND (
+              f.name LIKE ? OR 
+              COALESCE(s.artist, '') LIKE ? OR 
+              COALESCE(s.album, '') LIKE ? OR 
+              COALESCE(s.genre, '') LIKE ?
+            )
+          ORDER BY f.name COLLATE NOCASE ASC
           LIMIT ? OFFSET ?
-        `).all(`%${q}%`, lim, off);
+        `).all(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, lim, off);
       }
 
       return res.json({ folders: rows });
