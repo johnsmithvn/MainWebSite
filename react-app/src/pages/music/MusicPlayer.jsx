@@ -22,6 +22,7 @@ import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import PlayerFooter from '../../components/music/PlayerFooter';
 import PlayerHeader from '../../components/music/PlayerHeader';
+import PlaylistSidebar from '../../components/music/PlaylistSidebar';
 
 const MusicPlayer = () => {
   const navigate = useNavigate();
@@ -669,46 +670,13 @@ const MusicPlayer = () => {
 
   {/* Main layout: left Library sidebar, right content with header + bottom tracklist */}
   <div className="px-4 sm:px-6 mt-1 pb-[104px] grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-start">
-        {/* Left: Library sidebar */}
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] flex flex-col" style={{ height: 'calc(100vh - 200px)' }}>
-          <div className="px-4 py-3 text-xs uppercase tracking-wider text-white/60 border-b border-white/10 flex items-center justify-between">
-            <span>Playlist</span>
-            <span className="text-white/40 text-[11px]">Playlists</span>
-          </div>
-          <div className="p-3">
-            <div className="relative">
-              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-4 h-4" />
-              <input placeholder="Tìm playlist" className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30" />
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {library.loading && <div className="px-4 py-2 text-white/60 text-sm">Đang tải…</div>}
-            {!library.loading && library.items.length === 0 && (
-              <div className="px-4 py-6 text-white/60 text-sm">Chưa có playlist</div>
-            )}
-            {!library.loading && library.items.length > 0 && (
-              <div className="px-2 space-y-1">
-                {library.items.map((pl) => (
-                  <button
-                    key={pl.id}
-                    onClick={() => {
-                      setActivePlaylistId(pl.id);
-                      navigate('/music/player', { state: { kind: 'playlist', playlist: String(pl.id), key: sourceKey } });
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-left ${activePlaylistId === pl.id ? 'bg-white/10' : ''}`}
-                    title={pl.name}
-                  >
-                    <img src={pl.thumbnail || DEFAULT_IMAGES.music} onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)} alt={pl.name} className="w-9 h-9 rounded object-cover" />
-                    <div className="min-w-0">
-                      <div className="text-sm text-white truncate">{pl.name}</div>
-                      <div className="text-[11px] text-white/60 truncate">{new Date(pl.updatedAt || Date.now()).toLocaleDateString()}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Left: Library sidebar - replaced with PlaylistSidebar component */}
+        <PlaylistSidebar 
+          library={library}
+          activePlaylistId={activePlaylistId}
+          setActivePlaylistId={setActivePlaylistId}
+          sourceKey={sourceKey}
+        />
 
   {/* Right: Header banner and actions */}
   <div className="relative ml-1">
