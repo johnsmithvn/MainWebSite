@@ -137,8 +137,15 @@ const PlayerFooter = ({
       <div className="h-full px-4 md:px-6 pt-1 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(320px,720px)_minmax(0,1fr)] items-center gap-4">
         {/* Now playing (Left) - Click to open full player */}
         <div 
-          onClick={() => onOpenFullPlayer && onOpenFullPlayer()}
-          className="hidden md:flex items-center gap-3 min-w-0 overflow-hidden justify-self-start cursor-pointer hover:bg-white/5 rounded-lg p-2 -ml-2 transition-colors"
+          onClick={() => {
+            // Desktop only (>1024px): Click to open full player
+            const isDesktop = window.innerWidth > 1024;
+            if (isDesktop && onOpenFullPlayer) {
+              onOpenFullPlayer();
+            }
+          }}
+          className="hidden md:flex items-center gap-3 min-w-0 overflow-hidden justify-self-start cursor-pointer hover:bg-white/5 rounded-lg p-2 -ml-2 transition-colors lg:hover:bg-white/5 lg:cursor-pointer"
+          title="Click để mở Full Player (desktop)"
         >
           {currentTrack ? (
             <>
@@ -164,24 +171,7 @@ const PlayerFooter = ({
 
         {/* Controls + progress (Center) */}
         <div className="col-span-1 md:col-auto flex flex-col items-center justify-center w-full justify-self-center">
-          {/* Mobile: Click album art to open full player */}
-          {currentTrack && (
-            <div 
-              onClick={() => onOpenFullPlayer && onOpenFullPlayer()}
-              className="md:hidden flex items-center gap-2 mb-2 cursor-pointer hover:opacity-80 transition-opacity"
-            >
-              <img
-                src={buildThumbnailUrl(currentTrack, 'music') || DEFAULT_IMAGES.music}
-                onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)}
-                alt={currentTrack.name}
-                className="w-10 h-10 rounded object-cover"
-              />
-              <div className="min-w-0 max-w-[200px]">
-                <div className="text-xs truncate text-white font-medium">{currentTrack.name}</div>
-                <div className="text-[10px] text-white/60 truncate">{currentTrack.artist || 'Unknown Artist'}</div>
-              </div>
-            </div>
-          )}
+          {/* Mobile/Tablet: Hidden - album name in header opens full player instead */}
           <div className="flex items-center gap-5">
             <button 
               onClick={toggleShuffle} 

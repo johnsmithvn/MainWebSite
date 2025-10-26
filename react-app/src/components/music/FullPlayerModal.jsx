@@ -18,11 +18,10 @@ import {
   FiVolumeX,
   FiMaximize2,
   FiMinimize2,
-  FiCopy,
-  FiCheck,
+  FiPlus,
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
-import { useMusicStore } from '@/store';
+import { useMusicStore, useUIStore } from '@/store';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import { DEFAULT_IMAGES } from '@/constants';
 import LyricsModal from './LyricsModal';
@@ -53,10 +52,11 @@ const FullPlayerModal = ({
     setVolume,
   } = useMusicStore();
 
+  const { showToast } = useUIStore();
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState(0); // 0: none, -1: left, 1: right
-  const [copiedField, setCopiedField] = useState(null); // 'name' or 'artist'
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -167,20 +167,25 @@ const FullPlayerModal = ({
   const handleCopyToClipboard = async (text, field) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopiedField(field);
-      toast.success(`Đã copy ${field === 'name' ? 'tên bài hát' : 'tên nghệ sĩ'}!`, {
-        duration: 2000,
+      toast.success('Đã copy!', {
+        duration: 1500,
         icon: '📋',
       });
-      
-      // Reset copied state after 2 seconds
-      setTimeout(() => {
-        setCopiedField(null);
-      }, 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
       toast.error('Không thể copy vào clipboard');
     }
+  };
+
+  const handleAddToPlaylist = () => {
+    if (!currentTrack) {
+      showToast('Chưa có bài hát nào đang phát', 'warning');
+      return;
+    }
+    // Dispatch event to open playlist modal
+    window.dispatchEvent(new CustomEvent('openPlaylistModal', { 
+      detail: { item: currentTrack } 
+    }));
   };
 
   // Theme configs
@@ -339,49 +344,46 @@ const FullPlayerModal = ({
             <div className="mb-6">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1 min-w-0 mr-4">
-                  {/* Song Name - Click to copy */}
-                  <div className="group mb-1">
-                    <button
-                      onClick={() => handleCopyToClipboard(currentTrack.name, 'name')}
-                      className="w-full text-left hover:bg-white/5 rounded-lg px-2 py-1 -mx-2 transition-colors flex items-center gap-2"
-                      title="Click để copy tên bài hát"
+                  {/* Song Name - Click to copy (no icon, just toast) */}
+                  <button
+                    onClick={() => handleCopyToClipboard(currentTrack.name, 'name')}
+                    className="w-full text-left hover:bg-white/5 rounded-lg px-2 py-1 -mx-2 transition-colors mb-1"
+                    title="Click để copy tên bài hát"
+                  >
+                    <h1 
+                      className="text-2xl md:text-3xl font-bold text-white"
+                      style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
                     >
-                      <h1 className="text-2xl md:text-3xl font-bold text-white truncate flex-1">
-                        {currentTrack.name}
-                      </h1>
-                      {copiedField === 'name' ? (
-                        <FiCheck className="w-5 h-5 text-green-400 flex-shrink-0" />
-                      ) : (
-                        <FiCopy className="w-5 h-5 text-white/40 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                      )}
-                    </button>
-                  </div>
+                      {currentTrack.name}
+                    </h1>
+                  </button>
                   
-                  {/* Artist - Click to copy, max 2 lines with truncate */}
-                  <div className="group">
+                  {/* Artist - Click to copy (no icon, just toast) + Action buttons */}
+                  <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleCopyToClipboard(currentTrack.artist || 'Unknown Artist', 'artist')}
-                      className="w-full text-left hover:bg-white/5 rounded-lg px-2 py-1 -mx-2 transition-colors flex items-center gap-2"
+                      className="flex-1 text-left hover:bg-white/5 rounded-lg px-2 py-1 -mx-2 transition-colors"
                       title="Click để copy tên nghệ sĩ"
                     >
-                      <p className="text-base md:text-lg text-white/70 flex-1 line-clamp-2">
+                      <p className="text-base md:text-lg text-white/70 line-clamp-2">
                         {currentTrack.artist || 'Unknown Artist'}
                       </p>
-                      {copiedField === 'artist' ? (
-                        <FiCheck className="w-4 h-4 text-green-400 flex-shrink-0 self-start mt-1" />
-                      ) : (
-                        <FiCopy className="w-4 h-4 text-white/40 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-start mt-1" />
-                      )}
+                    </button>
+                    
+                    {/* Action buttons inline with artist */}
+                    <button 
+                      onClick={handleAddToPlaylist}
+                      className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+                      title="Thêm vào playlist"
+                    >
+                      <FiHeart className="w-6 h-6 text-white/70 hover:text-white" />
                     </button>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                    <FiHeart className="w-6 h-6 text-white/70 hover:text-white" />
-                  </button>
-                  <button className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                    <FiMoreHorizontal className="w-6 h-6 text-white/70 hover:text-white" />
-                  </button>
                 </div>
               </div>
             </div>

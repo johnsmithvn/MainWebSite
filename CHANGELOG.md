@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Added
 
+- ✨ [2025-10-26] Added "Add to Playlist" button to MusicPlayer and FullPlayerModal - Click the + icon next to play button to add current track to any playlist, with playlist creation support
+- ✨ [2025-10-26] Added global PlaylistModal component - Modal appears on any page when triggered, allows creating new playlists and managing track assignments
 - ✨ [2025-10-26] Added lyrics modal to MusicPlayer main view - Click on album cover art to open lyrics modal, shared component with FullPlayerModal for consistency
 - ✨ [2025-10-26] Added copy to clipboard feature in Full Player Modal - Click on song name or artist to copy to clipboard with toast notification and visual feedback
 - ✨ [2025-10-26] Added swipe gesture to Full Player Modal - Swipe left/right on album art to navigate to next/previous track with smooth animations
@@ -15,6 +17,11 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Changed
 
+- 🔄 [2025-10-26] Improved FullPlayerModal layout → Icon tim (add to playlist) nằm cùng hàng với artist name, layout gọn gàng và dễ nhìn hơn
+- 🔄 [2025-10-26] Improved MusicPlayer UI/UX → Tăng breakpoint mobile lên 1024px (lg), tăng line-clamp album name lên 3 dòng, heart icon = add to playlist, xóa icon +/⋯, chỉ giữ heart + download
+- 🔄 [2025-10-26] Simplified FullPlayerModal copy feature → Xóa icon copy clipboard và copiedField state, click vào tên/artist chỉ show toast "Đã copy!" (cleaner UX)
+- 🔄 [2025-10-26] Improved mobile UX for Full Player Modal access → Click album name/title in header to open (instead of footer), making it more intuitive
+- 🔄 [2025-10-26] Improved PlayerFooter on mobile → Removed click on album art, only progress bar is interactive for seeking (cleaner UX)
 - 🔄 [2025-10-26] Improved MusicPlayer header layout → Căn giữa ảnh cover trên mobile, rút ngắn vùng artist (max-w-[180px]) để tránh xuống dòng với songs/plays count
 - 🔄 [2025-10-26] Improved playlist toggle button design → Changed to gray theme with FiMusic icon for better visual consistency
 - 🔄 [2025-10-26] Improved Full Player Modal artist display → Artist name now displays maximum 2 lines with truncate for better readability
@@ -24,6 +31,8 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-10-26] Fixed PlaylistModal z-index conflict with FullPlayerModal → Tăng z-index từ 100 lên 105 để PlaylistModal luôn hiển thị phía trên khi được mở từ FullPlayerModal
+- 🐛 [2025-10-26] Fixed PlayerFooter mobile track info display → Xóa hoàn toàn track info (ảnh + tên bài) trên footer mobile/tablet để tránh xung đột với header album click, giải quyết vấn đề nháy timeline và hiển thị ảnh không mong muốn
 - 🐛 [2025-10-26] Fixed Music Player header search not working → Changed to use correct music-folder API endpoint with client-side filtering
 - 🐛 [2025-10-26] Fixed update-lyrics API error "respondSuccess is not a function" → Changed to use correct helper function names (sendSuccess, sendError) from responseHelpers
 - 🐛 [2025-10-26] Fixed Lyrics Modal save function not working → Changed to get sourceKey from useAuthStore instead of non-existent currentFolder from useMusicStore

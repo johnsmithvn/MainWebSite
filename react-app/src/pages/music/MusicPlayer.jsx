@@ -11,7 +11,8 @@ import {
   FiMoreHorizontal,
   FiDownload,
   FiClock,
-  FiSearch
+  FiSearch,
+  FiPlus
 } from 'react-icons/fi';
 import { useAuthStore, useMusicStore, useUIStore } from '@/store';
 import { DEFAULT_IMAGES } from '@/constants';
@@ -344,6 +345,17 @@ const MusicPlayer = () => {
       setVolume(0);
       audio.volume = 0;
     }
+  };
+
+  const handleAddToPlaylist = () => {
+    if (!currentTrack) {
+      showToast('Chưa có bài hát nào đang phát', 'warning');
+      return;
+    }
+    // Dispatch event to open playlist modal
+    window.dispatchEvent(new CustomEvent('openPlaylistModal', { 
+      detail: { item: currentTrack } 
+    }));
   };
 
   // Detect scroll to condense top header like screenshot 2 (robust: IntersectionObserver + fallback)
@@ -701,18 +713,26 @@ const MusicPlayer = () => {
             />
             <div className="flex-1 min-w-0">
               <h2
-                className="text-3xl md:text-5xl font-extrabold tracking-tight mt-2 leading-tight"
+                className="text-3xl md:text-5xl font-extrabold tracking-tight mt-2 leading-tight cursor-pointer hover:opacity-80 active:opacity-60 transition-opacity lg:cursor-default lg:hover:opacity-100 lg:active:opacity-100"
                 style={{
                   display: '-webkit-box',
-                  WebkitLineClamp: 2,
+                  WebkitLineClamp: 3,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
                 }}
-                title={currentTrack?.album || folderTitle || 'NOW PLAYING'}
+                title="Click để mở Full Player (mobile/tablet)"
+                onClick={() => {
+                  // Mobile and tablet: Click album name to open full player
+                  const isMobileOrTablet = window.innerWidth <= 1024;
+                  if (isMobileOrTablet) {
+                    console.log('🎵 Opening Full Player from album name click');
+                    setIsFullPlayerOpen(true);
+                  }
+                }}
               >
                 {currentTrack?.album?.toUpperCase?.() || folderTitle?.toUpperCase?.() || 'NOW PLAYING'}
               </h2>
-              {/* Rút ngắn vùng artist để tránh xuống dòng */}
+              {/* Artist info và action buttons */}
               <div className="mt-4 text-white/80 text-sm flex flex-wrap items-center gap-2">
                 <span
                   className="min-w-0 max-w-[180px] md:max-w-[220px] flex items-baseline gap-1"
@@ -730,8 +750,14 @@ const MusicPlayer = () => {
                 <button onClick={togglePlayPause} className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-lg" aria-label="Play">
                   {isPlaying ? <FiPause className="w-7 h-7" /> : <FiPlay className="w-7 h-7 ml-0.5" />}
                 </button>
+                <button 
+                  onClick={handleAddToPlaylist}
+                  className="p-3 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                  title="Thêm vào playlist"
+                >
+                  <FiHeart className="w-6 h-6" />
+                </button>
                 <button className="p-3 rounded-full text-white/70 hover:text-white"><FiDownload className="w-6 h-6" /></button>
-                <button className="p-3 rounded-full text-white/70 hover:text-white"><FiMoreHorizontal className="w-6 h-6" /></button>
               </div>
             </div>
           </div>
