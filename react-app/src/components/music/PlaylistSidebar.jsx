@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiList, FiX } from 'react-icons/fi';
+import { FiSearch, FiList, FiX, FiMusic } from 'react-icons/fi';
 import { DEFAULT_IMAGES } from '@/constants';
 
 const PlaylistSidebar = ({ 
@@ -73,10 +73,10 @@ const PlaylistSidebar = ({
       {/* Toggle button for mobile - floating */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-20 left-4 z-50 p-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg transition-all duration-200"
+        className="md:hidden fixed top-20 left-4 z-50 p-3 rounded-full bg-white/10 hover:bg-white/20 text-gray-400 hover:text-gray-300 shadow-lg transition-all duration-200 backdrop-blur-sm border border-white/10"
         aria-label="Toggle Playlist"
       >
-        {isOpen ? <FiX className="w-5 h-5" /> : <FiList className="w-5 h-5" />}
+        {isOpen ? <FiX className="w-5 h-5" /> : <FiMusic className="w-5 h-5" />}
       </button>
 
       {/* Desktop sidebar - always visible */}

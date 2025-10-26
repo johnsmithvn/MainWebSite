@@ -4,8 +4,30 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Added
+
+- ✨ [2025-10-26] Added lyrics modal to MusicPlayer main view - Click on album cover art to open lyrics modal, shared component with FullPlayerModal for consistency
+- ✨ [2025-10-26] Added copy to clipboard feature in Full Player Modal - Click on song name or artist to copy to clipboard with toast notification and visual feedback
+- ✨ [2025-10-26] Added swipe gesture to Full Player Modal - Swipe left/right on album art to navigate to next/previous track with smooth animations
+- ✨ [2025-10-26] Added Lyrics Display & Edit Feature - Click on album art in Full Player Modal to view and edit song lyrics with beautiful modal interface. Changes are saved to database.
+- ✨ [2025-10-26] Added Full Player Modal (Spotify-style) - Click on player footer to open full-screen player with large album art, animated equalizer, and enhanced controls
+- ✨ [2025-10-26] Added responsive playlist sidebar for Music Player - Hidden behind floating toggle button on mobile devices with slide-in animation
+
+### Changed
+
+- 🔄 [2025-10-26] Improved MusicPlayer header layout → Căn giữa ảnh cover trên mobile, rút ngắn vùng artist (max-w-[180px]) để tránh xuống dòng với songs/plays count
+- 🔄 [2025-10-26] Improved playlist toggle button design → Changed to gray theme with FiMusic icon for better visual consistency
+- 🔄 [2025-10-26] Improved Full Player Modal artist display → Artist name now displays maximum 2 lines with truncate for better readability
+- 🔄 [2025-10-26] Redesigned PlayerHeader layout → Music Library icon bên trái, Home button bên phải, search box ở giữa để cân đối và dễ sử dụng hơn
+- 🔄 [2025-10-26] Changed Music Player header navigation icons → Replaced back/forward arrows with Home and Music Library icons for better UX
+- 🔄 [2025-10-26] Improved Music Player header layout → Better spacing, larger search bar, improved mobile responsiveness
+
 ### Fixed
 
+- 🐛 [2025-10-26] Fixed Music Player header search not working → Changed to use correct music-folder API endpoint with client-side filtering
+- 🐛 [2025-10-26] Fixed update-lyrics API error "respondSuccess is not a function" → Changed to use correct helper function names (sendSuccess, sendError) from responseHelpers
+- 🐛 [2025-10-26] Fixed Lyrics Modal save function not working → Changed to get sourceKey from useAuthStore instead of non-existent currentFolder from useMusicStore
+- 🐛 [2025-10-26] Fixed Service Worker error "Failed to execute 'put' on 'Cache': Partial response (status code 206) is unsupported" → Added status code validation to only cache 200 OK responses, skip 206 Partial Content from audio/video streaming
 - 🐛 [2024-12-19] Fixed music search chỉ tìm được tên file → Có thể search theo artist, album, genre từ metadata
 
 ### Enhanced  

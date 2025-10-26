@@ -23,6 +23,8 @@ import LoadingOverlay from '@/components/common/LoadingOverlay';
 import PlayerFooter from '../../components/music/PlayerFooter';
 import PlayerHeader from '../../components/music/PlayerHeader';
 import PlaylistSidebar from '../../components/music/PlaylistSidebar';
+import FullPlayerModal from '../../components/music/FullPlayerModal';
+import LyricsModal from '../../components/music/LyricsModal';
 
 const MusicPlayer = () => {
   const navigate = useNavigate();
@@ -80,6 +82,8 @@ const MusicPlayer = () => {
   const [library, setLibrary] = useState({ items: [], loading: false, error: null });
   const [activePlaylistId, setActivePlaylistId] = useState(null);
   const [headerCondensed, setHeaderCondensed] = useState(false);
+  const [isFullPlayerOpen, setIsFullPlayerOpen] = useState(false);
+  const [isLyricsOpen, setIsLyricsOpen] = useState(false);
   const headerSentinelRef = useRef(null);
 
   // Audio ref
@@ -683,8 +687,19 @@ const MusicPlayer = () => {
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#50306e] via-transparent to-transparent opacity-60" />
           <div className="bg-gradient-to-b from-[#121212] via-[#121212]/95 to-transparent -mx-4 px-4 pt-1 pb-3">
             <div className="flex flex-col md:flex-row md:items-end gap-6">
-            <motion.img initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} src={headerArt} alt={(currentTrack?.name || currentPlaylist[0]?.name || folderTitle) || 'Cover'} onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)} className="w-48 h-48 md:w-56 md:h-56 object-cover rounded shadow-2xl" />
-            <div className="flex-1">
+            {/* Căn giữa ảnh cover trên mobile - Click to open lyrics */}
+            <motion.img 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ duration: 0.4 }} 
+              src={headerArt} 
+              alt={(currentTrack?.name || currentPlaylist[0]?.name || folderTitle) || 'Cover'} 
+              onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)} 
+              className="w-48 h-48 md:w-56 md:h-56 object-cover rounded shadow-2xl mx-auto md:mx-0 cursor-pointer hover:scale-[1.02] transition-transform" 
+              onClick={() => setIsLyricsOpen(true)}
+              title="Click để xem lời bài hát"
+            />
+            <div className="flex-1 min-w-0">
               <h2
                 className="text-3xl md:text-5xl font-extrabold tracking-tight mt-2 leading-tight"
                 style={{
@@ -697,18 +712,19 @@ const MusicPlayer = () => {
               >
                 {currentTrack?.album?.toUpperCase?.() || folderTitle?.toUpperCase?.() || 'NOW PLAYING'}
               </h2>
-              <div className="mt-4 text-white/80 text-sm flex items-center gap-2">
+              {/* Rút ngắn vùng artist để tránh xuống dòng */}
+              <div className="mt-4 text-white/80 text-sm flex flex-wrap items-center gap-2">
                 <span
-                  className="min-w-0 max-w-[300px] flex items-baseline gap-1"
+                  className="min-w-0 max-w-[180px] md:max-w-[220px] flex items-baseline gap-1"
                   title={currentTrack?.artist || 'Unknown Artist'}
                 >
                   <span className="font-semibold flex-none">Artist:</span>
                   <span className="truncate whitespace-nowrap">{currentTrack?.artist || 'Unknown Artist'}</span>
                 </span>
                 <span className="w-1 h-1 rounded-full bg-white/40" />
-                <span>{currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}</span>
+                <span className="whitespace-nowrap">{currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}</span>
                 <span className="w-1 h-1 rounded-full bg-white/40" />
-                <span>{Number(currentTrack?.viewCount ?? currentTrack?.views ?? 0).toLocaleString()} Plays</span>
+                <span className="whitespace-nowrap">{Number(currentTrack?.viewCount ?? currentTrack?.views ?? 0).toLocaleString()} Plays</span>
               </div>
               <div className="mt-6 flex items-center gap-4">
                 <button onClick={togglePlayPause} className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-lg" aria-label="Play">
@@ -815,7 +831,29 @@ const MusicPlayer = () => {
         handleSeek={handleSeek}
         handleVolumeBar={handleVolumeBar}
         prevOrderBeforeShuffleRef={prevOrderBeforeShuffleRef}
+        onOpenFullPlayer={() => setIsFullPlayerOpen(true)}
         theme="v1"
+      />
+
+      {/* Full Player Modal (Spotify-style) */}
+      <FullPlayerModal
+        isOpen={isFullPlayerOpen}
+        onClose={() => setIsFullPlayerOpen(false)}
+        audioRef={audioRef}
+        currentTime={currentTime}
+        duration={duration}
+        formatTime={formatTime}
+        handleSeek={handleSeek}
+        handleVolumeBar={handleVolumeBar}
+        prevOrderBeforeShuffleRef={prevOrderBeforeShuffleRef}
+        theme="v1"
+      />
+
+      {/* Lyrics Modal - Shared with FullPlayerModal */}
+      <LyricsModal
+        isOpen={isLyricsOpen}
+        onClose={() => setIsLyricsOpen(false)}
+        currentTrack={currentTrack}
       />
 
       {/* Audio Element */}

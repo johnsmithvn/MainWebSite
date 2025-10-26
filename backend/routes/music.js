@@ -11,6 +11,7 @@ router.use("/", require("../api/music/audio"));
 router.use("/", require("../api/music/audio-cache"));
 router.use("/", require("../api/music/playlist"));
 router.use("/", require("../api/music/music-meta"));
+router.use("/", require("../api/music/update-lyrics"));
 router.use("/", require("../api/music/reset-music-db"));
 router.use("/", require("../api/music/extract-thumbnail"));
 router.use("/", require("../api/music/set-thumbnail"));

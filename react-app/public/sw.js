@@ -204,10 +204,16 @@ async function networkFirstWithTimeout(request, cacheName) {
     
     const networkResponse = await Promise.race([networkPromise, timeoutPromise]);
     
-    if (networkResponse.ok) {
-      // Use centralized cache instance getter
-      const cache = await getCacheInstance(cacheName);
-      cache.put(request, networkResponse.clone());
+    // Only cache full responses (200), not partial content (206) or other status codes
+    // Cache API doesn't support 206 Partial Content responses
+    if (networkResponse.ok && networkResponse.status === 200) {
+      try {
+        // Use centralized cache instance getter
+        const cache = await getCacheInstance(cacheName);
+        await cache.put(request, networkResponse.clone());
+      } catch (cacheError) {
+        console.warn('⚠️ Failed to cache response:', cacheError.message);
+      }
     }
     
     return networkResponse;
