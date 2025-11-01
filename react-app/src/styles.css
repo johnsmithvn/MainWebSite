@@ -180,6 +180,21 @@ body {
   animation: scaleIn 0.2s ease-out;
 }
 
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 /* Loading spinner */
 .spinner {
   @apply inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin;

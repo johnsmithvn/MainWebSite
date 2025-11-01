@@ -1,7 +1,7 @@
 // 📁 src/components/manga/ReaderHeader.jsx
 // 📚 Header component for manga reader
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Menu, Search, Settings, Heart, Image as ImageIcon, Home, Download } from 'lucide-react';
 import SearchModal from '../common/SearchModal';
@@ -18,7 +18,9 @@ const ReaderHeader = ({
   onDownload,
   isDownloading = false,
   downloadProgress = { current: 0, total: 0, status: 'idle' },
-  isOfflineAvailable = false
+  isOfflineAvailable = false,
+  isInQueue = false, // ✅ Chapter đang trong download queue
+  isPreparingDownload = false // ✅ NEW: Đang chuẩn bị download (modal chưa hiện)
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -202,20 +204,30 @@ const ReaderHeader = ({
           >
             <Settings size={18} />
           </button>
+          
+          {/* Download Button - Simple */}
           {onDownload && (
             <button
-              className={`reader-header-btn download-btn ${isOfflineAvailable ? 'offline-available' : ''} ${isDownloading ? 'downloading' : ''}`}
+              className={`reader-header-btn download-btn ${isOfflineAvailable ? 'offline-available' : ''} ${isDownloading ? 'downloading' : ''} ${isInQueue ? 'in-queue' : ''} ${isPreparingDownload ? 'preparing' : ''}`}
               onClick={onDownload}
-              disabled={isDownloading}
+              disabled={isDownloading || isPreparingDownload}
               title={
-                isDownloading 
-                  ? `Đang tải... ${downloadProgress.current}/${downloadProgress.total}`
-                  : isOfflineAvailable 
-                    ? "Chapter đã tải offline" 
-                    : "Download offline"
+                isPreparingDownload
+                  ? "Đang chuẩn bị..."
+                  : isDownloading 
+                    ? `Đang tải... ${downloadProgress.current}/${downloadProgress.total}`
+                    : isInQueue
+                      ? "Chapter đang trong queue hoặc đã tải"
+                      : isOfflineAvailable 
+                        ? "Chapter đã tải offline" 
+                        : "Download chapter"
               }
             >
-              {isDownloading ? (
+              {isPreparingDownload ? (
+                <div className="download-progress">
+                  <div className="spinner" />
+                </div>
+              ) : isDownloading ? (
                 <div className="download-progress">
                   <div className="spinner" />
                   <span className="progress-text">
@@ -227,6 +239,9 @@ const ReaderHeader = ({
                   <Download size={18} />
                   {isOfflineAvailable && (
                     <div className="offline-indicator">✓</div>
+                  )}
+                  {isInQueue && !isOfflineAvailable && (
+                    <div className="queue-indicator">⏳</div>
                   )}
                 </>
               )}

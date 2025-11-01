@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import LoadingOverlay from './LoadingOverlay';
+import DownloadBadge from './DownloadBadge';
 import { useUIStore } from '../../store';
 import PlaylistModal from '@/components/music/PlaylistModal';
 
@@ -112,6 +113,9 @@ const Layout = () => {
           },
         }}
       />
+
+      {/* Floating Download Badge */}
+      <DownloadBadge />
 
   {/* Global Playlist Modal */}
   <PlaylistModal />

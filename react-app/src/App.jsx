@@ -5,6 +5,7 @@ import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useUIStore, useMusicStore } from '@/store';
 import Layout from '@/components/common/Layout';
+import PlaylistModal from '@/components/music/PlaylistModal';
 
 // Pages
 import Home from '@/pages/Home';
@@ -25,6 +26,7 @@ import OfflineHome from '@/pages/offline/OfflineHome';
 import OfflineMangaLibrary from '@/pages/offline/OfflineMangaLibrary';
 import OfflineMovieLibrary from '@/pages/offline/OfflineMovieLibrary';
 import OfflineMusicLibrary from '@/pages/offline/OfflineMusicLibrary';
+import DownloadManager from '@/pages/downloads/DownloadManager';
 
 function MusicPlayerRouter() {
   const { playerSettings } = useMusicStore();
@@ -57,12 +59,16 @@ function App() {
   }, [darkMode]);
 
   return (
-    <Routes>
-      {/* Full-screen routes outside of the main Layout */}
-      <Route path="/manga/reader/:folderId" element={<MangaReader />} />
-      <Route path="/manga/reader" element={<MangaReader />} />
-      <Route path="/movie/player" element={<MoviePlayer />} />
-      <Route path="/music/player" element={<MusicPlayerRouter />} />
+    <>
+      {/* Global Playlist Modal */}
+      <PlaylistModal />
+      
+      <Routes>
+        {/* Full-screen routes outside of the main Layout */}
+        <Route path="/manga/reader/:folderId" element={<MangaReader />} />
+        <Route path="/manga/reader" element={<MangaReader />} />
+        <Route path="/movie/player" element={<MoviePlayer />} />
+        <Route path="/music/player" element={<MusicPlayerRouter />} />
 
       <Route path="/" element={<Layout />}> 
         <Route index element={<Home />} />
@@ -88,6 +94,10 @@ function App() {
         
         {/* Settings */}
         <Route path="settings" element={<Settings />} />
+        
+        {/* Downloads */}
+        <Route path="downloads" element={<DownloadManager />} />
+        
         <Route path="offline">
           <Route index element={<OfflineHome />} />
           <Route path="manga" element={<OfflineMangaLibrary />} />
@@ -99,6 +109,7 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
+    </>
   );
 }
 

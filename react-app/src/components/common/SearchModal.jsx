@@ -353,8 +353,13 @@ const SuggestionItem = ({ item, onClick }) => {
         className="w-10 h-10 rounded object-cover bg-gray-200 dark:bg-dark-600"
         onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = fallback; }}
       />
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="text-sm text-gray-900 dark:text-white truncate">{item.name}</div>
+        {item.path && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={item.path}>
+            {item.path.split('/').slice(0, -1).join('/') || '/'}
+          </div>
+        )}
         {typeof item.viewCount === 'number' && (
           <div className="text-xs text-gray-500 dark:text-gray-400">👁️ {item.viewCount}</div>
         )}

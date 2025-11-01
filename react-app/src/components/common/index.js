@@ -21,3 +21,5 @@ export { default as StorageQuotaModal } from './StorageQuotaModal';
 export { default as StorageInfoModal } from './StorageInfoModal';
 export { default as ServiceWorkerStatus } from './ServiceWorkerStatus';
 export { default as BrowserSupportStatus } from './BrowserSupportStatus';
+export { default as DownloadBadge } from './DownloadBadge';
+export { default as VirtualList } from './VirtualList';

@@ -11,7 +11,8 @@ import {
   FiMoreHorizontal,
   FiDownload,
   FiClock,
-  FiSearch
+  FiSearch,
+  FiPlus
 } from 'react-icons/fi';
 import { useAuthStore, useMusicStore, useUIStore } from '@/store';
 import { DEFAULT_IMAGES } from '@/constants';
@@ -22,6 +23,9 @@ import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import PlayerFooter from '../../components/music/PlayerFooter';
 import PlayerHeader from '../../components/music/PlayerHeader';
+import PlaylistSidebar from '../../components/music/PlaylistSidebar';
+import FullPlayerModal from '../../components/music/FullPlayerModal';
+import LyricsModal from '../../components/music/LyricsModal';
 
 const MusicPlayer = () => {
   const navigate = useNavigate();
@@ -79,6 +83,8 @@ const MusicPlayer = () => {
   const [library, setLibrary] = useState({ items: [], loading: false, error: null });
   const [activePlaylistId, setActivePlaylistId] = useState(null);
   const [headerCondensed, setHeaderCondensed] = useState(false);
+  const [isFullPlayerOpen, setIsFullPlayerOpen] = useState(false);
+  const [isLyricsOpen, setIsLyricsOpen] = useState(false);
   const headerSentinelRef = useRef(null);
 
   // Audio ref
@@ -339,6 +345,17 @@ const MusicPlayer = () => {
       setVolume(0);
       audio.volume = 0;
     }
+  };
+
+  const handleAddToPlaylist = () => {
+    if (!currentTrack) {
+      showToast('Chưa có bài hát nào đang phát', 'warning');
+      return;
+    }
+    // Dispatch event to open playlist modal
+    window.dispatchEvent(new CustomEvent('openPlaylistModal', { 
+      detail: { item: currentTrack } 
+    }));
   };
 
   // Detect scroll to condense top header like screenshot 2 (robust: IntersectionObserver + fallback)
@@ -669,85 +686,78 @@ const MusicPlayer = () => {
 
   {/* Main layout: left Library sidebar, right content with header + bottom tracklist */}
   <div className="px-4 sm:px-6 mt-1 pb-[104px] grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-start">
-        {/* Left: Library sidebar */}
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] flex flex-col" style={{ height: 'calc(100vh - 200px)' }}>
-          <div className="px-4 py-3 text-xs uppercase tracking-wider text-white/60 border-b border-white/10 flex items-center justify-between">
-            <span>Playlist</span>
-            <span className="text-white/40 text-[11px]">Playlists</span>
-          </div>
-          <div className="p-3">
-            <div className="relative">
-              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-4 h-4" />
-              <input placeholder="Tìm playlist" className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30" />
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {library.loading && <div className="px-4 py-2 text-white/60 text-sm">Đang tải…</div>}
-            {!library.loading && library.items.length === 0 && (
-              <div className="px-4 py-6 text-white/60 text-sm">Chưa có playlist</div>
-            )}
-            {!library.loading && library.items.length > 0 && (
-              <div className="px-2 space-y-1">
-                {library.items.map((pl) => (
-                  <button
-                    key={pl.id}
-                    onClick={() => {
-                      setActivePlaylistId(pl.id);
-                      navigate('/music/player', { state: { kind: 'playlist', playlist: String(pl.id), key: sourceKey } });
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-left ${activePlaylistId === pl.id ? 'bg-white/10' : ''}`}
-                    title={pl.name}
-                  >
-                    <img src={pl.thumbnail || DEFAULT_IMAGES.music} onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)} alt={pl.name} className="w-9 h-9 rounded object-cover" />
-                    <div className="min-w-0">
-                      <div className="text-sm text-white truncate">{pl.name}</div>
-                      <div className="text-[11px] text-white/60 truncate">{new Date(pl.updatedAt || Date.now()).toLocaleDateString()}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Left: Library sidebar - replaced with PlaylistSidebar component */}
+        <PlaylistSidebar 
+          library={library}
+          activePlaylistId={activePlaylistId}
+          setActivePlaylistId={setActivePlaylistId}
+          sourceKey={sourceKey}
+        />
 
   {/* Right: Header banner and actions */}
   <div className="relative ml-1">
           <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#50306e] via-transparent to-transparent opacity-60" />
           <div className="bg-gradient-to-b from-[#121212] via-[#121212]/95 to-transparent -mx-4 px-4 pt-1 pb-3">
             <div className="flex flex-col md:flex-row md:items-end gap-6">
-            <motion.img initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} src={headerArt} alt={(currentTrack?.name || currentPlaylist[0]?.name || folderTitle) || 'Cover'} onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)} className="w-48 h-48 md:w-56 md:h-56 object-cover rounded shadow-2xl" />
-            <div className="flex-1">
+            {/* Căn giữa ảnh cover trên mobile - Click to open lyrics */}
+            <motion.img 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ duration: 0.4 }} 
+              src={headerArt} 
+              alt={(currentTrack?.name || currentPlaylist[0]?.name || folderTitle) || 'Cover'} 
+              onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)} 
+              className="w-48 h-48 md:w-56 md:h-56 object-cover rounded shadow-2xl mx-auto md:mx-0 cursor-pointer hover:scale-[1.02] transition-transform" 
+              onClick={() => setIsLyricsOpen(true)}
+              title="Click để xem lời bài hát"
+            />
+            <div className="flex-1 min-w-0">
               <h2
-                className="text-3xl md:text-5xl font-extrabold tracking-tight mt-2 leading-tight"
+                className="text-3xl md:text-5xl font-extrabold tracking-tight mt-2 leading-tight cursor-pointer hover:opacity-80 active:opacity-60 transition-opacity lg:cursor-default lg:hover:opacity-100 lg:active:opacity-100"
                 style={{
                   display: '-webkit-box',
-                  WebkitLineClamp: 2,
+                  WebkitLineClamp: 3,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
                 }}
-                title={currentTrack?.album || folderTitle || 'NOW PLAYING'}
+                title="Click để mở Full Player (mobile/tablet)"
+                onClick={() => {
+                  // Mobile and tablet: Click album name to open full player
+                  const isMobileOrTablet = window.innerWidth <= 1024;
+                  if (isMobileOrTablet) {
+                    console.log('🎵 Opening Full Player from album name click');
+                    setIsFullPlayerOpen(true);
+                  }
+                }}
               >
                 {currentTrack?.album?.toUpperCase?.() || folderTitle?.toUpperCase?.() || 'NOW PLAYING'}
               </h2>
-              <div className="mt-4 text-white/80 text-sm flex items-center gap-2">
+              {/* Artist info và action buttons */}
+              <div className="mt-4 text-white/80 text-sm flex flex-wrap items-center gap-2">
                 <span
-                  className="min-w-0 max-w-[300px] flex items-baseline gap-1"
+                  className="min-w-0 max-w-[180px] md:max-w-[220px] flex items-baseline gap-1"
                   title={currentTrack?.artist || 'Unknown Artist'}
                 >
                   <span className="font-semibold flex-none">Artist:</span>
                   <span className="truncate whitespace-nowrap">{currentTrack?.artist || 'Unknown Artist'}</span>
                 </span>
                 <span className="w-1 h-1 rounded-full bg-white/40" />
-                <span>{currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}</span>
+                <span className="whitespace-nowrap">{currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}</span>
                 <span className="w-1 h-1 rounded-full bg-white/40" />
-                <span>{Number(currentTrack?.viewCount ?? currentTrack?.views ?? 0).toLocaleString()} Plays</span>
+                <span className="whitespace-nowrap">{Number(currentTrack?.viewCount ?? currentTrack?.views ?? 0).toLocaleString()} Plays</span>
               </div>
               <div className="mt-6 flex items-center gap-4">
                 <button onClick={togglePlayPause} className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-lg" aria-label="Play">
                   {isPlaying ? <FiPause className="w-7 h-7" /> : <FiPlay className="w-7 h-7 ml-0.5" />}
                 </button>
+                <button 
+                  onClick={handleAddToPlaylist}
+                  className="p-3 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                  title="Thêm vào playlist"
+                >
+                  <FiHeart className="w-6 h-6" />
+                </button>
                 <button className="p-3 rounded-full text-white/70 hover:text-white"><FiDownload className="w-6 h-6" /></button>
-                <button className="p-3 rounded-full text-white/70 hover:text-white"><FiMoreHorizontal className="w-6 h-6" /></button>
               </div>
             </div>
           </div>
@@ -847,7 +857,29 @@ const MusicPlayer = () => {
         handleSeek={handleSeek}
         handleVolumeBar={handleVolumeBar}
         prevOrderBeforeShuffleRef={prevOrderBeforeShuffleRef}
+        onOpenFullPlayer={() => setIsFullPlayerOpen(true)}
         theme="v1"
+      />
+
+      {/* Full Player Modal (Spotify-style) */}
+      <FullPlayerModal
+        isOpen={isFullPlayerOpen}
+        onClose={() => setIsFullPlayerOpen(false)}
+        audioRef={audioRef}
+        currentTime={currentTime}
+        duration={duration}
+        formatTime={formatTime}
+        handleSeek={handleSeek}
+        handleVolumeBar={handleVolumeBar}
+        prevOrderBeforeShuffleRef={prevOrderBeforeShuffleRef}
+        theme="v1"
+      />
+
+      {/* Lyrics Modal - Shared with FullPlayerModal */}
+      <LyricsModal
+        isOpen={isLyricsOpen}
+        onClose={() => setIsLyricsOpen(false)}
+        currentTrack={currentTrack}
       />
 
       {/* Audio Element */}

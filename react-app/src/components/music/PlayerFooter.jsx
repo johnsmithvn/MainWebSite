@@ -24,6 +24,7 @@ const PlayerFooter = ({
   handleSeek, 
   handleVolumeBar,
   prevOrderBeforeShuffleRef,
+  onOpenFullPlayer, // New prop to open full player modal
   theme = 'v1' // 'v1' for Spotify-style, 'v2' for Zing-style
 }) => {
   const {
@@ -134,8 +135,18 @@ const PlayerFooter = ({
     <div className={`fixed bottom-0 left-0 right-0 h-[100px] ${config.bgColor} z-50 backdrop-blur border-t ${config.borderColor}`}>
       {/* Use a 3-column grid so center controls stay centered and sides truncate */}
       <div className="h-full px-4 md:px-6 pt-1 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(320px,720px)_minmax(0,1fr)] items-center gap-4">
-        {/* Now playing (Left) */}
-        <div className="hidden md:flex items-center gap-3 min-w-0 overflow-hidden justify-self-start">
+        {/* Now playing (Left) - Click to open full player */}
+        <div 
+          onClick={() => {
+            // Desktop only (>1024px): Click to open full player
+            const isDesktop = window.innerWidth > 1024;
+            if (isDesktop && onOpenFullPlayer) {
+              onOpenFullPlayer();
+            }
+          }}
+          className="hidden md:flex items-center gap-3 min-w-0 overflow-hidden justify-self-start cursor-pointer hover:bg-white/5 rounded-lg p-2 -ml-2 transition-colors lg:hover:bg-white/5 lg:cursor-pointer"
+          title="Click để mở Full Player (desktop)"
+        >
           {currentTrack ? (
             <>
               <img
@@ -160,6 +171,7 @@ const PlayerFooter = ({
 
         {/* Controls + progress (Center) */}
         <div className="col-span-1 md:col-auto flex flex-col items-center justify-center w-full justify-self-center">
+          {/* Mobile/Tablet: Hidden - album name in header opens full player instead */}
           <div className="flex items-center gap-5">
             <button 
               onClick={toggleShuffle} 
