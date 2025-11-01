@@ -23,26 +23,66 @@ const Layout = () => {
   useEffect(() => {
     const offlineAllowedPrefixes = ['/offline', '/manga/reader'];
 
-    const redirectToOffline = () => {
-      if (typeof window === 'undefined' || navigator.onLine) {
+    // Check if server is accessible
+    const checkServerAccessibility = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+        
+        // Use existing endpoint that doesn't require auth
+        const response = await fetch('/api/security-keys.js', {
+          method: 'HEAD',
+          signal: controller.signal,
+          cache: 'no-cache'
+        });
+        
+        clearTimeout(timeoutId);
+        console.log('🔍 Server check:', response.status, response.ok);
+        return response.ok;
+      } catch (error) {
+        console.log('❌ Server check failed:', error.message);
+        // Network error, server down, or no access
+        return false;
+      }
+    };
+
+    const redirectToOffline = async () => {
+      if (typeof window === 'undefined') {
         return;
       }
 
       const currentPath = window.location.pathname;
       const isAllowed = offlineAllowedPrefixes.some((prefix) => currentPath.startsWith(prefix));
 
-      if (!isAllowed) {
+      // Check both network status and server accessibility
+      const isOnline = navigator.onLine;
+      console.log('🌐 Network status:', isOnline);
+      
+      let serverAccessible = true;
+      if (isOnline) {
+        serverAccessible = await checkServerAccessibility();
+        console.log('🖥️ Server accessible:', serverAccessible);
+      }
+
+      const shouldRedirect = !isOnline || !serverAccessible;
+      console.log('🔄 Should redirect to offline:', shouldRedirect, '| Current path:', currentPath, '| Is allowed:', isAllowed);
+
+      if (shouldRedirect && !isAllowed) {
+        console.log('➡️ Redirecting to offline...');
         navigate('/offline', { replace: true });
       }
     };
 
-    // Run immediately if the app loads offline
+    // Run immediately if the app loads
     redirectToOffline();
 
+    // Listen for network changes
     window.addEventListener('offline', redirectToOffline);
+    window.addEventListener('online', redirectToOffline); // Also check when coming back online
 
     return () => {
       window.removeEventListener('offline', redirectToOffline);
+      window.removeEventListener('online', redirectToOffline);
     };
   }, [navigate]); // location.pathname intentionally omitted to avoid effect re-run issues on redirect
   

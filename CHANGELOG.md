@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Fixed
+- 🐛 [2025-11-01] Fixed click không hoạt động trên text "Click để xem chi tiết" trong DownloadBadge → Thêm onClick handler, cursor pointer với hover effect và xóa pointer-events-none khỏi tooltip
+
 ### Added
 
 - ✨ [2025-11-01] Added expand/collapse feature for Movie Player episode list - When episode list exceeds 20 items, automatically collapses to show 10 episodes before and after current episode. Click "Xem tất cả/Thu gọn" button to toggle full list
@@ -32,6 +35,7 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-11-01] Fixed offline manga reader black screen issue → Khi đọc manga offline, images chỉ lưu URLs gốc từ server mà không convert thành blob URLs để hiển thị offline. Giờ convert cached images thành blob URLs khi ở offline mode, có cleanup blob URLs khi unmount
 - 🐛 [2025-11-01] Fixed Service Worker memory leak trong getCacheInstance → cachePromises Map không được cleanup sau khi resolve/reject, gây memory leak khi mở nhiều cache. Giờ cleanup ngay sau promise resolve/reject
 - 🐛 [2025-11-01] Fixed Service Worker message handling thiếu error handling → postMessage có thể fail silent, giờ bọc trong try-catch và log errors, thêm catch handlers cho tất cả async operations
 - 🐛 [2025-11-01] Fixed Service Worker getCacheInfo performance issue → Operation mất 50-200ms mỗi lần duyệt toàn bộ cache keys. Giờ cache kết quả 5 giây (TTL), subsequent calls chỉ mất ~1ms
