@@ -781,57 +781,101 @@ const MusicPlayer = () => {
                 {currentTrack?.name || (currentTrack?.path ? currentTrack.path.split('/').pop()?.replace(/\.[^/.]+$/, '') : folderTitle || 'NOW PLAYING')}
               </h2>
               
-              {/* Title - hiển thị từ metadata */}
-              {trackMetadata?.title && !shouldHideField(trackMetadata.title) && (
-                <div className="mt-2 text-white/80 text-sm">
-                  <span className="font-semibold">Title:</span> {trackMetadata.title}
+              {/* Thông tin metadata - tất cả trên 1 dòng và có thể click để copy */}
+              <div className="mt-2 text-white/80 text-sm space-y-1">
+                {/* Title - có thể click để copy */}
+                {trackMetadata?.title && !shouldHideField(trackMetadata.title) && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold flex-shrink-0">Title:</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(trackMetadata.title);
+                        showToast('Đã copy title!', 'success');
+                      }}
+                      className="hover:underline hover:text-white transition-colors truncate text-left"
+                      title="Click để copy title"
+                    >
+                      {trackMetadata.title}
+                    </button>
+                  </div>
+                )}
+                
+                {/* Folder - có thể click để navigate */}
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold flex-shrink-0">Folder:</span>
+                  <button
+                    onClick={() => {
+                      const parentPath = (currentTrack?.path || '').split('/').slice(0, -1).join('/');
+                      if (parentPath) {
+                        navigate(`/music?path=${encodeURIComponent(parentPath)}`);
+                      } else {
+                        navigate('/music');
+                      }
+                    }}
+                    className="hover:underline hover:text-white transition-colors truncate text-left"
+                    title="Mở thư mục chứa"
+                  >
+                    {(() => {
+                      const p = (currentTrack?.path || '').split('/').slice(0, -1).join('/');
+                      const name = p ? p.split('/').pop() : '';
+                      return name || 'Home';
+                    })()}
+                  </button>
                 </div>
-              )}
-              
-              {/* Tên folder cha - có thể click */}
-              <div className="mt-2 text-white/80 text-sm">
-                <span className="font-semibold">Folder:</span>{' '}
-                <button
-                  onClick={() => {
-                    const parentPath = currentTrack?.path ? currentTrack.path.split('/').slice(0, -1).join('/') : '';
-                    if (parentPath) {
-                      navigate(`/music?file=${encodeURIComponent(parentPath)}&key=${sourceKey}`);
-                    } else {
-                      navigate(`/music/select?key=${sourceKey}`);
-                    }
-                  }}
-                  className="hover:underline hover:text-white transition-colors"
-                  title="Click để mở folder cha"
-                >
-                  {currentTrack?.path ? (currentTrack.path.split('/').slice(0, -1).join('/') || 'Home') : 'Home'}
-                </button>
+                
+                {/* Album - có thể click để copy */}
+                {(() => {
+                  const albumValue = normalizeAlbum(trackMetadata?.album || currentTrack?.album);
+                  return !shouldHideField(albumValue) ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold flex-shrink-0">Album:</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(albumValue);
+                          showToast('Đã copy album!', 'success');
+                        }}
+                        className="hover:underline hover:text-white transition-colors truncate text-left"
+                        title="Click để copy album"
+                      >
+                        {albumValue}
+                      </button>
+                    </div>
+                  ) : null;
+                })()}
+                
+                {/* Artist - từ metadata hoặc currentTrack, có thể click để copy */}
+                {(() => {
+                  const artistValue = trackMetadata?.artist || currentTrack?.artist || 'Unknown Artist';
+                  return !shouldHideField(artistValue) ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold flex-shrink-0">Artist:</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(artistValue);
+                          showToast('Đã copy artist!', 'success');
+                        }}
+                        className="hover:underline hover:text-white transition-colors truncate text-left"
+                        title="Click để copy artist"
+                      >
+                        {artistValue}
+                      </button>
+                    </div>
+                  ) : null;
+                })()}
               </div>
-              
-              {/* Album - từ metadata hoặc currentTrack */}
-              {(() => {
-                const albumValue = normalizeAlbum(trackMetadata?.album || currentTrack?.album);
-                return !shouldHideField(albumValue) ? (
-                  <div className="mt-2 text-white/80 text-sm">
-                    <span className="font-semibold">Album:</span> {albumValue}
-                  </div>
-                ) : null;
-              })()}
-              
-              {/* Artist - từ metadata hoặc currentTrack */}
-              {(() => {
-                const artistValue = trackMetadata?.artist || currentTrack?.artist || 'Unknown Artist';
-                return !shouldHideField(artistValue) ? (
-                  <div className="mt-2 text-white/80 text-sm">
-                    <span className="font-semibold">Artist:</span> {artistValue}
-                  </div>
-                ) : null;
-              })()}
               
               {/* Stats info */}
               <div className="mt-4 text-white/80 text-sm flex flex-wrap items-center gap-2">
                 <span className="whitespace-nowrap">{currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}</span>
                 <span className="w-1 h-1 rounded-full bg-white/40" />
                 <span className="whitespace-nowrap">{Number(currentTrack?.viewCount ?? currentTrack?.views ?? 0).toLocaleString()} Plays</span>
+                {/* Genre info from metadata */}
+                {trackMetadata?.genre && !shouldHideField(trackMetadata.genre) && (
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-white/40" />
+                    <span className="whitespace-nowrap">{trackMetadata.genre}</span>
+                  </>
+                )}
               </div>
               <div className="mt-6 flex items-center gap-4">
                 <button onClick={togglePlayPause} className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-lg" aria-label="Play">

@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Added
+
+- ✨ [2025-11-01] Added click to copy for Title, Album and Artist in MusicPlayer → Click vào Title, Album hoặc Artist để copy vào clipboard với toast notification, improved layout với tất cả metadata trên 1 dòng và truncate
+- ✨ [2025-11-01] Added genre display in MusicPlayer stats → Hiển thị genre bên cạnh plays count trong phần thông tin bài hát, tự động ẩn nếu genre không hợp lệ hoặc rỗng
+
+### Changed
+
+- 🔄 [2025-11-01] Changed folder navigation logic in MusicPlayer → Đồng bộ folder link ở header metadata với tracklist, sử dụng cùng logic navigation path và hiển thị tên folder chuẩn hơn
+
 ### Fixed
 - 🐛 [2025-11-01] Fixed click không hoạt động trên text "Click để xem chi tiết" trong DownloadBadge → Thêm onClick handler, cursor pointer với hover effect và xóa pointer-events-none khỏi tooltip
 - 🐛 [2025-11-01] Fixed FullPlayerModal title display → Use currentTrack.title directly instead of loading separate metadata (simplified approach)
