@@ -85,6 +85,7 @@ const MusicPlayer = () => {
   const [headerCondensed, setHeaderCondensed] = useState(false);
   const [isFullPlayerOpen, setIsFullPlayerOpen] = useState(false);
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
+  const [trackMetadata, setTrackMetadata] = useState(null);
   const headerSentinelRef = useRef(null);
 
   // Audio ref
@@ -655,6 +656,31 @@ const MusicPlayer = () => {
   const normalizedFilter = '';
   const visiblePlaylist = currentPlaylist;
 
+  // Load metadata for current track
+  useEffect(() => {
+    const loadMetadata = async () => {
+      if (!currentTrack?.path || !sourceKey) {
+        setTrackMetadata(null);
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/music/music-meta?key=${encodeURIComponent(sourceKey)}&path=${encodeURIComponent(currentTrack.path)}`);
+        if (response.ok) {
+          const metadata = await response.json();
+          setTrackMetadata(metadata);
+        } else {
+          setTrackMetadata(null);
+        }
+      } catch (err) {
+        console.warn('Failed to load track metadata:', err);
+        setTrackMetadata(null);
+      }
+    };
+    
+    loadMetadata();
+  }, [currentTrack?.path, sourceKey]);
+
   // Load user playlists for Library
   useEffect(() => {
     const load = async () => {
@@ -712,36 +738,66 @@ const MusicPlayer = () => {
               title="Click để xem lời bài hát"
             />
             <div className="flex-1 min-w-0">
+              {/* Tên file (không extension) - font bé hơn, không uppercase */}
               <h2
-                className="text-3xl md:text-5xl font-extrabold tracking-tight mt-2 leading-tight cursor-pointer hover:opacity-80 active:opacity-60 transition-opacity lg:cursor-default lg:hover:opacity-100 lg:active:opacity-100"
+                className="text-xl md:text-2xl font-bold tracking-normal mt-2 leading-tight cursor-pointer hover:opacity-80 active:opacity-60 transition-opacity lg:cursor-default lg:hover:opacity-100 lg:active:opacity-100"
                 style={{
                   display: '-webkit-box',
-                  WebkitLineClamp: 3,
+                  WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
                 }}
                 title="Click để mở Full Player (mobile/tablet)"
                 onClick={() => {
-                  // Mobile and tablet: Click album name to open full player
+                  // Mobile and tablet: Click filename to open full player
                   const isMobileOrTablet = window.innerWidth <= 1024;
                   if (isMobileOrTablet) {
-                    console.log('🎵 Opening Full Player from album name click');
+                    console.log('🎵 Opening Full Player from filename click');
                     setIsFullPlayerOpen(true);
                   }
                 }}
               >
-                {currentTrack?.album?.toUpperCase?.() || folderTitle?.toUpperCase?.() || 'NOW PLAYING'}
+                {currentTrack?.name || (currentTrack?.path ? currentTrack.path.split('/').pop()?.replace(/\.[^/.]+$/, '') : folderTitle || 'NOW PLAYING')}
               </h2>
-              {/* Artist info và action buttons */}
-              <div className="mt-4 text-white/80 text-sm flex flex-wrap items-center gap-2">
-                <span
-                  className="min-w-0 max-w-[180px] md:max-w-[220px] flex items-baseline gap-1"
-                  title={currentTrack?.artist || 'Unknown Artist'}
+              
+              {/* Title - hiển thị từ metadata */}
+              {trackMetadata?.title && (
+                <div className="mt-2 text-white/80 text-sm">
+                  <span className="font-semibold">Title:</span> {trackMetadata.title}
+                </div>
+              )}
+              
+              {/* Tên folder cha - có thể click */}
+              <div className="mt-2 text-white/80 text-sm">
+                <span className="font-semibold">Folder:</span>{' '}
+                <button
+                  onClick={() => {
+                    const parentPath = currentTrack?.path ? currentTrack.path.split('/').slice(0, -1).join('/') : '';
+                    if (parentPath) {
+                      navigate(`/music?file=${encodeURIComponent(parentPath)}&key=${sourceKey}`);
+                    } else {
+                      navigate(`/music/select?key=${sourceKey}`);
+                    }
+                  }}
+                  className="hover:underline hover:text-white transition-colors"
+                  title="Click để mở folder cha"
                 >
-                  <span className="font-semibold flex-none">Artist:</span>
-                  <span className="truncate whitespace-nowrap">{currentTrack?.artist || 'Unknown Artist'}</span>
-                </span>
-                <span className="w-1 h-1 rounded-full bg-white/40" />
+                  {currentTrack?.path ? (currentTrack.path.split('/').slice(0, -1).join('/') || 'Home') : 'Home'}
+                </button>
+              </div>
+              
+              {/* Album - từ metadata hoặc currentTrack */}
+              <div className="mt-2 text-white/80 text-sm">
+                <span className="font-semibold">Album:</span> {trackMetadata?.album || currentTrack?.album || 'Unknown Album'}
+              </div>
+              
+              {/* Artist - từ metadata hoặc currentTrack */}
+              <div className="mt-2 text-white/80 text-sm">
+                <span className="font-semibold">Artist:</span> {trackMetadata?.artist || currentTrack?.artist || 'Unknown Artist'}
+              </div>
+              
+              {/* Stats info */}
+              <div className="mt-4 text-white/80 text-sm flex flex-wrap items-center gap-2">
                 <span className="whitespace-nowrap">{currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}</span>
                 <span className="w-1 h-1 rounded-full bg-white/40" />
                 <span className="whitespace-nowrap">{Number(currentTrack?.viewCount ?? currentTrack?.views ?? 0).toLocaleString()} Plays</span>
@@ -879,7 +935,7 @@ const MusicPlayer = () => {
       <LyricsModal
         isOpen={isLyricsOpen}
         onClose={() => setIsLyricsOpen(false)}
-        currentTrack={currentTrack}
+        currentTrack={{ ...currentTrack, ...trackMetadata }}
       />
 
       {/* Audio Element */}

@@ -6,8 +6,15 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 - 🐛 [2025-11-01] Fixed click không hoạt động trên text "Click để xem chi tiết" trong DownloadBadge → Thêm onClick handler, cursor pointer với hover effect và xóa pointer-events-none khỏi tooltip
+- 🐛 [2025-11-01] Fixed FullPlayerModal title display → Use currentTrack.title directly instead of loading separate metadata (simplified approach)
+
+### Changed
+
+- 🔄 [2025-11-01] Changed MusicPlayer header layout → Cải thiện bố cục thông tin với hierarchy rõ ràng: tên file (thay album) làm title chính với font nhỏ hơn (text-xl/2xl) và không uppercase, title metadata hiển thị riêng từ API music-meta, folder cha có thể click để navigate, album và artist hiển thị từ metadata hoặc fallback
 
 ### Added
+
+- ✨ [2025-11-01] Added cột title cho metadata nhạc → Thêm field title vào quá trình quét metadata và lưu vào database, cập nhật schema songs table với cột title, đảm bảo API music-meta trả về title trong response
 
 - ✨ [2025-11-01] Added expand/collapse feature for Movie Player episode list - When episode list exceeds 20 items, automatically collapses to show 10 episodes before and after current episode. Click "Xem tất cả/Thu gọn" button to toggle full list
 - ✨ [2025-10-26] Added "Add to Playlist" button to MusicPlayer and FullPlayerModal - Click the + icon next to play button to add current track to any playlist, with playlist creation support
