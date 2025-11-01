@@ -36,6 +36,7 @@ const FullPlayerModal = ({
   handleSeek,
   handleVolumeBar,
   prevOrderBeforeShuffleRef,
+  trackMetadata,
   theme = 'v1'
 }) => {
   const {
@@ -57,6 +58,27 @@ const FullPlayerModal = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState(0); // 0: none, -1: left, 1: right
+
+  // Helper function to normalize album name
+  const normalizeAlbum = (album) => {
+    if (!album) return 'Unknown Album';
+    const normalized = album.toLowerCase();
+    if (normalized.includes('mp3.zing') || normalized.includes('nhaccuatui')) {
+      return 'Unknown Album';
+    }
+    return album;
+  };
+
+  // Helper function to check if value should be hidden
+  const shouldHideField = (value) => {
+    if (!value) return true;
+    const normalized = value.toLowerCase();
+    return normalized === 'unknown album' || 
+           normalized === 'unknown artist' || 
+           normalized === 'unknown' ||
+           normalized.includes('mp3.zing') || 
+           normalized.includes('nhaccuatui');
+  };
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -236,7 +258,12 @@ const FullPlayerModal = ({
             </button>
             <div className="text-center flex-1">
               <div className="text-xs text-white/60 uppercase tracking-wider">Album</div>
-              <div className="text-sm text-white font-medium">{currentTrack.album || 'Music Album'}</div>
+              <div className="text-sm text-white font-medium">
+                {(() => {
+                  const albumValue = normalizeAlbum(trackMetadata?.album || currentTrack.album);
+                  return shouldHideField(albumValue) ? 'Music Album' : albumValue;
+                })()}
+              </div>
             </div>
             <button
               onClick={toggleFullscreen}
@@ -351,10 +378,10 @@ const FullPlayerModal = ({
                     title="Click để copy tên bài hát"
                   >
                     <h1 
-                      className="text-2xl md:text-3xl font-bold text-white"
+                      className="text-xl md:text-2xl font-bold tracking-normal leading-tight text-white"
                       style={{
                         display: '-webkit-box',
-                        WebkitLineClamp: 3,
+                        WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
                       }}
@@ -363,27 +390,64 @@ const FullPlayerModal = ({
                     </h1>
                   </button>
                   
-                  {/* Artist - Click to copy (no icon, just toast) + Action buttons */}
-                  <div className="flex items-center gap-3">
+                  {/* Title - hiển thị từ metadata */}
+                  {trackMetadata?.title && !shouldHideField(trackMetadata.title) && (
                     <button
-                      onClick={() => handleCopyToClipboard(currentTrack.artist || 'Unknown Artist', 'artist')}
-                      className="flex-1 text-left hover:bg-white/5 rounded-lg px-2 py-1 -mx-2 transition-colors"
-                      title="Click để copy tên nghệ sĩ"
+                      onClick={() => handleCopyToClipboard(trackMetadata.title, 'title')}
+                      className="w-full text-left hover:bg-white/5 rounded-lg px-2 py-1 -mx-2 transition-colors mb-1"
+                      title="Click để copy title"
                     >
-                      <p className="text-base md:text-lg text-white/70 line-clamp-2">
-                        {currentTrack.artist || 'Unknown Artist'}
-                      </p>
+                      <div 
+                        className="text-sm text-white/80"
+                        style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 1,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <span className="font-semibold">Title:</span> {trackMetadata.title}
+                      </div>
                     </button>
-                    
-                    {/* Action buttons inline with artist */}
-                    <button 
-                      onClick={handleAddToPlaylist}
-                      className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
-                      title="Thêm vào playlist"
-                    >
-                      <FiHeart className="w-6 h-6 text-white/70 hover:text-white" />
-                    </button>
-                  </div>
+                  )}
+                  
+                  {/* Artist - Click to copy (no icon, just toast) + Action buttons */}
+                  {(() => {
+                    const artistValue = trackMetadata?.artist || currentTrack.artist || 'Unknown Artist';
+                    return !shouldHideField(artistValue) ? (
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleCopyToClipboard(artistValue, 'artist')}
+                          className="flex-1 text-left hover:bg-white/5 rounded-lg px-2 py-1 -mx-2 transition-colors"
+                          title="Click để copy tên nghệ sĩ"
+                        >
+                          <p className="text-base md:text-lg text-white/70 line-clamp-2">
+                            {artistValue}
+                          </p>
+                        </button>
+                        
+                        {/* Action buttons inline with artist */}
+                        <button 
+                          onClick={handleAddToPlaylist}
+                          className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+                          title="Thêm vào playlist"
+                        >
+                          <FiHeart className="w-6 h-6 text-white/70 hover:text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      // Chỉ hiển thị action button nếu không có artist
+                      <div className="flex justify-end">
+                        <button 
+                          onClick={handleAddToPlaylist}
+                          className="p-2 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+                          title="Thêm vào playlist"
+                        >
+                          <FiHeart className="w-6 h-6 text-white/70 hover:text-white" />
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

@@ -10,10 +10,13 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Changed
 
+- 🔄 [2025-11-01] Changed FullPlayerModal text styling → Đồng bộ font size và styling với MusicPlayer: tên bài hát dùng text-xl/2xl (thay vì 2xl/3xl), title và tên bài hát giới hạn tối đa 2 dòng, bỏ uppercase, thêm tracking-normal
 - 🔄 [2025-11-01] Changed MusicPlayer header layout → Cải thiện bố cục thông tin với hierarchy rõ ràng: tên file (thay album) làm title chính với font nhỏ hơn (text-xl/2xl) và không uppercase, title metadata hiển thị riêng từ API music-meta, folder cha có thể click để navigate, album và artist hiển thị từ metadata hoặc fallback
 
 ### Added
 
+- ✨ [2025-11-01] Added smart metadata filtering for music → Normalize album names containing "mp3.zing" or "nhaccuatui" to "Unknown Album", auto-hide Title/Artist/Album fields if they contain "Unknown" values to clean up UI
+- ✨ [2025-11-01] Added title metadata display trong FullPlayerModal → Thêm hiển thị title từ trackMetadata dưới tên file, có thể click để copy, đồng bộ với UI trong MusicPlayer
 - ✨ [2025-11-01] Added cột title cho metadata nhạc → Thêm field title vào quá trình quét metadata và lưu vào database, cập nhật schema songs table với cột title, đảm bảo API music-meta trả về title trong response
 
 - ✨ [2025-11-01] Added expand/collapse feature for Movie Player episode list - When episode list exceeds 20 items, automatically collapses to show 10 episodes before and after current episode. Click "Xem tất cả/Thu gọn" button to toggle full list

@@ -279,6 +279,27 @@ const MusicPlayer = () => {
     return `/api/music/audio?key=${sourceKey}&file=${encodeURIComponent(audioPath)}`;
   }
 
+  // Helper function to normalize album name
+  const normalizeAlbum = (album) => {
+    if (!album) return 'Unknown Album';
+    const normalized = album.toLowerCase();
+    if (normalized.includes('mp3.zing') || normalized.includes('nhaccuatui')) {
+      return 'Unknown Album';
+    }
+    return album;
+  };
+
+  // Helper function to check if value should be hidden
+  const shouldHideField = (value) => {
+    if (!value) return true;
+    const normalized = value.toLowerCase();
+    return normalized === 'unknown album' || 
+           normalized === 'unknown artist' || 
+           normalized === 'unknown' ||
+           normalized.includes('mp3.zing') || 
+           normalized.includes('nhaccuatui');
+  };
+
   const getTrackInfo = useCallback(() => {
     if (!effectivePath) return null;
     const fileName = effectivePath.split('/').pop();
@@ -287,7 +308,7 @@ const MusicPlayer = () => {
       name: nameWithoutExt,
       path: effectivePath,
       artist: 'Unknown Artist',
-      album: 'Unknown Album',
+      album: normalizeAlbum('Unknown Album'),
       thumbnail: null,
     };
   }, [effectivePath]);
@@ -431,7 +452,7 @@ const MusicPlayer = () => {
           name: nameWithoutExt,
           path: selectedFileArg,
           artist: 'Unknown Artist',
-          album: 'Unknown Album',
+          album: normalizeAlbum('Unknown Album'),
           thumbnail: buildThumbnailUrl({ path: selectedFileArg, type: 'audio', thumbnail: null }, 'music'),
         };
         playTrack(singleTrack, [singleTrack], 0);
@@ -496,7 +517,7 @@ const MusicPlayer = () => {
           name: nameWithoutExt,
           path: selectedPath,
           artist: 'Unknown Artist',
-          album: 'Unknown Album',
+          album: normalizeAlbum('Unknown Album'),
           thumbnail: buildThumbnailUrl({ path: selectedPath, type: 'audio', thumbnail: null }, 'music'),
         };
         playTrack(singleTrack, [singleTrack], 0);
@@ -514,7 +535,7 @@ const MusicPlayer = () => {
             name: nameWithoutExt,
             path: selectedFileArg,
             artist: 'Unknown Artist',
-            album: 'Unknown Album',
+            album: normalizeAlbum('Unknown Album'),
             thumbnail: buildThumbnailUrl({ path: selectedFileArg, type: 'audio', thumbnail: null }, 'music'),
           };
           playTrack(singleTrack, [singleTrack], 0);
@@ -761,7 +782,7 @@ const MusicPlayer = () => {
               </h2>
               
               {/* Title - hiển thị từ metadata */}
-              {trackMetadata?.title && (
+              {trackMetadata?.title && !shouldHideField(trackMetadata.title) && (
                 <div className="mt-2 text-white/80 text-sm">
                   <span className="font-semibold">Title:</span> {trackMetadata.title}
                 </div>
@@ -787,14 +808,24 @@ const MusicPlayer = () => {
               </div>
               
               {/* Album - từ metadata hoặc currentTrack */}
-              <div className="mt-2 text-white/80 text-sm">
-                <span className="font-semibold">Album:</span> {trackMetadata?.album || currentTrack?.album || 'Unknown Album'}
-              </div>
+              {(() => {
+                const albumValue = normalizeAlbum(trackMetadata?.album || currentTrack?.album);
+                return !shouldHideField(albumValue) ? (
+                  <div className="mt-2 text-white/80 text-sm">
+                    <span className="font-semibold">Album:</span> {albumValue}
+                  </div>
+                ) : null;
+              })()}
               
               {/* Artist - từ metadata hoặc currentTrack */}
-              <div className="mt-2 text-white/80 text-sm">
-                <span className="font-semibold">Artist:</span> {trackMetadata?.artist || currentTrack?.artist || 'Unknown Artist'}
-              </div>
+              {(() => {
+                const artistValue = trackMetadata?.artist || currentTrack?.artist || 'Unknown Artist';
+                return !shouldHideField(artistValue) ? (
+                  <div className="mt-2 text-white/80 text-sm">
+                    <span className="font-semibold">Artist:</span> {artistValue}
+                  </div>
+                ) : null;
+              })()}
               
               {/* Stats info */}
               <div className="mt-4 text-white/80 text-sm flex flex-wrap items-center gap-2">
@@ -928,6 +959,7 @@ const MusicPlayer = () => {
         handleSeek={handleSeek}
         handleVolumeBar={handleVolumeBar}
         prevOrderBeforeShuffleRef={prevOrderBeforeShuffleRef}
+        trackMetadata={trackMetadata}
         theme="v1"
       />
 
