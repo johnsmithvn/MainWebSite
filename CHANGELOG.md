@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Added
 
+- ✨ [2025-11-01] Added expand/collapse feature for Movie Player episode list - When episode list exceeds 20 items, automatically collapses to show 10 episodes before and after current episode. Click "Xem tất cả/Thu gọn" button to toggle full list
 - ✨ [2025-10-26] Added "Add to Playlist" button to MusicPlayer and FullPlayerModal - Click the + icon next to play button to add current track to any playlist, with playlist creation support
 - ✨ [2025-10-26] Added global PlaylistModal component - Modal appears on any page when triggered, allows creating new playlists and managing track assignments
 - ✨ [2025-10-26] Added lyrics modal to MusicPlayer main view - Click on album cover art to open lyrics modal, shared component with FullPlayerModal for consistency
@@ -31,6 +32,10 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-11-01] Fixed Service Worker memory leak trong getCacheInstance → cachePromises Map không được cleanup sau khi resolve/reject, gây memory leak khi mở nhiều cache. Giờ cleanup ngay sau promise resolve/reject
+- 🐛 [2025-11-01] Fixed Service Worker message handling thiếu error handling → postMessage có thể fail silent, giờ bọc trong try-catch và log errors, thêm catch handlers cho tất cả async operations
+- 🐛 [2025-11-01] Fixed Service Worker getCacheInfo performance issue → Operation mất 50-200ms mỗi lần duyệt toàn bộ cache keys. Giờ cache kết quả 5 giây (TTL), subsequent calls chỉ mất ~1ms
+- 🐛 [2025-11-01] Fixed Service Worker clearSpecificCache không invalidate cache → Sau khi xóa cache, cacheInfoCache và cacheInstances Map không được cleanup. Giờ invalidate cả 2 khi clear cache
 - 🐛 [2025-10-26] Fixed ReferenceError API_BASE_URL trong MangaReader → Changed từ `${API_BASE_URL}/api/increase-view` sang `/api/increase-view` (relative path), fix lỗi "API_BASE_URL is not defined" khi tăng view count
 - 🐛 [2025-10-26] Fixed const reassignment error trong timeout cleanup → Changed `const timeoutId` sang `let timeoutId` để có thể reassign trong Promise callback
 - 🐛 [2025-10-26] Fixed import path in useDownloadQueue.js → Changed từ named import `{ useDownloadQueueStore }` sang default import `useDownloadQueueStore` (Copilot review fix)

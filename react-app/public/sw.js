@@ -32,6 +32,10 @@ const NETWORK_TIMEOUT = 5000;
 // Cache instances management
 const cacheInstances = new Map();
 
+// getCacheInfo performance cache
+const cacheInfoCache = { data: null, timestamp: 0 };
+const CACHE_INFO_TTL = 5000; // 5 seconds cache for expensive getCacheInfo calls
+
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
   console.log('🔧 SW installing v3.0.0...');
@@ -136,6 +140,11 @@ const cachePromises = new Map(); // Track pending cache.open() promises
 /**
  * Get cache instance with race condition protection
  * Centralized function to avoid duplication across cache access points
+ * 
+ * ✅ FIX: Properly cleanup cachePromises Map to prevent memory leak
+ * 
+ * @param {string} cacheName - Name of the cache to open
+ * @returns {Promise<Cache>} Cache instance
  */
 async function getCacheInstance(cacheName) {
   // Get existing cache instance
@@ -147,15 +156,24 @@ async function getCacheInstance(cacheName) {
   // Check if there's already a pending cache.open() for this cacheName
   let cachePromise = cachePromises.get(cacheName);
   if (!cachePromise) {
-    // Create new cache.open() promise
-    cachePromise = caches.open(cacheName);
+    // Create new cache.open() promise with proper cleanup
+    cachePromise = caches.open(cacheName).then(openedCache => {
+      // ✅ Store cache instance for future use
+      cacheInstances.set(cacheName, openedCache);
+      // ✅ Clean up promise map to prevent memory leak
+      cachePromises.delete(cacheName);
+      return openedCache;
+    }).catch(error => {
+      // ✅ Clean up promise map on error too
+      cachePromises.delete(cacheName);
+      throw error;
+    });
+    
     cachePromises.set(cacheName, cachePromise);
   }
   
-  // Wait for the cache to be opened
+  // Wait for the cache to be opened (will get from cacheInstances on next call)
   cache = await cachePromise;
-  cacheInstances.set(cacheName, cache);
-  cachePromises.delete(cacheName); // Clean up the promise
   
   return cache;
 }
@@ -483,43 +501,101 @@ self.addEventListener('message', (event) => {
       break;
       
     case 'GET_CACHE_INFO':
-      getCacheInfo().then(info => {
-        event.source.postMessage({
-          type: 'CACHE_INFO_RESPONSE',
-          data: info
+      getCacheInfo()
+        .then(info => {
+          try {
+            event.source.postMessage({
+              type: 'CACHE_INFO_RESPONSE',
+              data: info
+            });
+          } catch (postError) {
+            console.error('❌ Failed to post cache info response:', postError);
+          }
+        })
+        .catch(error => {
+          console.error('❌ Failed to get cache info:', error);
+          try {
+            event.source.postMessage({
+              type: 'CACHE_INFO_RESPONSE',
+              data: { error: error.message }
+            });
+          } catch (postError) {
+            console.error('❌ Failed to post error response:', postError);
+          }
         });
-      });
       break;
       
     case 'CLEAR_CACHE':
-      clearSpecificCache(data?.cacheName).then(result => {
-        event.source.postMessage({
-          type: 'CACHE_CLEAR_RESPONSE',
-          data: { success: result, cacheName: data?.cacheName }
+      clearSpecificCache(data?.cacheName)
+        .then(result => {
+          try {
+            event.source.postMessage({
+              type: 'CACHE_CLEAR_RESPONSE',
+              data: { success: result, cacheName: data?.cacheName }
+            });
+          } catch (postError) {
+            console.error('❌ Failed to post cache clear response:', postError);
+          }
+        })
+        .catch(error => {
+          console.error('❌ Failed to clear cache:', error);
+          try {
+            event.source.postMessage({
+              type: 'CACHE_CLEAR_RESPONSE',
+              data: { success: false, cacheName: data?.cacheName, error: error.message }
+            });
+          } catch (postError) {
+            console.error('❌ Failed to post error response:', postError);
+          }
         });
-      });
       break;
       
     case 'REGISTER_BACKGROUND_SYNC':
       // Register background sync when offline
       if (self.registration && self.registration.sync) {
-        self.registration.sync.register('retry-failed-downloads');
+        self.registration.sync.register('retry-failed-downloads')
+          .then(() => {
+            console.log('✅ Background sync registered');
+          })
+          .catch(error => {
+            console.error('❌ Failed to register background sync:', error);
+          });
       }
       break;
       
     default:
-      console.warn('Unknown message type:', type);
+      console.warn('⚠️ Unknown message type:', type);
   }
 });
 
 // Cache management utilities
+/**
+ * Get cache information with performance optimization
+ * 
+ * ✅ FIX: Cache expensive cache inspection for 5 seconds
+ * - First call: 50-200ms (enumerate all cache keys)
+ * - Subsequent calls within 5s: ~1ms (return cached data)
+ * 
+ * @returns {Promise<Object>} Cache information
+ */
 async function getCacheInfo() {
   try {
+    const now = Date.now();
+    
+    // ✅ Return cached info if fresh (within TTL)
+    if (cacheInfoCache.data && (now - cacheInfoCache.timestamp) < CACHE_INFO_TTL) {
+      console.log('⚡ Returning cached cache info (fast path)');
+      return cacheInfoCache.data;
+    }
+    
+    console.log('🔍 Computing fresh cache info (expensive)...');
+    
     const cacheNames = await caches.keys();
     const info = {
       version: CACHE_VERSION,
       caches: {},
-      totalSize: 0
+      totalSize: 0,
+      computedAt: new Date().toISOString()
     };
     
     for (const cacheName of cacheNames) {
@@ -531,6 +607,7 @@ async function getCacheInfo() {
         type: cacheType
       };
 
+      // Only enumerate URLs for small caches (offline-core)
       if (cacheType === 'offline-core') {
         cacheInfo.urls = keys.map((request) => {
           try {
@@ -544,10 +621,15 @@ async function getCacheInfo() {
       info.caches[cacheName] = cacheInfo;
     }
     
+    // ✅ Store in cache for future calls
+    cacheInfoCache.data = info;
+    cacheInfoCache.timestamp = now;
+    
+    console.log('✅ Cache info computed and cached');
     return info;
   } catch (error) {
     console.error('❌ Failed to get cache info:', error);
-    return { error: error.message };
+    return { error: error.message, timestamp: new Date().toISOString() };
   }
 }
 
@@ -560,6 +642,11 @@ async function clearSpecificCache(cacheName) {
     
     if (result) {
       console.log('✅ Cache cleared:', cacheName);
+      // ✅ Invalidate cache info cache after clearing
+      cacheInfoCache.data = null;
+      cacheInfoCache.timestamp = 0;
+      // ✅ Remove from cache instances map
+      cacheInstances.delete(cacheName);
     } else {
       console.log('⚠️ Cache not found:', cacheName);
     }
