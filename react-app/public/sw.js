@@ -36,6 +36,12 @@ const cacheInstances = new Map();
 const cacheInfoCache = { data: null, timestamp: 0 };
 const CACHE_INFO_TTL = 5000; // 5 seconds cache for expensive getCacheInfo calls
 
+// Content change tracking for cache invalidation
+const contentChangeTracker = {
+  lastModified: new Map(), // Track last modified times by URL
+  contentHashes: new Map()  // Track content hashes for change detection
+};
+
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
   console.log('🔧 SW installing v3.0.0...');
@@ -228,7 +234,14 @@ async function networkFirstWithTimeout(request, cacheName) {
       try {
         // Use centralized cache instance getter
         const cache = await getCacheInstance(cacheName);
-        await cache.put(request, networkResponse.clone());
+        
+        // Check if content changed before caching
+        const shouldCache = await checkContentChange(request, networkResponse.clone());
+        if (shouldCache) {
+          await cache.put(request, networkResponse.clone());
+          // ✅ Invalidate cache info when new content is cached
+          invalidateCacheInfo();
+        }
       } catch (cacheError) {
         console.warn('⚠️ Failed to cache response:', cacheError.message);
       }
@@ -405,11 +418,78 @@ async function updateCacheInBackground(request, cache) {
   try {
     const response = await fetch(request);
     if (response.ok) {
-      cache.put(request, response);
+      // Check if content has changed before updating cache
+      const shouldUpdate = await checkContentChange(request, response.clone());
+      if (shouldUpdate) {
+        cache.put(request, response);
+        console.log('🔄 Cache updated due to content change:', getResourceName(request.url));
+      }
     }
   } catch (error) {
     // Silent fail for background updates
   }
+}
+
+/**
+ * Check if content has changed and should invalidate cache
+ * Uses ETag, Last-Modified headers, or content hashing
+ */
+async function checkContentChange(request, response) {
+  try {
+    const url = request.url;
+    const lastModified = response.headers.get('last-modified');
+    const etag = response.headers.get('etag');
+    
+    // Use ETag for precise change detection
+    if (etag) {
+      const lastETag = contentChangeTracker.contentHashes.get(url);
+      if (lastETag && lastETag === etag) {
+        return false; // No change
+      }
+      contentChangeTracker.contentHashes.set(url, etag);
+      return true;
+    }
+    
+    // Use Last-Modified as fallback
+    if (lastModified) {
+      const lastModifiedTime = new Date(lastModified).getTime();
+      const cachedTime = contentChangeTracker.lastModified.get(url);
+      if (cachedTime && cachedTime >= lastModifiedTime) {
+        return false; // No change
+      }
+      contentChangeTracker.lastModified.set(url, lastModifiedTime);
+      return true;
+    }
+    
+    // For dynamic content without headers, check content hash
+    if (response.headers.get('content-type')?.includes('application/json')) {
+      const text = await response.text();
+      const hash = await simpleHash(text);
+      const lastHash = contentChangeTracker.contentHashes.get(url);
+      if (lastHash && lastHash === hash) {
+        return false; // No change
+      }
+      contentChangeTracker.contentHashes.set(url, hash);
+      return true;
+    }
+    
+    // Default: assume content changed for unknown types
+    return true;
+  } catch (error) {
+    console.warn('⚠️ Failed to check content change:', error);
+    return true; // Assume changed on error
+  }
+}
+
+/**
+ * Simple hash function for content change detection
+ */
+async function simpleHash(text) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
 }
 
 async function getFallbackImage() {
@@ -525,6 +605,19 @@ self.addEventListener('message', (event) => {
         });
       break;
       
+    case 'INVALIDATE_CACHE_INFO':
+      // Manual cache info invalidation
+      invalidateCacheInfo();
+      try {
+        event.source.postMessage({
+          type: 'CACHE_INFO_INVALIDATED',
+          data: { success: true }
+        });
+      } catch (postError) {
+        console.error('❌ Failed to post invalidation response:', postError);
+      }
+      break;
+      
     case 'CLEAR_CACHE':
       clearSpecificCache(data?.cacheName)
         .then(result => {
@@ -630,6 +723,17 @@ async function getCacheInfo() {
   } catch (error) {
     console.error('❌ Failed to get cache info:', error);
     return { error: error.message, timestamp: new Date().toISOString() };
+  }
+}
+
+/**
+ * Invalidate cached cache info when content changes
+ */
+function invalidateCacheInfo() {
+  if (cacheInfoCache.data) {
+    console.log('🔄 Cache info invalidated due to content change');
+    cacheInfoCache.data = null;
+    cacheInfoCache.timestamp = 0;
   }
 }
 

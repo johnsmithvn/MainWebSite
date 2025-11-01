@@ -1,7 +1,7 @@
 // 📁 src/pages/movie/MoviePlayer.jsx
 // 🎬 Movie player page with full functionality from old frontend
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useAuthStore, useMovieStore, useUIStore } from "@/store";
 import { useRecentManager } from "@/hooks";
@@ -399,6 +399,15 @@ const MoviePlayer = () => {
     setEpisodeListExpanded(!episodeListExpanded);
   };
 
+  // Create path-to-index map for O(1) lookup performance
+  const pathToIndexMap = useMemo(() => {
+    const map = new Map();
+    videoList.forEach((video, index) => {
+      map.set(video.path, index);
+    });
+    return map;
+  }, [videoList]);
+
   // Calculate displayed episodes based on expand state
   const getDisplayedEpisodes = () => {
     if (videoList.length <= EPISODE_COLLAPSE_THRESHOLD) {
@@ -747,8 +756,8 @@ const MoviePlayer = () => {
               {/* Episode Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
                 {getDisplayedEpisodes().map((video, displayIndex) => {
-                  // Calculate actual index in full list
-                  const actualIndex = videoList.findIndex(v => v.path === video.path);
+                  // O(1) lookup instead of O(n) findIndex
+                  const actualIndex = pathToIndexMap.get(video.path) ?? 0;
                   
                   return (
                     <button

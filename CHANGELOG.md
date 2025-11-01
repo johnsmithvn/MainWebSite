@@ -6,21 +6,28 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Added
 
+- ✨ [2025-11-01] Added dedicated health check endpoint → Tạo `/api/health` chuyên dụng thay thế việc dùng `/api/security-keys.js` cho server connectivity check trong Layout.jsx
+- ✨ [2025-11-01] Added cache invalidation mechanism → Implement ETag, Last-Modified và content hash tracking để invalidate cache khi content thay đổi trong Service Worker
+- ✨ [2025-11-01] Added accessibility support for DownloadProgressModal → Thêm keyboard navigation (ESC key), ARIA labels, role="dialog", và overlay click/keyboard support
 - ✨ [2025-11-01] Added click to copy for Title, Album and Artist in MusicPlayer → Click vào Title, Album hoặc Artist để copy vào clipboard với toast notification, improved layout với tất cả metadata trên 1 dòng và truncate
 - ✨ [2025-11-01] Added genre display in MusicPlayer stats → Hiển thị genre bên cạnh plays count trong phần thông tin bài hát, tự động ẩn nếu genre không hợp lệ hoặc rỗng
 
 ### Changed
 
+- 🔄 [2025-11-01] Changed MoviePlayer episode performance → Optimize O(n²) findIndex loop bằng cách tạo pathToIndexMap với useMemo cho O(1) lookup, cải thiện performance đáng kể với video list lớn
 - 🔄 [2025-11-01] Changed PlayerHeader search API → Đồng bộ hoàn toàn với SearchModal: dùng apiService thay vì raw fetch, có cache/dedup và error handling tốt hơn
 - 🔄 [2025-11-01] Changed search fields to include title instead of genre → Cả MusicHome, PlayerHeader và backend audio-cache API đều search trên name/artist/album/title thay vì genre để cải thiện độ chính xác search
 - 🔄 [2025-11-01] Changed PlayerHeader search logic → Đồng bộ với MusicHome: thêm normalize function để tìm từ có dấu, chuyển từ music-folder API sang audio-cache API với search mode, filter cả name/artist/album/genre
 - 🔄 [2025-11-01] Changed folder navigation logic in MusicPlayer → Đồng bộ folder link ở header metadata với tracklist, sử dụng cùng logic navigation path và hiển thị tên folder chuẩn hơn
 
 ### Fixed
+
+- 🐛 [2025-11-01] Fixed server health check endpoint → Thay đổi từ `/api/security-keys.js` sang `/api/health` để tách biệt mục đích authentication và health checking
+- 🐛 [2025-11-01] Fixed accessibility issues trong DownloadProgressModal → Thêm proper keyboard support, ARIA attributes và focus management
 - 🐛 [2025-11-01] Fixed click không hoạt động trên text "Click để xem chi tiết" trong DownloadBadge → Thêm onClick handler, cursor pointer với hover effect và xóa pointer-events-none khỏi tooltip
 - 🐛 [2025-11-01] Fixed FullPlayerModal title display → Use currentTrack.title directly instead of loading separate metadata (simplified approach)
 
-### Changed
+## [2025-11-01] - Review Comments Implementation
 
 - 🔄 [2025-11-01] Changed FullPlayerModal text styling → Đồng bộ font size và styling với MusicPlayer: tên bài hát dùng text-xl/2xl (thay vì 2xl/3xl), title và tên bài hát giới hạn tối đa 2 dòng, bỏ uppercase, thêm tracking-normal
 - 🔄 [2025-11-01] Changed MusicPlayer header layout → Cải thiện bố cục thông tin với hierarchy rõ ràng: tên file (thay album) làm title chính với font nhỏ hơn (text-xl/2xl) và không uppercase, title metadata hiển thị riêng từ API music-meta, folder cha có thể click để navigate, album và artist hiển thị từ metadata hoặc fallback

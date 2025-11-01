@@ -15,6 +15,20 @@ const DownloadProgressModal = ({
 }) => {
   if (!isOpen) return null;
 
+  // Handle keyboard navigation for modal close
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape' && !isDownloading && progress.status === 'completed') {
+      onClose();
+    }
+  };
+
+  // Handle overlay click to close modal
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget && !isDownloading && progress.status === 'completed') {
+      onClose();
+    }
+  };
+
   const getStatusColor = () => {
     switch (progress.status) {
       case 'completed': return 'text-green-400';
@@ -36,13 +50,22 @@ const DownloadProgressModal = ({
   const progressPercentage = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={handleOverlayClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={progress.status === 'completed' && !isDownloading ? 0 : -1}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="download-modal-title"
+      aria-describedby="download-modal-description"
+    >
       <div className="relative w-full max-w-md bg-gray-900 text-gray-100 rounded-xl shadow-2xl ring-1 ring-white/10 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div className="flex items-center space-x-3">
             {getStatusIcon()}
-            <h2 className="text-lg font-semibold">Download Chapter</h2>
+            <h2 id="download-modal-title" className="text-lg font-semibold">Download Chapter</h2>
           </div>
           {progress.status === 'completed' && (
             <button
@@ -56,7 +79,7 @@ const DownloadProgressModal = ({
         </div>
 
         {/* Content */}
-        <div className="px-6 py-6 space-y-4">
+        <div id="download-modal-description" className="px-6 py-6 space-y-4">
           {/* Chapter info */}
           <div>
             <p className="text-sm text-gray-400 mb-1">Đang tải:</p>

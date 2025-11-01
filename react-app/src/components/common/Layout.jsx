@@ -29,18 +29,18 @@ const Layout = () => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
         
-        // Use existing endpoint that doesn't require auth
-        const response = await fetch('/api/security-keys.js', {
+        // Use dedicated health check endpoint
+        const response = await fetch('/api/health', {
           method: 'HEAD',
           signal: controller.signal,
           cache: 'no-cache'
         });
         
         clearTimeout(timeoutId);
-        console.log('🔍 Server check:', response.status, response.ok);
+        console.log('🔍 Server health check:', response.status, response.ok);
         return response.ok;
       } catch (error) {
-        console.log('❌ Server check failed:', error.message);
+        console.log('❌ Server health check failed:', error.message);
         // Network error, server down, or no access
         return false;
       }
