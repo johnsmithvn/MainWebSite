@@ -79,7 +79,7 @@ router.get("/audio-cache", async (req, res) => {
         rows = db.prepare(`
           SELECT DISTINCT 
             f.name, f.path, f.thumbnail, f.type, f.viewCount, f.isFavorite,
-            s.artist, s.album, s.genre
+            s.artist, s.album, s.title
           FROM folders f
           LEFT JOIN songs s ON f.path = s.path
           WHERE f.name != '.thumbnail'
@@ -87,7 +87,7 @@ router.get("/audio-cache", async (req, res) => {
               f.name LIKE ? OR 
               COALESCE(s.artist, '') LIKE ? OR 
               COALESCE(s.album, '') LIKE ? OR 
-              COALESCE(s.genre, '') LIKE ?
+              COALESCE(s.title, '') LIKE ?
             )
           ORDER BY f.name COLLATE NOCASE ASC
           LIMIT ? OFFSET ?
@@ -97,7 +97,7 @@ router.get("/audio-cache", async (req, res) => {
         rows = db.prepare(`
           SELECT DISTINCT 
             f.name, f.path, f.thumbnail, f.type, f.viewCount, f.isFavorite,
-            s.artist, s.album, s.genre
+            s.artist, s.album, s.title
           FROM folders f
           LEFT JOIN songs s ON f.path = s.path
           WHERE (f.type = 'audio' OR f.type = 'file')
@@ -106,7 +106,7 @@ router.get("/audio-cache", async (req, res) => {
               f.name LIKE ? OR 
               COALESCE(s.artist, '') LIKE ? OR 
               COALESCE(s.album, '') LIKE ? OR 
-              COALESCE(s.genre, '') LIKE ?
+              COALESCE(s.title, '') LIKE ?
             )
           ORDER BY f.name COLLATE NOCASE ASC
           LIMIT ? OFFSET ?

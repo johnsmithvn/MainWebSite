@@ -78,7 +78,13 @@ const PlayerHeader = ({
   // Debounced query for API suggestions
   const debouncedQuery = useDebounceValue(filterQuery, 300);
 
-  // Fetch suggestions from API
+  // Normalize helper to make search accent-insensitive (same as MusicHome)
+  const normalize = (str = '') => str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+
+  // Fetch suggestions from API (đồng bộ với SearchModal)
   const fetchSuggestions = useCallback(async (q, pageOffset = 0, isLoadMore = false) => {
     if (!q?.trim() || !sourceKey) return { items: [], hasMore: false };
     
@@ -86,32 +92,32 @@ const PlayerHeader = ({
       if (!isLoadMore) setSearchLoading(true);
       else setSearchLoadingMore(true);
 
-      // Use music-folder endpoint with search query
-      const res = await apiService.music.getFolders({
-        key: sourceKey,
-        path: '', // Search from root
-        search: q.trim(), // Add search parameter
+      // ✅ Sử dụng apiService giống SearchModal
+      const resp = await apiService.music.getAudioCache({
+        mode: 'search', 
+        key: sourceKey, 
+        q: q.trim(), 
+        type: 'all', 
+        limit: SEARCH_LIMIT, 
+        offset: pageOffset
+      });
+      
+      const items = Array.isArray(resp.data?.folders) ? resp.data.folders : [];
+      
+      // Client-side normalize filter for better accent matching
+      const searchNormalized = normalize(q.trim());
+      const filteredItems = items.filter(item => {
+        return [item.name, item.artist, item.album, item.title]
+          .some(val => normalize(val || '').includes(searchNormalized));
       });
 
-      const items = Array.isArray(res.data?.folders) ? res.data.folders : [];
-      
-      // Filter and limit results
-      const filteredItems = items
-        .filter(item => {
-          const searchLower = q.trim().toLowerCase();
-          return (
-            item.name?.toLowerCase().includes(searchLower) ||
-            item.artist?.toLowerCase().includes(searchLower) ||
-            item.album?.toLowerCase().includes(searchLower)
-          );
-        })
-        .slice(pageOffset, pageOffset + SEARCH_LIMIT);
-
-      const hasMore = items.length > pageOffset + SEARCH_LIMIT;
+      const hasMore = items.length >= SEARCH_LIMIT;
 
       return { items: filteredItems, hasMore };
     } catch (err) {
-      console.error('Search failed:', err);
+      if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
+        console.error('Search failed:', err);
+      }
       return { items: [], hasMore: false };
     } finally {
       setSearchLoading(false);

@@ -160,7 +160,7 @@ const MusicHome = () => {
   // Filter (apply normalized search across relevant fields)
   const filteredMusic = musicList.filter(music => {
     if (!needle) return true;
-    return [music.name, music.artist, music.album, music.path]
+    return [music.name, music.artist, music.album, music.title, music.path]
       .some(val => normalize(val || '').includes(needle));
   });
 

@@ -11,6 +11,9 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Changed
 
+- 🔄 [2025-11-01] Changed PlayerHeader search API → Đồng bộ hoàn toàn với SearchModal: dùng apiService thay vì raw fetch, có cache/dedup và error handling tốt hơn
+- 🔄 [2025-11-01] Changed search fields to include title instead of genre → Cả MusicHome, PlayerHeader và backend audio-cache API đều search trên name/artist/album/title thay vì genre để cải thiện độ chính xác search
+- 🔄 [2025-11-01] Changed PlayerHeader search logic → Đồng bộ với MusicHome: thêm normalize function để tìm từ có dấu, chuyển từ music-folder API sang audio-cache API với search mode, filter cả name/artist/album/genre
 - 🔄 [2025-11-01] Changed folder navigation logic in MusicPlayer → Đồng bộ folder link ở header metadata với tracklist, sử dụng cùng logic navigation path và hiển thị tên folder chuẩn hơn
 
 ### Fixed
