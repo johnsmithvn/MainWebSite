@@ -31,6 +31,12 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-10-26] Fixed ReferenceError API_BASE_URL trong MangaReader → Changed từ `${API_BASE_URL}/api/increase-view` sang `/api/increase-view` (relative path), fix lỗi "API_BASE_URL is not defined" khi tăng view count
+- 🐛 [2025-10-26] Fixed const reassignment error trong timeout cleanup → Changed `const timeoutId` sang `let timeoutId` để có thể reassign trong Promise callback
+- 🐛 [2025-10-26] Fixed import path in useDownloadQueue.js → Changed từ named import `{ useDownloadQueueStore }` sang default import `useDownloadQueueStore` (Copilot review fix)
+- 🐛 [2025-10-26] Fixed Promise.race timeout leak trong MangaReader → Added clearTimeout() trong finally block để prevent memory leak (Copilot review fix)
+- 🐛 [2025-10-26] Fixed performance.memory API browser compatibility → Added check cho Firefox/Safari vì performance.memory là Chromium-only API (Copilot review fix)
+- 🐛 [2025-10-26] Optimized progress calculation trong DownloadBadge → Memoize activeTasksArray riêng để giảm unnecessary filter operations trên mỗi render (Copilot review fix)
 - 🐛 [2025-10-26] Fixed PlaylistModal z-index conflict with FullPlayerModal → Tăng z-index từ 100 lên 105 để PlaylistModal luôn hiển thị phía trên khi được mở từ FullPlayerModal
 - 🐛 [2025-10-26] Fixed PlayerFooter mobile track info display → Xóa hoàn toàn track info (ảnh + tên bài) trên footer mobile/tablet để tránh xung đột với header album click, giải quyết vấn đề nháy timeline và hiển thị ảnh không mong muốn
 - 🐛 [2025-10-26] Fixed Music Player header search not working → Changed to use correct music-folder API endpoint with client-side filtering

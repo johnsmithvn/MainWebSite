@@ -262,7 +262,11 @@ export class MemoryMonitor {
    * Check memory usage
    */
   check() {
-    if (!performance.memory) return;
+    // Chrome/Edge only - Firefox/Safari don't support performance.memory
+    if (!('performance' in window) || !performance.memory) {
+      console.warn('[MemoryMonitor] Memory API not available (Chromium-only feature)');
+      return;
+    }
 
     const used = performance.memory.usedJSHeapSize;
     const limit = performance.memory.jsHeapSizeLimit;

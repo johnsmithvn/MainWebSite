@@ -998,11 +998,17 @@ const MangaReader = () => {
       
       // ✅ BƯỚC 2: Check storage TRƯỚC (với loading)
       const checkPromise = checkStorageForDownload(currentImages);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Storage check timeout after 10s')), 10000)
-      );
+      let timeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('Storage check timeout after 10s')), 10000);
+      });
       
-      const checkResult = await Promise.race([checkPromise, timeoutPromise]);
+      let checkResult;
+      try {
+        checkResult = await Promise.race([checkPromise, timeoutPromise]);
+      } finally {
+        clearTimeout(timeoutId);
+      }
       setStorageCheckResult(checkResult);
       setIsCheckingStorage(false); // Tắt loading
       
@@ -1195,7 +1201,7 @@ const MangaReader = () => {
       
       // Ghi log view (tương tự như direct download)
       try {
-        await fetch(`${API_BASE_URL}/api/increase-view`, {
+        await fetch('/api/increase-view', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -9,7 +9,7 @@
  */
 
 import { useMemo } from 'react';
-import { useDownloadQueueStore } from '../store/downloadQueueStore';
+import useDownloadQueueStore from '../store/downloadQueueStore';
 import {
   calculateTotalProgress,
   estimateTimeRemaining,

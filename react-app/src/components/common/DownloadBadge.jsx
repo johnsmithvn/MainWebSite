@@ -21,15 +21,17 @@ const DownloadBadge = () => {
   // Subscribe to store
   const { tasks, activeDownloads } = useDownloadQueueStore();
 
+  // Memoize filtered active tasks separately
+  const activeTasksArray = useMemo(() =>
+    Array.from(tasks.values()).filter(task =>
+      task.status === DOWNLOAD_STATUS.DOWNLOADING
+    ),
+    [tasks]
+  );
+
   // Calculate total progress across all active downloads
   const totalProgress = useMemo(() => {
-    if (activeDownloads.size === 0) return 0;
-
-    const activeTasksArray = Array.from(tasks.values()).filter(task =>
-      task.status === DOWNLOAD_STATUS.DOWNLOADING
-    );
-
-    if (activeTasksArray.length === 0) return 0;
+    if (activeDownloads.size === 0 || activeTasksArray.length === 0) return 0;
 
     const totalProgressSum = activeTasksArray.reduce(
       (sum, task) => sum + task.progress,
@@ -37,7 +39,7 @@ const DownloadBadge = () => {
     );
 
     return totalProgressSum / activeTasksArray.length;
-  }, [tasks, activeDownloads]);
+  }, [activeTasksArray, activeDownloads]);
 
   // Don't render if no active downloads
   if (activeDownloads.size === 0) return null;

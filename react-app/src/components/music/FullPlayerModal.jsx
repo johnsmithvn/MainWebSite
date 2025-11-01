@@ -235,8 +235,8 @@ const FullPlayerModal = ({
               <FiChevronDown className="w-7 h-7 text-white" />
             </button>
             <div className="text-center flex-1">
-              <div className="text-xs text-white/60 uppercase tracking-wider">Playing from</div>
-              <div className="text-sm text-white font-medium">{currentTrack.album || 'Unknown Album'}</div>
+              <div className="text-xs text-white/60 uppercase tracking-wider">Album</div>
+              <div className="text-sm text-white font-medium">{currentTrack.album || 'Music Album'}</div>
             </div>
             <button
               onClick={toggleFullscreen}
