@@ -35,7 +35,7 @@ router.get("/download", (req, res) => {
   // Set headers for download
   res.setHeader("Content-Type", mime);
   res.setHeader("Content-Length", fileSize);
-  res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(fileName)}"`);
+  res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`);
   res.setHeader("Cache-Control", "no-cache");
 
   // Stream file to response

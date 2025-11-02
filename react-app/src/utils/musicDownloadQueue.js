@@ -155,11 +155,10 @@ class MusicDownloadQueue {
       const blob = new Blob(chunks, { type: response.headers.get('content-type') || 'audio/mpeg' });
       
       // Trigger download
-      const downloadFileName = path.split('/').pop();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = downloadFileName;
+      link.download = fileName;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();

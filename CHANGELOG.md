@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Changed
 
+- 🔄 [2025-11-02] Changed health check timeout in Layout.jsx → Giảm timeout từ 3s xuống 2s để improve startup performance while still supporting slow networks (3G, edge), balanced approach cho cả fast và slow connections
+
+### Fixed
+
+- 🐛 [2025-11-02] Fixed Content-Disposition header encoding in music download API → Thay đổi từ `filename="${encodeURIComponent()}"` sang `filename*=UTF-8''${encodeURIComponent()}` để tuân thủ RFC 2231 standard, đảm bảo cross-browser compatibility với Unicode filenames
+- 🐛 [2025-11-02] Fixed duplicate filename extraction in musicDownloadQueue.js → Loại bỏ biến `downloadFileName` redundant (line 158), sử dụng lại biến `fileName` đã được extract từ line 97 để tránh code duplication
+
+### Changed
+
 - 🔄 [2025-11-02] Changed Android download folder date format → Thay đổi format ngày từ `YYYY-MM-DD` sang `YYYYMMDD` (ví dụ: `20250209` thay vì `2025-02-09`) trong MainActivity.java để tạo tên thư mục gọn hơn, áp dụng cho tất cả download qua JavascriptInterface (Music, Video, Picture)
 
 ### Added

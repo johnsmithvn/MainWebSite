@@ -27,7 +27,7 @@ const Layout = () => {
     const checkServerAccessibility = async () => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout - balanced for slow networks
         
         // Use dedicated health check endpoint
         const response = await fetch('/api/health', {
