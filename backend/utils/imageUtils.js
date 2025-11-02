@@ -2,9 +2,10 @@
 
 const fs = require("fs");
 const path = require("path");
+const { FILE_EXTENSIONS } = require("../constants");
 
-// Các định dạng file ảnh hợp lệ
-const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".avif"];
+// Các định dạng file ảnh hợp lệ (bao gồm cả PDF để scan vào DB)
+const IMAGE_EXTENSIONS = [...FILE_EXTENSIONS.IMAGE, ...FILE_EXTENSIONS.PDF];
 
 /**
  * 📂 Đệ quy tìm ảnh đầu tiên trong folder hoặc subfolder

@@ -6,6 +6,46 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Changed
 
+- 🔄 [2025-11-02] Changed PDF download URL conversion to use Web API → Refactored from manual check (`url.startsWith('http')`) to `new URL(url, window.location.origin).href` for consistency with Music download implementation
+- 🔄 [2025-11-02] Changed WebView PDF button from "Xem PDF" to "Tải xuống PDF" → Simplified WebView UX by directly downloading PDF instead of trying to open native viewer (which may not be available)
+
+### Fixed
+
+- 🐛 [2025-11-02] Fixed PDF viewing from Recent items → Added `type: 'pdf'` flag when adding PDF to recent, UniversalCard now detects and navigates with `type=pdf` query param
+- 🐛 [2025-11-02] Fixed PDF view count not increasing → Removed PDF exclusion from `increaseViewCount` effect in MangaReader, now tracks views for both images and PDFs
+- 🐛 [2025-11-02] Fixed WebView PDF download relative URL error → Convert to absolute URL (`${window.location.origin}${url}`) before passing to Android.downloadFile() to prevent "Can not handle uri" error
+- 🐛 [2025-11-02] Fixed PDF download button causing page refresh → Added `type="button"` attribute and `e.preventDefault()` to prevent default form submission behavior
+- 🐛 [2025-11-02] Fixed PDF URL parsing error → Wrap URL constructor with try-catch and use `window.location.origin` as base for relative URLs to prevent "Failed to construct 'URL': Invalid URL" error
+- 🐛 [2025-11-02] Fixed PDF download filename → Extract last segment from `path` query param instead of full URL (e.g., "Đội quân nhí nhố - Tập 2.pdf" instead of "pdf_key=ROOT_FANTASY&root=1shot&path=...")
+
+### Added
+
+- ✨ [2025-11-02] Added PDF download button → Floating download button (bottom-right) trong browser PDF viewer để save file offline, reuse existing blob để không fetch lại
+
+### Fixed
+
+- 🐛 [2025-11-02] Fixed PDF cache bloat → Exclude `/api/manga/pdf` from Service Worker cache, use network-only streaming to prevent large PDF files consuming cache storage (67.5 MB → 0 MB for PDFs), updated SW to v3.0.1
+- 🐛 [2025-11-02] Fixed WebView PDF unnecessary fetch → Skip PDF blob fetch when WebView detected, directly show native viewer button without loading/error states
+- 🐛 [2025-11-02] Fixed WebView PDF display issue → Added WebView detection + native PDF viewer integration (browser: iframe display, WebView: open PDFViewerActivity or fallback to download)
+
+### Added
+
+- ✨ [2025-11-02] Added PDFViewerActivity for Android → Native PDF viewer activity sử dụng barteksc/android-pdf-viewer library, hỗ trợ zoom/scroll/page navigation, tương tự ExoPlayerActivity cho video
+
+### Added
+
+- ✨ [2025-11-02] Added PDF support for manga reader → Hỗ trợ hiển thị file PDF như một chapter manga bằng native browser PDF viewer qua iframe, PDF files xuất hiện như card ngang hàng với folder trong MangaHome, click vào PDF → mở reader với full-screen iframe để xem PDF với browser built-in controls (zoom, scroll, search text)
+
+### Changed
+
+- 🔄 [2025-11-02] Changed PDF rendering approach → Chuyển từ react-pdf (có worker issues) sang native iframe để tận dụng browser's built-in PDF viewer, đơn giản hơn, không dependencies, và hoạt động ổn định trên mọi browser
+
+### Fixed
+
+- 🐛 [2025-11-02] Fixed PDF iframe CORS error → Fetch PDF as blob từ backend API, tạo object URL và display trong iframe để bypass browser CORS restrictions khi load cross-origin PDFs
+
+### Changed
+
 - 🔄 [2025-11-02] Changed health check timeout in Layout.jsx → Giảm timeout từ 3s xuống 2s để improve startup performance while still supporting slow networks (3G, edge), balanced approach cho cả fast và slow connections
 
 ### Fixed

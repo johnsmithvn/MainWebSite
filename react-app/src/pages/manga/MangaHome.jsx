@@ -160,6 +160,17 @@ const MangaHome = () => {
   const handleFolderClick = (folder) => {
     console.log('🔍 Clicked folder:', folder);
     
+    // 🆕 Handle PDF file click - go directly to reader
+    if (folder.type === 'pdf') {
+      console.log('📄 Opening PDF reader:', folder.path);
+      const readerParams = new URLSearchParams();
+      readerParams.set('path', folder.path);
+      readerParams.set('type', 'pdf'); // Flag to render PDF instead of images
+      readerParams.set('returnUrl', `${window.location.pathname}${window.location.search}`);
+      navigate(`/manga/reader?${readerParams.toString()}`);
+      return;
+    }
+    
     // Logic theo frontend cũ - không validation path
     // if (folder.isSelfReader && folder.images) -> go to reader
     // else -> loadFolder(folder.path)

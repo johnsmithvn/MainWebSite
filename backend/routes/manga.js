@@ -10,5 +10,6 @@ router.use("/", require("../api/manga/reset-cache"));
 router.use("/", require("../api/manga/scan"));
 router.use("/", require("../api/manga/favorite"));
 router.use("/", require("../api/manga/root-thumbnail"));
+router.use("/", require("../api/manga/pdf"));
 
 module.exports = router;

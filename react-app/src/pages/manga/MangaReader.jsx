@@ -11,6 +11,7 @@ import { checkStorageForDownload } from '../../utils/storageQuota';
 import { isCachesAPISupported, getUnsupportedMessage } from '../../utils/browserSupport';
 import { READER } from '../../constants';
 import ReaderHeader from '../../components/manga/ReaderHeader';
+import PDFReader from '../../components/manga/PDFReader';
 import { DownloadProgressModal, DownloadConfirmModal, StorageQuotaModal } from '../../components/common';
 import toast from 'react-hot-toast';
 
@@ -133,6 +134,10 @@ const MangaReader = () => {
     console.log('📁 currentMangaPath computed:', path);
     return path;
   }, [searchParams, folderId]);
+
+  // 🆕 Detect if current content is PDF
+  const isPDFMode = searchParams.get('type') === 'pdf';
+  const [pdfUrl, setPdfUrl] = useState(null);
 
   // ✅ Track offline blob URLs for cleanup
   const offlineBlobUrlsRef = useRef([]);
@@ -291,6 +296,42 @@ const MangaReader = () => {
   }, []);
 
   const loadFolderData = useCallback(async (path) => {
+    // 🆕 Handle PDF mode differently
+    if (isPDFMode) {
+      console.log('📄 Loading PDF:', path);
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const url = `/api/manga/pdf?key=${stableAuthKeys.sourceKey}&root=${stableAuthKeys.rootFolder}&path=${encodeURIComponent(path)}`;
+        setPdfUrl(url);
+        setCurrentPath(path);
+        
+        // ✅ Add to recent with PDF type flag
+        try {
+          const fileName = path.split('/').pop();
+          const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+          addRecentItem({ 
+            name: nameWithoutExt || 'PDF', 
+            path, 
+            type: 'pdf', // ← ✅ Important: Mark as PDF for correct navigation
+            thumbnail: '/default/default-cover.jpg',
+            isFavorite: false 
+          });
+        } catch (err) {
+          console.warn('Error adding PDF to recent:', err);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading PDF:', error);
+        setError('Failed to load PDF');
+        setLoading(false);
+      }
+      return;
+    }
+    
+    // Original image loading logic
     // Abort previous in-flight request
     if (folderAbortRef.current) {
       try { folderAbortRef.current.abort(); } catch {}
@@ -362,7 +403,7 @@ const MangaReader = () => {
     } finally {
       if (myRequestId === requestIdRef.current) setLoading(false);
     }
-  }, [stableAuthKeys.sourceKey, stableAuthKeys.rootFolder, mangaSettings.useDb, preloadImage, addRecentItem, readerSettings.readingMode]);
+  }, [isPDFMode, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder, mangaSettings.useDb, preloadImage, addRecentItem, readerSettings.readingMode]);
 
   useEffect(() => {
     if (currentMangaPath && stableAuthKeys.sourceKey && stableAuthKeys.rootFolder) {
@@ -469,6 +510,7 @@ const MangaReader = () => {
 
   // Increase view when path changes (debounced inside function)
   useEffect(() => {
+    // ✅ Always increase view for both image and PDF modes (unless offline)
     if (!isOfflineMode && currentMangaPath && stableAuthKeys.sourceKey && stableAuthKeys.rootFolder) {
       increaseViewCount(currentMangaPath, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder);
     }
@@ -1641,7 +1683,7 @@ const MangaReader = () => {
     );
   }
 
-  if (!currentImages.length) {
+  if (!currentImages.length && !isPDFMode) {
     return (
       <div className="manga-reader">
         <div className="reader">
@@ -1656,6 +1698,67 @@ const MangaReader = () => {
             Không có ảnh nào được tìm thấy
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // 🆕 PDF Reader Mode - Simplified with iframe
+  if (isPDFMode && pdfUrl) {
+    return (
+      <div className="manga-reader scroll-mode-active">
+        {/* Reader Header */}
+        {showControls && (
+          <ReaderHeader
+            currentPath={currentPath}
+            isFavorite={isFavorite}
+            onToggleFavorite={handleToggleFavorite}
+            onSetThumbnail={handleSetThumbnail}
+            onDownload={handleDownloadChapter}
+            isChapterOfflineAvailable={isChapterOfflineAvailable}
+            readerSettings={readerSettings}
+            toggleReadingMode={() => {}} // Disabled for PDF
+            onClose={() => {
+              const returnUrl = searchParams.get('returnUrl');
+              if (returnUrl) {
+                navigate(returnUrl);
+              } else {
+                navigate(-1);
+              }
+            }}
+            currentPage={1}
+            totalPages={1}
+            scrollPageIndex={0}
+            totalScrollPages={1}
+            onJump={() => {}} // Disabled for PDF iframe mode
+          />
+        )}
+
+        {/* PDF Container - Full screen iframe */}
+        <div 
+          className="reader"
+          onClick={toggleControls}
+          style={{
+            backgroundColor: '#1a1a1a',
+            minHeight: '100vh',
+            paddingTop: showControls ? '60px' : '0',
+            transition: 'padding-top 0.3s ease',
+            position: 'relative'
+          }}
+        >
+          <PDFReader
+            url={pdfUrl}
+            currentPage={1}
+            onLoadSuccess={(numPages) => {
+              console.log('✅ PDF loaded (iframe mode)');
+            }}
+            onLoadError={(error) => {
+              console.error('❌ PDF load error:', error);
+              setError('Không thể tải PDF');
+            }}
+          />
+        </div>
+
+        {/* ❌ Remove pagination controls - iframe handles scrolling internally */}
       </div>
     );
   }
