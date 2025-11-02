@@ -86,7 +86,7 @@ async function scanMusicFolderToDB(
       }
 
       // Metadata nhạc (có thể scan nhẹ, không extract ảnh)
-      let duration = 0, artist = null, album = null, genre = null, lyrics = null;
+      let duration = 0, artist = null, album = null, genre = null, lyrics = null, title = null;
       try {
         const { parseFile } = await import("music-metadata");
         const metadata = await parseFile(fullPath);
@@ -97,6 +97,7 @@ async function scanMusicFolderToDB(
           : 0;
         artist = typeof common.artist === "string" ? common.artist : null;
         album = typeof common.album === "string" ? common.album : null;
+        title = typeof common.title === "string" ? common.title : null;
         genre = Array.isArray(common.genre)
           ? common.genre.join(", ")
           : typeof common.genre === "string"
@@ -130,10 +131,10 @@ async function scanMusicFolderToDB(
         );
         db.prepare(
           `
-          INSERT INTO songs (path, artist, album, genre, lyrics)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO songs (path, artist, album, title, genre, lyrics)
+          VALUES (?, ?, ?, ?, ?, ?)
         `
-        ).run(relPath, artist, album, genre, lyrics);
+        ).run(relPath, artist, album, title, genre, lyrics);
         stats.inserted++;
       } else {
         // UPDATE metadata nếu đã tồn tại
@@ -144,9 +145,9 @@ async function scanMusicFolderToDB(
         ).run(thumb, Date.now(), relPath);
         db.prepare(
           `
-          UPDATE songs SET artist = ?, album = ?, genre = ?, lyrics = ? WHERE path = ?
+          UPDATE songs SET artist = ?, album = ?, title = ?, genre = ?, lyrics = ? WHERE path = ?
         `
-        ).run(artist, album, genre, lyrics, relPath);
+        ).run(artist, album, title, genre, lyrics, relPath);
         stats.skipped++;
       }
     }

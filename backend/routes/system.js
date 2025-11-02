@@ -6,6 +6,9 @@ const router = express.Router();
 const fs = require("fs");
 const { getRootPath, getAllMangaKeys, getAllMovieKeys, getAllMusicKeys, SECURITY_KEYS, SECURITY_PASSWORD } = require("../utils/config");
 
+// Health check endpoint
+router.use("/health", require("../api/health"));
+
 // View tracking
 router.use("/", require("../api/increase-view"));
 

@@ -146,6 +146,7 @@ function getMusicDB(dbkey) {
       path TEXT NOT NULL UNIQUE, -- match với folders.path
       artist TEXT,
       album TEXT,
+      title TEXT,
       genre TEXT,
       lyrics TEXT
     );
@@ -177,6 +178,15 @@ function getMusicDB(dbkey) {
     .map((c) => c.name);
   if (!cols.includes("thumbnail")) {
     db.exec("ALTER TABLE playlists ADD COLUMN thumbnail TEXT");
+  }
+
+  // ✅ Kiểm tra & thêm cột title vào bảng songs nếu thiếu
+  const songCols = db
+    .prepare("PRAGMA table_info(songs)")
+    .all()
+    .map((c) => c.name);
+  if (!songCols.includes("title")) {
+    db.exec("ALTER TABLE songs ADD COLUMN title TEXT");
   }
 
   dbMap[dbkey] = db;

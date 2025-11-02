@@ -134,6 +134,24 @@ const MangaReader = () => {
     return path;
   }, [searchParams, folderId]);
 
+  // ✅ Track offline blob URLs for cleanup
+  const offlineBlobUrlsRef = useRef([]);
+
+  // Cleanup function for blob URLs  
+  const cleanupBlobUrls = useCallback(() => {
+    if (offlineBlobUrlsRef.current.length > 0) {
+      console.log(`🧹 Cleaning up ${offlineBlobUrlsRef.current.length} blob URLs`);
+      offlineBlobUrlsRef.current.forEach(blobUrl => {
+        try {
+          URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+          console.warn('⚠️ Error revoking blob URL:', error);
+        }
+      });
+      offlineBlobUrlsRef.current = [];
+    }
+  }, []);
+
   const isOfflineMode = searchParams.get('offline') === '1';
 
 
@@ -369,14 +387,57 @@ const MangaReader = () => {
             (async () => {
               console.log('📱 Offline mode detected, loading from IndexedDB...');
               try {
+                // Clean up any existing blob URLs first
+                cleanupBlobUrls();
+                
                 const ch = await getChapter(currentMangaPath);
                 console.log('📦 Chapter data from IndexedDB:', ch);
                 
-                if (ch) {
-                  console.log(`✅ Found ${ch.pageUrls?.length || 0} pages in offline chapter`);
-                  setCurrentImages(ch.pageUrls);
-                  setCurrentPath(currentMangaPath);
-                  setLoading(false);
+                if (ch && ch.pageUrls) {
+                  console.log(`✅ Found ${ch.pageUrls.length} pages in offline chapter`);
+                  
+                  // 🔧 OFFLINE FIX: Convert cached URLs to blob URLs for offline viewing
+                  if (isCachesAPISupported()) {
+                    const offlineImageUrls = await Promise.all(
+                      ch.pageUrls.map(async (originalUrl, index) => {
+                        try {
+                          // Try to get image from cache storage
+                          const cache = await caches.open('chapter-images');
+                          const cachedResponse = await cache.match(originalUrl);
+                          
+                          if (cachedResponse) {
+                            // Convert cached response to blob URL
+                            const blob = await cachedResponse.blob();
+                            const blobUrl = URL.createObjectURL(blob);
+                            console.log(`📱 Page ${index + 1}: Loaded from cache → blob URL`);
+                            return blobUrl;
+                          } else {
+                            console.warn(`⚠️ Page ${index + 1}: Not found in cache, using original URL`);
+                            return originalUrl; // Fallback to original URL (might not load offline)
+                          }
+                        } catch (error) {
+                          console.error(`❌ Page ${index + 1}: Error loading from cache:`, error);
+                          return originalUrl; // Fallback to original URL
+                        }
+                      })
+                    );
+                    
+                    // Store blob URLs for cleanup
+                    offlineBlobUrlsRef.current = offlineImageUrls.filter(url => url.startsWith('blob:'));
+                    
+                    setCurrentImages(offlineImageUrls);
+                    setCurrentPath(currentMangaPath);
+                    setLoading(false);
+                    
+                    console.log(`✅ Successfully converted ${offlineImageUrls.length} images to offline URLs`);
+                    console.log(`🔗 Created ${offlineBlobUrlsRef.current.length} blob URLs for cleanup`);
+                  } else {
+                    // Fallback: Caches API not supported, use original URLs
+                    console.warn('⚠️ Caches API not supported, using original URLs (might not load offline)');
+                    setCurrentImages(ch.pageUrls);
+                    setCurrentPath(currentMangaPath);
+                    setLoading(false);
+                  }
                 } else {
                   console.error('❌ No offline chapter found for path:', currentMangaPath);
                   setError('Offline data not found');
@@ -401,6 +462,8 @@ const MangaReader = () => {
       }
       // Clear last key so remount (StrictMode) can refetch
       lastLoadKeyRef.current = '';
+      // 🧹 Cleanup blob URLs when path changes
+      cleanupBlobUrls();
     };
   }, [currentMangaPath, stableAuthKeys.sourceKey, stableAuthKeys.rootFolder, loadFolderData, readerPrefetch, setReaderPrefetch, preloadImage]);
 
@@ -425,8 +488,10 @@ const MangaReader = () => {
       if (folderAbortRef.current) {
         try { folderAbortRef.current.abort(); } catch {}
       }
+      // 🧹 Cleanup blob URLs when component unmounts
+      cleanupBlobUrls();
     };
-  }, []);
+  }, [cleanupBlobUrls]);
 
   // Handle browser back button
   useEffect(() => {

@@ -14,11 +14,6 @@ const LyricsModal = ({ isOpen, onClose, currentTrack }) => {
   const [lyrics, setLyrics] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Debug log
-  useEffect(() => {
-    console.log('🎤 LyricsModal state:', { isOpen, currentTrack });
-  }, [isOpen, currentTrack]);
-
   useEffect(() => {
     if (isOpen && currentTrack) {
       // Load lyrics from track or fetch from API

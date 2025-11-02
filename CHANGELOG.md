@@ -4,8 +4,61 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Changed
+
+- 🔄 [2025-11-02] Changed health check timeout in Layout.jsx → Giảm timeout từ 3s xuống 2s để improve startup performance while still supporting slow networks (3G, edge), balanced approach cho cả fast và slow connections
+
+### Fixed
+
+- 🐛 [2025-11-02] Fixed Content-Disposition header encoding in music download API → Thay đổi từ `filename="${encodeURIComponent()}"` sang `filename*=UTF-8''${encodeURIComponent()}` để tuân thủ RFC 2231 standard, đảm bảo cross-browser compatibility với Unicode filenames
+- 🐛 [2025-11-02] Fixed duplicate filename extraction in musicDownloadQueue.js → Loại bỏ biến `downloadFileName` redundant (line 158), sử dụng lại biến `fileName` đã được extract từ line 97 để tránh code duplication
+
+### Changed
+
+- 🔄 [2025-11-02] Changed Android download folder date format → Thay đổi format ngày từ `YYYY-MM-DD` sang `YYYYMMDD` (ví dụ: `20250209` thay vì `2025-02-09`) trong MainActivity.java để tạo tên thư mục gọn hơn, áp dụng cho tất cả download qua JavascriptInterface (Music, Video, Picture)
+
 ### Added
 
+- ✨ [2025-11-01] Added music download queue system → Tạo MusicDownloadModal với 2 options (current track/full playlist), musicDownloadQueue utility quản lý hàng chờ tải với max 3 concurrent downloads, progress tracking và background processing, user có thể đóng modal và tiếp tục nghe nhạc trong khi hệ thống tự động tải
+- ✨ [2025-11-01] Added runtime storage permission request to Android app → Implement checkStoragePermission() và onRequestPermissionsResult() trong MainActivity để request WRITE_EXTERNAL_STORAGE permission khi app khởi động, hiển thị dialog giải thích và xử lý kết quả permission
+- ✨ [2025-11-01] Added DownloadListener to Android WebView → Implement download functionality trong MainActivity.java để handle download requests từ WebView, sử dụng DownloadManager để tải file xuống thư mục Music với notification progress
+- ✨ [2025-11-01] Added storage permissions to Android app → Thêm WRITE_EXTERNAL_STORAGE và READ_EXTERNAL_STORAGE permissions vào AndroidManifest.xml để hỗ trợ download files
+- ✨ [2025-11-01] Added music download functionality → Triển khai chức năng download bài hát với endpoint `/api/music/download`, hỗ trợ download từ MusicPlayer và FullPlayerModal, tự động trigger browser download với tên file chính xác
+- ✨ [2025-11-01] Added comprehensive download functionality for Music Player → Support single track và playlist download với progressive fallback (WebView → File System Access API → Blob download), includes download progress modal và proper mobile app integration
+- ✨ [2025-11-01] Added dedicated health check endpoint → Tạo `/api/health` chuyên dụng thay thế việc dùng `/api/security-keys.js` cho server connectivity check trong Layout.jsx
+- ✨ [2025-11-01] Added cache invalidation mechanism → Implement ETag, Last-Modified và content hash tracking để invalidate cache khi content thay đổi trong Service Worker
+- ✨ [2025-11-01] Added accessibility support for DownloadProgressModal → Thêm keyboard navigation (ESC key), ARIA labels, role="dialog", và overlay click/keyboard support
+- ✨ [2025-11-01] Added click to copy for Title, Album and Artist in MusicPlayer → Click vào Title, Album hoặc Artist để copy vào clipboard với toast notification, improved layout với tất cả metadata trên 1 dòng và truncate
+- ✨ [2025-11-01] Added genre display in MusicPlayer stats → Hiển thị genre bên cạnh plays count trong phần thông tin bài hát, tự động ẩn nếu genre không hợp lệ hoặc rỗng
+
+### Changed
+
+- 🔄 [2025-11-01] Changed MoviePlayer episode performance → Optimize O(n²) findIndex loop bằng cách tạo pathToIndexMap với useMemo cho O(1) lookup, cải thiện performance đáng kể với video list lớn
+- 🔄 [2025-11-01] Changed PlayerHeader search API → Đồng bộ hoàn toàn với SearchModal: dùng apiService thay vì raw fetch, có cache/dedup và error handling tốt hơn
+- 🔄 [2025-11-01] Changed search fields to include title instead of genre → Cả MusicHome, PlayerHeader và backend audio-cache API đều search trên name/artist/album/title thay vì genre để cải thiện độ chính xác search
+- 🔄 [2025-11-01] Changed PlayerHeader search logic → Đồng bộ với MusicHome: thêm normalize function để tìm từ có dấu, chuyển từ music-folder API sang audio-cache API với search mode, filter cả name/artist/album/genre
+- 🔄 [2025-11-01] Changed folder navigation logic in MusicPlayer → Đồng bộ folder link ở header metadata với tracklist, sử dụng cùng logic navigation path và hiển thị tên folder chuẩn hơn
+
+### Fixed
+
+- 🐛 [2025-11-02] Fixed music download error on Android WebView → Blob URLs không hoạt động trên WebView, thêm Android.downloadFile() JavascriptInterface để trigger native DownloadManager, auto-detect WebView và dùng native method thay vì blob download
+- 🐛 [2025-11-01] Fixed server health check endpoint → Thay đổi từ `/api/security-keys.js` sang `/api/health` để tách biệt mục đích authentication và health checking
+- 🐛 [2025-11-01] Fixed accessibility issues trong DownloadProgressModal → Thêm proper keyboard support, ARIA attributes và focus management
+- 🐛 [2025-11-01] Fixed click không hoạt động trên text "Click để xem chi tiết" trong DownloadBadge → Thêm onClick handler, cursor pointer với hover effect và xóa pointer-events-none khỏi tooltip
+- 🐛 [2025-11-01] Fixed FullPlayerModal title display → Use currentTrack.title directly instead of loading separate metadata (simplified approach)
+
+## [2025-11-01] - Review Comments Implementation
+
+- 🔄 [2025-11-01] Changed FullPlayerModal text styling → Đồng bộ font size và styling với MusicPlayer: tên bài hát dùng text-xl/2xl (thay vì 2xl/3xl), title và tên bài hát giới hạn tối đa 2 dòng, bỏ uppercase, thêm tracking-normal
+- 🔄 [2025-11-01] Changed MusicPlayer header layout → Cải thiện bố cục thông tin với hierarchy rõ ràng: tên file (thay album) làm title chính với font nhỏ hơn (text-xl/2xl) và không uppercase, title metadata hiển thị riêng từ API music-meta, folder cha có thể click để navigate, album và artist hiển thị từ metadata hoặc fallback
+
+### Added
+
+- ✨ [2025-11-01] Added smart metadata filtering for music → Normalize album names containing "mp3.zing" or "nhaccuatui" to "Unknown Album", auto-hide Title/Artist/Album fields if they contain "Unknown" values to clean up UI
+- ✨ [2025-11-01] Added title metadata display trong FullPlayerModal → Thêm hiển thị title từ trackMetadata dưới tên file, có thể click để copy, đồng bộ với UI trong MusicPlayer
+- ✨ [2025-11-01] Added cột title cho metadata nhạc → Thêm field title vào quá trình quét metadata và lưu vào database, cập nhật schema songs table với cột title, đảm bảo API music-meta trả về title trong response
+
+- ✨ [2025-11-01] Added expand/collapse feature for Movie Player episode list - When episode list exceeds 20 items, automatically collapses to show 10 episodes before and after current episode. Click "Xem tất cả/Thu gọn" button to toggle full list
 - ✨ [2025-10-26] Added "Add to Playlist" button to MusicPlayer and FullPlayerModal - Click the + icon next to play button to add current track to any playlist, with playlist creation support
 - ✨ [2025-10-26] Added global PlaylistModal component - Modal appears on any page when triggered, allows creating new playlists and managing track assignments
 - ✨ [2025-10-26] Added lyrics modal to MusicPlayer main view - Click on album cover art to open lyrics modal, shared component with FullPlayerModal for consistency
@@ -31,6 +84,11 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-11-01] Fixed offline manga reader black screen issue → Khi đọc manga offline, images chỉ lưu URLs gốc từ server mà không convert thành blob URLs để hiển thị offline. Giờ convert cached images thành blob URLs khi ở offline mode, có cleanup blob URLs khi unmount
+- 🐛 [2025-11-01] Fixed Service Worker memory leak trong getCacheInstance → cachePromises Map không được cleanup sau khi resolve/reject, gây memory leak khi mở nhiều cache. Giờ cleanup ngay sau promise resolve/reject
+- 🐛 [2025-11-01] Fixed Service Worker message handling thiếu error handling → postMessage có thể fail silent, giờ bọc trong try-catch và log errors, thêm catch handlers cho tất cả async operations
+- 🐛 [2025-11-01] Fixed Service Worker getCacheInfo performance issue → Operation mất 50-200ms mỗi lần duyệt toàn bộ cache keys. Giờ cache kết quả 5 giây (TTL), subsequent calls chỉ mất ~1ms
+- 🐛 [2025-11-01] Fixed Service Worker clearSpecificCache không invalidate cache → Sau khi xóa cache, cacheInfoCache và cacheInstances Map không được cleanup. Giờ invalidate cả 2 khi clear cache
 - 🐛 [2025-10-26] Fixed ReferenceError API_BASE_URL trong MangaReader → Changed từ `${API_BASE_URL}/api/increase-view` sang `/api/increase-view` (relative path), fix lỗi "API_BASE_URL is not defined" khi tăng view count
 - 🐛 [2025-10-26] Fixed const reassignment error trong timeout cleanup → Changed `const timeoutId` sang `let timeoutId` để có thể reassign trong Promise callback
 - 🐛 [2025-10-26] Fixed import path in useDownloadQueue.js → Changed từ named import `{ useDownloadQueueStore }` sang default import `useDownloadQueueStore` (Copilot review fix)

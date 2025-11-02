@@ -26,6 +26,8 @@ import PlayerHeader from '../../components/music/PlayerHeader';
 import PlaylistSidebar from '../../components/music/PlaylistSidebar';
 import FullPlayerModal from '../../components/music/FullPlayerModal';
 import LyricsModal from '../../components/music/LyricsModal';
+import MusicDownloadModal from '../../components/music/MusicDownloadModal';
+import { musicDownloadQueue } from '@/utils/musicDownloadQueue';
 
 const MusicPlayer = () => {
   const navigate = useNavigate();
@@ -85,6 +87,8 @@ const MusicPlayer = () => {
   const [headerCondensed, setHeaderCondensed] = useState(false);
   const [isFullPlayerOpen, setIsFullPlayerOpen] = useState(false);
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [trackMetadata, setTrackMetadata] = useState(null);
   const headerSentinelRef = useRef(null);
 
   // Audio ref
@@ -278,6 +282,27 @@ const MusicPlayer = () => {
     return `/api/music/audio?key=${sourceKey}&file=${encodeURIComponent(audioPath)}`;
   }
 
+  // Helper function to normalize album name
+  const normalizeAlbum = (album) => {
+    if (!album) return 'Unknown Album';
+    const normalized = album.toLowerCase();
+    if (normalized.includes('mp3.zing') || normalized.includes('nhaccuatui')) {
+      return 'Unknown Album';
+    }
+    return album;
+  };
+
+  // Helper function to check if value should be hidden
+  const shouldHideField = (value) => {
+    if (!value) return true;
+    const normalized = value.toLowerCase();
+    return normalized === 'unknown album' || 
+           normalized === 'unknown artist' || 
+           normalized === 'unknown' ||
+           normalized.includes('mp3.zing') || 
+           normalized.includes('nhaccuatui');
+  };
+
   const getTrackInfo = useCallback(() => {
     if (!effectivePath) return null;
     const fileName = effectivePath.split('/').pop();
@@ -286,7 +311,7 @@ const MusicPlayer = () => {
       name: nameWithoutExt,
       path: effectivePath,
       artist: 'Unknown Artist',
-      album: 'Unknown Album',
+      album: normalizeAlbum('Unknown Album'),
       thumbnail: null,
     };
   }, [effectivePath]);
@@ -356,6 +381,31 @@ const MusicPlayer = () => {
     window.dispatchEvent(new CustomEvent('openPlaylistModal', { 
       detail: { item: currentTrack } 
     }));
+  };
+
+  const handleDownload = async () => {
+    // Open modal instead of direct download
+    setIsDownloadModalOpen(true);
+  };
+
+  const handleDownloadConfirm = (tracks) => {
+    if (!sourceKey) {
+      showToast('Thiếu source key', 'error');
+      return;
+    }
+
+    try {
+      // Add tracks to download queue
+      musicDownloadQueue.addToQueue(tracks, sourceKey);
+      
+      if (tracks.length === 1) {
+        showToast('Đã thêm 1 bài hát vào hàng chờ tải!', 'success');
+      } else {
+        showToast(`Đã thêm ${tracks.length} bài hát vào hàng chờ tải!`, 'success');
+      }
+    } catch (err) {
+      showToast('Không thể thêm vào hàng chờ: ' + err.message, 'error');
+    }
   };
 
   // Detect scroll to condense top header like screenshot 2 (robust: IntersectionObserver + fallback)
@@ -430,7 +480,7 @@ const MusicPlayer = () => {
           name: nameWithoutExt,
           path: selectedFileArg,
           artist: 'Unknown Artist',
-          album: 'Unknown Album',
+          album: normalizeAlbum('Unknown Album'),
           thumbnail: buildThumbnailUrl({ path: selectedFileArg, type: 'audio', thumbnail: null }, 'music'),
         };
         playTrack(singleTrack, [singleTrack], 0);
@@ -495,7 +545,7 @@ const MusicPlayer = () => {
           name: nameWithoutExt,
           path: selectedPath,
           artist: 'Unknown Artist',
-          album: 'Unknown Album',
+          album: normalizeAlbum('Unknown Album'),
           thumbnail: buildThumbnailUrl({ path: selectedPath, type: 'audio', thumbnail: null }, 'music'),
         };
         playTrack(singleTrack, [singleTrack], 0);
@@ -513,7 +563,7 @@ const MusicPlayer = () => {
             name: nameWithoutExt,
             path: selectedFileArg,
             artist: 'Unknown Artist',
-            album: 'Unknown Album',
+            album: normalizeAlbum('Unknown Album'),
             thumbnail: buildThumbnailUrl({ path: selectedFileArg, type: 'audio', thumbnail: null }, 'music'),
           };
           playTrack(singleTrack, [singleTrack], 0);
@@ -655,6 +705,31 @@ const MusicPlayer = () => {
   const normalizedFilter = '';
   const visiblePlaylist = currentPlaylist;
 
+  // Load metadata for current track
+  useEffect(() => {
+    const loadMetadata = async () => {
+      if (!currentTrack?.path || !sourceKey) {
+        setTrackMetadata(null);
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/music/music-meta?key=${encodeURIComponent(sourceKey)}&path=${encodeURIComponent(currentTrack.path)}`);
+        if (response.ok) {
+          const metadata = await response.json();
+          setTrackMetadata(metadata);
+        } else {
+          setTrackMetadata(null);
+        }
+      } catch (err) {
+        console.warn('Failed to load track metadata:', err);
+        setTrackMetadata(null);
+      }
+    };
+    
+    loadMetadata();
+  }, [currentTrack?.path, sourceKey]);
+
   // Load user playlists for Library
   useEffect(() => {
     const load = async () => {
@@ -712,39 +787,123 @@ const MusicPlayer = () => {
               title="Click để xem lời bài hát"
             />
             <div className="flex-1 min-w-0">
+              {/* Tên file (không extension) - font bé hơn, không uppercase */}
               <h2
-                className="text-3xl md:text-5xl font-extrabold tracking-tight mt-2 leading-tight cursor-pointer hover:opacity-80 active:opacity-60 transition-opacity lg:cursor-default lg:hover:opacity-100 lg:active:opacity-100"
+                className="text-xl md:text-2xl font-bold tracking-normal mt-2 leading-tight cursor-pointer hover:opacity-80 active:opacity-60 transition-opacity lg:cursor-default lg:hover:opacity-100 lg:active:opacity-100"
                 style={{
                   display: '-webkit-box',
-                  WebkitLineClamp: 3,
+                  WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
                 }}
                 title="Click để mở Full Player (mobile/tablet)"
                 onClick={() => {
-                  // Mobile and tablet: Click album name to open full player
+                  // Mobile and tablet: Click filename to open full player
                   const isMobileOrTablet = window.innerWidth <= 1024;
                   if (isMobileOrTablet) {
-                    console.log('🎵 Opening Full Player from album name click');
+                    console.log('🎵 Opening Full Player from filename click');
                     setIsFullPlayerOpen(true);
                   }
                 }}
               >
-                {currentTrack?.album?.toUpperCase?.() || folderTitle?.toUpperCase?.() || 'NOW PLAYING'}
+                {currentTrack?.name || (currentTrack?.path ? currentTrack.path.split('/').pop()?.replace(/\.[^/.]+$/, '') : folderTitle || 'NOW PLAYING')}
               </h2>
-              {/* Artist info và action buttons */}
+              
+              {/* Thông tin metadata - tất cả trên 1 dòng và có thể click để copy */}
+              <div className="mt-2 text-white/80 text-sm space-y-1">
+                {/* Title - có thể click để copy */}
+                {trackMetadata?.title && !shouldHideField(trackMetadata.title) && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold flex-shrink-0">Title:</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(trackMetadata.title);
+                        showToast('Đã copy title!', 'success');
+                      }}
+                      className="hover:underline hover:text-white transition-colors truncate text-left"
+                      title="Click để copy title"
+                    >
+                      {trackMetadata.title}
+                    </button>
+                  </div>
+                )}
+                
+                {/* Folder - có thể click để navigate */}
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold flex-shrink-0">Folder:</span>
+                  <button
+                    onClick={() => {
+                      const parentPath = (currentTrack?.path || '').split('/').slice(0, -1).join('/');
+                      if (parentPath) {
+                        navigate(`/music?path=${encodeURIComponent(parentPath)}`);
+                      } else {
+                        navigate('/music');
+                      }
+                    }}
+                    className="hover:underline hover:text-white transition-colors truncate text-left"
+                    title="Mở thư mục chứa"
+                  >
+                    {(() => {
+                      const p = (currentTrack?.path || '').split('/').slice(0, -1).join('/');
+                      const name = p ? p.split('/').pop() : '';
+                      return name || 'Home';
+                    })()}
+                  </button>
+                </div>
+                
+                {/* Album - có thể click để copy */}
+                {(() => {
+                  const albumValue = normalizeAlbum(trackMetadata?.album || currentTrack?.album);
+                  return !shouldHideField(albumValue) ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold flex-shrink-0">Album:</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(albumValue);
+                          showToast('Đã copy album!', 'success');
+                        }}
+                        className="hover:underline hover:text-white transition-colors truncate text-left"
+                        title="Click để copy album"
+                      >
+                        {albumValue}
+                      </button>
+                    </div>
+                  ) : null;
+                })()}
+                
+                {/* Artist - từ metadata hoặc currentTrack, có thể click để copy */}
+                {(() => {
+                  const artistValue = trackMetadata?.artist || currentTrack?.artist || 'Unknown Artist';
+                  return !shouldHideField(artistValue) ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold flex-shrink-0">Artist:</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(artistValue);
+                          showToast('Đã copy artist!', 'success');
+                        }}
+                        className="hover:underline hover:text-white transition-colors truncate text-left"
+                        title="Click để copy artist"
+                      >
+                        {artistValue}
+                      </button>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+              
+              {/* Stats info */}
               <div className="mt-4 text-white/80 text-sm flex flex-wrap items-center gap-2">
-                <span
-                  className="min-w-0 max-w-[180px] md:max-w-[220px] flex items-baseline gap-1"
-                  title={currentTrack?.artist || 'Unknown Artist'}
-                >
-                  <span className="font-semibold flex-none">Artist:</span>
-                  <span className="truncate whitespace-nowrap">{currentTrack?.artist || 'Unknown Artist'}</span>
-                </span>
-                <span className="w-1 h-1 rounded-full bg-white/40" />
                 <span className="whitespace-nowrap">{currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}</span>
                 <span className="w-1 h-1 rounded-full bg-white/40" />
                 <span className="whitespace-nowrap">{Number(currentTrack?.viewCount ?? currentTrack?.views ?? 0).toLocaleString()} Plays</span>
+                {/* Genre info from metadata */}
+                {trackMetadata?.genre && !shouldHideField(trackMetadata.genre) && (
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-white/40" />
+                    <span className="whitespace-nowrap">{trackMetadata.genre}</span>
+                  </>
+                )}
               </div>
               <div className="mt-6 flex items-center gap-4">
                 <button onClick={togglePlayPause} className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-400 text-black flex items-center justify-center shadow-lg" aria-label="Play">
@@ -757,7 +916,13 @@ const MusicPlayer = () => {
                 >
                   <FiHeart className="w-6 h-6" />
                 </button>
-                <button className="p-3 rounded-full text-white/70 hover:text-white"><FiDownload className="w-6 h-6" /></button>
+                <button 
+                  onClick={handleDownload}
+                  className="p-3 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                  title="Tải xuống"
+                >
+                  <FiDownload className="w-6 h-6" />
+                </button>
               </div>
             </div>
           </div>
@@ -872,6 +1037,7 @@ const MusicPlayer = () => {
         handleSeek={handleSeek}
         handleVolumeBar={handleVolumeBar}
         prevOrderBeforeShuffleRef={prevOrderBeforeShuffleRef}
+        trackMetadata={trackMetadata}
         theme="v1"
       />
 
@@ -879,7 +1045,16 @@ const MusicPlayer = () => {
       <LyricsModal
         isOpen={isLyricsOpen}
         onClose={() => setIsLyricsOpen(false)}
+        currentTrack={{ ...currentTrack, ...trackMetadata }}
+      />
+
+      {/* Download Options Modal */}
+      <MusicDownloadModal
+        isOpen={isDownloadModalOpen}
+        onClose={() => setIsDownloadModalOpen(false)}
         currentTrack={currentTrack}
+        currentPlaylist={currentPlaylist}
+        onDownload={handleDownloadConfirm}
       />
 
       {/* Audio Element */}

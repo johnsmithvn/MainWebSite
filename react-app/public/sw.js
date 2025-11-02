@@ -32,6 +32,16 @@ const NETWORK_TIMEOUT = 5000;
 // Cache instances management
 const cacheInstances = new Map();
 
+// getCacheInfo performance cache
+const cacheInfoCache = { data: null, timestamp: 0 };
+const CACHE_INFO_TTL = 5000; // 5 seconds cache for expensive getCacheInfo calls
+
+// Content change tracking for cache invalidation
+const contentChangeTracker = {
+  lastModified: new Map(), // Track last modified times by URL
+  contentHashes: new Map()  // Track content hashes for change detection
+};
+
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
   console.log('🔧 SW installing v3.0.0...');
@@ -136,6 +146,11 @@ const cachePromises = new Map(); // Track pending cache.open() promises
 /**
  * Get cache instance with race condition protection
  * Centralized function to avoid duplication across cache access points
+ * 
+ * ✅ FIX: Properly cleanup cachePromises Map to prevent memory leak
+ * 
+ * @param {string} cacheName - Name of the cache to open
+ * @returns {Promise<Cache>} Cache instance
  */
 async function getCacheInstance(cacheName) {
   // Get existing cache instance
@@ -147,15 +162,24 @@ async function getCacheInstance(cacheName) {
   // Check if there's already a pending cache.open() for this cacheName
   let cachePromise = cachePromises.get(cacheName);
   if (!cachePromise) {
-    // Create new cache.open() promise
-    cachePromise = caches.open(cacheName);
+    // Create new cache.open() promise with proper cleanup
+    cachePromise = caches.open(cacheName).then(openedCache => {
+      // ✅ Store cache instance for future use
+      cacheInstances.set(cacheName, openedCache);
+      // ✅ Clean up promise map to prevent memory leak
+      cachePromises.delete(cacheName);
+      return openedCache;
+    }).catch(error => {
+      // ✅ Clean up promise map on error too
+      cachePromises.delete(cacheName);
+      throw error;
+    });
+    
     cachePromises.set(cacheName, cachePromise);
   }
   
-  // Wait for the cache to be opened
+  // Wait for the cache to be opened (will get from cacheInstances on next call)
   cache = await cachePromise;
-  cacheInstances.set(cacheName, cache);
-  cachePromises.delete(cacheName); // Clean up the promise
   
   return cache;
 }
@@ -210,7 +234,14 @@ async function networkFirstWithTimeout(request, cacheName) {
       try {
         // Use centralized cache instance getter
         const cache = await getCacheInstance(cacheName);
-        await cache.put(request, networkResponse.clone());
+        
+        // Check if content changed before caching
+        const shouldCache = await checkContentChange(request, networkResponse.clone());
+        if (shouldCache) {
+          await cache.put(request, networkResponse.clone());
+          // ✅ Invalidate cache info when new content is cached
+          invalidateCacheInfo();
+        }
       } catch (cacheError) {
         console.warn('⚠️ Failed to cache response:', cacheError.message);
       }
@@ -387,11 +418,78 @@ async function updateCacheInBackground(request, cache) {
   try {
     const response = await fetch(request);
     if (response.ok) {
-      cache.put(request, response);
+      // Check if content has changed before updating cache
+      const shouldUpdate = await checkContentChange(request, response.clone());
+      if (shouldUpdate) {
+        cache.put(request, response);
+        console.log('🔄 Cache updated due to content change:', getResourceName(request.url));
+      }
     }
   } catch (error) {
     // Silent fail for background updates
   }
+}
+
+/**
+ * Check if content has changed and should invalidate cache
+ * Uses ETag, Last-Modified headers, or content hashing
+ */
+async function checkContentChange(request, response) {
+  try {
+    const url = request.url;
+    const lastModified = response.headers.get('last-modified');
+    const etag = response.headers.get('etag');
+    
+    // Use ETag for precise change detection
+    if (etag) {
+      const lastETag = contentChangeTracker.contentHashes.get(url);
+      if (lastETag && lastETag === etag) {
+        return false; // No change
+      }
+      contentChangeTracker.contentHashes.set(url, etag);
+      return true;
+    }
+    
+    // Use Last-Modified as fallback
+    if (lastModified) {
+      const lastModifiedTime = new Date(lastModified).getTime();
+      const cachedTime = contentChangeTracker.lastModified.get(url);
+      if (cachedTime && cachedTime >= lastModifiedTime) {
+        return false; // No change
+      }
+      contentChangeTracker.lastModified.set(url, lastModifiedTime);
+      return true;
+    }
+    
+    // For dynamic content without headers, check content hash
+    if (response.headers.get('content-type')?.includes('application/json')) {
+      const text = await response.text();
+      const hash = await simpleHash(text);
+      const lastHash = contentChangeTracker.contentHashes.get(url);
+      if (lastHash && lastHash === hash) {
+        return false; // No change
+      }
+      contentChangeTracker.contentHashes.set(url, hash);
+      return true;
+    }
+    
+    // Default: assume content changed for unknown types
+    return true;
+  } catch (error) {
+    console.warn('⚠️ Failed to check content change:', error);
+    return true; // Assume changed on error
+  }
+}
+
+/**
+ * Simple hash function for content change detection
+ */
+async function simpleHash(text) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
 }
 
 async function getFallbackImage() {
@@ -483,43 +581,114 @@ self.addEventListener('message', (event) => {
       break;
       
     case 'GET_CACHE_INFO':
-      getCacheInfo().then(info => {
-        event.source.postMessage({
-          type: 'CACHE_INFO_RESPONSE',
-          data: info
+      getCacheInfo()
+        .then(info => {
+          try {
+            event.source.postMessage({
+              type: 'CACHE_INFO_RESPONSE',
+              data: info
+            });
+          } catch (postError) {
+            console.error('❌ Failed to post cache info response:', postError);
+          }
+        })
+        .catch(error => {
+          console.error('❌ Failed to get cache info:', error);
+          try {
+            event.source.postMessage({
+              type: 'CACHE_INFO_RESPONSE',
+              data: { error: error.message }
+            });
+          } catch (postError) {
+            console.error('❌ Failed to post error response:', postError);
+          }
         });
-      });
+      break;
+      
+    case 'INVALIDATE_CACHE_INFO':
+      // Manual cache info invalidation
+      invalidateCacheInfo();
+      try {
+        event.source.postMessage({
+          type: 'CACHE_INFO_INVALIDATED',
+          data: { success: true }
+        });
+      } catch (postError) {
+        console.error('❌ Failed to post invalidation response:', postError);
+      }
       break;
       
     case 'CLEAR_CACHE':
-      clearSpecificCache(data?.cacheName).then(result => {
-        event.source.postMessage({
-          type: 'CACHE_CLEAR_RESPONSE',
-          data: { success: result, cacheName: data?.cacheName }
+      clearSpecificCache(data?.cacheName)
+        .then(result => {
+          try {
+            event.source.postMessage({
+              type: 'CACHE_CLEAR_RESPONSE',
+              data: { success: result, cacheName: data?.cacheName }
+            });
+          } catch (postError) {
+            console.error('❌ Failed to post cache clear response:', postError);
+          }
+        })
+        .catch(error => {
+          console.error('❌ Failed to clear cache:', error);
+          try {
+            event.source.postMessage({
+              type: 'CACHE_CLEAR_RESPONSE',
+              data: { success: false, cacheName: data?.cacheName, error: error.message }
+            });
+          } catch (postError) {
+            console.error('❌ Failed to post error response:', postError);
+          }
         });
-      });
       break;
       
     case 'REGISTER_BACKGROUND_SYNC':
       // Register background sync when offline
       if (self.registration && self.registration.sync) {
-        self.registration.sync.register('retry-failed-downloads');
+        self.registration.sync.register('retry-failed-downloads')
+          .then(() => {
+            console.log('✅ Background sync registered');
+          })
+          .catch(error => {
+            console.error('❌ Failed to register background sync:', error);
+          });
       }
       break;
       
     default:
-      console.warn('Unknown message type:', type);
+      console.warn('⚠️ Unknown message type:', type);
   }
 });
 
 // Cache management utilities
+/**
+ * Get cache information with performance optimization
+ * 
+ * ✅ FIX: Cache expensive cache inspection for 5 seconds
+ * - First call: 50-200ms (enumerate all cache keys)
+ * - Subsequent calls within 5s: ~1ms (return cached data)
+ * 
+ * @returns {Promise<Object>} Cache information
+ */
 async function getCacheInfo() {
   try {
+    const now = Date.now();
+    
+    // ✅ Return cached info if fresh (within TTL)
+    if (cacheInfoCache.data && (now - cacheInfoCache.timestamp) < CACHE_INFO_TTL) {
+      console.log('⚡ Returning cached cache info (fast path)');
+      return cacheInfoCache.data;
+    }
+    
+    console.log('🔍 Computing fresh cache info (expensive)...');
+    
     const cacheNames = await caches.keys();
     const info = {
       version: CACHE_VERSION,
       caches: {},
-      totalSize: 0
+      totalSize: 0,
+      computedAt: new Date().toISOString()
     };
     
     for (const cacheName of cacheNames) {
@@ -531,6 +700,7 @@ async function getCacheInfo() {
         type: cacheType
       };
 
+      // Only enumerate URLs for small caches (offline-core)
       if (cacheType === 'offline-core') {
         cacheInfo.urls = keys.map((request) => {
           try {
@@ -544,10 +714,26 @@ async function getCacheInfo() {
       info.caches[cacheName] = cacheInfo;
     }
     
+    // ✅ Store in cache for future calls
+    cacheInfoCache.data = info;
+    cacheInfoCache.timestamp = now;
+    
+    console.log('✅ Cache info computed and cached');
     return info;
   } catch (error) {
     console.error('❌ Failed to get cache info:', error);
-    return { error: error.message };
+    return { error: error.message, timestamp: new Date().toISOString() };
+  }
+}
+
+/**
+ * Invalidate cached cache info when content changes
+ */
+function invalidateCacheInfo() {
+  if (cacheInfoCache.data) {
+    console.log('🔄 Cache info invalidated due to content change');
+    cacheInfoCache.data = null;
+    cacheInfoCache.timestamp = 0;
   }
 }
 
@@ -560,6 +746,11 @@ async function clearSpecificCache(cacheName) {
     
     if (result) {
       console.log('✅ Cache cleared:', cacheName);
+      // ✅ Invalidate cache info cache after clearing
+      cacheInfoCache.data = null;
+      cacheInfoCache.timestamp = 0;
+      // ✅ Remove from cache instances map
+      cacheInstances.delete(cacheName);
     } else {
       console.log('⚠️ Cache not found:', cacheName);
     }

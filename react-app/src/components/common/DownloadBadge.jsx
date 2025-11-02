@@ -111,7 +111,7 @@ const DownloadBadge = () => {
           </button>
 
           {/* Tooltip */}
-          <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             <div className="bg-gray-900 dark:bg-dark-700 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
               <div className="font-semibold mb-1">
                 {activeDownloads.size} download{activeDownloads.size > 1 ? 's' : ''} đang chạy
@@ -119,11 +119,14 @@ const DownloadBadge = () => {
               <div className="text-gray-300 dark:text-gray-400">
                 {Math.round(totalProgress)}% hoàn thành
               </div>
-              <div className="text-gray-400 dark:text-gray-500 text-[10px] mt-1">
+              <div 
+                className="text-gray-400 dark:text-gray-500 text-[10px] mt-1 cursor-pointer hover:text-primary-400 transition-colors duration-200 pointer-events-auto"
+                onClick={handleClick}
+              >
                 Click để xem chi tiết
               </div>
               {/* Arrow */}
-              <div className="absolute top-full right-4 w-2 h-2 bg-gray-900 dark:bg-dark-700 transform rotate-45 -mt-1" />
+              <div className="absolute top-full right-4 w-2 h-2 bg-gray-900 dark:bg-dark-700 transform rotate-45 -mt-1 pointer-events-none" />
             </div>
           </div>
 

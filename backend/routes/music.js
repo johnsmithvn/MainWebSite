@@ -9,6 +9,7 @@ router.use("/", require("../api/music/scan-music"));
 router.use("/", require("../api/music/music-folder"));
 router.use("/", require("../api/music/audio"));
 router.use("/", require("../api/music/audio-cache"));
+router.use("/", require("../api/music/download"));
 router.use("/", require("../api/music/playlist"));
 router.use("/", require("../api/music/music-meta"));
 router.use("/", require("../api/music/update-lyrics"));

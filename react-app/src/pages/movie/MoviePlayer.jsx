@@ -1,7 +1,7 @@
 // 📁 src/pages/movie/MoviePlayer.jsx
 // 🎬 Movie player page with full functionality from old frontend
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useAuthStore, useMovieStore, useUIStore } from "@/store";
 import { useRecentManager } from "@/hooks";
@@ -56,6 +56,9 @@ const MoviePlayer = () => {
   const [thumbnailLoading, setThumbnailLoading] = useState(false); // For thumbnail setting
   const [randomLoading, setRandomLoading] = useState(false); // For random jump
 
+  // Episode list expand/collapse state
+  const [episodeListExpanded, setEpisodeListExpanded] = useState(false);
+
   // Video gesture controls
   const [dragStartX, setDragStartX] = useState(null);
   const [startTime, setStartTime] = useState(0);
@@ -65,6 +68,7 @@ const MoviePlayer = () => {
   const SKIP_SECONDS = 10;
   const PIXELS_PER_SECOND = 10;
   const SWIPE_THRESHOLD = 5;
+  const EPISODE_COLLAPSE_THRESHOLD = 20; // Collapse episode list if more than this number
 
   // Track last initialized combination to avoid duplicate init (StrictMode / key sync)
   const lastInitRef = useRef({ file: null, key: null });
@@ -390,6 +394,38 @@ const MoviePlayer = () => {
     }
   };
 
+  // Toggle episode list expand/collapse
+  const handleToggleEpisodeList = () => {
+    setEpisodeListExpanded(!episodeListExpanded);
+  };
+
+  // Create path-to-index map for O(1) lookup performance
+  const pathToIndexMap = useMemo(() => {
+    const map = new Map();
+    videoList.forEach((video, index) => {
+      map.set(video.path, index);
+    });
+    return map;
+  }, [videoList]);
+
+  // Calculate displayed episodes based on expand state
+  const getDisplayedEpisodes = () => {
+    if (videoList.length <= EPISODE_COLLAPSE_THRESHOLD) {
+      return videoList; // Show all if under threshold
+    }
+
+    if (episodeListExpanded) {
+      return videoList; // Show all when expanded
+    }
+
+    // When collapsed, show episodes around current episode
+    const SHOW_RANGE = 10; // Show 10 episodes on each side
+    const start = Math.max(0, currentIndex - SHOW_RANGE);
+    const end = Math.min(videoList.length, currentIndex + SHOW_RANGE + 1);
+
+    return videoList.slice(start, end);
+  };
+
   // Random video jump
   const handleRandomJump = async () => {
     try {
@@ -693,24 +729,60 @@ const MoviePlayer = () => {
           {/* Episode List */}
           {videoList.length > 0 && (
             <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-                Danh sách tập ({videoList.length})
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                {videoList.map((video, index) => (
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Danh sách tập ({videoList.length})
+                </h3>
+                
+                {/* Show expand/collapse button only if list is long */}
+                {videoList.length > EPISODE_COLLAPSE_THRESHOLD && (
                   <button
-                    key={video.path}
-                    onClick={() => handleEpisodeClick(video)}
-                    className={`px-3 py-2 rounded text-sm transition-colors ${
-                      video.path === currentFile
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
-                    }`}
+                    onClick={handleToggleEpisodeList}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
                   >
-                    Tập {index + 1}
+                    {episodeListExpanded ? (
+                      <>
+                        ⬆ Thu gọn
+                      </>
+                    ) : (
+                      <>
+                        ⬇ Xem tất cả
+                      </>
+                    )}
                   </button>
-                ))}
+                )}
               </div>
+
+              {/* Episode Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                {getDisplayedEpisodes().map((video, displayIndex) => {
+                  // O(1) lookup instead of O(n) findIndex
+                  const actualIndex = pathToIndexMap.get(video.path) ?? 0;
+                  
+                  return (
+                    <button
+                      key={video.path}
+                      onClick={() => handleEpisodeClick(video)}
+                      className={`px-3 py-2 rounded text-sm transition-colors ${
+                        video.path === currentFile
+                          ? "bg-blue-500 text-white font-semibold ring-2 ring-blue-300"
+                          : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600"
+                      }`}
+                      title={video.name || `Tập ${actualIndex + 1}`}
+                    >
+                      Tập {actualIndex + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Show indicator when collapsed */}
+              {videoList.length > EPISODE_COLLAPSE_THRESHOLD && !episodeListExpanded && (
+                <div className="mt-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                  Đang hiển thị {getDisplayedEpisodes().length} tập gần tập hiện tại
+                  (tổng {videoList.length} tập)
+                </div>
+              )}
             </div>
           )}
 
