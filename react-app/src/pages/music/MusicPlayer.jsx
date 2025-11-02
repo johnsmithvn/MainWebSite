@@ -26,6 +26,8 @@ import PlayerHeader from '../../components/music/PlayerHeader';
 import PlaylistSidebar from '../../components/music/PlaylistSidebar';
 import FullPlayerModal from '../../components/music/FullPlayerModal';
 import LyricsModal from '../../components/music/LyricsModal';
+import MusicDownloadModal from '../../components/music/MusicDownloadModal';
+import { musicDownloadQueue } from '@/utils/musicDownloadQueue';
 
 const MusicPlayer = () => {
   const navigate = useNavigate();
@@ -85,6 +87,7 @@ const MusicPlayer = () => {
   const [headerCondensed, setHeaderCondensed] = useState(false);
   const [isFullPlayerOpen, setIsFullPlayerOpen] = useState(false);
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [trackMetadata, setTrackMetadata] = useState(null);
   const headerSentinelRef = useRef(null);
 
@@ -378,6 +381,31 @@ const MusicPlayer = () => {
     window.dispatchEvent(new CustomEvent('openPlaylistModal', { 
       detail: { item: currentTrack } 
     }));
+  };
+
+  const handleDownload = async () => {
+    // Open modal instead of direct download
+    setIsDownloadModalOpen(true);
+  };
+
+  const handleDownloadConfirm = (tracks) => {
+    if (!sourceKey) {
+      showToast('Thiếu source key', 'error');
+      return;
+    }
+
+    try {
+      // Add tracks to download queue
+      musicDownloadQueue.addToQueue(tracks, sourceKey);
+      
+      if (tracks.length === 1) {
+        showToast('Đã thêm 1 bài hát vào hàng chờ tải!', 'success');
+      } else {
+        showToast(`Đã thêm ${tracks.length} bài hát vào hàng chờ tải!`, 'success');
+      }
+    } catch (err) {
+      showToast('Không thể thêm vào hàng chờ: ' + err.message, 'error');
+    }
   };
 
   // Detect scroll to condense top header like screenshot 2 (robust: IntersectionObserver + fallback)
@@ -888,7 +916,13 @@ const MusicPlayer = () => {
                 >
                   <FiHeart className="w-6 h-6" />
                 </button>
-                <button className="p-3 rounded-full text-white/70 hover:text-white"><FiDownload className="w-6 h-6" /></button>
+                <button 
+                  onClick={handleDownload}
+                  className="p-3 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                  title="Tải xuống"
+                >
+                  <FiDownload className="w-6 h-6" />
+                </button>
               </div>
             </div>
           </div>
@@ -1012,6 +1046,15 @@ const MusicPlayer = () => {
         isOpen={isLyricsOpen}
         onClose={() => setIsLyricsOpen(false)}
         currentTrack={{ ...currentTrack, ...trackMetadata }}
+      />
+
+      {/* Download Options Modal */}
+      <MusicDownloadModal
+        isOpen={isDownloadModalOpen}
+        onClose={() => setIsDownloadModalOpen(false)}
+        currentTrack={currentTrack}
+        currentPlaylist={currentPlaylist}
+        onDownload={handleDownloadConfirm}
       />
 
       {/* Audio Element */}

@@ -4,8 +4,18 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Changed
+
+- 🔄 [2025-11-02] Changed Android download folder date format → Thay đổi format ngày từ `YYYY-MM-DD` sang `YYYYMMDD` (ví dụ: `20250209` thay vì `2025-02-09`) trong MainActivity.java để tạo tên thư mục gọn hơn, áp dụng cho tất cả download qua JavascriptInterface (Music, Video, Picture)
+
 ### Added
 
+- ✨ [2025-11-01] Added music download queue system → Tạo MusicDownloadModal với 2 options (current track/full playlist), musicDownloadQueue utility quản lý hàng chờ tải với max 3 concurrent downloads, progress tracking và background processing, user có thể đóng modal và tiếp tục nghe nhạc trong khi hệ thống tự động tải
+- ✨ [2025-11-01] Added runtime storage permission request to Android app → Implement checkStoragePermission() và onRequestPermissionsResult() trong MainActivity để request WRITE_EXTERNAL_STORAGE permission khi app khởi động, hiển thị dialog giải thích và xử lý kết quả permission
+- ✨ [2025-11-01] Added DownloadListener to Android WebView → Implement download functionality trong MainActivity.java để handle download requests từ WebView, sử dụng DownloadManager để tải file xuống thư mục Music với notification progress
+- ✨ [2025-11-01] Added storage permissions to Android app → Thêm WRITE_EXTERNAL_STORAGE và READ_EXTERNAL_STORAGE permissions vào AndroidManifest.xml để hỗ trợ download files
+- ✨ [2025-11-01] Added music download functionality → Triển khai chức năng download bài hát với endpoint `/api/music/download`, hỗ trợ download từ MusicPlayer và FullPlayerModal, tự động trigger browser download với tên file chính xác
+- ✨ [2025-11-01] Added comprehensive download functionality for Music Player → Support single track và playlist download với progressive fallback (WebView → File System Access API → Blob download), includes download progress modal và proper mobile app integration
 - ✨ [2025-11-01] Added dedicated health check endpoint → Tạo `/api/health` chuyên dụng thay thế việc dùng `/api/security-keys.js` cho server connectivity check trong Layout.jsx
 - ✨ [2025-11-01] Added cache invalidation mechanism → Implement ETag, Last-Modified và content hash tracking để invalidate cache khi content thay đổi trong Service Worker
 - ✨ [2025-11-01] Added accessibility support for DownloadProgressModal → Thêm keyboard navigation (ESC key), ARIA labels, role="dialog", và overlay click/keyboard support
@@ -22,6 +32,7 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-11-02] Fixed music download error on Android WebView → Blob URLs không hoạt động trên WebView, thêm Android.downloadFile() JavascriptInterface để trigger native DownloadManager, auto-detect WebView và dùng native method thay vì blob download
 - 🐛 [2025-11-01] Fixed server health check endpoint → Thay đổi từ `/api/security-keys.js` sang `/api/health` để tách biệt mục đích authentication và health checking
 - 🐛 [2025-11-01] Fixed accessibility issues trong DownloadProgressModal → Thêm proper keyboard support, ARIA attributes và focus management
 - 🐛 [2025-11-01] Fixed click không hoạt động trên text "Click để xem chi tiết" trong DownloadBadge → Thêm onClick handler, cursor pointer với hover effect và xóa pointer-events-none khỏi tooltip
