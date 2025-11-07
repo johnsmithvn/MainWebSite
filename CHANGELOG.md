@@ -6,6 +6,17 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Changed
 
+- 🔄 [2025-11-02] Changed thumbnail extraction timeout → Bỏ timeout (set `timeout: 0`) cho API extract-thumbnail vì quá trình quét có thể mất rất lâu với thư mục lớn
+
+### Fixed
+
+- 🐛 [2025-11-02] Fixed thumbnail extraction copyfile error → Thêm check `fs.existsSync(firstMusicThumb)`, tạo folder `.thumbnail` trước khi copy, wrap `copyFileSync` trong try-catch để bỏ qua lỗi và tiếp tục scan
+- 🐛 [2025-11-02] Fixed thumbnail path construction error → Dùng `rootPath + childRelPath` thay vì `absPath + entry.name` để xây dựng absolute path đúng cho file/folder con
+- 🐛 [2025-11-02] Fixed thumbnail extraction path error "ENOENT: no such file or directory, copyfile" → Sửa logic lấy path thumbnail của file audio, dùng `path.dirname(childAbsPath)` thay vì `absPath` để lấy đúng folder chứa file
+- 🐛 [2025-11-02] Fixed thumbnail extraction error "Cannot read properties of undefined" → Thêm optional chaining và kiểm tra null/undefined cho metadata.common, pic.format, pic.data, và result.thumb trong extract-thumbnail.js (music)
+
+### Changed
+
 - 🔄 [2025-11-02] Changed PDF download URL conversion to use Web API → Refactored from manual check (`url.startsWith('http')`) to `new URL(url, window.location.origin).href` for consistency with Music download implementation
 - 🔄 [2025-11-02] Changed WebView PDF button from "Xem PDF" to "Tải xuống PDF" → Simplified WebView UX by directly downloading PDF instead of trying to open native viewer (which may not be available)
 
