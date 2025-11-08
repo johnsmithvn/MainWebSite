@@ -8,7 +8,7 @@ import { useMovieStore } from '@/store';
 import { useRecentMoviesManager } from '@/hooks/useMovieData';
 import { DEFAULT_IMAGES } from '@/constants';
 
-const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
+const MovieCard = ({ item, showViews = false, onFavoriteChange, variant = 'grid' }) => {
   const navigate = useNavigate();
   const { toggleFavorite } = useMovieStore();
   const { addRecentMovie } = useRecentMoviesManager();
@@ -56,6 +56,73 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange }) => {
     return 'Folder';
   };
   const typeLabel = getTypeLabel();
+
+  // List view layout (like Manga)
+  if (variant === 'list') {
+    return (
+      <div
+        onClick={handleClick}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg 
+                  transition-all duration-200 cursor-pointer group flex items-center p-2 sm:p-4"
+      >
+        <div className="flex items-center gap-2 sm:gap-4 w-full">
+          {/* Thumbnail */}
+          <div className="w-16 h-12 sm:w-24 sm:h-16 bg-gray-200 dark:bg-gray-700 rounded-md 
+                        flex-shrink-0 overflow-hidden">
+            <img
+              src={item.thumbnail || (isVideo ? DEFAULT_IMAGES.video : DEFAULT_IMAGES.folder)}
+              alt={displayName}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              onError={(e) => {
+                e.target.src = isVideo ? DEFAULT_IMAGES.video : DEFAULT_IMAGES.folder;
+              }}
+            />
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white 
+                          truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 
+                          transition-colors">
+              {displayName}
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs
+                            bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                {isFolder ? <Folder className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                {typeLabel}
+              </span>
+              {showViews && item.views > 0 && (
+                <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                  <Clock className="w-3 h-3" />
+                  {item.views} views
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Favorite button */}
+          {isVideo && (
+            <button
+              onClick={handleFavoriteClick}
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full
+                        hover:bg-gray-100 dark:hover:bg-gray-700"
+              title={item.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Heart 
+                className={`w-5 h-5 ${
+                  item.isFavorite 
+                    ? 'fill-red-500 text-red-500' 
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}
+              />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

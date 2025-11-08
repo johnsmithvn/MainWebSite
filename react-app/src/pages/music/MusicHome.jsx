@@ -165,6 +165,11 @@ const MusicHome = () => {
   });
 
   const sortedMusic = [...filteredMusic].sort((a, b) => {
+    // ALWAYS put folders first, then files (regardless of sortBy option)
+    if (a.type === 'folder' && b.type !== 'folder') return -1;
+    if (a.type !== 'folder' && b.type === 'folder') return 1;
+    
+    // Within same type group, apply the selected sort
     switch (sortBy) {
       case 'name':
         return (a.name || '').localeCompare(b.name || '');
@@ -173,9 +178,7 @@ const MusicHome = () => {
       case 'album':
         return (a.album || '').localeCompare(b.album || '');
       case 'type':
-        // Folders first, then audio files
-        if (a.type === 'folder' && b.type !== 'folder') return -1;
-        if (a.type !== 'folder' && b.type === 'folder') return 1;
+        // Already sorted by type above, now sort by name within type
         return (a.name || '').localeCompare(b.name || '');
       case 'views':
         return (b.viewCount || 0) - (a.viewCount || 0);
@@ -428,19 +431,46 @@ const MusicHome = () => {
               }
             </p>
           </div>
-        ) : (
+        ) : viewMode === 'grid' ? (
           <>
-            <div className={`grid gap-2 sm:gap-4 ${
-              viewMode === 'grid' 
-                ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-6' 
-                : 'grid-cols-1'
-            }`}>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 sm:gap-3">
               {currentMusic.map((music, index) => (
                 <MusicCard
                   key={music.path || index}
                   item={music}
                   showViews={true}
-                  variant={viewMode === 'list' ? 'compact' : 'default'}
+                  variant="grid"
+                />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex flex-col items-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  totalItems={filteredMusic.length}
+                  itemsPerPage={musicPerPage}
+                  enableJump={true}
+                  center
+                />
+                <div className="text-center mt-4 text-sm text-gray-600 dark:text-gray-400">
+                  Page {currentPage + 1} of {totalPages} • {filteredMusic.length} result{filteredMusic.length === 1 ? '' : 's'}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-2 sm:gap-4">
+              {currentMusic.map((music, index) => (
+                <MusicCard
+                  key={music.path || index}
+                  item={music}
+                  showViews={true}
+                  variant="list"
                 />
               ))}
             </div>

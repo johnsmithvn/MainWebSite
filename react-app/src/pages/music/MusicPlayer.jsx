@@ -521,7 +521,21 @@ const MusicPlayer = () => {
 
       const response = await apiService.music.getFolders({ key: sourceKey, path: folderToLoad });
       const audioFiles = (response.data?.folders || []).filter((i) => i.type === 'audio' || i.type === 'file');
-      const playlist = audioFiles.map((file) => ({
+      
+
+
+      // Sort exactly like MusicHome to maintain consistent order
+      const sortedAudioFiles = [...audioFiles].sort((a, b) => {
+        // Folders first, then audio files
+        if (a.type === 'folder' && b.type !== 'folder') return -1;
+        if (a.type !== 'folder' && b.type === 'folder') return 1;
+        // Then sort by name alphabetically (case-insensitive)
+        return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+      });
+
+  
+
+      const playlist = sortedAudioFiles.map((file) => ({
         ...file,
         name: file.name || file.path.split('/').pop(),
         thumbnail: buildThumbnailUrl(file, 'music'),

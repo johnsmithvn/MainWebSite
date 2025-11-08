@@ -67,7 +67,9 @@ const MusicCard = ({
   const cardVariants = {
     default: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
     compact: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
-    slider: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200'
+    slider: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
+    list: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
+    grid: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200'
   };
 
   const getTypeIcon = () => {
@@ -84,6 +86,66 @@ const MusicCard = ({
     }
     return 'Folder';
   };
+
+  // List view layout (like Manga)
+  if (variant === 'list') {
+    return (
+      <div
+        onClick={handleClick}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg 
+                  transition-all duration-200 cursor-pointer group flex items-center p-2 sm:p-4"
+      >
+        <div className="flex items-center gap-2 sm:gap-4 w-full">
+          {/* Thumbnail */}
+          <div className="w-12 h-16 sm:w-16 sm:h-20 bg-gray-200 dark:bg-gray-700 rounded-md 
+                        flex-shrink-0 overflow-hidden">
+            <img
+              src={getThumbnailUrl()}
+              alt={displayName}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              onError={(e) => {
+                e.target.src = isAudio ? DEFAULT_IMAGES.music : DEFAULT_IMAGES.folder;
+              }}
+            />
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white 
+                          truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 
+                          transition-colors">
+              {displayName}
+            </h3>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs
+                            bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                {getTypeIcon()}
+                {getTypeLabel()}
+              </span>
+              {showViews && item.viewCount > 0 && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {item.viewCount} plays
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Action button */}
+          {isAudio && (
+            <button
+              onClick={handleAddToPlaylist}
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full
+                        hover:bg-gray-100 dark:hover:bg-gray-700"
+              title="Add to playlist"
+            >
+              <FiPlus className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
