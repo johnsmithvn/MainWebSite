@@ -1,6 +1,8 @@
 /**
  * Enhanced Service Worker for Manga Reader App
  * Provides intelligent caching, offline functionality, and storage management
+ * 
+ * ✅ v3.0.1 - PDF streaming optimization (no cache)
  */
 
 // Import default images constants
@@ -12,7 +14,7 @@ const DEFAULT_IMAGES = {
   favicon: '/default/favicon.png'
 };
 
-const CACHE_VERSION = 'v3.0.0';
+const CACHE_VERSION = 'v3.0.1'; // ✅ PDF streaming (no cache)
 const STATIC_CACHE = `offline-core-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `reader-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'chapter-images'; // Keep existing name for compatibility
@@ -44,7 +46,7 @@ const contentChangeTracker = {
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('🔧 SW installing v3.0.0...');
+  console.log('🔧 SW installing v3.0.1...');
 
   event.waitUntil((async () => {
     try {
@@ -69,7 +71,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - cleanup old caches
 self.addEventListener('activate', (event) => {
-  console.log('🚀 SW activating v3.0.0...');
+  console.log('🚀 SW activating v3.0.1...');
 
   event.waitUntil(
     Promise.all([
@@ -124,6 +126,12 @@ self.addEventListener('fetch', (event) => {
   
   // Skip non-GET requests
   if (request.method !== 'GET') return;
+  
+  // ✅ Network-only for PDF (no cache, stream directly)
+  if (request.url.includes('/api/manga/pdf')) {
+    event.respondWith(fetch(request));
+    return;
+  }
   
   // Route to appropriate strategy
   if (isStaticAsset(request)) {
@@ -396,7 +404,12 @@ function isStaticAsset(request) {
 }
 
 function isAPIRequest(request) {
-  return request.url.includes('/api/');
+  const url = request.url;
+  // ❌ Exclude PDF endpoint from caching (too large, stream directly)
+  if (url.includes('/api/manga/pdf')) {
+    return false;
+  }
+  return url.includes('/api/');
 }
 
 function isMangaImage(request) {

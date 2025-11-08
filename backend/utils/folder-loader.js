@@ -70,6 +70,15 @@ function loadFolderFromDisk(
 
         images.push(`/manga/${root}/${safePath}`);
       }
+      // 🆕 Thêm PDF file như một "folder" để hiển thị card
+      if (ext === ".pdf") {
+        folders.push({
+          name: entry.name,
+          path: path.posix.join(folderPath, entry.name),
+          type: "pdf",
+          thumbnail: "/default/default-cover.jpg", // Default PDF thumbnail
+        });
+      }
     }
   }
 
@@ -195,6 +204,16 @@ function loadFolderFromDB(dbkey, root, folderPath = "", limit = 0, offset = 0) {
               .replace(/\\/g, "/");
             const safePath = rel.split("/").map(encodeURIComponent).join("/");
             images.push(`/manga/${root}/${safePath}`);
+          }
+          // 🆕 Thêm PDF file như một "folder" để hiển thị card
+          if (ext === ".pdf") {
+            folders.push({
+              name: entry.name,
+              path: path.posix.join(folderPath, entry.name),
+              type: "pdf",
+              thumbnail: "/default/default-cover.jpg",
+              isFavorite: false,
+            });
           }
         }
       }

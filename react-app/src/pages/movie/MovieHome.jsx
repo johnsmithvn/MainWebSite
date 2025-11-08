@@ -403,19 +403,48 @@ const MovieHome = () => {
               {searchTerm ? 'Try adjusting your search' : 'This folder is empty'}
             </p>
           </div>
-        ) : (
+        ) : viewMode === 'grid' ? (
           <>
             {/* Current page items (after filtering & sorting) */}
-            <div className={`grid ${
-              viewMode === 'grid' 
-                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6' 
-                : 'grid-cols-1'
-            } gap-2 sm:gap-4 mb-4 sm:mb-6`}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 gap-2 sm:gap-3 mb-4 sm:mb-6">
               {currentMovies.map((movie) => (
                 <MovieCard
                   key={movie.path}
                   item={movie}
                   showViews={false}
+                  variant="grid"
+                />
+              ))}
+            </div>
+
+            {/* Pagination (shared component) */}
+            {totalPages > 1 && (
+              <div className="mt-4 flex flex-col items-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                  totalItems={filteredMovies.length}
+                  itemsPerPage={moviesPerPage}
+                  enableJump={true}
+                  center
+                />
+                <div className="text-center mt-4 text-sm text-gray-600 dark:text-gray-400">
+                  Page {currentPage + 1} of {totalPages} • {filteredMovies.length} result{filteredMovies.length === 1 ? '' : 's'}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* List view */}
+            <div className="grid grid-cols-1 gap-2 sm:gap-4 mb-4 sm:mb-6">
+              {currentMovies.map((movie) => (
+                <MovieCard
+                  key={movie.path}
+                  item={movie}
+                  showViews={false}
+                  variant="list"
                 />
               ))}
             </div>

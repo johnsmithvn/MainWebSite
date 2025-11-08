@@ -16,7 +16,8 @@ const FILE_EXTENSIONS = {
   IMAGE: [
     '.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif',
     '.bmp', '.tiff', '.svg'
-  ]
+  ],
+  PDF: ['.pdf']
 };
 
 /**

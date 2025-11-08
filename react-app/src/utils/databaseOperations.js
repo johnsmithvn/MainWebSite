@@ -254,18 +254,21 @@ export const performThumbnailExtraction = async (
 
     let response;
 
+    // ✅ Bỏ timeout cho extract-thumbnail vì có thể mất rất lâu
+    const config = { timeout: 0 }; // 0 = no timeout
+
     if (type === 'movie') {
       response = await apiService.movie.extractThumbnail({
         key: sourceKey,
         path: currentPath || '',
         overwrite,
-      });
+      }, config);
     } else {
       response = await apiService.music.extractThumbnail({
         key: sourceKey,
         path: currentPath || '',
         overwrite,
-      });
+      }, config);
     }
 
     if (response.data?.success) {

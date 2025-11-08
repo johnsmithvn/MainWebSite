@@ -50,13 +50,17 @@ async function extractThumbnailSmart({ key, relPath = "", overwrite = false }) {
             ".aiff",
           ].includes(path.extname(entry.name).toLowerCase())
         ) {
-          const thumbDir = path.join(absPath, ".thumbnail");
-          const name = path.basename(entry.name, path.extname(entry.name));
-          const ext = path.extname(result.thumb); // lấy .jpg hoặc .png
-          thumbFile = path.join(thumbDir, name + ext);
+          // ✅ result.thumb là relative path như ".thumbnail/song.jpg"
+          // Cần join với childDir (folder chứa file)
+          if (result.thumb) {
+            const childAbsPath = path.join(rootPath, childRelPath);
+            const childDir = path.dirname(childAbsPath);
+            thumbFile = path.join(childDir, result.thumb);
+          }
         } else if (entry.isDirectory()) {
           if (result.thumb) {
-            const childAbsPath = path.join(absPath, entry.name);
+            // result.thumb cho folder cũng là relative path
+            const childAbsPath = path.join(rootPath, childRelPath);
             thumbFile = path.join(childAbsPath, result.thumb);
           }
         }
@@ -72,12 +76,28 @@ async function extractThumbnailSmart({ key, relPath = "", overwrite = false }) {
 
     // Tạo thumbnail đại diện cho folder nếu có nhạc
     let folderThumbRelative = null;
-    if (firstMusicThumb) {
+    if (firstMusicThumb && fs.existsSync(firstMusicThumb)) {
       const folderName = path.basename(absPath);
       const thumbDir = path.join(absPath, ".thumbnail");
       const folderThumb = path.join(thumbDir, folderName + ".jpg");
+      
+      // ✅ Tạo folder .thumbnail nếu chưa tồn tại
+      if (!fs.existsSync(thumbDir)) {
+        fs.mkdirSync(thumbDir, { recursive: true });
+      }
+      
       if (overwrite || !fs.existsSync(folderThumb)) {
-        fs.copyFileSync(firstMusicThumb, folderThumb);
+        try {
+          fs.copyFileSync(firstMusicThumb, folderThumb);
+        } catch (err) {
+          console.error(`❌ Copy thumbnail error for ${relPath}:`, err.message);
+          return {
+            success: true,
+            message: "Extracted all in folder (skip folder thumb)",
+            count,
+            thumb: null,
+          };
+        }
       }
       folderThumbRelative = path.posix.join(".thumbnail", folderName + ".jpg");
       // Update thumbnail cho folder trong DB
@@ -113,17 +133,18 @@ async function extractThumbnailSmart({ key, relPath = "", overwrite = false }) {
     try {
       const { parseFile } = await import("music-metadata");
       const metadata = await parseFile(absPath);
-      const common = metadata.common;
-      if (common.picture && common.picture.length > 0) {
+      const common = metadata?.common; // ✅ Optional chaining
+      if (common?.picture && common.picture.length > 0) {
         const pic = common.picture[0];
-        const ext = pic.format.includes("png") ? ".png" : ".jpg";
+        // ✅ Kiểm tra pic.format trước khi dùng includes
+        const ext = pic?.format?.includes("png") ? ".png" : ".jpg";
         const name = path.basename(relPath, path.extname(relPath));
         const baseDir = path.dirname(absPath);
         const thumbFolder = path.join(baseDir, ".thumbnail");
         fs.mkdirSync(thumbFolder, { recursive: true }); // ✅ an toàn khi chạy song song
         const thumbFile = path.join(thumbFolder, name + ext);
         const shouldWrite = overwrite || !fs.existsSync(thumbFile);
-        if (shouldWrite) {
+        if (shouldWrite && pic?.data) {
           fs.writeFileSync(thumbFile, pic.data);
         }
         // === UPDATE DB thumbnail ===

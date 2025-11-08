@@ -4,3 +4,4 @@
 export { default as MangaCard } from './MangaCard';
 export { default as MangaRandomSection } from './MangaRandomSection';
 export { default as ReaderHeader } from './ReaderHeader';
+export { default as PDFReader } from './PDFReader';
