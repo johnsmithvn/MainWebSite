@@ -62,7 +62,9 @@ async function scanMovieFolderToDB(
       const existing = db
         .prepare(`SELECT * FROM folders WHERE path = ?`)
         .get(relPath);
+      
       if (!existing) {
+        // ✅ NEW FOLDER
         db.prepare(
           `
           INSERT INTO folders (name, path, thumbnail, type, createdAt, updatedAt)
@@ -70,12 +72,16 @@ async function scanMovieFolderToDB(
         `
         ).run(entry.name, relPath, thumb, Date.now(), Date.now());
         stats.inserted++;
-      } else {
+      } else if (existing.thumbnail !== thumb) {
+        // ✅ CHANGED - Thumbnail updated
         db.prepare(
           `
           UPDATE folders SET thumbnail = ?, updatedAt = ? WHERE path = ?
         `
         ).run(thumb, Date.now(), relPath);
+        stats.updated++;
+      } else {
+        // ✅ UNCHANGED - True skip
         stats.skipped++;
       }
 
@@ -95,14 +101,17 @@ async function scanMovieFolderToDB(
         thumb = findThumbnail(thumbDir, baseName);
       }
 
+      const fullPath = path.join(basePath, entry.name);
+      const stat = fs.statSync(fullPath);
+      const lastModified = stat.mtimeMs;
+
       const existing = db
         .prepare(`SELECT * FROM folders WHERE path = ?`)
         .get(relPath);
-      const fullPath = path.join(basePath, entry.name);
-      const stat = fs.statSync(fullPath);
-      const duration = await getVideoDuration(fullPath);
 
       if (!existing) {
+        // ✅ NEW FILE
+        const duration = await getVideoDuration(fullPath);
         db.prepare(
           `
           INSERT INTO folders (name, path, thumbnail, type, size, modified, duration, createdAt, updatedAt)
@@ -113,18 +122,31 @@ async function scanMovieFolderToDB(
           relPath,
           thumb,
           stat.size,
-          stat.mtimeMs,
+          lastModified,
           duration,
           Date.now(),
           Date.now()
         );
         stats.inserted++;
-      } else {
+      } else if (existing.modified !== lastModified) {
+        // ✅ CHANGED FILE - File was modified
+        const duration = await getVideoDuration(fullPath);
+        db.prepare(
+          `
+          UPDATE folders SET thumbnail = ?, size = ?, modified = ?, duration = ?, updatedAt = ? WHERE path = ?
+        `
+        ).run(thumb, stat.size, lastModified, duration, Date.now(), relPath);
+        stats.updated++;
+      } else if (existing.thumbnail !== thumb) {
+        // ✅ THUMBNAIL CHANGED - Only thumbnail updated
         db.prepare(
           `
           UPDATE folders SET thumbnail = ?, updatedAt = ? WHERE path = ?
         `
         ).run(thumb, Date.now(), relPath);
+        stats.updated++;
+      } else {
+        // ✅ UNCHANGED FILE - True skip
         stats.skipped++;
       }
     }
