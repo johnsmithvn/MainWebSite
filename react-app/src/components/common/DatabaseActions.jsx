@@ -119,9 +119,22 @@ const DatabaseActions = ({
           currentSourceKey,
           currentRootFolder,
           (data, message) => {
+            // Build detailed stats message
+            const stats = data.stats || {};
+            const statsDetails = [];
+            
+            if (stats.inserted > 0) statsDetails.push(`✨ ${stats.inserted} mới`);
+            if (stats.updated > 0) statsDetails.push(`🔄 ${stats.updated} cập nhật`);
+            if (stats.skipped > 0) statsDetails.push(`⏭️ ${stats.skipped} bỏ qua`);
+            if (stats.deleted > 0) statsDetails.push(`🗑️ ${stats.deleted} đã xóa`);
+            
+            const statsMessage = statsDetails.length > 0 
+              ? `\n\n📊 Kết quả:\n${statsDetails.join('\n')}` 
+              : '';
+            
             successModal({
               title: '✅ Quét hoàn tất!',
-              message: `${message}${data.stats?.total ? ` - Tìm thấy ${data.stats.total} mục.` : ''}`
+              message: `${message}${statsMessage}`
             });
           },
           (error) => {

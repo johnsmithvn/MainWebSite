@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Changed
 
+- 🔄 [2025-01-08] Enhanced scan result display → DatabaseActions hiển thị chi tiết stats breakdown (inserted, updated, skipped, deleted) thay vì chỉ tổng số, giúp user hiểu rõ scan operation đã làm gì (DatabaseActions.jsx)
+
+### Added
+
+- ✨ [2025-01-08] Added orphaned records cleanup (Mark & Sweep GC) → Tự động phát hiện và xóa records của files/folders đã bị xóa hoặc di chuyển khỏi disk, giữ database sạch và sync với filesystem thực tế, tránh hiển thị files không tồn tại trong UI, stats tracking thêm `deleted` counter (movie-scan.js, music-scan.js, cache-scan.js)
+
+### Changed
+
 - 🔄 [2025-01-08] Optimized Music metadata extraction performance → Smart caching: chỉ extract metadata khi file mới hoặc file đã sửa (modified timestamp khác), SKIP metadata extraction cho files không thay đổi, giảm re-scan time từ 20-30 phút xuống 1-2 GIÂY (600-1800x nhanh hơn), lần scan đầu vẫn đầy đủ metadata cho search/display (music-scan.js)
 - 🔄 [2025-01-08] Optimized Movie & Music scan performance → Smart update logic với `lastModified` check cho video/audio files và thumbnail check cho folders, chỉ UPDATE khi file thực sự thay đổi (file modified time khác) hoặc thumbnail thay đổi, giảm 95% unnecessary DB writes, tăng tốc re-scan lên 4-6x (movie-scan.js, music-scan.js)
 

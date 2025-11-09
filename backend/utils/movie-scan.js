@@ -35,11 +35,16 @@ function getVideoDuration(filePath) {
 async function scanMovieFolderToDB(
   dbkey,
   currentPath = "",
-  stats = { inserted: 0, updated: 0, skipped: 0 }
+  stats = { inserted: 0, updated: 0, skipped: 0, deleted: 0 }
 ) {
   const db = getMovieDB(dbkey);
   const rootPath = getRootPath(dbkey);
   const basePath = path.join(rootPath, currentPath);
+
+  // 🗑️ PHASE 1: Mark all as unscanned (only on root scan)
+  if (currentPath === "") {
+    db.prepare(`UPDATE folders SET scanned = 0`).run();
+  }
 
   if (!fs.existsSync(basePath)) return stats;
 
@@ -67,8 +72,8 @@ async function scanMovieFolderToDB(
         // ✅ NEW FOLDER
         db.prepare(
           `
-          INSERT INTO folders (name, path, thumbnail, type, createdAt, updatedAt)
-          VALUES (?, ?, ?, 'folder', ?, ?)
+          INSERT INTO folders (name, path, thumbnail, type, scanned, createdAt, updatedAt)
+          VALUES (?, ?, ?, 'folder', 1, ?, ?)
         `
         ).run(entry.name, relPath, thumb, Date.now(), Date.now());
         stats.inserted++;
@@ -76,12 +81,13 @@ async function scanMovieFolderToDB(
         // ✅ CHANGED - Thumbnail updated
         db.prepare(
           `
-          UPDATE folders SET thumbnail = ?, updatedAt = ? WHERE path = ?
+          UPDATE folders SET thumbnail = ?, scanned = 1, updatedAt = ? WHERE path = ?
         `
         ).run(thumb, Date.now(), relPath);
         stats.updated++;
       } else {
-        // ✅ UNCHANGED - True skip
+        // ✅ UNCHANGED - Mark as scanned
+        db.prepare(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
         stats.skipped++;
       }
 
@@ -114,8 +120,8 @@ async function scanMovieFolderToDB(
         const duration = await getVideoDuration(fullPath);
         db.prepare(
           `
-          INSERT INTO folders (name, path, thumbnail, type, size, modified, duration, createdAt, updatedAt)
-          VALUES (?, ?, ?, 'video', ?, ?, ?, ?, ?)
+          INSERT INTO folders (name, path, thumbnail, type, size, modified, duration, scanned, createdAt, updatedAt)
+          VALUES (?, ?, ?, 'video', ?, ?, ?, 1, ?, ?)
         `
         ).run(
           entry.name,
@@ -133,7 +139,7 @@ async function scanMovieFolderToDB(
         const duration = await getVideoDuration(fullPath);
         db.prepare(
           `
-          UPDATE folders SET thumbnail = ?, size = ?, modified = ?, duration = ?, updatedAt = ? WHERE path = ?
+          UPDATE folders SET thumbnail = ?, size = ?, modified = ?, duration = ?, scanned = 1, updatedAt = ? WHERE path = ?
         `
         ).run(thumb, stat.size, lastModified, duration, Date.now(), relPath);
         stats.updated++;
@@ -141,14 +147,25 @@ async function scanMovieFolderToDB(
         // ✅ THUMBNAIL CHANGED - Only thumbnail updated
         db.prepare(
           `
-          UPDATE folders SET thumbnail = ?, updatedAt = ? WHERE path = ?
+          UPDATE folders SET thumbnail = ?, scanned = 1, updatedAt = ? WHERE path = ?
         `
         ).run(thumb, Date.now(), relPath);
         stats.updated++;
       } else {
-        // ✅ UNCHANGED FILE - True skip
+        // ✅ UNCHANGED FILE - Mark as scanned
+        db.prepare(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
         stats.skipped++;
       }
+    }
+  }
+
+  // 🗑️ PHASE 3: Sweep orphaned records (only on root scan completion)
+  if (currentPath === "") {
+    const orphanedCount = db.prepare(`SELECT COUNT(*) as count FROM folders WHERE scanned = 0`).get().count;
+    if (orphanedCount > 0) {
+      db.prepare(`DELETE FROM folders WHERE scanned = 0`).run();
+      stats.deleted = orphanedCount;
+      console.log(`🗑️ Deleted ${stats.deleted} orphaned movie records`);
     }
   }
 
