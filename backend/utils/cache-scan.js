@@ -21,13 +21,19 @@ const {
     dbkey,
     root,
     currentPath = "",
-    stats = { scanned: 0, inserted: 0, updated: 0, skipped: 0 }
+    stats = { scanned: 0, inserted: 0, updated: 0, skipped: 0, deleted: 0 }
   ) {
-    const db = getDB(dbkey); // Lấy DB từ dbkey => xác định db
+    const db = getDB(dbkey); // Lấy DB từ dbkey => xác định db
 
     // const fullPath = path.join(getRootPath(dbkey), currentPath);
     const rootPath = path.join(getRootPath(dbkey), root); // Lấy đường dẫn root từ config
     const fullPath = path.join(rootPath, currentPath);
+
+    // 🗑️ PHASE 1: Mark all as unscanned (only on root scan)
+    if (currentPath === "") {
+      db.prepare(`UPDATE folders SET scanned = 0 WHERE root = ?`).run(root);
+    }
+
     // ⚠️ Bỏ qua nếu cả folder và subfolder đều không có ảnh
     if (!hasImageRecursively(fullPath)) return stats;
 
@@ -111,8 +117,8 @@ const {
           db.prepare(
             `INSERT INTO folders (
             root, name, path, thumbnail,
-            lastModified, imageCount, chapterCount, otherName, type, createdAt, updatedAt
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            lastModified, imageCount, chapterCount, otherName, type, scanned, createdAt, updatedAt
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`
           ).run(
             root,
             entry.name,
@@ -130,7 +136,7 @@ const {
         } else if (existing.lastModified < lastModified) {
           db.prepare(
             `UPDATE folders
-           SET thumbnail = ?, lastModified = ?, imageCount = ?, chapterCount = ?, updatedAt = ?
+           SET thumbnail = ?, lastModified = ?, imageCount = ?, chapterCount = ?, scanned = 1, updatedAt = ?
            WHERE root = ? AND path = ?`
           ).run(
             thumbnail,
@@ -143,12 +149,27 @@ const {
           );
           stats.updated++;
         } else {
+          db.prepare(`UPDATE folders SET scanned = 1 WHERE root = ? AND path = ?`)
+            .run(root, relativePath);
           stats.skipped++;
         }
       }
 
       // 🔁 Đệ quy tiếp
       scanFolderRecursive(dbkey,root, relativePath, stats);
+    }
+
+    // 🗑️ PHASE 3: Sweep orphaned records (only on root scan completion)
+    if (currentPath === "") {
+      const orphanedCount = db.prepare(
+        `SELECT COUNT(*) as count FROM folders WHERE root = ? AND scanned = 0`
+      ).get(root).count;
+      
+      if (orphanedCount > 0) {
+        db.prepare(`DELETE FROM folders WHERE root = ? AND scanned = 0`).run(root);
+        stats.deleted = orphanedCount;
+        console.log(`🗑️ Deleted ${stats.deleted} orphaned manga records in root "${root}"`);
+      }
     }
 
     return stats;
