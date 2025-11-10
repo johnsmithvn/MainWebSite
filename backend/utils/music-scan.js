@@ -216,16 +216,15 @@ async function scanMusicFolderToDB(
 
   // 🗑️ PHASE 3: Sweep orphaned records (only on root scan completion)
   if (currentPath === "") {
-    const orphanedFolders = db.prepare(`SELECT path FROM folders WHERE scanned = 0`).all();
-    if (orphanedFolders.length > 0) {
+    const orphanedCount = db.prepare(`SELECT COUNT(*) as count FROM folders WHERE scanned = 0`).get().count;
+    if (orphanedCount > 0) {
       // Delete orphaned songs first (foreign key constraint)
-      const orphanedPaths = orphanedFolders.map(r => r.path);
-      const placeholders = orphanedPaths.map(() => '?').join(',');
-      db.prepare(`DELETE FROM songs WHERE path IN (${placeholders})`).run(...orphanedPaths);
+      // Using subquery to avoid SQLite 999 parameter limit
+      db.prepare(`DELETE FROM songs WHERE path IN (SELECT path FROM folders WHERE scanned = 0)`).run();
       
       // Delete orphaned folders
       db.prepare(`DELETE FROM folders WHERE scanned = 0`).run();
-      stats.deleted = orphanedFolders.length;
+      stats.deleted = orphanedCount;
       
       console.log(`🗑️ Deleted ${stats.deleted} orphaned music records`);
     }
