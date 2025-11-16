@@ -13,7 +13,8 @@ import {
   FiSettings,
   FiHeart,
   FiList,
-  FiDownload
+  FiDownload,
+  FiImage
 } from 'react-icons/fi';
 import { useAuthStore } from '../../store';
 import useDownloadQueueStore from '../../store/downloadQueueStore';
@@ -47,6 +48,7 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
         { path: '/manga', icon: FiBook, label: 'Manga' },
         { path: '/movie', icon: FiFilm, label: 'Movie' },
         { path: '/music', icon: FiMusic, label: 'Music' },
+        { path: '/media', icon: FiImage, label: 'Media Gallery' },
         { path: '/downloads', icon: FiDownload, label: 'Downloads', count: activeDownloadsCount },
       ]
     },
@@ -137,6 +139,23 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
               showLabels={true}
               className="space-y-1"
             />
+          </div>
+        )}
+
+        {/* Media Gallery tools */}
+        {location.pathname.startsWith('/media') && (
+          <div>
+            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+              Công cụ 📸 Media
+            </h3>
+            <button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('media:scan'));
+              }}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            >
+              <span>🚀 Scan Media</span>
+            </button>
           </div>
         )}
       </div>

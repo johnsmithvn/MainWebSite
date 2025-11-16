@@ -4,6 +4,49 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛 [2025-01-16] Fixed Media Gallery Timeline view UI issues → Sửa sticky header từ top-[100px] xuống top-[64px] để khớp với toolbar height, giảm padding và spacing cho gọn gàng (py-4→py-3, space-y-12→space-y-8, text-2xl→text-xl), xóa nút "Add to Album" trong Timeline view (chỉ giữ Select và Favorite), thêm onError handler cho thumbnails để fallback về default image khi lỗi load (MediaTimeline.jsx, MediaHome.jsx)
+- 🐛 [2025-01-16] Fixed Timeline header overlapping sidebar → Giảm z-index header từ z-30 xuống z-10 để không che sidebar, đồng bộ layout (MediaTimeline.jsx)
+- 🐛 [2025-01-16] Fixed Lightbox filename overflow → Thêm truncate + max-width (header: 60vw, footer: 70vw) và tooltip title cho tên file dài chỉ hiển thị 1 dòng, tránh tràn giao diện (MediaLightbox.jsx)
+- 🐛 [2025-01-16] Fixed MediaToolbar overlapping Sidebar → Giảm z-index toolbar từ z-50 xuống z-20 để sidebar không bị che (MediaToolbar.jsx)
+- 🐛 [2025-01-16] Removed obsolete zoom/rotate icons in Lightbox → Xóa ZoomIn/ZoomOut/Rotate UI, hỗ trợ pinch-to-zoom hai ngón + pan kéo tay, giữ double-click zoom desktop, cải thiện trải nghiệm mobile (MediaLightbox.jsx)
+- 🐛 [2025-11-16] Fixed Media Timeline header spacing bị đè bởi khoảng trắng dư → Xóa `pt-16` (thêm 64px) trên container MediaHome, giữ py-6; header sticky vẫn top-[64px] khớp chiều cao toolbar h-16. Kết quả: Không còn khoảng trắng lớn & header không bị cảm giác che/đẩy xuống (MediaHome.jsx)
+- 🐛 [2025-11-16] Fixed folders xuất hiện ở Favorites/Albums/Timeline view → Gắn hiển thị folders chỉ khi `view === 'photos'` và clear state folders nếu chuyển sang view khác để tránh hiện dư (MediaHome.jsx)
+- 🐛 [2025-11-16] Fixed không thêm được items vào Album (sai tham số) → Trước đây AlbumPicker gửi `selectedCount` (number) khiến `Array.from(number)` tạo mảng rỗng các phần tử undefined, update DB không thành công; sửa lại truyền `selectedItems` (Set) và convert đúng sang array IDs, thêm guard nếu chưa chọn gì (MediaToolbar.jsx, MediaHome.jsx)
+- ✨ [2025-11-16] Added Delete Album action → Nút xóa trên mỗi AlbumCard (hover hiện), xác nhận trước khi xóa, gọi DELETE `/api/media/albums/:id` và refresh danh sách (MediaAlbums.jsx, MediaHome.jsx)
+- ✨ [2025-11-16] Album cover auto from first item → `GET /api/media/albums` trả về `coverItemPath` + `coverThumbnail`; frontend dùng để hiển thị ảnh bìa nếu `coverImage` chưa được set (album-manager.js, MediaAlbums.jsx)
+- 🐛 [2025-11-16] Replaced native confirm dialog bằng Confirm Modal có sẵn → Xóa album dùng `confirmModal` (useModal) thay vì `window.confirm` để đồng bộ UX và tránh chặn UI (MediaAlbums.jsx)
+
+### Changed
+
+- 🔄 [2025-11-16] Changed MediaLightbox download to music-like streaming with progress → Thay `window.open()` bằng download streaming (fetch + stream + Blob) có hiển thị tiến trình nhỏ (percent + bytes), tự động đặt tên file theo item.path, và tích hợp Android WebView native download (`window.Android.downloadFile`) giống MusicPlayer; UX không chặn UI, hiển thị mini overlay trạng thái (MediaLightbox.jsx)
+
+### Changed
+
+- 🔄 [2025-01-16] Moved Media scan action into Sidebar → Xóa nút Scan khỏi MediaToolbar (chỉ hiện khi chọn item), thêm nút "🚀 Scan Media" trong Sidebar khi ở route /media, dùng custom event `media:scan` để kích hoạt scan từ MediaHome (Sidebar.jsx, MediaToolbar.jsx, MediaHome.jsx)
+
+### Added
+
+- ✨ [2025-01-16] Added Lightbox mobile swipe & responsive navigation → Thêm gesture vuốt trái/phải trên mobile để chuyển ảnh (ẩn nút điều hướng lớn trên màn hình nhỏ), hỗ trợ zoom kéo (pan) khi đã phóng to, double-click để toggle 1x/2x, phím tắt + / - để zoom, giới hạn scale 1x–8x, reset zoom khi đổi ảnh (MediaLightbox.jsx)
+
+### Changed
+
+- 🔄 [2025-01-16] Changed Media Gallery to folder navigation mode → Giống Manga/Movie với folders table trong database, hiển thị folders với thumbnail preview, click vào folder để navigate vào trong, breadcrumb navigation, video fallback về default thumbnail nếu không có .thumbnail, scan folders với itemCount và thumbnail tự động (db.js, media-scan.js, media-folders.js, MediaHome.jsx, MediaGrid.jsx, media.js)
+
+### Fixed
+
+- 🐛 [2025-01-16] Fixed Media Gallery API 404 errors → Sửa tất cả media API files export router thành export function handlers (scan-media.js, media-folder.js, favorite-media.js, reset-media-db.js, set-thumbnail.js, media-cache.js, media-stats.js), routes/media.js gọi đúng function handlers thay vì routers, nguyên nhân: Express router không thể mount router con như middleware trực tiếp
+
+### Added
+
+- ✨ [2025-01-16] Added Media Gallery source selection on Home page → Thêm section "Media Gallery 📸" vào trang chủ để chọn source MEDIA_* (MEDIA_PHOTOS, MEDIA_CAMERA, MEDIA_DOWNLOAD), tương tự Movie và Music, click vào source key sẽ navigate đến `/media?key=MEDIA_XXX` (Home.jsx, system.js, config.js)
+- ✨ [2025-01-16] Added Media Gallery feature (Google Photos-like) → Trang mới `/media` để quản lý ảnh/video cá nhân với 4 views (Photos Grid, Timeline, Albums, Favorites), Lightbox viewer, Multi-select, Auto thumbnail detection, Mark & Sweep GC scan, SQLite database với 2 tables (media_items, albums), 10 API endpoints, hỗ trợ MEDIA_* root paths trong .env (28 files: backend API, frontend components, documentation)
+
+### Fixed
+
+- 🐛 [2025-01-16] Fixed build error "fetchAPI is not exported" → Sửa MediaHome.jsx sử dụng `apiService` thay vì `fetchAPI` không tồn tại
+
 ### Changed
 
 - 🔄 [2025-01-08] Enhanced scan result display → DatabaseActions hiển thị chi tiết stats breakdown (inserted, updated, skipped, deleted) thay vì chỉ tổng số, giúp user hiểu rõ scan operation đã làm gì (DatabaseActions.jsx)

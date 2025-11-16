@@ -16,7 +16,8 @@ const Home = () => {
   const [sourceKeys, setSourceKeys] = useState({
     manga: [],
     movie: [],
-    music: []
+    music: [],
+    media: []
   });
   const [showSecure, setShowSecure] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -66,11 +67,13 @@ const Home = () => {
         const mangaMatch = sourceScript.match(/window\.mangaKeys = (\[.*?\]);/);
         const movieMatch = sourceScript.match(/window\.movieKeys = (\[.*?\]);/);
         const musicMatch = sourceScript.match(/window\.musicKeys = (\[.*?\]);/);
+        const mediaMatch = sourceScript.match(/window\.mediaKeys = (\[.*?\]);/);
         
         setSourceKeys({
           manga: mangaMatch ? JSON.parse(mangaMatch[1]) : [],
           movie: movieMatch ? JSON.parse(movieMatch[1]) : [],
-          music: musicMatch ? JSON.parse(musicMatch[1]) : []
+          music: musicMatch ? JSON.parse(musicMatch[1]) : [],
+          media: mediaMatch ? JSON.parse(mediaMatch[1]) : []
         });
 
         // Load security keys
@@ -122,6 +125,8 @@ const Home = () => {
         navigate('/movie');
       } else if (type === 'music') {
         navigate('/music');
+      } else if (type === 'media') {
+        navigate(`/media?key=${key}`);
       }
     } catch (error) {
       console.error(`Error checking ${type}:`, error);
@@ -152,6 +157,7 @@ const Home = () => {
     if (sourceKeys.manga.includes(key)) return 'manga';
     if (sourceKeys.movie.includes(key)) return 'movie';
     if (sourceKeys.music.includes(key)) return 'music';
+    if (sourceKeys.media.includes(key)) return 'media';
     return 'manga';
   };
 
@@ -262,6 +268,14 @@ const Home = () => {
           type="music"
           icon="🎵"
         />
+        
+        <SourceSection
+          title="Media Gallery"
+          keys={sourceKeys.media}
+          type="media"
+          icon="📸"
+        />
+        
         <div className="text-center space-y-4">
           {!online && (
             <p className="mb-2 text-sm text-red-500">Bạn đang offline</p>
