@@ -64,6 +64,15 @@ function getDB(dbkey) {
   if (!cols.includes("otherName")) {
     db.prepare(`ALTER TABLE folders ADD COLUMN otherName TEXT`).run();
   }
+  // ✅ Ensure scanned column exists for mark & sweep GC
+  if (!cols.includes("scanned")) {
+    try {
+      db.prepare(`ALTER TABLE folders ADD COLUMN scanned INTEGER DEFAULT 0`).run();
+    } catch (err) {
+      // ignore if unable to add (e.g., older SQLite versions)
+      console.warn('Could not add scanned column to folders (getDB):', err.message);
+    }
+  }
 
   dbMap[dbkey] = db;
   return db;
@@ -102,6 +111,14 @@ function getMovieDB(dbkey) {
 
   if (!existingCols.includes("size")) {
     db.prepare(`ALTER TABLE folders ADD COLUMN size INTEGER DEFAULT 0`).run();
+  }
+  // Ensure scanned column exists for movie DB as well
+  if (!existingCols.includes("scanned")) {
+    try {
+      db.prepare(`ALTER TABLE folders ADD COLUMN scanned INTEGER DEFAULT 0`).run();
+    } catch (err) {
+      console.warn('Could not add scanned column to folders (getMovieDB):', err.message);
+    }
   }
   if (!existingCols.includes("modified")) {
     db.prepare(`ALTER TABLE folders ADD COLUMN modified INTEGER`).run();
@@ -187,6 +204,16 @@ function getMusicDB(dbkey) {
     .map((c) => c.name);
   if (!songCols.includes("title")) {
     db.exec("ALTER TABLE songs ADD COLUMN title TEXT");
+  }
+
+  // Ensure folders table has scanned column for music DB
+  const folderCols = db.prepare("PRAGMA table_info(folders)").all().map((c) => c.name);
+  if (!folderCols.includes("scanned")) {
+    try {
+      db.prepare(`ALTER TABLE folders ADD COLUMN scanned INTEGER DEFAULT 0`).run();
+    } catch (err) {
+      console.warn('Could not add scanned column to folders (getMusicDB):', err.message);
+    }
   }
 
   dbMap[dbkey] = db;
