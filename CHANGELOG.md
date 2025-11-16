@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file. Dates use Y
 ### Changed
 
 - 🔄 [2025-11-16] Changed MediaLightbox download to music-like streaming with progress → Thay `window.open()` bằng download streaming (fetch + stream + Blob) có hiển thị tiến trình nhỏ (percent + bytes), tự động đặt tên file theo item.path, và tích hợp Android WebView native download (`window.Android.downloadFile`) giống MusicPlayer; UX không chặn UI, hiển thị mini overlay trạng thái (MediaLightbox.jsx)
+- 🔄 [2025-11-16] Centralized file extension constants vào `backend/constants.js` và refactor scanners dùng constants → Bỏ các mảng IMAGE_EXTS/VIDEO_EXTS/AUDIO_EXTS hardcode trong `media-scan.js`, `movie-scan.js`, `music-scan.js`; import `FILE_EXTENSIONS` dùng thống nhất. Đồng thời thêm hỗ trợ `.heic/.heif` vào danh sách IMAGE để scan ảnh iPhone. (constants.js, media-scan.js, movie-scan.js, music-scan.js)
 
 ### Changed
 

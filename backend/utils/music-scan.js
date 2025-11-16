@@ -3,12 +3,11 @@ const fs = require("fs");
 const path = require("path");
 const { getRootPath } = require("./config");
 const { getMusicDB } = require("./db");
+const { FILE_EXTENSIONS } = require("../constants");
 
-const AUDIO_EXTS = [
-  ".mp3", ".flac", ".wav", ".aac", ".m4a",
-  ".ogg", ".opus", ".wma", ".alac", ".aiff",
-];
-const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".avif"];
+// Centralized extensions
+const AUDIO_EXTS = (FILE_EXTENSIONS.AUDIO || []).map(e => e.toLowerCase());
+const IMAGE_EXTS = (FILE_EXTENSIONS.IMAGE || []).map(e => e.toLowerCase());
 
 // 🟢 Tìm thumbnail đúng tên (ưu tiên jpg, png, ...)
 function findThumbnail(thumbnailDir, baseName) {

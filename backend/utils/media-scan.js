@@ -5,13 +5,15 @@ const fs = require("fs");
 const path = require("path");
 const { getRootPath } = require("./config");
 const { getMediaDB } = require("./db");
+const { FILE_EXTENSIONS } = require("../constants");
 
 const ffmpeg = require("fluent-ffmpeg");
 const ffprobe = require("ffprobe-static");
 ffmpeg.setFfprobePath(ffprobe.path);
 
-const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif", ".bmp", ".heic", ".heif"];
-const VIDEO_EXTS = [".mp4", ".mkv", ".avi", ".webm", ".mov", ".m4v", ".3gp"];
+// Use centralized file extensions from constants and normalize to lowercase
+const IMAGE_EXTS = (FILE_EXTENSIONS.IMAGE || []).map(e => e.toLowerCase());
+const VIDEO_EXTS = (FILE_EXTENSIONS.VIDEO || []).map(e => e.toLowerCase());
 
 // 🟢 Helper: Tìm thumbnail trong .thumbnail folder
 function findThumbnail(thumbnailDir, baseName) {

@@ -15,7 +15,7 @@ const FILE_EXTENSIONS = {
   ],
   IMAGE: [
     '.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif',
-    '.bmp', '.tiff', '.svg'
+    '.bmp', '.tiff', '.svg', '.heic', '.heif','jfif'
   ],
   PDF: ['.pdf']
 };
@@ -29,7 +29,8 @@ const DB_TABLES = {
   SONGS: 'songs',
   PLAYLISTS: 'playlists',
   PLAYLIST_ITEMS: 'playlist_items',
-  ROOT_THUMBNAILS: 'root_thumbnails'
+  ROOT_THUMBNAILS: 'root_thumbnails',
+  MEDIA_ITEMS: 'media_items'
 };
 
 /**
