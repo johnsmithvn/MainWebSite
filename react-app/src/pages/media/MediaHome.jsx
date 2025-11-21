@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useUIStore, useAuthStore } from '@/store';
 import { apiService } from '@/utils/api';
+import { useModal } from '@/components/common/Modal';
 import MediaGrid from '@/components/media/MediaGrid';
 import MediaTimeline from '@/components/media/MediaTimeline';
 import MediaAlbums from '@/components/media/MediaAlbums';
@@ -15,6 +16,7 @@ function MediaHome() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useUIStore();
   const { setSourceKey } = useAuthStore();
+  const { confirmModal, successModal, errorModal, Modal } = useModal();
   
   const [folders, setFolders] = useState([]);
   const [mediaItems, setMediaItems] = useState([]);
@@ -39,11 +41,18 @@ function MediaHome() {
 
   // Listen for global media:scan event dispatched from sidebar
   useEffect(() => {
-    const handler = () => {
+    const handleScanEvent = () => {
       handleScan();
     };
-    window.addEventListener('media:scan', handler);
-    return () => window.removeEventListener('media:scan', handler);
+    const handleDeleteDbEvent = () => {
+      handleDeleteDatabase();
+    };
+    window.addEventListener('media:scan', handleScanEvent);
+    window.addEventListener('media:deleteDb', handleDeleteDbEvent);
+    return () => {
+      window.removeEventListener('media:scan', handleScanEvent);
+      window.removeEventListener('media:deleteDb', handleDeleteDbEvent);
+    };
   }, [dbkey]);
   
   const [pagination, setPagination] = useState({
@@ -89,9 +98,7 @@ function MediaHome() {
   };
 
   const loadMediaFolders = async () => {
-    const response = await apiService.get('/api/media/media-folders', { 
-      params: { key: dbkey, path: currentPath } 
-    });
+    const response = await apiService.media.getFolders({ key: dbkey, path: currentPath });
     const data = response.data;
     setFolders(data.folders || []);
     setMediaItems(data.items || []);
@@ -112,22 +119,33 @@ function MediaHome() {
     if (month) params.month = month;
     if (albumId) params.albumId = albumId;
 
-    const response = await apiService.get('/api/media/media-folder', { params });
+    const response = await apiService.media.getItems(params);
     const data = response.data;
     setMediaItems(data.items);
     setTimeline(data.timeline || []);
-    setPagination(data.pagination);
+    
+    // Fix race condition: chỉ update pagination nếu thực sự có thay đổi
+    if (data.pagination) {
+      setPagination(prev => {
+        const hasChanged = 
+          prev.total !== data.pagination.total ||
+          prev.totalPages !== data.pagination.totalPages ||
+          prev.limit !== data.pagination.limit;
+        
+        return hasChanged ? { ...prev, ...data.pagination } : prev;
+      });
+    }
   };
 
   const loadAlbums = async () => {
-    const response = await apiService.get('/api/media/albums', { params: { key: dbkey } });
+    const response = await apiService.media.getAlbums({ key: dbkey });
     setAlbums(response.data.albums);
   };
 
   const handleScan = async () => {
     try {
       showToast('Đang scan media...', 'info');
-      const response = await apiService.post('/api/media/scan-media', { key: dbkey });
+      const response = await apiService.media.scan({ key: dbkey });
       const data = response.data;
       showToast(`Scan thành công! +${data.stats.inserted} mới, ~${data.stats.updated} cập nhật`, 'success');
       loadData();
@@ -136,9 +154,68 @@ function MediaHome() {
     }
   };
 
+  const handleDeleteDatabase = async () => {
+    const confirmed = await confirmModal({
+      title: '🗑️ Xóa Database Media',
+      message: (
+        <div className="text-left space-y-3">
+          <p className="font-medium">Bạn có chắc muốn xóa toàn bộ database media?</p>
+          <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+            <p className="font-semibold text-red-800 dark:text-red-200 mb-2">💀 Cảnh báo:</p>
+            <ul className="text-sm space-y-1 text-red-700 dark:text-red-300">
+              <li>• Database: <strong>{dbkey}</strong></li>
+              <li>• Tất cả dữ liệu media sẽ bị xóa</li>
+              <li>• Albums và favorites sẽ bị mất</li>
+              <li>• Lượt xem và thống kê sẽ bị mất</li>
+              <li>• File ảnh/video thực tế sẽ KHÔNG bị ảnh hưởng</li>
+            </ul>
+          </div>
+          <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg border border-red-300 dark:border-red-700">
+            <p className="font-bold text-red-800 dark:text-red-200">
+              ❌ Hành động này không thể hoàn tác!
+            </p>
+          </div>
+        </div>
+      ),
+      confirmText: '🗑️ Xóa Database',
+      cancelText: 'Hủy',
+      type: 'confirm'
+    });
+
+    if (!confirmed) return;
+
+    try {
+      showToast('Đang xóa database...', 'info');
+      const response = await apiService.media.resetDb({ key: dbkey });
+      
+      successModal({
+        title: '✅ Xóa thành công!',
+        message: response.data.message || 'Database đã được xóa hoàn toàn.'
+      });
+      
+      // Clear local state
+      setFolders([]);
+      setMediaItems([]);
+      setTimeline([]);
+      setAlbums([]);
+      setSelectedItems(new Set());
+      setPagination({
+        page: 1,
+        limit: 100,
+        total: 0,
+        totalPages: 0
+      });
+    } catch (error) {
+      errorModal({
+        title: '❌ Lỗi xóa database',
+        message: error.message
+      });
+    }
+  };
+
   const handleFavorite = async (itemId, isFavorite) => {
     try {
-      await apiService.post('/api/media/favorite-media', { key: dbkey, id: itemId, isFavorite });
+      await apiService.media.toggleFavorite({ key: dbkey, id: itemId, isFavorite });
       showToast(isFavorite ? 'Đã thêm vào yêu thích' : 'Đã xóa khỏi yêu thích', 'success');
       loadData();
     } catch (error) {
@@ -148,7 +225,7 @@ function MediaHome() {
 
   const handleCreateAlbum = async (name, description) => {
     try {
-      await apiService.post('/api/media/albums', { key: dbkey, name, description });
+      await apiService.media.createAlbum({ key: dbkey, name, description });
       showToast('Đã tạo album', 'success');
       loadAlbums();
     } catch (error) {
@@ -164,7 +241,7 @@ function MediaHome() {
         return;
       }
       const itemIds = Array.from(itemIdsSet);
-      await apiService.post(`/api/media/albums/${albumId}/items`, { key: dbkey, itemIds });
+      await apiService.media.addItemsToAlbum(albumId, { key: dbkey, itemIds });
       showToast(`Đã thêm ${itemIds.length} mục vào album`, 'success');
       setSelectedItems(new Set());
       loadData();
@@ -202,7 +279,7 @@ function MediaHome() {
                 onSelectAlbum={(id) => setSearchParams({ key: dbkey, view: 'albums', albumId: id })}
                 onDeleteAlbum={async (id) => {
                   try {
-                    await apiService.delete(`/api/media/albums/${id}`, { data: { key: dbkey } });
+                    await apiService.media.deleteAlbum(id, { key: dbkey });
                     showToast('Đã xóa album', 'success');
                     await loadAlbums();
                   } catch (error) {
@@ -243,6 +320,7 @@ function MediaHome() {
             ) : view === 'timeline' ? (
               <MediaTimeline
                 items={mediaItems}
+                timeline={timeline}
                 selectedItems={selectedItems}
                 onSelectItem={(id) => {
                   const newSet = new Set(selectedItems);
@@ -339,7 +417,7 @@ function MediaHome() {
               <div className="flex justify-center mt-8 gap-2">
                 <button
                   disabled={pagination.page === 1}
-                  onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
+                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                   className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
                 >
                   Previous
@@ -349,7 +427,7 @@ function MediaHome() {
                 </span>
                 <button
                   disabled={pagination.page === pagination.totalPages}
-                  onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
+                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                   className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
                 >
                   Next
@@ -368,6 +446,9 @@ function MediaHome() {
           onFavorite={handleFavorite}
         />
       )}
+
+      {/* Modal for confirmations */}
+      <Modal />
     </div>
   );
 }

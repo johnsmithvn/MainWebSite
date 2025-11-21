@@ -6,8 +6,7 @@ import { X, ChevronLeft, ChevronRight, Heart, Download } from 'lucide-react';
 
 function MediaLightbox({ items, currentIndex, onClose, onFavorite }) {
   const [index, setIndex] = useState(currentIndex);
-  const item = items[index];
-
+  
   // Zoom & Pan state
   const [scale, setScale] = useState(1);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
@@ -21,25 +20,10 @@ function MediaLightbox({ items, currentIndex, onClose, onFavorite }) {
   const [dlProgress, setDlProgress] = useState({ received: 0, total: 0, percent: 0, status: 'idle', error: null });
   const downloadAbortRef = useRef(null);
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowLeft') handlePrev();
-      if (e.key === 'ArrowRight') handleNext();
-      if (e.key === '+' || e.key === '=') zoomIn();
-      if (e.key === '-' || e.key === '_') zoomOut();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [index]);
+  // Touch handlers refs
+  const pinchRef = useRef({ initialDistance: 0, initialScale: 1 });
 
-  // Reset zoom when item changes
-  useEffect(() => {
-    setScale(1);
-    setTranslate({ x: 0, y: 0 });
-    setIsPanning(false);
-  }, [index]);
-
+  // Define all functions BEFORE useEffect to avoid stale closures
   const handlePrev = () => {
     if (index > 0) setIndex(index - 1);
   };
@@ -47,11 +31,6 @@ function MediaLightbox({ items, currentIndex, onClose, onFavorite }) {
   const handleNext = () => {
     if (index < items.length - 1) setIndex(index + 1);
   };
-
-  if (!item) return null;
-
-  const isVideo = item.type === 'video';
-  const mediaSrc = `/media/${item.path}`;
 
   const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
@@ -69,6 +48,36 @@ function MediaLightbox({ items, currentIndex, onClose, onFavorite }) {
     }
     setScale(newScale);
   };
+
+  const zoomIn = () => zoomBy(1.2);
+  const zoomOut = () => zoomBy(0.8333);
+  const resetZoom = () => { setScale(1); setTranslate({ x: 0, y: 0 }); };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'ArrowRight') handleNext();
+      if (e.key === '+' || e.key === '=') zoomIn();
+      if (e.key === '-' || e.key === '_') zoomOut();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [index, handlePrev, handleNext, zoomIn, zoomOut, onClose]);
+
+  // Reset zoom when item changes
+  useEffect(() => {
+    setScale(1);
+    setTranslate({ x: 0, y: 0 });
+    setIsPanning(false);
+  }, [index]);
+
+  // Early return AFTER all hooks
+  const item = items[index];
+  if (!item) return null;
+
+  const isVideo = item.type === 'video';
+  const mediaSrc = `/media/${item.path}`;
 
   const onWheel = (e) => {
     e.preventDefault();
@@ -100,10 +109,6 @@ function MediaLightbox({ items, currentIndex, onClose, onFavorite }) {
       setTranslate({ x: 0, y: 0 });
     }
   };
-
-  const zoomIn = () => zoomBy(1.2);
-  const zoomOut = () => zoomBy(0.8333);
-  const resetZoom = () => { setScale(1); setTranslate({ x: 0, y: 0 }); };
 
   // ===== Download (similar to Music Player) =====
   const getFilenameFromPath = (p, fallback = 'download') => {
@@ -216,8 +221,6 @@ function MediaLightbox({ items, currentIndex, onClose, onFavorite }) {
   };
 
   // Touch handlers for mobile swipe & pan
-  const pinchRef = useRef({ initialDistance: 0, initialScale: 1 });
-
   const getDistance = (t1, t2) => {
     const dx = t1.clientX - t2.clientX;
     const dy = t1.clientY - t2.clientY;
@@ -388,7 +391,7 @@ function MediaLightbox({ items, currentIndex, onClose, onFavorite }) {
             </div>
           </div>
           <div className="text-gray-400">
-            {new Date(item.date_taken).toLocaleDateString()}
+            {item.date_taken ? new Date(item.date_taken).toLocaleDateString() : 'N/A'}
           </div>
         </div>
       </div>

@@ -4,8 +4,37 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Changed
+
+- 🔄 [2025-11-22] Centralized auto-refresh intervals vào constants → Move hard-coded interval values từ `useRandomItems.js` (`staleTime: 5 * 60 * 1000`, `cacheTime: 10 * 60 * 1000`), `useRecentItems.js` (`staleTime: 30 * 1000` → `10 * 60 * 1000`, `cacheTime: 5 * 60 * 1000` → `20 * 60 * 1000`), và `useTopViewItems.js` (`staleTime: 10 * 60 * 1000` → `15 * 60 * 1000`) vào `AUTO_REFRESH` constants object (`RANDOM_ITEMS`, `RANDOM_ITEMS_CACHE`, `RECENT_ITEMS`, `TOP_VIEW_ITEMS`) để dễ maintain và customize, đồng bộ cache strategy across all hooks (constants/index.js, useRandomItems.js, useRecentItems.js, useTopViewItems.js)
+
+### Added
+
+- ✨ [2025-11-21] Added ServiceWorker thumbnail caching for Movie/Music/Media → Implement stale-while-revalidate strategy với cache limit 1000 items (~30MB), LRU cleanup, background update, giảm network requests và tăng performance khi scroll grid (sw.js v3.1.0)
+
 ### Fixed
 
+- 🐛 [2025-11-20] Fixed MediaLightbox hooks error completely → Di chuyển TẤT CẢ function declarations (handlePrev, handleNext, zoomIn, zoomOut, etc.) lên TRƯỚC early return và useEffect, xóa các duplicate declarations, đảm bảo hooks luôn được gọi theo cùng thứ tự (MediaLightbox.jsx)
+- 🐛 [2025-11-20] Fixed browser back button behavior in MediaLightbox → Push dummy history state khi mở lightbox, intercept popstate event để đóng lightbox thay vì navigate về folder trước (MediaLightbox.jsx)
+
+### Added
+
+- ✨ [2025-11-16] Added Media database delete functionality → Thêm button "Delete Database" trong Sidebar Media Gallery với modal xác nhận chi tiết, cho phép xóa toàn bộ database media (albums, favorites, stats) nhưng giữ nguyên file gốc (MediaHome.jsx, Sidebar.jsx)
+
+### Changed
+
+- 🔄 [2025-11-16] Refactored MediaHome.jsx to use media APIs wrapper → Đồng bộ hóa toàn bộ API calls trong MediaHome.jsx để dùng `apiService.media.*` methods thay vì direct calls, đảm bảo consistency và tận dụng request deduplication + timeout config (MediaHome.jsx)
+
+### Fixed
+
+- 🐛 [2025-11-16] Fixed Media scan timeout issue → Bỏ giới hạn timeout cho scan media API bằng cách thêm `{ timeout: 0 }` config giống manga/movie/music, tránh request bị cancel khi scan folder lớn mất nhiều thời gian (MediaHome.jsx, api.js)
+- ✨ [2025-11-16] Added Media APIs wrapper → Tạo `media` object trong apiService với các methods chuẩn hóa (getFolders, getItems, getAlbums, scan, etc.) để đồng bộ với cấu trúc manga/movie/music APIs (api.js, constants/index.js)
+- 🐛 [2025-11-16] Fixed SQL injection vulnerability trong media-folders API → Thêm sanitize function escape ký tự `%` và `_` trong path parameter, sử dụng ESCAPE clause trong SQL LIKE queries để prevent wildcard injection attacks (media-folders.js)
+- 🐛 [2025-11-16] Fixed race condition trong MediaHome pagination → Thay đổi setPagination logic chỉ update khi data thực sự thay đổi (total, totalPages, limit), prevent infinite loop khi API response trigger re-fetch (MediaHome.jsx)
+- 🐛 [2025-11-16] Fixed incorrect state update pattern trong MediaHome → Chuyển từ spread operator mutation `setPagination({ ...pagination, page: pagination.page - 1 })` sang functional update `setPagination(prev => ({ ...prev, page: prev.page - 1 }))` để tránh stale closure issues (MediaHome.jsx)
+- 🐛 [2025-11-16] Fixed unsafe date handling trong MediaLightbox footer → Thêm null check `{item.date_taken ? new Date(item.date_taken).toLocaleDateString() : 'N/A'}` để prevent "Invalid Date" display khi date_taken null/undefined (MediaLightbox.jsx)
+- 🐛 [2025-11-16] Fixed missing error handler cho thumbnail images → Thêm onError handler với fallback hierarchy (thumbnail → original → default) để prevent broken image icons khi thumbnail load fail (MediaGrid.jsx)
+- 🐛 [2025-11-16] Fixed timeline prop không được truyền vào MediaTimeline → Thêm `timeline={timeline}` prop để component nhận đúng data từ API response (MediaHome.jsx)
 - 🐛 [2025-01-16] Fixed Media Gallery Timeline view UI issues → Sửa sticky header từ top-[100px] xuống top-[64px] để khớp với toolbar height, giảm padding và spacing cho gọn gàng (py-4→py-3, space-y-12→space-y-8, text-2xl→text-xl), xóa nút "Add to Album" trong Timeline view (chỉ giữ Select và Favorite), thêm onError handler cho thumbnails để fallback về default image khi lỗi load (MediaTimeline.jsx, MediaHome.jsx)
 - 🐛 [2025-01-16] Fixed Timeline header overlapping sidebar → Giảm z-index header từ z-30 xuống z-10 để không che sidebar, đồng bộ layout (MediaTimeline.jsx)
 - 🐛 [2025-01-16] Fixed Lightbox filename overflow → Thêm truncate + max-width (header: 60vw, footer: 70vw) và tooltip title cho tên file dài chỉ hiển thị 1 dòng, tránh tràn giao diện (MediaLightbox.jsx)

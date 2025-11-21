@@ -37,6 +37,17 @@ function MediaGridItem({ item, index, isSelected, onSelect, onClick, onFavorite 
     thumbSrc = `/media/${item.path}`;
   }
 
+  const handleImageError = (e) => {
+    // Fallback hierarchy: thumbnail → original file → default
+    if (e.target.src.includes(item.thumbnail) && item.path) {
+      e.target.src = `/media/${item.path}`;
+    } else if (isVideo) {
+      e.target.src = '/default/video-thumb.png';
+    } else {
+      e.target.src = '/default/folder-thumb.png';
+    }
+  };
+
   const handleClick = (e) => {
     if (e.shiftKey || e.ctrlKey) {
       e.preventDefault();
@@ -58,6 +69,7 @@ function MediaGridItem({ item, index, isSelected, onSelect, onClick, onFavorite 
         alt={item.name}
         className="w-full h-full object-cover transition-transform group-hover:scale-110"
         loading="lazy"
+        onError={handleImageError}
       />
 
       {/* Video indicator */}

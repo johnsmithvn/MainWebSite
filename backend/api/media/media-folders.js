@@ -17,27 +17,31 @@ const mediaFolders = (req, res) => {
   try {
     const db = getMediaDB(key);
 
+    // Sanitize path để tránh SQL injection trong LIKE pattern
+    const sanitizePath = (p) => p.replace(/[%_]/g, '\\$&');
+    
     // Get folders in current path
-    const pathPrefix = path ? `${path}/` : "";
+    const pathPrefix = path ? `${sanitizePath(path)}/` : "";
     const pathDepth = path ? path.split("/").length : 0;
 
     // Get immediate child folders (not recursive)
     const folders = db.prepare(`
       SELECT * FROM folders 
       WHERE root = ? 
-        AND path LIKE ? 
+        AND path LIKE ? ESCAPE '\\'
         AND LENGTH(path) - LENGTH(REPLACE(path, '/', '')) = ?
       ORDER BY name COLLATE NOCASE ASC
     `).all(key, `${pathPrefix}%`, pathDepth);
 
     // Get media items in current folder (not subfolders)
+    const sanitizedPath = path ? sanitizePath(path) : '';
     const items = db.prepare(`
       SELECT * FROM media_items 
-      WHERE path LIKE ? AND path NOT LIKE ?
+      WHERE path LIKE ? ESCAPE '\\' AND path NOT LIKE ? ESCAPE '\\'
       ORDER BY name COLLATE NOCASE ASC
     `).all(
-      path ? `${path}/%` : '%',
-      path ? `${path}/%/%` : '%/%'
+      sanitizedPath ? `${sanitizedPath}/%` : '%',
+      sanitizedPath ? `${sanitizedPath}/%/%` : '%/%'
     );
 
     res.json({

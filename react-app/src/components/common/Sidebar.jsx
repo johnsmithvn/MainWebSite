@@ -148,14 +148,24 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
               Công cụ 📸 Media
             </h3>
-            <button
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent('media:scan'));
-              }}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-            >
-              <span>🚀 Scan Media</span>
-            </button>
+            <div className="space-y-1">
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('media:scan'));
+                }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+              >
+                <span>🚀 Scan Media</span>
+              </button>
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('media:deleteDb'));
+                }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-700 text-white transition-colors"
+              >
+                <span>🗑️ Delete Database</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
