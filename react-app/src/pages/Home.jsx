@@ -224,10 +224,10 @@ const Home = () => {
         className="text-center space-y-4"
       >
         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white">
-          Chào mừng đến với MainWebSite
+          Chào Zai đẹp ( ˶˘ ³˘)♡
         </h1>
         <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          Trình quản lý media local cho manga, phim và nhạc. Chọn source để bắt đầu.
+          Chuẩn bị vào thiên đường nào (˶˃⤙˂˶).
         </p>
 
         {/* Toggle secure sources */}
