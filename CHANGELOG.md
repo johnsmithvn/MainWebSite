@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛 [2025-11-22] Fixed selection toolbar layout → Căn giữa toàn bộ selection toolbar bằng cách thay đổi từ `ml-auto` sang `justify-center`, loại bỏ alignment lệch phải cho layout cân bằng hơn (MusicPlayer.jsx)
+- 🐛 [2025-11-22] Fixed header tên source dài trên mobile làm đẩy icon → Ẩn tên source trên mobile (sm:hidden), chỉ hiển thị icon 📚 để tránh layout overflow và đảm bảo icons header không bị đẩy đi (Header.jsx)
+- 🐛 [2025-11-22] Fixed checkbox không tích được trong selection mode → Sửa event propagation bằng cách wrap checkbox trong div với onClick stopPropagation, checkbox onChange chỉ là controlled component, prevent click event bubble lên row trigger playback (MusicPlayer.jsx)
+
+### Added
+
+- ✨ [2025-11-22] Added remove from playlist functionality in MusicPlayer → Khi đang view playlist (có currentPlaylistId), hiển thị thêm cột "Action" với nút xóa (FiTrash2) cho mỗi track, thêm nút "Xóa khỏi playlist" trong selection toolbar màu đỏ, tạo API `/api/music/playlist/remove-multiple` với transaction support, auto update local state và currentIndex khi xóa tracks (MusicPlayer.jsx, playlist.js)
+- ✨ [2025-11-22] Added multiple track selection feature in Music Player → Thêm nút "Chọn nhiều bài" (toggle selection mode), checkbox cho mỗi track, selection toolbar với "Chọn tất cả/Bỏ chọn/Thêm vào playlist", disable drag-and-drop khi đang ở selection mode, highlight selected tracks với background màu xanh (MusicPlayer.jsx)
+- ✨ [2025-11-22] Added batch add to playlist functionality → Cập nhật PlaylistModal hỗ trợ thêm nhiều bài hát cùng lúc vào playlist, hiển thị số lượng bài hát được chọn trong modal header, tạo API endpoint `/api/music/playlist/add-multiple` với transaction support để đảm bảo tính toàn vẹn dữ liệu (PlaylistModal.jsx, playlist.js)
+
 ### Changed
 
 - 🔄 [2025-11-22] Centralized auto-refresh intervals vào constants → Move hard-coded interval values từ `useRandomItems.js` (`staleTime: 5 * 60 * 1000`, `cacheTime: 10 * 60 * 1000`), `useRecentItems.js` (`staleTime: 30 * 1000` → `10 * 60 * 1000`, `cacheTime: 5 * 60 * 1000` → `20 * 60 * 1000`), và `useTopViewItems.js` (`staleTime: 10 * 60 * 1000` → `15 * 60 * 1000`) vào `AUTO_REFRESH` constants object (`RANDOM_ITEMS`, `RANDOM_ITEMS_CACHE`, `RECENT_ITEMS`, `TOP_VIEW_ITEMS`) để dễ maintain và customize, đồng bộ cache strategy across all hooks (constants/index.js, useRandomItems.js, useRecentItems.js, useTopViewItems.js)

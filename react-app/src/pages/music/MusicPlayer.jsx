@@ -12,7 +12,8 @@ import {
   FiDownload,
   FiClock,
   FiSearch,
-  FiPlus
+  FiPlus,
+  FiTrash2
 } from 'react-icons/fi';
 import { useAuthStore, useMusicStore, useUIStore } from '@/store';
 import { DEFAULT_IMAGES } from '@/constants';
@@ -82,6 +83,7 @@ const MusicPlayer = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [playlistTitle, setPlaylistTitle] = useState(null);
+  const [currentPlaylistId, setCurrentPlaylistId] = useState(null); // Track current playlist ID
   const [library, setLibrary] = useState({ items: [], loading: false, error: null });
   const [activePlaylistId, setActivePlaylistId] = useState(null);
   const [headerCondensed, setHeaderCondensed] = useState(false);
@@ -99,6 +101,10 @@ const MusicPlayer = () => {
   const isDraggingRef = useRef(false);
   const [dropIndicator, setDropIndicator] = useState({ index: -1, position: 'above' });
   const prevOrderBeforeShuffleRef = useRef(null);
+
+  // Selection states for multi-select
+  const [selectedTracks, setSelectedTracks] = useState(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   // Helper: bump viewCount locally for UI sync
   const bumpViewCount = useCallback((songPath) => {
@@ -373,15 +379,150 @@ const MusicPlayer = () => {
   };
 
   const handleAddToPlaylist = () => {
-    if (!currentTrack) {
-      showToast('Chưa có bài hát nào đang phát', 'warning');
+    if (!currentTrack && selectedTracks.size === 0) {
+      showToast('Chưa có bài hát nào được chọn', 'warning');
       return;
     }
-    // Dispatch event to open playlist modal
-    window.dispatchEvent(new CustomEvent('openPlaylistModal', { 
-      detail: { item: currentTrack } 
-    }));
+    
+    // If in selection mode, use selected tracks
+    if (isSelectionMode && selectedTracks.size > 0) {
+      const tracksToAdd = currentPlaylist.filter(track => selectedTracks.has(track.path));
+      window.dispatchEvent(new CustomEvent('openPlaylistModal', { 
+        detail: { items: tracksToAdd } 
+      }));
+    } else {
+      // Default: add current track
+      window.dispatchEvent(new CustomEvent('openPlaylistModal', { 
+        detail: { item: currentTrack } 
+      }));
+    }
   };
+
+  // Selection handlers
+  const toggleSelectTrack = useCallback((trackPath) => {
+    setSelectedTracks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(trackPath)) {
+        newSet.delete(trackPath);
+      } else {
+        newSet.add(trackPath);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const selectAllTracks = useCallback(() => {
+    setSelectedTracks(new Set(currentPlaylist.map(t => t.path)));
+  }, [currentPlaylist]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedTracks(new Set());
+    setIsSelectionMode(false);
+  }, []);
+
+  const toggleSelectionMode = useCallback(() => {
+    setIsSelectionMode(prev => !prev);
+    if (isSelectionMode) {
+      setSelectedTracks(new Set());
+    }
+  }, [isSelectionMode]);
+
+  const handleAddSelectedToPlaylist = useCallback(() => {
+    if (selectedTracks.size === 0) {
+      showToast('Chưa chọn bài hát nào', 'warning');
+      return;
+    }
+    
+    const tracksToAdd = currentPlaylist.filter(track => selectedTracks.has(track.path));
+    window.dispatchEvent(new CustomEvent('openPlaylistModal', { 
+      detail: { items: tracksToAdd } 
+    }));
+  }, [selectedTracks, currentPlaylist, showToast]);
+
+  // Remove tracks from current playlist
+  const handleRemoveFromPlaylist = useCallback(async (trackPath) => {
+    if (!currentPlaylistId || !sourceKey) {
+      showToast('Không thể xóa khỏi playlist', 'error');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/music/playlist/remove', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: sourceKey,
+          playlistId: currentPlaylistId,
+          path: trackPath
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      // Update local state - remove track from current playlist
+      const updatedPlaylist = currentPlaylist.filter(track => track.path !== trackPath);
+      useMusicStore.setState({ 
+        currentPlaylist: updatedPlaylist,
+        // Update currentIndex if needed
+        currentIndex: currentIndex >= updatedPlaylist.length ? Math.max(0, updatedPlaylist.length - 1) : currentIndex
+      });
+
+      showToast('Đã xóa khỏi playlist', 'success');
+    } catch (err) {
+      console.error('Remove from playlist error:', err);
+      showToast('Không thể xóa khỏi playlist: ' + err.message, 'error');
+    }
+  }, [currentPlaylistId, sourceKey, currentPlaylist, currentIndex, showToast]);
+
+  // Remove multiple selected tracks from playlist
+  const handleRemoveSelectedFromPlaylist = useCallback(async () => {
+    if (selectedTracks.size === 0) {
+      showToast('Chưa chọn bài hát nào', 'warning');
+      return;
+    }
+
+    if (!currentPlaylistId || !sourceKey) {
+      showToast('Không thể xóa khỏi playlist', 'error');
+      return;
+    }
+
+    try {
+      const pathsToRemove = Array.from(selectedTracks);
+      const response = await fetch('/api/music/playlist/remove-multiple', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: sourceKey,
+          playlistId: currentPlaylistId,
+          paths: pathsToRemove
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      // Update local state - remove selected tracks
+      const updatedPlaylist = currentPlaylist.filter(track => !selectedTracks.has(track.path));
+      const newCurrentIndex = currentTrack ? updatedPlaylist.findIndex(t => t.path === currentTrack.path) : -1;
+      
+      useMusicStore.setState({ 
+        currentPlaylist: updatedPlaylist,
+        currentIndex: newCurrentIndex >= 0 ? newCurrentIndex : Math.max(0, updatedPlaylist.length - 1)
+      });
+
+      // Clear selection and exit selection mode
+      setSelectedTracks(new Set());
+      setIsSelectionMode(false);
+
+      showToast(`Đã xóa ${pathsToRemove.length} bài khỏi playlist`, 'success');
+    } catch (err) {
+      console.error('Remove multiple from playlist error:', err);
+      showToast('Không thể xóa khỏi playlist: ' + err.message, 'error');
+    }
+  }, [selectedTracks, currentPlaylistId, sourceKey, currentPlaylist, currentTrack, showToast]);
 
   const handleDownload = async () => {
     // Open modal instead of direct download
@@ -463,6 +604,7 @@ const MusicPlayer = () => {
       }));
 
       setPlaylistTitle(data?.name || null);
+      setCurrentPlaylistId(Number(playlistId)); // Save current playlist ID
 
       let startIndex = 0;
       if (selectedFileArg) {
@@ -500,6 +642,9 @@ const MusicPlayer = () => {
         showToast('Thiếu source key', 'error');
         return;
       }
+
+      // Clear playlist ID since we're loading folder, not playlist
+      setCurrentPlaylistId(null);
 
       const folderPath = folderPathArg;
       const selectedPath = selectedFileArg;
@@ -937,13 +1082,77 @@ const MusicPlayer = () => {
                 >
                   <FiDownload className="w-6 h-6" />
                 </button>
+                <button 
+                  onClick={toggleSelectionMode}
+                  className={`p-3 rounded-full transition-colors ${isSelectionMode ? 'bg-green-500 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
+                  title={isSelectionMode ? "Thoát chế độ chọn" : "Chọn nhiều bài"}
+                >
+                  <FiPlus className="w-6 h-6" />
+                </button>
               </div>
             </div>
           </div>
           </div>
+          {/* Selection toolbar - shown when in selection mode */}
+          {isSelectionMode && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mt-4 p-4 rounded-xl bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 flex flex-wrap items-center justify-center gap-3"
+            >
+              <div className="flex items-center gap-2 text-white/90">
+                <span className="font-semibold">
+                  {selectedTracks.size === 0 
+                    ? 'Select tracks to add to playlist' 
+                    : `Selected ${selectedTracks.size} tracks`}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={selectAllTracks}
+                  className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors"
+                >
+                  All
+                </button>
+                <button
+                  onClick={clearSelection}
+                  className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors"
+                >
+                  Clear CB
+                </button>
+                <button
+                  onClick={handleAddSelectedToPlaylist}
+                  disabled={selectedTracks.size === 0}
+                  className="px-4 py-2 rounded-lg bg-green-500 hover:bg-green-400 disabled:bg-gray-500 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+                >
+                 Add
+                </button>
+                {/* Remove from playlist button - only show when viewing a playlist */}
+                {currentPlaylistId && (
+                  <button
+                    onClick={handleRemoveSelectedFromPlaylist}
+                    disabled={selectedTracks.size === 0}
+                    className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-400 disabled:bg-gray-500 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
           {/* Bottom: Full tracklist */}
           <div className="mt-4 mb-0.5 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 420px)', minHeight: '300px' }}>
-            <div className="grid grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_56px_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_56px_72px_56px] gap-3 px-4 py-2 text-sm text-white/60 border-b border-white/10">
+            <div className={`grid ${
+              isSelectionMode 
+                ? currentPlaylistId 
+                  ? 'grid-cols-[40px_40px_1fr_56px_40px] md:grid-cols-[40px_40px_1fr_1fr_56px_72px_56px_40px] lg:grid-cols-[40px_40px_1fr_1fr_1fr_56px_72px_56px_40px]'
+                  : 'grid-cols-[40px_40px_1fr_56px] md:grid-cols-[40px_40px_1fr_1fr_56px_72px_56px] lg:grid-cols-[40px_40px_1fr_1fr_1fr_56px_72px_56px]'
+                : currentPlaylistId
+                  ? 'grid-cols-[40px_1fr_56px_40px] md:grid-cols-[40px_1fr_1fr_56px_72px_56px_40px] lg:grid-cols-[40px_1fr_1fr_1fr_56px_72px_56px_40px]'
+                  : 'grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_56px_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_56px_72px_56px]'
+            } gap-3 px-4 py-2 text-sm text-white/60 border-b border-white/10`}>
+              {isSelectionMode && <div className="text-center">✓</div>}
               <div className="text-center">#</div>
               <div>Title</div>
               <div className="hidden lg:block">Album</div>
@@ -951,22 +1160,58 @@ const MusicPlayer = () => {
               <div className="hidden md:block text-center">Format</div>
               <div className="hidden md:flex justify-end pr-2">Views</div>
               <div className="flex justify-end pr-2"><FiClock className="w-4 h-4" /></div>
+              {currentPlaylistId && <div className="text-center">Action</div>}
             </div>
 
     <div className="divide-y divide-white/5 flex-1 overflow-y-auto">
-              {currentPlaylist.map((track, index) => (
+              {currentPlaylist.map((track, index) => {
+                const isSelected = selectedTracks.has(track.path);
+                return (
                 <div
                   key={track.path || index}
-                  draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDrop={(e) => handleDrop(e, index)}
+                  draggable={!isSelectionMode}
+                  onDragStart={() => !isSelectionMode && handleDragStart(index)}
+                  onDragOver={(e) => !isSelectionMode && handleDragOver(e, index)}
+                  onDrop={(e) => !isSelectionMode && handleDrop(e, index)}
                   onDragEnd={handleDragEnd}
-                  onClick={(e) => handleRowClick(e, track, index)}
-      className={`relative grid grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_56px_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_56px_72px_56px] gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${index === currentIndex ? 'bg-white/10' : ''}`}
+                  onClick={(e) => {
+                    if (isSelectionMode) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleSelectTrack(track.path);
+                    } else {
+                      handleRowClick(e, track, index);
+                    }
+                  }}
+      className={`relative grid ${
+        isSelectionMode 
+          ? currentPlaylistId 
+            ? 'grid-cols-[40px_40px_1fr_56px_40px] md:grid-cols-[40px_40px_1fr_1fr_56px_72px_56px_40px] lg:grid-cols-[40px_40px_1fr_1fr_1fr_56px_72px_56px_40px]'
+            : 'grid-cols-[40px_40px_1fr_56px] md:grid-cols-[40px_40px_1fr_1fr_56px_72px_56px] lg:grid-cols-[40px_40px_1fr_1fr_1fr_56px_72px_56px]'
+          : currentPlaylistId
+            ? 'grid-cols-[40px_1fr_56px_40px] md:grid-cols-[40px_1fr_1fr_56px_72px_56px_40px] lg:grid-cols-[40px_1fr_1fr_1fr_56px_72px_56px_40px]'
+            : 'grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_56px_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_56px_72px_56px]'
+      } gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${index === currentIndex ? 'bg-white/10' : ''} ${isSelected ? 'bg-green-500/20' : ''}`}
                 >
-                  {dropIndicator.index === index && (
+                  {dropIndicator.index === index && !isSelectionMode && (
                     <div className={`absolute left-2 right-2 ${dropIndicator.position === 'above' ? 'top-0' : 'bottom-0'} h-0.5 bg-emerald-400 shadow-[0_0_0_2px_rgba(16,185,129,0.35)] rounded pointer-events-none`} />
+                  )}
+                  {isSelectionMode && (
+                    <div 
+                      className="text-center flex items-center justify-center"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSelectTrack(track.path);
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {}} // Controlled by parent div onClick
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-5 h-5 rounded border-2 border-white/30 bg-white/10 checked:bg-green-500 checked:border-green-500 cursor-pointer transition-colors"
+                      />
+                    </div>
                   )}
                   <div className="text-center text-white/60">
                     {index === currentIndex && isPlaying ? (<span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse" />) : (index + 1)}
@@ -1016,8 +1261,24 @@ const MusicPlayer = () => {
                   <div className="flex items-center justify-end gap-3 pr-2 text-white/70">
                     <span className="tabular-nums text-sm">{track.duration ? formatTime(track.duration) : '—'}</span>
                   </div>
+
+                  {/* Action button - only show when viewing a playlist */}
+                  {currentPlaylistId && (
+                    <div className="flex items-center justify-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveFromPlaylist(track.path);
+                        }}
+                        className="p-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors"
+                        title="Xóa khỏi playlist"
+                      >
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))}
+              )})}
 
               {currentPlaylist.length === 0 && (
                 <div className="px-4 py-10 text-center text-white/60">Chưa có danh sách phát. Hãy chọn một bài để bắt đầu.</div>
