@@ -342,15 +342,19 @@ const DatabaseActions = ({
       label: showLabels ? labels.delete : '',
       onClick: handleDelete,
       className: 'text-red-600 hover:text-red-700 border-red-300 hover:border-red-400'
-    },
-    {
+    }
+  );
+
+  // Media doesn't support reset operation
+  if (currentContentType !== 'media') {
+    buttons.push({
       key: 'reset',
       icon: FiRotateCcw,
       label: showLabels ? labels.reset : '',
       onClick: handleReset,
       className: 'text-yellow-600 hover:text-yellow-700 border-yellow-300 hover:border-yellow-400'
-    }
-  );
+    });
+  }
   
   // Layout classes
   const layoutClasses = {

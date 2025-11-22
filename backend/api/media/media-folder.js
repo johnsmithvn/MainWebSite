@@ -70,13 +70,14 @@ const getMediaFolder = (req, res) => {
   `;
   const items = db.prepare(itemsQuery).all(...params, limit, offset);
 
-  // Get timeline data (grouped by date)
+  // Get timeline data (grouped by date) - ONLY images and videos
   const timelineQuery = `
     SELECT 
       date(datetime(date_taken/1000, 'unixepoch')) as date,
       COUNT(*) as count
     FROM media_items 
-    ${whereClause}
+    WHERE type IN ('image', 'video')
+    ${whereConditions.length > 0 ? `AND ${whereConditions.join(" AND ")}` : ''}
     GROUP BY date(datetime(date_taken/1000, 'unixepoch'))
     ORDER BY date DESC
   `;

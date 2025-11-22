@@ -1,8 +1,7 @@
 // 📁 backend/api/media/reset-media-db.js
 // 🗑️ Reset media database
 
-const path = require("path");
-const fs = require("fs");
+const { getMediaDB } = require("../../utils/db");
 
 /**
  * POST /api/media/reset-media-db
@@ -13,22 +12,19 @@ const resetMediaDb = (req, res) => {
   if (!dbkey) return res.status(400).json({ error: "Thiếu key" });
 
   try {
-    const safeName = dbkey.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const DB_DIR = path.join(__dirname, "../../data");
-    const dbPath = path.join(DB_DIR, `${safeName}.db`);
+    const db = getMediaDB(dbkey);
 
-    if (fs.existsSync(dbPath)) {
-      fs.unlinkSync(dbPath);
-      res.json({
-        success: true,
-        message: `Database ${dbkey} đã được reset`
-      });
-    } else {
-      res.json({
-        success: true,
-        message: `Database ${dbkey} không tồn tại`
-      });
-    }
+    // Xóa toàn bộ dữ liệu trong các bảng
+    db.prepare("DELETE FROM media_items").run();
+    db.prepare("DELETE FROM folders").run();
+    db.prepare("DELETE FROM albums").run();
+
+    console.log(`🗑️ Đã xóa toàn bộ dữ liệu DB cho ${dbkey}`);
+
+    res.json({
+      success: true,
+      message: `Database ${dbkey} đã được reset thành công`
+    });
   } catch (err) {
     console.error("❌ Reset media DB error:", err);
     res.status(500).json({ success: false, error: err.message });

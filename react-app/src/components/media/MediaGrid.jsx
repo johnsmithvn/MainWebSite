@@ -2,7 +2,29 @@
 // 📸 Media Grid Component (Google Photos-like)
 
 import React from 'react';
-import { Heart, Video, CheckCircle } from 'lucide-react';
+import { Heart, Video, CheckCircle, FileText, Music, File, Archive, FileCode } from 'lucide-react';
+
+// Helper: Get file type icon
+function FileTypeIcon({ type, size = 20 }) {
+  const iconProps = { size };
+  
+  switch (type) {
+    case 'audio':
+      return <Music {...iconProps} className="text-purple-400" />;
+    case 'pdf':
+      return <FileText {...iconProps} className="text-red-400" />;
+    case 'text':
+      return <FileText {...iconProps} className="text-blue-400" />;
+    case 'document':
+      return <FileText {...iconProps} className="text-blue-500" />;
+    case 'archive':
+      return <Archive {...iconProps} className="text-orange-400" />;
+    case 'code':
+      return <FileCode {...iconProps} className="text-green-400" />;
+    default:
+      return <File {...iconProps} className="text-gray-400" />;
+  }
+}
 
 function MediaGrid({ items, selectedItems, onSelectItem, onItemClick, onFavorite }) {
   return (
@@ -24,6 +46,8 @@ function MediaGrid({ items, selectedItems, onSelectItem, onItemClick, onFavorite
 
 function MediaGridItem({ item, index, isSelected, onSelect, onClick, onFavorite }) {
   const isVideo = item.type === 'video';
+  const isImage = item.type === 'image';
+  const isViewable = isImage || isVideo;
   
   // Thumbnail logic with fallback
   let thumbSrc;
@@ -32,14 +56,17 @@ function MediaGridItem({ item, index, isSelected, onSelect, onClick, onFavorite 
   } else if (isVideo) {
     // Video fallback to default thumbnail
     thumbSrc = '/default/video-thumb.png';
-  } else {
+  } else if (isImage) {
     // Image without thumbnail - use the image itself
     thumbSrc = `/media/${item.path}`;
+  } else {
+    // Non-viewable file - no thumbnail
+    thumbSrc = null;
   }
 
   const handleImageError = (e) => {
     // Fallback hierarchy: thumbnail → original file → default
-    if (e.target.src.includes(item.thumbnail) && item.path) {
+    if (e.target.src.includes(item.thumbnail) && item.path && isImage) {
       e.target.src = `/media/${item.path}`;
     } else if (isVideo) {
       e.target.src = '/default/video-thumb.png';
@@ -64,13 +91,23 @@ function MediaGridItem({ item, index, isSelected, onSelect, onClick, onFavorite 
       }`}
       onClick={handleClick}
     >
-      <img
-        src={thumbSrc}
-        alt={item.name}
-        className="w-full h-full object-cover transition-transform group-hover:scale-110"
-        loading="lazy"
-        onError={handleImageError}
-      />
+      {isViewable && thumbSrc ? (
+        <img
+          src={thumbSrc}
+          alt={item.name}
+          className="w-full h-full object-cover transition-transform group-hover:scale-110"
+          loading="lazy"
+          onError={handleImageError}
+        />
+      ) : (
+        // Non-viewable file: Show icon
+        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 dark:from-gray-800 dark:to-black">
+          <FileTypeIcon type={item.type} size={48} />
+          <div className="mt-2 text-white text-xs opacity-70 px-2 text-center line-clamp-2">
+            {item.name}
+          </div>
+        </div>
+      )}
 
       {/* Video indicator */}
       {isVideo && (

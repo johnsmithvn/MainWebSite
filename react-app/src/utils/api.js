@@ -226,7 +226,7 @@ export const apiService = {
     removeItemsFromAlbum: (id, data) => api.delete(`${API.ENDPOINTS.MEDIA}/albums/${id}/items`, { data }),
     toggleFavorite: (data) => api.post(`${API.ENDPOINTS.MEDIA}/favorite-media`, data),
     scan: (params) => api.post(`${API.ENDPOINTS.MEDIA}/scan-media`, params, { timeout: 0 }),
-    resetDb: (params) => api.delete(`${API.ENDPOINTS.MEDIA}/reset-media-db`, { params, timeout: 0 }),
+    resetDb: (data) => api.post(`${API.ENDPOINTS.MEDIA}/reset-media-db`, data, { timeout: 0 }),
     getStats: (params) => api.get(`${API.ENDPOINTS.MEDIA}/media-stats`, { params }),
   },
 

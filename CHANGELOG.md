@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-01-16] Fixed Timeline view showing non-viewable files → Thêm client-side filter trong loadMediaItems() để chỉ hiển thị image và video khi view === 'timeline' và không có type filter, đảm bảo timeline chỉ show media có thể xem được (MediaHome.jsx)
+- 🐛 [2025-01-16] Fixed duplicate "Công cụ" sections in Sidebar → Thêm điều kiện `currentContentType !== 'media'` vào section đầu tiên (manga/movie/music) và thay path check bằng `currentContentType === 'media'` cho section thứ hai, đảm bảo chỉ hiển thị 1 section tools tại 1 thời điểm (Sidebar.jsx)
+- 🐛 [2025-01-16] Fixed Reset button showing for Media type → Thêm điều kiện `currentContentType !== 'media'` trong DatabaseActions.jsx khi build button config array, media chỉ có Scan và Delete buttons vì không có reset endpoint (DatabaseActions.jsx)
 - 🐛 [2025-11-22] Fixed selection toolbar layout → Căn giữa toàn bộ selection toolbar bằng cách thay đổi từ `ml-auto` sang `justify-center`, loại bỏ alignment lệch phải cho layout cân bằng hơn (MusicPlayer.jsx)
 - 🐛 [2025-11-22] Fixed header tên source dài trên mobile làm đẩy icon → Ẩn tên source trên mobile (sm:hidden), chỉ hiển thị icon 📚 để tránh layout overflow và đảm bảo icons header không bị đẩy đi (Header.jsx)
 - 🐛 [2025-11-22] Fixed checkbox không tích được trong selection mode → Sửa event propagation bằng cách wrap checkbox trong div với onClick stopPropagation, checkbox onChange chỉ là controlled component, prevent click event bubble lên row trigger playback (MusicPlayer.jsx)

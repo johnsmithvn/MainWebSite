@@ -14,6 +14,26 @@ ffmpeg.setFfprobePath(ffprobe.path);
 // Use centralized file extensions from constants and normalize to lowercase
 const IMAGE_EXTS = (FILE_EXTENSIONS.IMAGE || []).map(e => e.toLowerCase());
 const VIDEO_EXTS = (FILE_EXTENSIONS.VIDEO || []).map(e => e.toLowerCase());
+const AUDIO_EXTS = (FILE_EXTENSIONS.AUDIO || []).map(e => e.toLowerCase());
+const PDF_EXTS = (FILE_EXTENSIONS.PDF || []).map(e => e.toLowerCase());
+const TEXT_EXTS = (FILE_EXTENSIONS.TEXT || []).map(e => e.toLowerCase());
+const DOCUMENT_EXTS = (FILE_EXTENSIONS.DOCUMENT || []).map(e => e.toLowerCase());
+const ARCHIVE_EXTS = (FILE_EXTENSIONS.ARCHIVE || []).map(e => e.toLowerCase());
+const CODE_EXTS = (FILE_EXTENSIONS.CODE || []).map(e => e.toLowerCase());
+
+// Helper: Determine file type from extension
+function getFileType(ext) {
+  ext = ext.toLowerCase();
+  if (IMAGE_EXTS.includes(ext)) return 'image';
+  if (VIDEO_EXTS.includes(ext)) return 'video';
+  if (AUDIO_EXTS.includes(ext)) return 'audio';
+  if (PDF_EXTS.includes(ext)) return 'pdf';
+  if (TEXT_EXTS.includes(ext)) return 'text';
+  if (DOCUMENT_EXTS.includes(ext)) return 'document';
+  if (ARCHIVE_EXTS.includes(ext)) return 'archive';
+  if (CODE_EXTS.includes(ext)) return 'code';
+  return 'other';
+}
 
 // 🟢 Helper: Tìm thumbnail trong .thumbnail folder
 function findThumbnail(thumbnailDir, baseName) {
@@ -214,6 +234,51 @@ async function scanMediaFolderToDB(
         db.prepare(
           `UPDATE media_items SET thumbnail = ?, size = ?, modified = ?, width = ?, height = ?, duration = ?, date_taken = ?, scanned = 1, updatedAt = ? WHERE path = ?`
         ).run(thumb, stat.size, lastModified, width, height, duration, dateTaken, Date.now(), relPath);
+        stats.updated++;
+      } else if (existing.thumbnail !== thumb) {
+        // ✅ THUMBNAIL CHANGED
+        db.prepare(`UPDATE media_items SET thumbnail = ?, scanned = 1, updatedAt = ? WHERE path = ?`).run(thumb, Date.now(), relPath);
+        stats.updated++;
+      } else {
+        // ✅ UNCHANGED
+        db.prepare(`UPDATE media_items SET scanned = 1 WHERE path = ?`).run(relPath);
+        stats.skipped++;
+      }
+      continue;
+    }
+
+    // 📄 ALL OTHER FILES (audio, pdf, text, document, archive, code, other)
+    const ext = path.extname(entry.name).toLowerCase();
+    const fileType = getFileType(ext);
+    
+    if (fileType !== 'image' && fileType !== 'video' && ext) {
+      itemCount++;
+
+      const stat = fs.statSync(fullPath);
+      const lastModified = stat.mtimeMs;
+      const dateTaken = extractDateTaken(fullPath, entry.name);
+      
+      let thumb = null;
+      const baseName = path.basename(entry.name, path.extname(entry.name));
+      const thumbDir = path.join(basePath, ".thumbnail");
+      if (fs.existsSync(thumbDir)) {
+        thumb = findThumbnail(thumbDir, baseName);
+      }
+
+      const existing = db.prepare(`SELECT * FROM media_items WHERE path = ?`).get(relPath);
+
+      if (!existing) {
+        // ✅ NEW FILE
+        db.prepare(
+          `INSERT INTO media_items (name, path, thumbnail, type, size, modified, date_taken, scanned, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`
+        ).run(entry.name, relPath, thumb, fileType, stat.size, lastModified, dateTaken, Date.now(), Date.now());
+        stats.inserted++;
+      } else if (existing.modified !== lastModified) {
+        // ✅ CHANGED FILE
+        db.prepare(
+          `UPDATE media_items SET thumbnail = ?, size = ?, modified = ?, date_taken = ?, scanned = 1, updatedAt = ? WHERE path = ?`
+        ).run(thumb, stat.size, lastModified, dateTaken, Date.now(), relPath);
         stats.updated++;
       } else if (existing.thumbnail !== thumb) {
         // ✅ THUMBNAIL CHANGED

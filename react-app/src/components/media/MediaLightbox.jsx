@@ -2,7 +2,43 @@
 // 🖼️ Media Lightbox Viewer (Google Photos-like)
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, Heart, Download } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Heart, Download, FileText, Music, File, Archive, FileCode, FileCog } from 'lucide-react';
+
+// Helper: Get file type icon
+function FileIcon({ type, size = 48 }) {
+  const iconProps = { size, className: 'text-gray-400' };
+  
+  switch (type) {
+    case 'audio':
+      return <Music {...iconProps} className="text-purple-400" />;
+    case 'pdf':
+      return <FileText {...iconProps} className="text-red-400" />;
+    case 'text':
+      return <FileText {...iconProps} className="text-blue-400" />;
+    case 'document':
+      return <FileText {...iconProps} className="text-blue-500" />;
+    case 'archive':
+      return <Archive {...iconProps} className="text-orange-400" />;
+    case 'code':
+      return <FileCode {...iconProps} className="text-green-400" />;
+    default:
+      return <File {...iconProps} className="text-gray-400" />;
+  }
+}
+
+// Helper: Get file type label
+function getFileTypeLabel(type) {
+  switch (type) {
+    case 'audio': return '🎵 File nhạc';
+    case 'pdf': return '📄 File PDF';
+    case 'text': return '📝 File văn bản';
+    case 'document': return '📋 Tài liệu';
+    case 'archive': return '📦 File nén';
+    case 'code': return '💻 File mã nguồn';
+    case 'other': return '📎 File khác';
+    default: return '📁 File';
+  }
+}
 
 function MediaLightbox({ items, currentIndex, onClose, onFavorite }) {
   const [index, setIndex] = useState(currentIndex);
@@ -77,6 +113,8 @@ function MediaLightbox({ items, currentIndex, onClose, onFavorite }) {
   if (!item) return null;
 
   const isVideo = item.type === 'video';
+  const isImage = item.type === 'image';
+  const isViewable = isImage || isVideo;
   const mediaSrc = `/media/${item.path}`;
 
   const onWheel = (e) => {
@@ -344,7 +382,7 @@ function MediaLightbox({ items, currentIndex, onClose, onFavorite }) {
             autoPlay
             className="max-w-full max-h-full"
           />
-        ) : (
+        ) : isImage ? (
           <img
             src={mediaSrc}
             alt={item.name}
@@ -355,6 +393,49 @@ function MediaLightbox({ items, currentIndex, onClose, onFavorite }) {
             }}
             className="max-w-full max-h-full object-contain pointer-events-none"
           />
+        ) : (
+          // 📄 Non-viewable file: Show preview with download button
+          <div className="flex flex-col items-center justify-center gap-6 p-8 max-w-2xl">
+            {/* File Icon */}
+            <div className="w-32 h-32 rounded-full bg-gray-800/50 flex items-center justify-center">
+              <FileIcon type={item.type} size={64} />
+            </div>
+            
+            {/* File Info */}
+            <div className="text-center">
+              <h3 className="text-2xl font-semibold text-white mb-2 break-all px-4">
+                {item.name}
+              </h3>
+              <p className="text-gray-400 text-lg mb-1">
+                {getFileTypeLabel(item.type)}
+              </p>
+              {item.size && (
+                <p className="text-gray-500">
+                  {formatFileSize(item.size)}
+                </p>
+              )}
+            </div>
+
+            {/* Message */}
+            <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4 max-w-md">
+              <p className="text-yellow-200 text-center">
+                ⚠️ Không hỗ trợ xem trước file này
+              </p>
+              <p className="text-yellow-300/70 text-sm text-center mt-2">
+                Vui lòng tải xuống để xem nội dung
+              </p>
+            </div>
+
+            {/* Download Button */}
+            <button
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white rounded-lg font-semibold text-lg transition-colors shadow-lg"
+            >
+              <Download size={24} />
+              {isDownloading ? 'Đang tải...' : 'Tải xuống'}
+            </button>
+          </div>
         )}
 
         {/* Zoom controls removed per request (pinch to zoom supported) */}

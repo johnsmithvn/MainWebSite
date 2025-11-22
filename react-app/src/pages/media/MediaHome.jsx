@@ -39,22 +39,6 @@ function MediaHome() {
     setSourceKey(dbkey);
   }, [dbkey, setSourceKey]);
 
-  // Listen for global media:scan event dispatched from sidebar
-  useEffect(() => {
-    const handleScanEvent = () => {
-      handleScan();
-    };
-    const handleDeleteDbEvent = () => {
-      handleDeleteDatabase();
-    };
-    window.addEventListener('media:scan', handleScanEvent);
-    window.addEventListener('media:deleteDb', handleDeleteDbEvent);
-    return () => {
-      window.removeEventListener('media:scan', handleScanEvent);
-      window.removeEventListener('media:deleteDb', handleDeleteDbEvent);
-    };
-  }, [dbkey]);
-  
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 100,
@@ -113,6 +97,15 @@ function MediaHome() {
       order: 'DESC'
     };
 
+    // Timeline view: only load images and videos (filter at backend)
+    if (view === 'timeline' && !type) {
+      // Default to showing both image and video
+      // Backend will handle filtering for timeline data
+      // For now, we can't send multiple types, so we skip type filter
+      // and let backend return all, then filter client-side
+      // TODO: Update backend to support type[]=image&type[]=video
+    }
+
     if (view === 'favorites') params.favorite = 'true';
     if (type) params.type = type;
     if (year) params.year = year;
@@ -121,7 +114,16 @@ function MediaHome() {
 
     const response = await apiService.media.getItems(params);
     const data = response.data;
-    setMediaItems(data.items);
+    
+    // Filter out non-viewable files from timeline view
+    let filteredItems = data.items;
+    if (view === 'timeline' && !type) {
+      filteredItems = data.items.filter(item => 
+        item.type === 'image' || item.type === 'video'
+      );
+    }
+    
+    setMediaItems(filteredItems);
     setTimeline(data.timeline || []);
     
     // Fix race condition: chỉ update pagination nếu thực sự có thay đổi
@@ -140,77 +142,6 @@ function MediaHome() {
   const loadAlbums = async () => {
     const response = await apiService.media.getAlbums({ key: dbkey });
     setAlbums(response.data.albums);
-  };
-
-  const handleScan = async () => {
-    try {
-      showToast('Đang scan media...', 'info');
-      const response = await apiService.media.scan({ key: dbkey });
-      const data = response.data;
-      showToast(`Scan thành công! +${data.stats.inserted} mới, ~${data.stats.updated} cập nhật`, 'success');
-      loadData();
-    } catch (error) {
-      showToast(error.message, 'error');
-    }
-  };
-
-  const handleDeleteDatabase = async () => {
-    const confirmed = await confirmModal({
-      title: '🗑️ Xóa Database Media',
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">Bạn có chắc muốn xóa toàn bộ database media?</p>
-          <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-red-800 dark:text-red-200 mb-2">💀 Cảnh báo:</p>
-            <ul className="text-sm space-y-1 text-red-700 dark:text-red-300">
-              <li>• Database: <strong>{dbkey}</strong></li>
-              <li>• Tất cả dữ liệu media sẽ bị xóa</li>
-              <li>• Albums và favorites sẽ bị mất</li>
-              <li>• Lượt xem và thống kê sẽ bị mất</li>
-              <li>• File ảnh/video thực tế sẽ KHÔNG bị ảnh hưởng</li>
-            </ul>
-          </div>
-          <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg border border-red-300 dark:border-red-700">
-            <p className="font-bold text-red-800 dark:text-red-200">
-              ❌ Hành động này không thể hoàn tác!
-            </p>
-          </div>
-        </div>
-      ),
-      confirmText: '🗑️ Xóa Database',
-      cancelText: 'Hủy',
-      type: 'confirm'
-    });
-
-    if (!confirmed) return;
-
-    try {
-      showToast('Đang xóa database...', 'info');
-      const response = await apiService.media.resetDb({ key: dbkey });
-      
-      successModal({
-        title: '✅ Xóa thành công!',
-        message: response.data.message || 'Database đã được xóa hoàn toàn.'
-      });
-      
-      // Clear local state
-      setFolders([]);
-      setMediaItems([]);
-      setTimeline([]);
-      setAlbums([]);
-      setSelectedItems(new Set());
-      setPagination({
-        page: 1,
-        limit: 100,
-        total: 0,
-        totalPages: 0
-      });
-    } catch (error) {
-      errorModal({
-        title: '❌ Lỗi xóa database',
-        message: error.message
-      });
-    }
   };
 
   const handleFavorite = async (itemId, isFavorite) => {
@@ -256,7 +187,6 @@ function MediaHome() {
         dbkey={dbkey}
         view={view}
         selectedItems={selectedItems}
-        onScan={handleScan}
         onClearSelection={() => setSelectedItems(new Set())}
         onAddToAlbum={handleAddToAlbum}
         albums={albums}

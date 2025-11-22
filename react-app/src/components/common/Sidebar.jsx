@@ -122,8 +122,8 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
           </div>
         ))}
 
-        {/* Admin tools - Only show for valid content type */}
-        {sourceKey && currentContentType && (
+        {/* Admin tools - Only show for valid content type (manga/movie/music) */}
+        {sourceKey && currentContentType && currentContentType !== 'media' && (
           <div>
             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
               Công cụ {currentContentType === 'manga' ? '📚 Manga' : currentContentType === 'movie' ? '🎬 Movie' : '🎵 Music'}
@@ -143,29 +143,18 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
         )}
 
         {/* Media Gallery tools */}
-        {location.pathname.startsWith('/media') && (
+        {currentContentType === 'media' && (
           <div>
             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
               Công cụ 📸 Media
             </h3>
-            <div className="space-y-1">
-              <button
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('media:scan'));
-                }}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-              >
-                <span>🚀 Scan Media</span>
-              </button>
-              <button
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('media:deleteDb'));
-                }}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm bg-red-600 hover:bg-red-700 text-white transition-colors"
-              >
-                <span>🗑️ Delete Database</span>
-              </button>
-            </div>
+            <DatabaseActions 
+              contentType="media"
+              sourceKey={sourceKey}
+              layout="vertical"
+              size="sm"
+              showLabels={true}
+            />
           </div>
         )}
       </div>
