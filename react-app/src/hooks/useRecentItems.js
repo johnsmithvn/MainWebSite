@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import { processThumbnails } from '@/utils/thumbnailUtils';
 import { getRecentViewedCacheKey } from '@/constants/cacheKeys';
+import { AUTO_REFRESH } from '@/constants';
 
 /**
  * Hook để quản lý recent viewed items với localStorage cache
@@ -116,8 +117,8 @@ export const useRecentItems = (type, options = {}) => {
     queryKey,
     queryFn: fetchRecentItems,
     enabled: enabled && !!sourceKey && (type !== 'manga' || !!rootFolder) && mangaSettings.enableRecentTracking,
-    staleTime: 30 * 1000, // 30 seconds - recent data changes frequently
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: AUTO_REFRESH.RECENT_ITEMS,      // ⏱️ 10 phút - Recent data cache
+    cacheTime: AUTO_REFRESH.RECENT_ITEMS * 2,  // 💾 20 phút - Memory cache (2x)
     refetchOnWindowFocus: false,
     refetchOnMount: true
   });

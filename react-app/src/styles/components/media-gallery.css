@@ -1,0 +1,117 @@
+/* 📁 react-app/src/styles/components/media-gallery.css */
+/* 📸 Media Gallery Styles */
+
+/* Grid hover effects */
+.media-grid-item {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.media-grid-item:hover {
+  transform: scale(1.02);
+  z-index: 1;
+}
+
+/* Lightbox transitions */
+.media-lightbox-enter {
+  opacity: 0;
+}
+
+.media-lightbox-enter-active {
+  opacity: 1;
+  transition: opacity 300ms ease-in;
+}
+
+.media-lightbox-exit {
+  opacity: 1;
+}
+
+.media-lightbox-exit-active {
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+}
+
+/* Timeline calendar */
+.timeline-date-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transition: all 0.3s ease;
+}
+
+.timeline-date-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* Album card */
+.album-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  transition: transform 0.3s ease;
+}
+
+.album-card:hover {
+  transform: scale(1.05);
+}
+
+.album-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.album-card:hover::after {
+  opacity: 1;
+}
+
+/* Selection animation */
+.media-item-selected {
+  animation: pulse 0.3s ease;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+/* Lazy loading skeleton */
+.media-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .media-grid {
+    gap: 2px;
+  }
+  
+  .media-lightbox-controls {
+    bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* Dark mode optimizations */
+.dark .media-grid-item {
+  background: rgba(31, 41, 55, 0.5);
+}
+
+.dark .timeline-date-card {
+  background: linear-gradient(135deg, #4c51bf 0%, #6b46c1 100%);
+}

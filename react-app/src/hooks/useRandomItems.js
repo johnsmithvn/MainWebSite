@@ -7,6 +7,7 @@ import api from '@/utils/api';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import { processThumbnails } from '@/utils/thumbnailUtils';
 import { getRandomViewCacheKey } from '@/constants/cacheKeys';
+import { AUTO_REFRESH } from '@/constants';
 import toast from 'react-hot-toast';
 
 /**
@@ -18,8 +19,8 @@ import toast from 'react-hot-toast';
 export const useRandomItems = (type, options = {}) => {
   const {
     enabled = true,
-    staleTime = 5 * 60 * 1000, // 5 minutes
-    cacheTime = 10 * 60 * 1000, // 10 minutes
+    staleTime = AUTO_REFRESH.RANDOM_ITEMS,       // ⏱️ 5 phút - Data "fresh" time
+    cacheTime = AUTO_REFRESH.RANDOM_ITEMS_CACHE, // 💾 10 phút - Memory cache time
     count = 20,
     force = false
   } = options;
@@ -174,9 +175,6 @@ export const useRandomItems = (type, options = {}) => {
     if (type === 'manga' && !rootFolder) {
       throw new Error('Missing root folder for manga');
     }
-
-    console.log('🔍 fetchRandomItems:', { sourceKey, rootFolder, type, cacheKey });
-
     // Check cache first unless force refresh
     if (!force) {
       const cached = getCachedData();

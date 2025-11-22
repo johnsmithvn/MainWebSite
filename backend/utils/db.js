@@ -220,4 +220,73 @@ function getMusicDB(dbkey) {
   return db;
 }
 
-module.exports = { getDB, getMovieDB, getMusicDB };
+// 📸 Media Gallery DB (Google Photos-like)
+const dbMediaMap = {};
+function getMediaDB(dbkey) {
+  if (dbMediaMap[dbkey]) return dbMediaMap[dbkey];
+  
+  const safeName = dbkey.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const dbPath = path.join(DB_DIR, `${safeName}.db`);
+  const db = new Database(dbPath);
+
+  db.exec(`
+    -- � folders: Folder cache with thumbnails (for navigation)
+    CREATE TABLE IF NOT EXISTS folders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      root TEXT NOT NULL,
+      path TEXT NOT NULL,
+      name TEXT NOT NULL,
+      thumbnail TEXT,
+      itemCount INTEGER DEFAULT 0,
+      scanned INTEGER DEFAULT 0,
+      createdAt INTEGER,
+      updatedAt INTEGER,
+      UNIQUE(root, path)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_folder_root ON folders(root);
+    CREATE INDEX IF NOT EXISTS idx_folder_path ON folders(path);
+
+    -- �📸 media_items: Images & Videos
+    CREATE TABLE IF NOT EXISTS media_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      path TEXT NOT NULL UNIQUE,
+      thumbnail TEXT,
+      type TEXT NOT NULL, -- 'image' | 'video'
+      size INTEGER DEFAULT 0,
+      modified INTEGER,
+      width INTEGER,
+      height INTEGER,
+      duration INTEGER, -- for videos (seconds)
+      date_taken INTEGER, -- timestamp when photo/video was taken
+      isFavorite INTEGER DEFAULT 0,
+      viewCount INTEGER DEFAULT 0,
+      albumId INTEGER, -- link to albums table
+      scanned INTEGER DEFAULT 0,
+      createdAt INTEGER,
+      updatedAt INTEGER
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_media_path ON media_items(path);
+    CREATE INDEX IF NOT EXISTS idx_media_type ON media_items(type);
+    CREATE INDEX IF NOT EXISTS idx_media_favorite ON media_items(isFavorite);
+    CREATE INDEX IF NOT EXISTS idx_media_date_taken ON media_items(date_taken);
+    CREATE INDEX IF NOT EXISTS idx_media_album ON media_items(albumId);
+
+    -- 📚 albums: Collections like Google Photos
+    CREATE TABLE IF NOT EXISTS albums (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      coverImage TEXT,
+      createdAt INTEGER,
+      updatedAt INTEGER
+    );
+  `);
+
+  dbMediaMap[dbkey] = db;
+  return db;
+}
+
+module.exports = { getDB, getMovieDB, getMusicDB, getMediaDB };

@@ -7,7 +7,7 @@ import { apiService } from './api';
 /**
  * Get content type from source key
  * @param {string} sourceKey 
- * @returns {string|null} Content type ('manga', 'movie', 'music')
+ * @returns {string|null} Content type ('manga', 'movie', 'music', 'media')
  */
 export const getContentTypeFromSourceKey = (sourceKey) => {
   if (!sourceKey) return null;
@@ -27,6 +27,11 @@ export const getContentTypeFromSourceKey = (sourceKey) => {
     return 'music';
   }
   
+  // Media sources typically start with MEDIA_
+  if (sourceKey.startsWith('MEDIA_')) {
+    return 'media';
+  }
+  
   // Default to null if can't determine
   return null;
 };
@@ -44,12 +49,12 @@ export const isValidContentType = (type, sourceKey, rootFolder = null) => {
   // Manga requires rootFolder
   if (type === 'manga' && !rootFolder) return false;
   
-  return ['manga', 'movie', 'music'].includes(type);
+  return ['manga', 'movie', 'music', 'media'].includes(type);
 };
 
 /**
  * Database scan operation with loading state
- * @param {string} type - Content type ('manga', 'movie', 'music')
+ * @param {string} type - Content type ('manga', 'movie', 'music', 'media')
  * @param {string} sourceKey - Database key
  * @param {string} rootFolder - Root folder (for manga only)
  * @param {Function} onSuccess - Success callback
@@ -85,6 +90,11 @@ export const performDatabaseScan = async (type, sourceKey, rootFolder = null, on
         response = await apiService.music.scan(requestBody);
         break;
         
+      case 'media':
+        requestBody = { key: sourceKey };
+        response = await apiService.media.scan(requestBody);
+        break;
+        
       default:
         throw new Error(`Unknown content type: ${type}`);
     }
@@ -105,7 +115,7 @@ export const performDatabaseScan = async (type, sourceKey, rootFolder = null, on
 
 /**
  * Database delete operation with loading state
- * @param {string} type - Content type ('manga', 'movie', 'music')
+ * @param {string} type - Content type ('manga', 'movie', 'music', 'media')
  * @param {string} sourceKey - Database key
  * @param {string} rootFolder - Root folder (for manga only)
  * @param {Function} onSuccess - Success callback
@@ -139,6 +149,11 @@ export const performDatabaseDelete = async (type, sourceKey, rootFolder = null, 
       case 'music':
         params = { key: sourceKey, mode: 'delete' };
         response = await apiService.music.resetDb(params);
+        break;
+        
+      case 'media':
+        params = { key: sourceKey };
+        response = await apiService.media.resetDb(params);
         break;
         
       default:
@@ -340,6 +355,14 @@ export const getDatabaseOperationLabels = (type) => {
       thumbnailDescription: 'Tạo lại thumbnail cho toàn bộ bài hát và thư mục con trong thư mục hiện tại.',
       thumbnailSuccess: '✅ Đã quét thumbnail music!',
       thumbnailSuccessDetail: 'Đã hoàn tất quét thumbnail music.'
+    },
+    media: {
+      scan: 'Quét Media',
+      delete: 'Xóa DB Media',
+      reset: 'Reset DB Media',
+      scanDescription: 'Quét và cập nhật database media (ảnh, video, files)',
+      deleteDescription: 'Xóa tất cả dữ liệu media từ database (albums, favorites sẽ bị mất)',
+      resetDescription: 'Xóa dữ liệu cũ và quét lại từ đầu'
     }
   };
   

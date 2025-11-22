@@ -144,6 +144,59 @@ router.post("/playlist/add", (req, res) => {
   res.json({ success: true });
 });
 
+// ➕ Thêm nhiều bài hát vào playlist
+router.post("/playlist/add-multiple", (req, res) => {
+  const { key, playlistId, paths } = req.body;
+  if (!key || !playlistId || !Array.isArray(paths) || paths.length === 0) {
+    return res.status(400).json({ error: "Thiếu dữ liệu hoặc paths không hợp lệ" });
+  }
+
+  const db = getMusicDB(key);
+  
+  try {
+    // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
+    db.prepare("BEGIN TRANSACTION").run();
+
+    // Lấy maxOrder hiện tại
+    const maxOrderRow = db
+      .prepare(`SELECT MAX(sortOrder) as maxOrder FROM playlist_items WHERE playlistId = ?`)
+      .get(playlistId);
+    let nextOrder = (maxOrderRow?.maxOrder ?? 0) + 1;
+
+    // Prepare statement để insert
+    const insertStmt = db.prepare(
+      `INSERT OR IGNORE INTO playlist_items (playlistId, songPath, sortOrder) VALUES (?, ?, ?)`
+    );
+
+    // Insert từng bài hát
+    let addedCount = 0;
+    for (const path of paths) {
+      const result = insertStmt.run(playlistId, path, nextOrder);
+      if (result.changes > 0) {
+        addedCount++;
+        nextOrder++;
+      }
+    }
+
+    // Cập nhật updatedAt của playlist
+    db.prepare(`UPDATE playlists SET updatedAt = ? WHERE id = ?`).run(now(), playlistId);
+
+    // Commit transaction
+    db.prepare("COMMIT").run();
+
+    res.json({ 
+      success: true, 
+      message: `Đã thêm ${addedCount} bài hát vào playlist`,
+      addedCount 
+    });
+  } catch (error) {
+    // Rollback nếu có lỗi
+    db.prepare("ROLLBACK").run();
+    console.error("Error adding multiple tracks:", error);
+    res.status(500).json({ error: "Không thể thêm nhiều bài hát vào playlist" });
+  }
+});
+
 // ❌ Xoá bài hát khỏi playlist
 router.delete("/playlist/remove", (req, res) => {
   const { key, playlistId, path } = req.body;
@@ -158,6 +211,52 @@ router.delete("/playlist/remove", (req, res) => {
   ).run(playlistId, path);
 
   res.json({ success: true });
+});
+
+// ❌ Xoá nhiều bài hát khỏi playlist
+router.delete("/playlist/remove-multiple", (req, res) => {
+  const { key, playlistId, paths } = req.body;
+  if (!key || !playlistId || !Array.isArray(paths) || paths.length === 0) {
+    return res.status(400).json({ error: "Thiếu dữ liệu hoặc paths không hợp lệ" });
+  }
+
+  const db = getMusicDB(key);
+  
+  try {
+    // Bắt đầu transaction
+    db.prepare("BEGIN TRANSACTION").run();
+
+    // Prepare statement để delete
+    const deleteStmt = db.prepare(
+      `DELETE FROM playlist_items WHERE playlistId = ? AND songPath = ?`
+    );
+
+    // Delete từng bài hát
+    let removedCount = 0;
+    for (const path of paths) {
+      const result = deleteStmt.run(playlistId, path);
+      if (result.changes > 0) {
+        removedCount++;
+      }
+    }
+
+    // Cập nhật updatedAt của playlist
+    db.prepare(`UPDATE playlists SET updatedAt = ? WHERE id = ?`).run(now(), playlistId);
+
+    // Commit transaction
+    db.prepare("COMMIT").run();
+
+    res.json({ 
+      success: true, 
+      message: `Đã xóa ${removedCount} bài hát khỏi playlist`,
+      removedCount 
+    });
+  } catch (error) {
+    // Rollback nếu có lỗi
+    db.prepare("ROLLBACK").run();
+    console.error("Error removing multiple tracks:", error);
+    res.status(500).json({ error: "Không thể xóa nhiều bài hát khỏi playlist" });
+  }
 });
 
 // 🗑️ Xoá playlist hoàn toàn
