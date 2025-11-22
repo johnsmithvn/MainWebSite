@@ -145,11 +145,34 @@ function MediaHome() {
   };
 
   const handleFavorite = async (itemId, isFavorite) => {
+        // Optimistic update to avoid refetch causing flash/reload
+    const previousItems = mediaItems;
+    const previousSelected = new Set(selectedItems);
+
+    setMediaItems((prevItems) => {
+      if (view === 'favorites' && !isFavorite) {
+        return prevItems.filter((item) => item.id !== itemId);
+      }
+      return prevItems.map((item) =>
+        item.id === itemId ? { ...item, isFavorite } : item
+      );
+    });
+
+    if (view === 'favorites' && !isFavorite && selectedItems.has(itemId)) {
+      setSelectedItems((prev) => {
+        const updated = new Set(prev);
+        updated.delete(itemId);
+        return updated;
+      });
+    }
+
     try {
       await apiService.media.toggleFavorite({ key: dbkey, id: itemId, isFavorite });
       showToast(isFavorite ? 'Đã thêm vào yêu thích' : 'Đã xóa khỏi yêu thích', 'success');
-      loadData();
     } catch (error) {
+       // Revert UI state if API fails
+      setMediaItems(previousItems);
+      setSelectedItems(previousSelected);
       showToast(error.message, 'error');
     }
   };
