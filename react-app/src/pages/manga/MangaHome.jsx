@@ -10,6 +10,7 @@ import Button from '../../components/common/Button';
 import Breadcrumb from '../../components/common/Breadcrumb';
 import MangaCard from '../../components/manga/MangaCard';
 import MangaRandomSection from '../../components/manga/MangaRandomSection';
+import DeleteConfirmModal from '../../components/common/DeleteConfirmModal';
 import { DEFAULT_IMAGES } from '../../constants';
 
 const MangaHome = () => {
@@ -28,16 +29,20 @@ const MangaHome = () => {
     fetchMangaFolders,
     fetchFavorites,
     toggleFavorite,
+    deleteItem,
     clearNavigationFlag,
     clearMangaCache
   } = useMangaStore();
   
   const { sourceKey, rootFolder, setRootFolder } = useAuthStore();
+  const { showToast } = useUIStore();
   
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('name');
   const [showFilters, setShowFilters] = useState(false);
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0); // For forcing re-renders
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const viewParam = searchParams.get('view');
   const showRandomSection = !searchParams.get('path') && viewParam !== 'folder';
   const focusParam = searchParams.get('focus');
@@ -248,13 +253,25 @@ const MangaHome = () => {
       
       // Force refresh local component để hiển thị thay đổi ngay lập tức
       setLocalRefreshTrigger(prev => prev + 1);
-      
-      // Refresh favorites list to update UI
-      fetchFavorites();
-      
-      console.log('✅ MangaHome GridView favorite toggle completed');
     } catch (error) {
-      console.error('❌ Error toggling favorite in MangaHome GridView:', error);
+      console.error('Error toggling favorite:', error);
+      showToast?.(error.message || 'Lỗi cập nhật yêu thích', 'error');
+    }
+  };
+
+  const handleDeleteItem = async (path) => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteItem(path);
+      showToast?.(result.data.message || 'Đã xóa folder', 'success');
+      setItemToDelete(null);
+      // Refresh lại danh sách
+      await fetchMangaFolders(currentPath);
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      showToast?.(error.message || 'Lỗi khi xóa folder', 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -549,6 +566,7 @@ const MangaHome = () => {
                 onToggleFavorite={() => 
                   handleToggleFavorite(item)
                 }
+                onDeleteClick={(manga) => setItemToDelete(manga)}
                 onClick={handleFolderClick}
                 showViews={false}
                 variant="grid"
@@ -670,6 +688,20 @@ const MangaHome = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={async () => {
+          if (itemToDelete) {
+            await handleDeleteItem(itemToDelete.path);
+          }
+        }}
+        itemName={itemToDelete?.name || ''}
+        itemType="manga folder"
+        isLoading={isDeleting}
+      />
       </div>
     </div>
   );

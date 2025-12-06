@@ -56,32 +56,32 @@ const Header = () => {
   const currentDisplayName = useMemo(() => {
     // Manga select page: show sourceKey
     if (isSelectPage) {
-      return lastMangaKey || 'MainWebSite';
+      return lastMangaKey || 'Meo Meo';
     }
     
     // Manga page with root folder: show root folder name
     if (isMangaPage) {
-      return lastMangaRootFolder || lastMangaKey || 'MainWebSite';
+      return lastMangaRootFolder || lastMangaKey || 'Meo Meo';
     }
     
     // Movie page: show sourceKey
     if (isMoviePage) {
-      return lastMovieKey || 'MainWebSite';
+      return lastMovieKey || 'Meo Meo';
     }
     
     // Music page: show sourceKey
     if (isMusicPage) {
-      return lastMusicKey || 'MainWebSite';
+      return lastMusicKey || 'Meo Meo';
     }
     
     // Offline manga: show formatted source
     if (isOfflineMangaPage) {
       const source = searchParams.get('source');
-      return source ? formatSourceLabel(source) : 'MainWebSite';
+      return source ? formatSourceLabel(source) : 'Home';
     }
     
     // Default: show MainWebSite
-    return 'MainWebSite';
+    return 'Meo Meo';
   }, [isSelectPage, isMangaPage, isMoviePage, isMusicPage, isOfflineMangaPage, lastMangaKey, lastMangaRootFolder, lastMovieKey, lastMusicKey, searchParams]);
 
   // Debug: Add temporary button to clear all last keys
@@ -145,8 +145,8 @@ const Header = () => {
                 to={isOfflineMangaPage ? '/offline' : homePath} 
                 className="flex items-center space-x-2 text-xl font-bold text-primary-600 dark:text-primary-400"
               >
-                <span>📚</span>
-                <span>{currentDisplayName}</span>
+                <span>⸜(｡˃ ᵕ ˂ )⸝♡</span>
+                <span className="hidden sm:inline">{currentDisplayName}</span>
               </Link>
             </div>
 

@@ -4,6 +4,166 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Added
+
+- ✨ [2025-12-06] Added delete functionality for manga folders
+  - Backend: Created `/api/manga/delete-item` endpoint with cascade deletion
+  - Frontend: Integrated delete button in MangaCard (bottom-right corner on hover)
+  - Store: Added `useMangaStore.deleteItem()` with state management
+  - Modal: Reused `DeleteConfirmModal` for confirmation
+  - Cascade logic: Deleting folder removes all subfolders + view counts
+  - Parameters: Uses manga-specific pattern (dbkey + root + path)
+  - Cache cleanup: Automatically clears cache after deletion
+
+- ✨ [2025-12-06] Added delete functionality for media items (photos/videos)
+  - Backend: Created `/api/media/delete-item` endpoint with cascade deletion
+  - Frontend: Integrated delete button in MediaGrid cards (grid view only)
+  - Folder cards: Added delete button at top-right corner on hover
+  - Delete button appears at bottom-right corner on hover (red trash icon)
+  - Modal: Reused `DeleteConfirmModal` for confirmation
+  - Cascade logic: Deleting folder removes all children items and subfolders
+  - Album cleanup: Automatically removes deleted items from all albums
+
+- ✨ [2025-12-06] Added delete functionality for movie items
+  - Backend: Created `/api/movie/delete-item` endpoint with cascade deletion
+  - Frontend: Integrated delete button in MovieCard (grid & list view)
+  - Store: Added `useMovieStore.deleteItem()` with UI state management
+  - Architecture: Single `DeleteConfirmModal` instance at page level (not per card)
+  - Cascade logic: Deleting folder removes all children videos recursively
+
+- ✨ [2025-01-26] Added professional delete confirmation modal for music items
+  - Created `DeleteConfirmModal` component with detailed warning UI
+  - Shows AlertTriangle icon, item name, and deletion scope warnings
+  - Differentiates messaging for folder vs file deletion
+  - Includes loading state during deletion process
+  - Supports Escape key and backdrop click to close
+
+- ✨ [2025-12-06] Added music item/folder delete functionality
+  - Backend API: `DELETE /api/music/delete-item` - Xóa file hoặc folder khỏi database
+  - Frontend: Delete button (🗑️) trong MusicCard (grid & list view)
+  - Smart deletion: Xóa folder sẽ xóa tất cả children + metadata (songs, playlist_items)
+  - UI: Confirmation dialog trước khi xóa
+  - Store function: `useMusicStore.deleteItem(path)` - Tự động cập nhật UI sau khi xóa
+
+### Changed
+
+- 🔄 [2025-01-26] Refactored delete feature to follow project architecture patterns
+  - Replaced `window.confirm` with `DeleteConfirmModal` for consistent UX
+  - Updated `useMusicStore.deleteItem` to use `apiService.music.deleteItem` instead of raw fetch
+  - Added `apiService.music.deleteItem` to centralized API service pattern
+  - Exported `DeleteConfirmModal` from `components/common/index.js` barrel export
+  - Integrated modal state management in MusicCard component
+
+- 🔄 [2025-12-06] Updated MusicCard component
+  - Thêm delete button ở bottom-right (grid view) và right side (list view)
+  - Delete button xuất hiện khi hover (grid) hoặc luôn visible (list)
+  - Prevent card click khi click delete button (stopPropagation)
+
+### Documentation
+
+- 📝 [2025-12-06] Added comprehensive analysis documents
+  - `docs/MUSIC-SCAN-ANALYSIS.md` - Phân tích logic scan music và đề xuất partial scan
+  - `docs/MUSIC-DELETE-FEATURE-ANALYSIS.md` - Phân tích DB structure và delete feature
+
+### Fixed
+
+- 🐛 [2025-12-06] Fixed media delete cascade logic
+  - Corrected folder deletion to include the folder itself (not just children)
+  - Added album_items cleanup when deleting folders (removes all child items from albums)
+  - Now properly deletes: folder entry + all subfolders + all media items + album references
+
+- 🐛 [2025-12-06] Fixed syntax error in MusicCard.jsx
+  - Removed duplicate closing braces in handleDeleteConfirm function (line 84-85)
+  - Build error resolved: "Unexpected '}'" during vite production build
+
+- 🐛 [2025-11-23] Fixed music: Next bài trong playlist không được thêm vào Recent → Gọi `addRecentMusic` khi playback bắt đầu để đảm bảo các lần next (auto-next hoặc nhấn Next) được ghi vào lịch sử Recent (react-app/src/pages/music/MusicPlayer.jsx)
+
+- 🐛 [2025-01-16] Fixed Timeline view showing non-viewable files → Thêm client-side filter trong loadMediaItems() để chỉ hiển thị image và video khi view === 'timeline' và không có type filter, đảm bảo timeline chỉ show media có thể xem được (MediaHome.jsx)
+- 🐛 [2025-01-16] Fixed duplicate "Công cụ" sections in Sidebar → Thêm điều kiện `currentContentType !== 'media'` vào section đầu tiên (manga/movie/music) và thay path check bằng `currentContentType === 'media'` cho section thứ hai, đảm bảo chỉ hiển thị 1 section tools tại 1 thời điểm (Sidebar.jsx)
+- 🐛 [2025-01-16] Fixed Reset button showing for Media type → Thêm điều kiện `currentContentType !== 'media'` trong DatabaseActions.jsx khi build button config array, media chỉ có Scan và Delete buttons vì không có reset endpoint (DatabaseActions.jsx)
+- 🐛 [2025-11-22] Fixed selection toolbar layout → Căn giữa toàn bộ selection toolbar bằng cách thay đổi từ `ml-auto` sang `justify-center`, loại bỏ alignment lệch phải cho layout cân bằng hơn (MusicPlayer.jsx)
+- 🐛 [2025-11-22] Fixed header tên source dài trên mobile làm đẩy icon → Ẩn tên source trên mobile (sm:hidden), chỉ hiển thị icon 📚 để tránh layout overflow và đảm bảo icons header không bị đẩy đi (Header.jsx)
+- 🐛 [2025-11-22] Fixed checkbox không tích được trong selection mode → Sửa event propagation bằng cách wrap checkbox trong div với onClick stopPropagation, checkbox onChange chỉ là controlled component, prevent click event bubble lên row trigger playback (MusicPlayer.jsx)
+
+### Added
+
+- ✨ [2025-11-22] Added remove from playlist functionality in MusicPlayer → Khi đang view playlist (có currentPlaylistId), hiển thị thêm cột "Action" với nút xóa (FiTrash2) cho mỗi track, thêm nút "Xóa khỏi playlist" trong selection toolbar màu đỏ, tạo API `/api/music/playlist/remove-multiple` với transaction support, auto update local state và currentIndex khi xóa tracks (MusicPlayer.jsx, playlist.js)
+- ✨ [2025-11-22] Added multiple track selection feature in Music Player → Thêm nút "Chọn nhiều bài" (toggle selection mode), checkbox cho mỗi track, selection toolbar với "Chọn tất cả/Bỏ chọn/Thêm vào playlist", disable drag-and-drop khi đang ở selection mode, highlight selected tracks với background màu xanh (MusicPlayer.jsx)
+- ✨ [2025-11-22] Added batch add to playlist functionality → Cập nhật PlaylistModal hỗ trợ thêm nhiều bài hát cùng lúc vào playlist, hiển thị số lượng bài hát được chọn trong modal header, tạo API endpoint `/api/music/playlist/add-multiple` với transaction support để đảm bảo tính toàn vẹn dữ liệu (PlaylistModal.jsx, playlist.js)
+
+### Changed
+
+- 🔄 [2025-11-22] Centralized auto-refresh intervals vào constants → Move hard-coded interval values từ `useRandomItems.js` (`staleTime: 5 * 60 * 1000`, `cacheTime: 10 * 60 * 1000`), `useRecentItems.js` (`staleTime: 30 * 1000` → `10 * 60 * 1000`, `cacheTime: 5 * 60 * 1000` → `20 * 60 * 1000`), và `useTopViewItems.js` (`staleTime: 10 * 60 * 1000` → `15 * 60 * 1000`) vào `AUTO_REFRESH` constants object (`RANDOM_ITEMS`, `RANDOM_ITEMS_CACHE`, `RECENT_ITEMS`, `TOP_VIEW_ITEMS`) để dễ maintain và customize, đồng bộ cache strategy across all hooks (constants/index.js, useRandomItems.js, useRecentItems.js, useTopViewItems.js)
+
+### Added
+
+- ✨ [2025-11-21] Added ServiceWorker thumbnail caching for Movie/Music/Media → Implement stale-while-revalidate strategy với cache limit 1000 items (~30MB), LRU cleanup, background update, giảm network requests và tăng performance khi scroll grid (sw.js v3.1.0)
+
+### Fixed
+
+- 🐛 [2025-11-20] Fixed MediaLightbox hooks error completely → Di chuyển TẤT CẢ function declarations (handlePrev, handleNext, zoomIn, zoomOut, etc.) lên TRƯỚC early return và useEffect, xóa các duplicate declarations, đảm bảo hooks luôn được gọi theo cùng thứ tự (MediaLightbox.jsx)
+- 🐛 [2025-11-20] Fixed browser back button behavior in MediaLightbox → Push dummy history state khi mở lightbox, intercept popstate event để đóng lightbox thay vì navigate về folder trước (MediaLightbox.jsx)
+
+### Added
+
+- ✨ [2025-11-16] Added Media database delete functionality → Thêm button "Delete Database" trong Sidebar Media Gallery với modal xác nhận chi tiết, cho phép xóa toàn bộ database media (albums, favorites, stats) nhưng giữ nguyên file gốc (MediaHome.jsx, Sidebar.jsx)
+
+### Changed
+
+- 🔄 [2025-11-16] Refactored MediaHome.jsx to use media APIs wrapper → Đồng bộ hóa toàn bộ API calls trong MediaHome.jsx để dùng `apiService.media.*` methods thay vì direct calls, đảm bảo consistency và tận dụng request deduplication + timeout config (MediaHome.jsx)
+
+### Fixed
+
+- 🐛 [2025-11-16] Fixed Media scan timeout issue → Bỏ giới hạn timeout cho scan media API bằng cách thêm `{ timeout: 0 }` config giống manga/movie/music, tránh request bị cancel khi scan folder lớn mất nhiều thời gian (MediaHome.jsx, api.js)
+- ✨ [2025-11-16] Added Media APIs wrapper → Tạo `media` object trong apiService với các methods chuẩn hóa (getFolders, getItems, getAlbums, scan, etc.) để đồng bộ với cấu trúc manga/movie/music APIs (api.js, constants/index.js)
+- 🐛 [2025-11-16] Fixed SQL injection vulnerability trong media-folders API → Thêm sanitize function escape ký tự `%` và `_` trong path parameter, sử dụng ESCAPE clause trong SQL LIKE queries để prevent wildcard injection attacks (media-folders.js)
+- 🐛 [2025-11-16] Fixed race condition trong MediaHome pagination → Thay đổi setPagination logic chỉ update khi data thực sự thay đổi (total, totalPages, limit), prevent infinite loop khi API response trigger re-fetch (MediaHome.jsx)
+- 🐛 [2025-11-16] Fixed incorrect state update pattern trong MediaHome → Chuyển từ spread operator mutation `setPagination({ ...pagination, page: pagination.page - 1 })` sang functional update `setPagination(prev => ({ ...prev, page: prev.page - 1 }))` để tránh stale closure issues (MediaHome.jsx)
+- 🐛 [2025-11-16] Fixed unsafe date handling trong MediaLightbox footer → Thêm null check `{item.date_taken ? new Date(item.date_taken).toLocaleDateString() : 'N/A'}` để prevent "Invalid Date" display khi date_taken null/undefined (MediaLightbox.jsx)
+- 🐛 [2025-11-16] Fixed missing error handler cho thumbnail images → Thêm onError handler với fallback hierarchy (thumbnail → original → default) để prevent broken image icons khi thumbnail load fail (MediaGrid.jsx)
+- 🐛 [2025-11-16] Fixed timeline prop không được truyền vào MediaTimeline → Thêm `timeline={timeline}` prop để component nhận đúng data từ API response (MediaHome.jsx)
+- 🐛 [2025-01-16] Fixed Media Gallery Timeline view UI issues → Sửa sticky header từ top-[100px] xuống top-[64px] để khớp với toolbar height, giảm padding và spacing cho gọn gàng (py-4→py-3, space-y-12→space-y-8, text-2xl→text-xl), xóa nút "Add to Album" trong Timeline view (chỉ giữ Select và Favorite), thêm onError handler cho thumbnails để fallback về default image khi lỗi load (MediaTimeline.jsx, MediaHome.jsx)
+- 🐛 [2025-01-16] Fixed Timeline header overlapping sidebar → Giảm z-index header từ z-30 xuống z-10 để không che sidebar, đồng bộ layout (MediaTimeline.jsx)
+- 🐛 [2025-01-16] Fixed Lightbox filename overflow → Thêm truncate + max-width (header: 60vw, footer: 70vw) và tooltip title cho tên file dài chỉ hiển thị 1 dòng, tránh tràn giao diện (MediaLightbox.jsx)
+- 🐛 [2025-01-16] Fixed MediaToolbar overlapping Sidebar → Giảm z-index toolbar từ z-50 xuống z-20 để sidebar không bị che (MediaToolbar.jsx)
+- 🐛 [2025-01-16] Removed obsolete zoom/rotate icons in Lightbox → Xóa ZoomIn/ZoomOut/Rotate UI, hỗ trợ pinch-to-zoom hai ngón + pan kéo tay, giữ double-click zoom desktop, cải thiện trải nghiệm mobile (MediaLightbox.jsx)
+- 🐛 [2025-11-16] Fixed Media Timeline header spacing bị đè bởi khoảng trắng dư → Xóa `pt-16` (thêm 64px) trên container MediaHome, giữ py-6; header sticky vẫn top-[64px] khớp chiều cao toolbar h-16. Kết quả: Không còn khoảng trắng lớn & header không bị cảm giác che/đẩy xuống (MediaHome.jsx)
+- 🐛 [2025-11-16] Fixed folders xuất hiện ở Favorites/Albums/Timeline view → Gắn hiển thị folders chỉ khi `view === 'photos'` và clear state folders nếu chuyển sang view khác để tránh hiện dư (MediaHome.jsx)
+- 🐛 [2025-11-16] Fixed không thêm được items vào Album (sai tham số) → Trước đây AlbumPicker gửi `selectedCount` (number) khiến `Array.from(number)` tạo mảng rỗng các phần tử undefined, update DB không thành công; sửa lại truyền `selectedItems` (Set) và convert đúng sang array IDs, thêm guard nếu chưa chọn gì (MediaToolbar.jsx, MediaHome.jsx)
+- ✨ [2025-11-16] Added Delete Album action → Nút xóa trên mỗi AlbumCard (hover hiện), xác nhận trước khi xóa, gọi DELETE `/api/media/albums/:id` và refresh danh sách (MediaAlbums.jsx, MediaHome.jsx)
+- ✨ [2025-11-16] Album cover auto from first item → `GET /api/media/albums` trả về `coverItemPath` + `coverThumbnail`; frontend dùng để hiển thị ảnh bìa nếu `coverImage` chưa được set (album-manager.js, MediaAlbums.jsx)
+- 🐛 [2025-11-16] Replaced native confirm dialog bằng Confirm Modal có sẵn → Xóa album dùng `confirmModal` (useModal) thay vì `window.confirm` để đồng bộ UX và tránh chặn UI (MediaAlbums.jsx)
+
+### Changed
+
+- 🔄 [2025-11-16] Changed MediaLightbox download to music-like streaming with progress → Thay `window.open()` bằng download streaming (fetch + stream + Blob) có hiển thị tiến trình nhỏ (percent + bytes), tự động đặt tên file theo item.path, và tích hợp Android WebView native download (`window.Android.downloadFile`) giống MusicPlayer; UX không chặn UI, hiển thị mini overlay trạng thái (MediaLightbox.jsx)
+- 🔄 [2025-11-16] Centralized file extension constants vào `backend/constants.js` và refactor scanners dùng constants → Bỏ các mảng IMAGE_EXTS/VIDEO_EXTS/AUDIO_EXTS hardcode trong `media-scan.js`, `movie-scan.js`, `music-scan.js`; import `FILE_EXTENSIONS` dùng thống nhất. Đồng thời thêm hỗ trợ `.heic/.heif` vào danh sách IMAGE để scan ảnh iPhone. (constants.js, media-scan.js, movie-scan.js, music-scan.js)
+
+### Changed
+
+- 🔄 [2025-01-16] Moved Media scan action into Sidebar → Xóa nút Scan khỏi MediaToolbar (chỉ hiện khi chọn item), thêm nút "🚀 Scan Media" trong Sidebar khi ở route /media, dùng custom event `media:scan` để kích hoạt scan từ MediaHome (Sidebar.jsx, MediaToolbar.jsx, MediaHome.jsx)
+
+### Added
+
+- ✨ [2025-01-16] Added Lightbox mobile swipe & responsive navigation → Thêm gesture vuốt trái/phải trên mobile để chuyển ảnh (ẩn nút điều hướng lớn trên màn hình nhỏ), hỗ trợ zoom kéo (pan) khi đã phóng to, double-click để toggle 1x/2x, phím tắt + / - để zoom, giới hạn scale 1x–8x, reset zoom khi đổi ảnh (MediaLightbox.jsx)
+
+### Changed
+
+- 🔄 [2025-01-16] Changed Media Gallery to folder navigation mode → Giống Manga/Movie với folders table trong database, hiển thị folders với thumbnail preview, click vào folder để navigate vào trong, breadcrumb navigation, video fallback về default thumbnail nếu không có .thumbnail, scan folders với itemCount và thumbnail tự động (db.js, media-scan.js, media-folders.js, MediaHome.jsx, MediaGrid.jsx, media.js)
+
+### Fixed
+
+- 🐛 [2025-01-16] Fixed Media Gallery API 404 errors → Sửa tất cả media API files export router thành export function handlers (scan-media.js, media-folder.js, favorite-media.js, reset-media-db.js, set-thumbnail.js, media-cache.js, media-stats.js), routes/media.js gọi đúng function handlers thay vì routers, nguyên nhân: Express router không thể mount router con như middleware trực tiếp
+
+### Added
+
+- ✨ [2025-01-16] Added Media Gallery source selection on Home page → Thêm section "Media Gallery 📸" vào trang chủ để chọn source MEDIA_* (MEDIA_PHOTOS, MEDIA_CAMERA, MEDIA_DOWNLOAD), tương tự Movie và Music, click vào source key sẽ navigate đến `/media?key=MEDIA_XXX` (Home.jsx, system.js, config.js)
+- ✨ [2025-01-16] Added Media Gallery feature (Google Photos-like) → Trang mới `/media` để quản lý ảnh/video cá nhân với 4 views (Photos Grid, Timeline, Albums, Favorites), Lightbox viewer, Multi-select, Auto thumbnail detection, Mark & Sweep GC scan, SQLite database với 2 tables (media_items, albums), 10 API endpoints, hỗ trợ MEDIA_* root paths trong .env (28 files: backend API, frontend components, documentation)
+
+### Fixed
+
+- 🐛 [2025-01-16] Fixed build error "fetchAPI is not exported" → Sửa MediaHome.jsx sử dụng `apiService` thay vì `fetchAPI` không tồn tại
+
 ### Changed
 
 - 🔄 [2025-01-08] Enhanced scan result display → DatabaseActions hiển thị chi tiết stats breakdown (inserted, updated, skipped, deleted) thay vì chỉ tổng số, giúp user hiểu rõ scan operation đã làm gì (DatabaseActions.jsx)

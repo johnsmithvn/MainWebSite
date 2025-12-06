@@ -17,9 +17,9 @@ const SECURITY_KEYS = (parsedEnv.SECURITY || "")
 const SECURITY_PASSWORD = parsedEnv.SECURITY_PASSWORD || "";
 
 for (const [key, value] of Object.entries(parsedEnv)) {
-  // ✅ Lấy cả ROOT_ (manga), V_ (movie), M_ (music)
+  // ✅ Lấy cả ROOT_ (manga), V_ (movie), M_ (music), MEDIA_ (media gallery)
   if (
-    (key.startsWith("ROOT_") || key.startsWith("V_") || key.startsWith("M_")) &&
+    (key.startsWith("ROOT_") || key.startsWith("V_") || key.startsWith("M_") || key.startsWith("MEDIA_")) &&
     typeof value === "string" &&
     fs.existsSync(value)
   ) {
@@ -36,12 +36,15 @@ for (const [key, value] of Object.entries(parsedEnv)) {
 // }
 
 /**
- * ✅ Trả về path thật từ root key
+ * ✅ Trả về path thật từ root key (case-insensitive)
  * @param {string} rootKey
  * @returns {string} absolute path
  */
 function getRootPath(rootKey) {
-  return ROOT_PATHS[rootKey.toUpperCase()];
+  // Case-insensitive lookup: tìm key trong ROOT_PATHS
+  const upperKey = rootKey.toUpperCase();
+  const actualKey = Object.keys(ROOT_PATHS).find(k => k.toUpperCase() === upperKey);
+  return actualKey ? ROOT_PATHS[actualKey] : undefined;
 }
 
 function getAllMovieKeys() {
@@ -55,6 +58,10 @@ function getAllMusicKeys() {
   return Object.keys(ROOT_PATHS).filter((key) => key.startsWith("M_"));
 }
 
+function getAllMediaKeys() {
+  return Object.keys(ROOT_PATHS).filter((key) => key.startsWith("MEDIA_"));
+}
+
 
 module.exports = {
   ROOT_PATHS,
@@ -63,6 +70,7 @@ module.exports = {
   getAllMovieKeys, // 🟢 THÊM HÀM NÀY
   getAllMangaKeys, // 🟢 VÀ HÀM NÀY
   getAllMusicKeys,
+  getAllMediaKeys,
   SECURITY_KEYS,
   SECURITY_PASSWORD,
 };

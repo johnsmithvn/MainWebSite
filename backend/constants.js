@@ -15,9 +15,28 @@ const FILE_EXTENSIONS = {
   ],
   IMAGE: [
     '.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif',
-    '.bmp', '.tiff', '.svg'
+    '.bmp', '.tiff', '.svg', '.heic', '.heif','.jfif'
   ],
-  PDF: ['.pdf']
+  PDF: ['.pdf'],
+  TEXT: [
+    '.txt', '.md', '.log', '.json', '.xml', '.csv',
+    '.yaml', '.yml', '.ini', '.cfg', '.conf'
+  ],
+  DOCUMENT: [
+    '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+    '.odt', '.ods', '.odp', '.rtf'
+  ],
+  ARCHIVE: [
+    '.zip', '.rar', '.7z', '.tar', '.gz', '.bz2',
+    '.xz', '.iso'
+  ],
+  CODE: [
+    '.js', '.jsx', '.ts', '.tsx', '.py', '.java',
+    '.c', '.cpp', '.h', '.cs', '.php', '.rb',
+    '.go', '.rs', '.swift', '.kt', '.sql', '.html',
+    '.css', '.scss', '.sass', '.less'
+  ],
+  OTHER: [] // Catch-all for any other file types
 };
 
 /**
@@ -29,7 +48,8 @@ const DB_TABLES = {
   SONGS: 'songs',
   PLAYLISTS: 'playlists',
   PLAYLIST_ITEMS: 'playlist_items',
-  ROOT_THUMBNAILS: 'root_thumbnails'
+  ROOT_THUMBNAILS: 'root_thumbnails',
+  MEDIA_ITEMS: 'media_items'
 };
 
 /**

@@ -1,6 +1,7 @@
 // 📁 src/components/manga/MangaCard.jsx
 import { useNavigate } from 'react-router-dom';
 import { FiEye, FiHeart } from 'react-icons/fi';
+import { Trash2 } from 'lucide-react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { useRecentManager } from '@/hooks/useRecentManager';
@@ -10,7 +11,8 @@ import { DEFAULT_IMAGES } from '@/constants';
 const MangaCard = ({ 
   manga, 
   isFavorite, 
-  onToggleFavorite, 
+  onToggleFavorite,
+  onDeleteClick,
   showViews = false,
   onClick,
   className = '',
@@ -82,6 +84,13 @@ const MangaCard = ({
     }
   };
 
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    if (onDeleteClick) {
+      onDeleteClick(manga);
+    }
+  };
+
   const displayName = manga.name === '__self__' ? 'Đọc ngay' : manga.name;
 
   const cardClasses = `manga-card ${variant} ${className}`;
@@ -101,13 +110,6 @@ const MangaCard = ({
         />
         
         {/* View count badge - always visible when showViews is true */}
-        {showViews && (manga.count > 0 || manga.viewCount > 0) && (
-          <div className="view-count-badge">
-            <FiEye />
-            <span>{formatViewCount(manga.count || manga.viewCount || 0)}</span>
-          </div>
-        )}
-        
         {/* Favorite button - always visible when active, or on hover */}
         <button
           className={`manga-card-favorite ${isCurrentlyFavorite ? 'active' : ''}`}
@@ -116,6 +118,17 @@ const MangaCard = ({
         >
           <FiHeart />
         </button>
+        
+        {/* Delete button - bottom right corner on hover */}
+        {onDeleteClick && (
+          <button
+            className="manga-card-delete"
+            onClick={handleDeleteClick}
+            title="Xóa folder"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
         
         {/* Overlay for general hover effects */}
         <div className="manga-card-overlay">

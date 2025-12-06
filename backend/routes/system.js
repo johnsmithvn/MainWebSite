@@ -4,7 +4,7 @@
 const express = require("express");
 const router = express.Router();
 const fs = require("fs");
-const { getRootPath, getAllMangaKeys, getAllMovieKeys, getAllMusicKeys, SECURITY_KEYS, SECURITY_PASSWORD } = require("../utils/config");
+const { getRootPath, getAllMangaKeys, getAllMovieKeys, getAllMusicKeys, getAllMediaKeys, SECURITY_KEYS, SECURITY_PASSWORD } = require("../utils/config");
 
 // Health check endpoint
 router.use("/health", require("../api/health"));
@@ -33,10 +33,12 @@ router.get("/source-keys.js", (req, res) => {
   const manga = getAllMangaKeys();
   const movie = getAllMovieKeys();
   const music = getAllMusicKeys();
+  const media = getAllMediaKeys();
   
   const js = `window.mangaKeys = ${JSON.stringify(manga)};
 window.movieKeys = ${JSON.stringify(movie)};
-window.musicKeys = ${JSON.stringify(music)};`;
+window.musicKeys = ${JSON.stringify(music)};
+window.mediaKeys = ${JSON.stringify(media)};`;
   
   res.type("application/javascript").send(js);
 });

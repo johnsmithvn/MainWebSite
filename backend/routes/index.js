@@ -5,6 +5,7 @@ const express = require("express");
 const mangaRoutes = require("./manga");
 const movieRoutes = require("./movie");
 const musicRoutes = require("./music");
+const mediaRoutes = require("./media");
 const systemRoutes = require("./system");
 
 const router = express.Router();
@@ -13,6 +14,7 @@ const router = express.Router();
 router.use("/manga", mangaRoutes);
 router.use("/movie", movieRoutes);
 router.use("/music", musicRoutes);
+router.use("/media", mediaRoutes);
 router.use("/", systemRoutes);
 
 module.exports = router;

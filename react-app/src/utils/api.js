@@ -145,6 +145,7 @@ export const apiService = {
     scan: (params) => api.post(`${API.ENDPOINTS.MANGA}/scan`, params, { timeout: 0 }),
     getRootThumbnail: (params) => api.get(`${API.ENDPOINTS.MANGA}/root-thumbnail`, { params }),
     setRootThumbnail: (data) => api.post(`${API.ENDPOINTS.MANGA}/root-thumbnail`, data),
+    deleteItem: (data) => api.delete(`${API.ENDPOINTS.MANGA}/delete-item`, { data }),
   },
 
   // Movie APIs
@@ -171,6 +172,7 @@ export const apiService = {
     resetDb: (params) => api.delete(`${API.ENDPOINTS.MOVIE}/reset-cache-movie`, { params, timeout: 0 }),
     scan: (params) => api.post(`${API.ENDPOINTS.MOVIE}/scan-movie`, params, { timeout: 0 }),
     checkEmpty: (params) => api.get(`${API.ENDPOINTS.MOVIE}/movie-folder-empty`, { params }),
+    deleteItem: (data) => api.delete(`${API.ENDPOINTS.MOVIE}/delete-item`, { data }),
   },
 
   // Music APIs
@@ -201,6 +203,35 @@ export const apiService = {
     setThumbnail: (params) => api.post(`${API.ENDPOINTS.MUSIC}/set-thumbnail`, params),
     resetDb: (params) => api.delete(`${API.ENDPOINTS.MUSIC}/reset-cache-music`, { params, timeout: 0 }),
     scan: (params) => api.post(`${API.ENDPOINTS.MUSIC}/scan-music`, params, { timeout: 0 }),
+    deleteItem: (data) => api.delete(`${API.ENDPOINTS.MUSIC}/delete-item`, { data }),
+  },
+
+  // Media APIs (Photos/Videos Gallery)
+  media: {
+    getFolders: (params) => {
+      const url = `${API.ENDPOINTS.MEDIA}/media-folders`;
+      const key = buildGetKey(url, params);
+      if (inflightGet.has(key)) {
+        return inflightGet.get(key);
+      }
+      const req = api.get(url, { params }).finally(() => {
+        inflightGet.delete(key);
+      });
+      inflightGet.set(key, req);
+      return req;
+    },
+    getItems: (params) => api.get(`${API.ENDPOINTS.MEDIA}/media-folder`, { params }),
+    getAlbums: (params) => api.get(`${API.ENDPOINTS.MEDIA}/albums`, { params }),
+    createAlbum: (data) => api.post(`${API.ENDPOINTS.MEDIA}/albums`, data),
+    updateAlbum: (id, data) => api.put(`${API.ENDPOINTS.MEDIA}/albums/${id}`, data),
+    deleteAlbum: (id, data) => api.delete(`${API.ENDPOINTS.MEDIA}/albums/${id}`, { data }),
+    addItemsToAlbum: (id, data) => api.post(`${API.ENDPOINTS.MEDIA}/albums/${id}/items`, data),
+    removeItemsFromAlbum: (id, data) => api.delete(`${API.ENDPOINTS.MEDIA}/albums/${id}/items`, { data }),
+    toggleFavorite: (data) => api.post(`${API.ENDPOINTS.MEDIA}/favorite-media`, data),
+    scan: (params) => api.post(`${API.ENDPOINTS.MEDIA}/scan-media`, params, { timeout: 0 }),
+    resetDb: (data) => api.post(`${API.ENDPOINTS.MEDIA}/reset-media-db`, data, { timeout: 0 }),
+    getStats: (params) => api.get(`${API.ENDPOINTS.MEDIA}/media-stats`, { params }),
+    deleteItem: (data) => api.delete(`${API.ENDPOINTS.MEDIA}/delete-item`, { data }),
   },
 
   // System APIs

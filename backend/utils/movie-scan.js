@@ -2,13 +2,15 @@ const fs = require("fs");
 const path = require("path");
 const { getRootPath } = require("./config");
 const { getMovieDB } = require("./db");
+const { FILE_EXTENSIONS } = require("../constants");
 
 const ffmpeg = require("fluent-ffmpeg");
 const ffprobe = require("ffprobe-static");
 ffmpeg.setFfprobePath(ffprobe.path);
 
-const VIDEO_EXTS = [".mp4", ".mkv", ".avi", ".webm", ".ts", ".wmv"];
-const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".avif"];
+// Centralized extensions
+const VIDEO_EXTS = (FILE_EXTENSIONS.VIDEO || []).map(e => e.toLowerCase());
+const IMAGE_EXTS = (FILE_EXTENSIONS.IMAGE || []).map(e => e.toLowerCase());
 
 // 🟢 Hàm tìm thumbnail đúng tên
 function findThumbnail(thumbnailDir, baseName) {
