@@ -4,20 +4,16 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
-### Fixed
-
-- 🐛 [2025-12-06] Fixed getRootPath() case-sensitive bug causing scan failures
-  - Issue: ENV keys like `V_new_movie` were not found when queried as `V_NEW_MOVIE`
-  - Solution: Implemented case-insensitive key lookup in `backend/utils/config.js`
-  - Impact: All database scan operations now work with mixed-case ENV keys
-
-- 🐛 [2025-12-06] Fixed Settings page API calls not using Vite proxy
-  - Issue: Direct `fetch()` calls bypassed proxy causing 500 errors on Tailscale domains
-  - Solution: Replaced all `fetch()` with `apiService` methods (manga/movie/music scan & reset)
-  - Files: `react-app/src/pages/Settings.jsx` - 8 endpoints migrated
-  - Impact: Database operations now work correctly across all network configurations
-
 ### Added
+
+- ✨ [2025-12-06] Added delete functionality for media items (photos/videos)
+  - Backend: Created `/api/media/delete-item` endpoint with cascade deletion
+  - Frontend: Integrated delete button in MediaGrid cards (grid view only)
+  - Folder cards: Added delete button at top-right corner on hover
+  - Delete button appears at bottom-right corner on hover (red trash icon)
+  - Modal: Reused `DeleteConfirmModal` for confirmation
+  - Cascade logic: Deleting folder removes all children items and subfolders
+  - Album cleanup: Automatically removes deleted items from all albums
 
 - ✨ [2025-12-06] Added delete functionality for movie items
   - Backend: Created `/api/movie/delete-item` endpoint with cascade deletion
@@ -61,6 +57,11 @@ All notable changes to this project will be documented in this file. Dates use Y
   - `docs/MUSIC-DELETE-FEATURE-ANALYSIS.md` - Phân tích DB structure và delete feature
 
 ### Fixed
+
+- 🐛 [2025-12-06] Fixed media delete cascade logic
+  - Corrected folder deletion to include the folder itself (not just children)
+  - Added album_items cleanup when deleting folders (removes all child items from albums)
+  - Now properly deletes: folder entry + all subfolders + all media items + album references
 
 - 🐛 [2025-12-06] Fixed syntax error in MusicCard.jsx
   - Removed duplicate closing braces in handleDeleteConfirm function (line 84-85)

@@ -11,6 +11,8 @@ import MediaTimeline from '@/components/media/MediaTimeline';
 import MediaAlbums from '@/components/media/MediaAlbums';
 import MediaToolbar from '@/components/media/MediaToolbar';
 import MediaLightbox from '@/components/media/MediaLightbox';
+import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
+import { Trash2 } from 'lucide-react';
 
 function MediaHome() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -25,6 +27,8 @@ function MediaHome() {
   const [loading, setLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const dbkey = searchParams.get('key') || 'MEDIA_PHOTOS';
   const currentPath = searchParams.get('path') || '';
@@ -177,6 +181,21 @@ function MediaHome() {
     }
   };
 
+  const deleteItem = async (path) => {
+    setIsDeleting(true);
+    try {
+      const result = await apiService.media.deleteItem({ key: dbkey, path });
+      showToast(result.data.message || 'Đã xóa item', 'success');
+      setItemToDelete(null);
+      // Refresh data
+      await loadData();
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleCreateAlbum = async (name, description) => {
     try {
       await apiService.media.createAlbum({ key: dbkey, name, description });
@@ -268,6 +287,7 @@ function MediaHome() {
                   }}
                   onItemClick={(index) => setLightboxIndex(index)}
                   onFavorite={handleFavorite}
+                  onDeleteClick={(item) => setItemToDelete(item)}
                 />
               </>
             ) : view === 'timeline' ? (
@@ -318,10 +338,10 @@ function MediaHome() {
                     <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Folders</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                       {folders.map((folder) => (
-                        <button
+                        <div
                           key={folder.path}
+                          className="relative group flex flex-col items-center p-4 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition cursor-pointer"
                           onClick={() => setSearchParams({ key: dbkey, path: folder.path })}
-                          className="flex flex-col items-center p-4 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
                         >
                           {folder.thumbnail ? (
                             <img
@@ -344,7 +364,18 @@ function MediaHome() {
                               {folder.itemCount} items
                             </span>
                           )}
-                        </button>
+                          
+                          {/* Delete button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setItemToDelete({ path: folder.path, name: folder.name, type: 'folder' });
+                            }}
+                            className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-600/90 hover:bg-red-700 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 size={14} className="text-white" />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -362,6 +393,7 @@ function MediaHome() {
                   }}
                   onItemClick={(index) => setLightboxIndex(index)}
                   onFavorite={handleFavorite}
+                  onDeleteClick={(item) => setItemToDelete(item)}
                 />
               </>
             )}
@@ -402,6 +434,20 @@ function MediaHome() {
 
       {/* Modal for confirmations */}
       <Modal />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={async () => {
+          if (itemToDelete) {
+            await deleteItem(itemToDelete.path);
+          }
+        }}
+        itemName={itemToDelete?.name || ''}
+        itemType="media item"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

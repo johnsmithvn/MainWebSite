@@ -2,7 +2,7 @@
 // 📸 Media Grid Component (Google Photos-like)
 
 import React from 'react';
-import { Heart, Video, CheckCircle, FileText, Music, File, Archive, FileCode } from 'lucide-react';
+import { Heart, Video, CheckCircle, FileText, Music, File, Archive, FileCode, Trash2 } from 'lucide-react';
 
 // Helper: Get file type icon
 function FileTypeIcon({ type, size = 20 }) {
@@ -26,7 +26,7 @@ function FileTypeIcon({ type, size = 20 }) {
   }
 }
 
-function MediaGrid({ items, selectedItems, onSelectItem, onItemClick, onFavorite }) {
+function MediaGrid({ items, selectedItems, onSelectItem, onItemClick, onFavorite, onDeleteClick }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1">
       {items.map((item, index) => (
@@ -38,13 +38,14 @@ function MediaGrid({ items, selectedItems, onSelectItem, onItemClick, onFavorite
           onSelect={() => onSelectItem(item.id)}
           onClick={() => onItemClick(index)}
           onFavorite={(isFavorite) => onFavorite(item.id, isFavorite)}
+          onDeleteClick={() => onDeleteClick?.(item)}
         />
       ))}
     </div>
   );
 }
 
-function MediaGridItem({ item, index, isSelected, onSelect, onClick, onFavorite }) {
+function MediaGridItem({ item, index, isSelected, onSelect, onClick, onFavorite, onDeleteClick }) {
   const isVideo = item.type === 'video';
   const isImage = item.type === 'image';
   const isViewable = isImage || isVideo;
@@ -140,7 +141,6 @@ function MediaGridItem({ item, index, isSelected, onSelect, onClick, onFavorite 
           )}
         </button>
       </div>
-
       {/* Favorite button */}
       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
@@ -156,9 +156,25 @@ function MediaGridItem({ item, index, isSelected, onSelect, onClick, onFavorite 
           />
         </button>
       </div>
+
+      {/* Delete button */}
+      {onDeleteClick && (
+        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteClick();
+            }}
+            className="w-6 h-6 rounded-full bg-red-600/90 hover:bg-red-700 flex items-center justify-center shadow-md"
+          >
+            <Trash2 size={14} className="text-white" />
+          </button>
+        </div>
+      )}
     </div>
   );
-}
+} ;
+
 
 function formatDuration(seconds) {
   if (!seconds) return '0:00';
