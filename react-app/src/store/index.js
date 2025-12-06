@@ -434,6 +434,53 @@ export const useMangaStore = create(
           set({ error: error.response?.data?.message || error.message });
         }
       },
+
+      deleteItem: async (path) => {
+        try {
+          const { sourceKey, rootFolder } = useAuthStore.getState();
+          
+          console.log('🗑️ MangaStore deleteItem:', { sourceKey, rootFolder, path });
+          
+          // Call API to delete item
+          const result = await apiService.manga.deleteItem({ dbkey: sourceKey, root: rootFolder, path });
+          
+          console.log('✅ Delete result:', result.data);
+          
+          // Update local state - remove deleted item and all children
+          set((state) => {
+            const updatedMangaList = state.mangaList.filter(manga => {
+              // Remove the deleted folder itself
+              if (manga.path === path) return false;
+              // Remove all children (path starts with deleted path)
+              if (manga.path.startsWith(`${path}/`)) return false;
+              return true;
+            });
+            
+            // Also remove from favorites if it was favorited
+            const updatedFavorites = state.favorites.filter(f => {
+              if (f.path === path) return false;
+              if (f.path.startsWith(`${path}/`)) return false;
+              return true;
+            });
+            
+            return { 
+              mangaList: updatedMangaList,
+              favorites: updatedFavorites,
+              favoritesRefreshTrigger: state.favoritesRefreshTrigger + 1
+            };
+          });
+          
+          // Clear manga cache to force refresh
+          const currentPath = get().currentPath;
+          setMangaCache(sourceKey, rootFolder, currentPath, null);
+          
+          return result;
+          
+        } catch (error) {
+          console.error('Delete item error:', error);
+          throw error;
+        }
+      },
     }),
     {
       name: 'manga-storage',

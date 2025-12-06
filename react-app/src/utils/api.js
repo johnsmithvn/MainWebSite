@@ -145,6 +145,7 @@ export const apiService = {
     scan: (params) => api.post(`${API.ENDPOINTS.MANGA}/scan`, params, { timeout: 0 }),
     getRootThumbnail: (params) => api.get(`${API.ENDPOINTS.MANGA}/root-thumbnail`, { params }),
     setRootThumbnail: (data) => api.post(`${API.ENDPOINTS.MANGA}/root-thumbnail`, data),
+    deleteItem: (data) => api.delete(`${API.ENDPOINTS.MANGA}/delete-item`, { data }),
   },
 
   // Movie APIs

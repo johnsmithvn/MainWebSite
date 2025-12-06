@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Added
 
+- ✨ [2025-12-06] Added delete functionality for manga folders
+  - Backend: Created `/api/manga/delete-item` endpoint with cascade deletion
+  - Frontend: Integrated delete button in MangaCard (bottom-right corner on hover)
+  - Store: Added `useMangaStore.deleteItem()` with state management
+  - Modal: Reused `DeleteConfirmModal` for confirmation
+  - Cascade logic: Deleting folder removes all subfolders + view counts
+  - Parameters: Uses manga-specific pattern (dbkey + root + path)
+  - Cache cleanup: Automatically clears cache after deletion
+
 - ✨ [2025-12-06] Added delete functionality for media items (photos/videos)
   - Backend: Created `/api/media/delete-item` endpoint with cascade deletion
   - Frontend: Integrated delete button in MediaGrid cards (grid view only)
