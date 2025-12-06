@@ -14,5 +14,6 @@ router.use("/", require("../api/movie/video-cache"));
 router.use("/", require("../api/movie/favorite-movie"));
 router.use("/", require("../api/movie/extract-movie-thumbnail"));
 router.use("/", require("../api/movie/set-thumbnail"));
+router.use("/", require("../api/movie/delete-item"));
 
 module.exports = router;

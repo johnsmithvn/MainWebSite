@@ -36,12 +36,15 @@ for (const [key, value] of Object.entries(parsedEnv)) {
 // }
 
 /**
- * ✅ Trả về path thật từ root key
+ * ✅ Trả về path thật từ root key (case-insensitive)
  * @param {string} rootKey
  * @returns {string} absolute path
  */
 function getRootPath(rootKey) {
-  return ROOT_PATHS[rootKey.toUpperCase()];
+  // Case-insensitive lookup: tìm key trong ROOT_PATHS
+  const upperKey = rootKey.toUpperCase();
+  const actualKey = Object.keys(ROOT_PATHS).find(k => k.toUpperCase() === upperKey);
+  return actualKey ? ROOT_PATHS[actualKey] : undefined;
 }
 
 function getAllMovieKeys() {

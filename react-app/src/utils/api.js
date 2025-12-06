@@ -171,6 +171,7 @@ export const apiService = {
     resetDb: (params) => api.delete(`${API.ENDPOINTS.MOVIE}/reset-cache-movie`, { params, timeout: 0 }),
     scan: (params) => api.post(`${API.ENDPOINTS.MOVIE}/scan-movie`, params, { timeout: 0 }),
     checkEmpty: (params) => api.get(`${API.ENDPOINTS.MOVIE}/movie-folder-empty`, { params }),
+    deleteItem: (data) => api.delete(`${API.ENDPOINTS.MOVIE}/delete-item`, { data }),
   },
 
   // Music APIs
@@ -201,6 +202,7 @@ export const apiService = {
     setThumbnail: (params) => api.post(`${API.ENDPOINTS.MUSIC}/set-thumbnail`, params),
     resetDb: (params) => api.delete(`${API.ENDPOINTS.MUSIC}/reset-cache-music`, { params, timeout: 0 }),
     scan: (params) => api.post(`${API.ENDPOINTS.MUSIC}/scan-music`, params, { timeout: 0 }),
+    deleteItem: (data) => api.delete(`${API.ENDPOINTS.MUSIC}/delete-item`, { data }),
   },
 
   // Media APIs (Photos/Videos Gallery)

@@ -15,6 +15,7 @@ export { default as Toast } from './Toast';
 export { default as Breadcrumb } from './Breadcrumb';
 export { default as Pagination } from './Pagination';
 export { default as DatabaseActions } from './DatabaseActions';
+export { default as DeleteConfirmModal } from './DeleteConfirmModal';
 export { default as DownloadProgressModal } from './DownloadProgressModal';
 export { default as DownloadConfirmModal } from './DownloadConfirmModal';
 export { default as StorageQuotaModal } from './StorageQuotaModal';

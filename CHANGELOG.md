@@ -6,6 +6,66 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-12-06] Fixed getRootPath() case-sensitive bug causing scan failures
+  - Issue: ENV keys like `V_new_movie` were not found when queried as `V_NEW_MOVIE`
+  - Solution: Implemented case-insensitive key lookup in `backend/utils/config.js`
+  - Impact: All database scan operations now work with mixed-case ENV keys
+
+- 🐛 [2025-12-06] Fixed Settings page API calls not using Vite proxy
+  - Issue: Direct `fetch()` calls bypassed proxy causing 500 errors on Tailscale domains
+  - Solution: Replaced all `fetch()` with `apiService` methods (manga/movie/music scan & reset)
+  - Files: `react-app/src/pages/Settings.jsx` - 8 endpoints migrated
+  - Impact: Database operations now work correctly across all network configurations
+
+### Added
+
+- ✨ [2025-12-06] Added delete functionality for movie items
+  - Backend: Created `/api/movie/delete-item` endpoint with cascade deletion
+  - Frontend: Integrated delete button in MovieCard (grid & list view)
+  - Store: Added `useMovieStore.deleteItem()` with UI state management
+  - Architecture: Single `DeleteConfirmModal` instance at page level (not per card)
+  - Cascade logic: Deleting folder removes all children videos recursively
+
+- ✨ [2025-01-26] Added professional delete confirmation modal for music items
+  - Created `DeleteConfirmModal` component with detailed warning UI
+  - Shows AlertTriangle icon, item name, and deletion scope warnings
+  - Differentiates messaging for folder vs file deletion
+  - Includes loading state during deletion process
+  - Supports Escape key and backdrop click to close
+
+- ✨ [2025-12-06] Added music item/folder delete functionality
+  - Backend API: `DELETE /api/music/delete-item` - Xóa file hoặc folder khỏi database
+  - Frontend: Delete button (🗑️) trong MusicCard (grid & list view)
+  - Smart deletion: Xóa folder sẽ xóa tất cả children + metadata (songs, playlist_items)
+  - UI: Confirmation dialog trước khi xóa
+  - Store function: `useMusicStore.deleteItem(path)` - Tự động cập nhật UI sau khi xóa
+
+### Changed
+
+- 🔄 [2025-01-26] Refactored delete feature to follow project architecture patterns
+  - Replaced `window.confirm` with `DeleteConfirmModal` for consistent UX
+  - Updated `useMusicStore.deleteItem` to use `apiService.music.deleteItem` instead of raw fetch
+  - Added `apiService.music.deleteItem` to centralized API service pattern
+  - Exported `DeleteConfirmModal` from `components/common/index.js` barrel export
+  - Integrated modal state management in MusicCard component
+
+- 🔄 [2025-12-06] Updated MusicCard component
+  - Thêm delete button ở bottom-right (grid view) và right side (list view)
+  - Delete button xuất hiện khi hover (grid) hoặc luôn visible (list)
+  - Prevent card click khi click delete button (stopPropagation)
+
+### Documentation
+
+- 📝 [2025-12-06] Added comprehensive analysis documents
+  - `docs/MUSIC-SCAN-ANALYSIS.md` - Phân tích logic scan music và đề xuất partial scan
+  - `docs/MUSIC-DELETE-FEATURE-ANALYSIS.md` - Phân tích DB structure và delete feature
+
+### Fixed
+
+- 🐛 [2025-12-06] Fixed syntax error in MusicCard.jsx
+  - Removed duplicate closing braces in handleDeleteConfirm function (line 84-85)
+  - Build error resolved: "Unexpected '}'" during vite production build
+
 - 🐛 [2025-11-23] Fixed music: Next bài trong playlist không được thêm vào Recent → Gọi `addRecentMusic` khi playback bắt đầu để đảm bảo các lần next (auto-next hoặc nhấn Next) được ghi vào lịch sử Recent (react-app/src/pages/music/MusicPlayer.jsx)
 
 - 🐛 [2025-01-16] Fixed Timeline view showing non-viewable files → Thêm client-side filter trong loadMediaItems() để chỉ hiển thị image và video khi view === 'timeline' và không có type filter, đảm bảo timeline chỉ show media có thể xem được (MediaHome.jsx)
