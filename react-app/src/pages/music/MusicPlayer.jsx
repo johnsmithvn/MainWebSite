@@ -257,6 +257,13 @@ const MusicPlayer = () => {
       lastIncRef.path = trackPath;
       lastIncRef.ts = now;
 
+      // Ensure track is recorded as recently played whenever playback starts
+      try {
+        addRecentMusic(track);
+      } catch (err) {
+        console.warn('Failed to add recent music:', err);
+      }
+
       try {
         const res = await fetch('/api/increase-view/music', {
           method: 'POST',

@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-11-23] Fixed music: Next bài trong playlist không được thêm vào Recent → Gọi `addRecentMusic` khi playback bắt đầu để đảm bảo các lần next (auto-next hoặc nhấn Next) được ghi vào lịch sử Recent (react-app/src/pages/music/MusicPlayer.jsx)
+
 - 🐛 [2025-01-16] Fixed Timeline view showing non-viewable files → Thêm client-side filter trong loadMediaItems() để chỉ hiển thị image và video khi view === 'timeline' và không có type filter, đảm bảo timeline chỉ show media có thể xem được (MediaHome.jsx)
 - 🐛 [2025-01-16] Fixed duplicate "Công cụ" sections in Sidebar → Thêm điều kiện `currentContentType !== 'media'` vào section đầu tiên (manga/movie/music) và thay path check bằng `currentContentType === 'media'` cho section thứ hai, đảm bảo chỉ hiển thị 1 section tools tại 1 thời điểm (Sidebar.jsx)
 - 🐛 [2025-01-16] Fixed Reset button showing for Media type → Thêm điều kiện `currentContentType !== 'media'` trong DatabaseActions.jsx khi build button config array, media chỉ có Scan và Delete buttons vì không có reset endpoint (DatabaseActions.jsx)
