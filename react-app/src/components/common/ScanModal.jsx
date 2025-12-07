@@ -16,12 +16,14 @@ const ScanModal = ({
 }) => {
   const [path, setPath] = useState('');
   const [error, setError] = useState('');
+  const [shallow, setShallow] = useState(false);
 
   // Reset state khi modal đóng
   useEffect(() => {
     if (!isOpen) {
       setPath('');
       setError('');
+      setShallow(false);
     }
   }, [isOpen]);
 
@@ -84,7 +86,7 @@ const ScanModal = ({
     // Remove leading/trailing slashes if any (defensive)
     const finalPath = cleanPath.replace(/^\/+|\/+$/g, '');
     
-    onConfirm?.(finalPath);
+    onConfirm?.(finalPath, shallow);
   };
 
   const getTypeLabel = () => {
@@ -150,7 +152,7 @@ const ScanModal = ({
                 </div>
 
                 {/* Path Input */}
-                <div className="mb-4">
+                <div className="mb-3">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     <Folder className="w-4 h-4 inline mr-1" />
                     Folder Path
@@ -173,11 +175,33 @@ const ScanModal = ({
                   )}
                 </div>
 
+                {/* Shallow scan checkbox */}
+                <div className="mb-4">
+                  <label className="flex items-start space-x-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50/60 dark:bg-gray-700/30 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={shallow}
+                      onChange={(e) => setShallow(e.target.checked)}
+                      disabled={isScanning}
+                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    <div className="text-sm text-left flex-1">
+                      <p className="font-semibold text-gray-800 dark:text-gray-100">
+                        Scan Shallow (không đệ quy)
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        Chỉ quét các items ở level hiện tại, không quét vào các folder con. 
+                        Lưu ý <span className="text-red-600 dark:text-red-400 font-semibold">chỉ sử dụng cho root</span> (không truyền path) vì bug logic delete.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
                 {/* Examples */}
                 <div className="mb-4">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Ví dụ paths:</p>
                   <div className="flex flex-wrap gap-2">
-                    {['Albums', 'Singles', 'Playlists/Rock'].map((example) => (
+                    {['New folder', '/', 'New folder/Rock'].map((example) => (
                       <button
                         key={example}
                         type="button"

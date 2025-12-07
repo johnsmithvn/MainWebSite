@@ -6,6 +6,40 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Fixed
 
+- 🐛 [2025-01-26] Fixed shallow scan deleting nested folders issue
+  - Issue: Shallow scan was marking all folders as unscanned, then deleting nested folders during cleanup
+  - Root cause: Phase 1 marked all items in scope, Phase 3 deleted all unscanned items
+  - Solution: Shallow-aware marking and cleanup logic
+  - Phase 1 marking now uses `path NOT LIKE '%/%/%'` to only mark direct children when shallow
+  - Phase 3 cleanup uses same pattern to only delete direct children when shallow
+  - Applies to both music and movie modules
+  - Example: Shallow scan at root only affects root items, preserves all nested folders
+
+### Added
+
+- ✨ [2025-01-26] Added shallow scan option for music and movie modules
+  - New checkbox in ScanModal: "Scan Shallow (không đệ quy)"
+  - Shallow scan only processes items at current level, skips recursion into subfolders
+  - Useful when only updating root items without affecting nested folders
+  - Example: Scan root music folder for new albums without re-scanning existing album contents
+  - Checkbox state managed in ScanModal, passed to backend via shallow parameter
+  - Backend support: shallow parameter in scanMusicFolderToDB and scanMovieFolderToDB
+  - API endpoints accept shallow: true in request body (music/scan-music, movie/scan-movie)
+  - Response message includes "(shallow)" indicator when shallow scan is performed
+
+- ✨ [2025-01-26] Added partial scan support for movie module
+  - Implemented scope-aware scanning with scopePath parameter in scanMovieFolderToDB
+  - Supports partial scan via path input (e.g., "Movies/Action")
+  - Scope-aware marking: Only marks items in scope as unscanned during Phase 1
+  - Scope boundary check: Processes only items in scope or parent folders
+  - Parent folder preservation: Marks parent folders as scanned to prevent deletion
+  - Scope-aware cleanup: Only deletes orphaned items within scope during Phase 3
+  - Updated API endpoint to accept path parameter: POST /api/scan-movie { key, path }
+  - Reuses existing ScanModal component for consistent UX across music/movie
+  - Full scan still available by not providing path parameter
+
+### Fixed
+
 - 🐛 [2025-01-26] Fixed ScanModal state reset issue after successful scan
   - Issue: Modal auto-reset to initial state after showing success message
   - Root cause: Progress state reset in finally block with setTimeout(500ms)

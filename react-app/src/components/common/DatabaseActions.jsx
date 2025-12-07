@@ -114,8 +114,8 @@ const DatabaseActions = ({
   };
 
   // Handle scan confirm from modal
-  const handleScanConfirm = async (path) => {
-    console.log('🔄 Starting scan:', { type: currentContentType, path, sourceKey: currentSourceKey });
+  const handleScanConfirm = async (path, shallow = false) => {
+    console.log('🔄 Starting scan:', { type: currentContentType, path, shallow, sourceKey: currentSourceKey });
     
     if (!currentSourceKey) {
       console.error('❌ No sourceKey available');
@@ -133,15 +133,15 @@ const DatabaseActions = ({
       switch (currentContentType) {
         case 'music':
           setScanProgress({ current: 1, total: 3, message: 'Đang scan music folders...' });
-          response = await apiService.music.scan({ key: currentSourceKey, path });
+          response = await apiService.music.scan({ key: currentSourceKey, path, shallow });
           break;
         case 'movie':
           setScanProgress({ current: 1, total: 3, message: 'Đang scan movie folders...' });
-          response = await apiService.movie.scan({ key: currentSourceKey, path });
+          response = await apiService.movie.scan({ key: currentSourceKey, path, shallow });
           break;
         case 'manga':
           setScanProgress({ current: 1, total: 3, message: 'Đang scan manga folders...' });
-          response = await apiService.manga.scan({ dbkey: currentSourceKey, path });
+          response = await apiService.manga.scan({ dbkey: currentSourceKey, path, shallow });
           break;
         default:
           throw new Error(`Unknown scan type: ${currentContentType}`);

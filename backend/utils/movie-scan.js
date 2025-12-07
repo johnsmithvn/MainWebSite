@@ -37,15 +37,41 @@ function getVideoDuration(filePath) {
 async function scanMovieFolderToDB(
   dbkey,
   currentPath = "",
-  stats = { inserted: 0, updated: 0, skipped: 0, deleted: 0 }
+  stats = { inserted: 0, updated: 0, skipped: 0, deleted: 0 },
+  scopePath = null, // 🎯 Partial scan: path to scan from (e.g., "Movies/Action")
+  shallow = false // 📦 Shallow scan: don't recurse into subfolders
 ) {
   const db = getMovieDB(dbkey);
   const rootPath = getRootPath(dbkey);
   const basePath = path.join(rootPath, currentPath);
 
-  // 🗑️ PHASE 1: Mark all as unscanned (only on root scan)
+  // 🗑️ PHASE 1: Mark items as unscanned (scope-aware & shallow-aware)
   if (currentPath === "") {
-    db.prepare(`UPDATE folders SET scanned = 0`).run();
+    if (scopePath) {
+      // 🎯 Partial scan
+      if (shallow) {
+        // Shallow: only mark direct children of scope
+        db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR (path LIKE ? AND path NOT LIKE ?)`)
+          .run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
+        console.log(`📦 Shallow partial scan: Marking scope "${scopePath}" (direct children only)`);
+      } else {
+        // Deep: mark scope and all descendants
+        db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR path LIKE ?`)
+          .run(scopePath, `${scopePath}/%`);
+        console.log(`🎯 Deep partial scan: Marking scope "${scopePath}" (all descendants)`);
+      }
+    } else {
+      // 🌍 Full scan
+      if (shallow) {
+        // Shallow: only mark root level items
+        db.prepare(`UPDATE folders SET scanned = 0 WHERE path NOT LIKE ?`).run('%/%');
+        console.log(`📦 Shallow full scan: Marking root level items only`);
+      } else {
+        // Deep: mark all items
+        db.prepare(`UPDATE folders SET scanned = 0`).run();
+        console.log(`🎯 Deep full scan: Marking all items`);
+      }
+    }
   }
 
   if (!fs.existsSync(basePath)) return stats;
@@ -56,6 +82,30 @@ async function scanMovieFolderToDB(
     // ❌ Skip folder .thumbnail
     if (entry.isDirectory() && entry.name === ".thumbnail") continue;
     const relPath = path.posix.join(currentPath, entry.name);
+
+    // 🎯 Scope boundary check for partial scan
+    if (scopePath) {
+      const isInScope = relPath === scopePath || relPath.startsWith(scopePath + "/");
+      const isParentOfScope = scopePath.startsWith(relPath + "/");
+      
+      // Skip if not in scope and not a parent folder of scope
+      if (!isInScope && !isParentOfScope) {
+        continue;
+      }
+      
+      // If this is a parent folder of scope, mark it as scanned (preserve it)
+      if (isParentOfScope && !isInScope) {
+        const existing = db.prepare(`SELECT * FROM folders WHERE path = ?`).get(relPath);
+        if (existing) {
+          db.prepare(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
+        }
+        // Continue scanning to reach the scope path
+        if (entry.isDirectory()) {
+          await scanMovieFolderToDB(dbkey, relPath, stats, scopePath);
+        }
+        continue;
+      }
+    }
 
     // 📁 FOLDER
     if (entry.isDirectory()) {
@@ -93,7 +143,10 @@ async function scanMovieFolderToDB(
         stats.skipped++;
       }
 
-      await scanMovieFolderToDB(dbkey, relPath, stats); // Đệ quy
+      // 📦 Shallow scan: Skip recursion into subfolders
+      if (!shallow) {
+        await scanMovieFolderToDB(dbkey, relPath, stats, scopePath, shallow); // Đệ quy với scopePath
+      }
     }
 
     // 🎞 VIDEO FILE
@@ -161,13 +214,59 @@ async function scanMovieFolderToDB(
     }
   }
 
-  // 🗑️ PHASE 3: Sweep orphaned records (only on root scan completion)
+  // 🗑️ PHASE 3: Sweep orphaned records (scope-aware & shallow-aware cleanup)
   if (currentPath === "") {
-    const orphanedCount = db.prepare(`SELECT COUNT(*) as count FROM folders WHERE scanned = 0`).get().count;
-    if (orphanedCount > 0) {
-      db.prepare(`DELETE FROM folders WHERE scanned = 0`).run();
-      stats.deleted = orphanedCount;
-      console.log(`🗑️ Deleted ${stats.deleted} orphaned movie records`);
+    if (scopePath) {
+      // 🎯 Partial scan cleanup
+      if (shallow) {
+        // Shallow: only delete unscanned direct children
+        const orphanedCount = db.prepare(
+          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?))`
+        ).get(scopePath, `${scopePath}/%`, `${scopePath}/%/%`).count;
+        
+        if (orphanedCount > 0) {
+          db.prepare(
+            `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?))`
+          ).run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
+          stats.deleted = orphanedCount;
+          console.log(`🗑️ Deleted ${stats.deleted} orphaned movie records in scope (shallow): "${scopePath}"`);
+        }
+      } else {
+        // Deep: delete all unscanned items in scope
+        const orphanedCount = db.prepare(
+          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
+        ).get(scopePath, `${scopePath}/%`).count;
+        
+        if (orphanedCount > 0) {
+          db.prepare(
+            `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
+          ).run(scopePath, `${scopePath}/%`);
+          stats.deleted = orphanedCount;
+          console.log(`🗑️ Deleted ${stats.deleted} orphaned movie records in scope (deep): "${scopePath}"`);
+        }
+      }
+    } else {
+      // 🌍 Full scan cleanup
+      if (shallow) {
+        // Shallow: only delete root level unscanned items
+        const orphanedCount = db.prepare(
+          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND path NOT LIKE ?`
+        ).get('%/%').count;
+        
+        if (orphanedCount > 0) {
+          db.prepare(`DELETE FROM folders WHERE scanned = 0 AND path NOT LIKE ?`).run('%/%');
+          stats.deleted = orphanedCount;
+          console.log(`🗑️ Deleted ${stats.deleted} orphaned root movie records (shallow)`);
+        }
+      } else {
+        // Deep: delete all unscanned items
+        const orphanedCount = db.prepare(`SELECT COUNT(*) as count FROM folders WHERE scanned = 0`).get().count;
+        if (orphanedCount > 0) {
+          db.prepare(`DELETE FROM folders WHERE scanned = 0`).run();
+          stats.deleted = orphanedCount;
+          console.log(`🗑️ Deleted ${stats.deleted} orphaned movie records (deep)`);
+        }
+      }
     }
   }
 
