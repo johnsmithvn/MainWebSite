@@ -24,15 +24,25 @@ function findThumbnail(thumbnailDir, baseName) {
 async function scanMusicFolderToDB(
   dbkey,
   currentPath = "",
-  stats = { inserted: 0, updated: 0, skipped: 0, deleted: 0 }
+  stats = { inserted: 0, updated: 0, skipped: 0, deleted: 0 },
+  scopePath = "" // 🎯 NEW: scope path for partial scan
 ) {
   const db = getMusicDB(dbkey);
   const rootPath = getRootPath(dbkey);
   const basePath = path.join(rootPath, currentPath);
 
-  // 🗑️ PHASE 1: Mark all as unscanned (only on root scan)
+  // 🗑️ PHASE 1: Mark as unscanned (scope-aware)
   if (currentPath === "") {
-    db.prepare(`UPDATE folders SET scanned = 0`).run();
+    if (scopePath) {
+      // Partial scan: only mark items in scope path
+      db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR path LIKE ?`)
+        .run(scopePath, `${scopePath}/%`);
+      console.log(`🎯 Marking scope: ${scopePath}`);
+    } else {
+      // Full scan: mark all
+      db.prepare(`UPDATE folders SET scanned = 0`).run();
+      console.log(`🎯 Marking all items for full scan`);
+    }
   }
 
   if (!fs.existsSync(basePath)) return stats;
@@ -43,6 +53,25 @@ async function scanMusicFolderToDB(
     if (entry.isDirectory() && entry.name === ".thumbnail") continue;
     const relPath = path.posix.join(currentPath, entry.name);
     const fullPath = path.join(basePath, entry.name);
+
+    // 🎯 SCOPE CHECK: Skip items outside scope for partial scan
+    if (scopePath) {
+      const isInScope = relPath === scopePath || relPath.startsWith(`${scopePath}/`);
+      const isParentOfScope = scopePath.startsWith(`${relPath}/`);
+      
+      // Skip if not in scope and not parent of scope
+      if (!isInScope && !isParentOfScope) {
+        continue;
+      }
+      
+      // Mark parent folders (on path to scope) as scanned to prevent deletion
+      if (isParentOfScope && !isInScope) {
+        const existing = db.prepare(`SELECT * FROM folders WHERE path = ?`).get(relPath);
+        if (existing) {
+          db.prepare(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
+        }
+      }
+    }
 
     // 📁 FOLDER
     if (entry.isDirectory()) {
@@ -78,7 +107,7 @@ async function scanMusicFolderToDB(
         stats.skipped++;
       }
 
-      await scanMusicFolderToDB(dbkey, relPath, stats); // 🔁 Đệ quy
+      await scanMusicFolderToDB(dbkey, relPath, stats, scopePath); // 🔁 Đệ quy
     }
 
     // 🎵 AUDIO FILE
@@ -213,19 +242,42 @@ async function scanMusicFolderToDB(
     }
   }
 
-  // 🗑️ PHASE 3: Sweep orphaned records (only on root scan completion)
+  // 🗑️ PHASE 3: Sweep orphaned records (scope-aware cleanup)
   if (currentPath === "") {
-    const orphanedCount = db.prepare(`SELECT COUNT(*) as count FROM folders WHERE scanned = 0`).get().count;
-    if (orphanedCount > 0) {
-      // Delete orphaned songs first (foreign key constraint)
-      // Using subquery to avoid SQLite 999 parameter limit
-      db.prepare(`DELETE FROM songs WHERE path IN (SELECT path FROM folders WHERE scanned = 0)`).run();
+    let orphanedCount;
+    if (scopePath) {
+      // Partial scan: only delete orphaned items in scope path
+      orphanedCount = db.prepare(
+        `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
+      ).get(scopePath, `${scopePath}/%`).count;
       
-      // Delete orphaned folders
-      db.prepare(`DELETE FROM folders WHERE scanned = 0`).run();
-      stats.deleted = orphanedCount;
-      
-      console.log(`🗑️ Deleted ${stats.deleted} orphaned music records`);
+      if (orphanedCount > 0) {
+        // Delete orphaned songs first (foreign key constraint)
+        db.prepare(
+          `DELETE FROM songs WHERE path IN (SELECT path FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ?))`
+        ).run(scopePath, `${scopePath}/%`);
+        
+        // Delete orphaned folders
+        db.prepare(
+          `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
+        ).run(scopePath, `${scopePath}/%`);
+        
+        stats.deleted = orphanedCount;
+        console.log(`🗑️ Deleted ${stats.deleted} orphaned music records in scope: ${scopePath}`);
+      }
+    } else {
+      // Full scan: delete all orphaned items
+      orphanedCount = db.prepare(`SELECT COUNT(*) as count FROM folders WHERE scanned = 0`).get().count;
+      if (orphanedCount > 0) {
+        // Delete orphaned songs first (foreign key constraint)
+        db.prepare(`DELETE FROM songs WHERE path IN (SELECT path FROM folders WHERE scanned = 0)`).run();
+        
+        // Delete orphaned folders
+        db.prepare(`DELETE FROM folders WHERE scanned = 0`).run();
+        stats.deleted = orphanedCount;
+        
+        console.log(`🗑️ Deleted ${stats.deleted} orphaned music records`);
+      }
     }
   }
 

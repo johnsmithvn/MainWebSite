@@ -1,6 +1,3 @@
-// 📁 src/components/common/Sidebar.jsx
-// 🗂️ Sidebar navigation component
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';

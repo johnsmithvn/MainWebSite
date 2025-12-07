@@ -24,3 +24,4 @@ export { default as ServiceWorkerStatus } from './ServiceWorkerStatus';
 export { default as BrowserSupportStatus } from './BrowserSupportStatus';
 export { default as DownloadBadge } from './DownloadBadge';
 export { default as VirtualList } from './VirtualList';
+export { default as ScanModal } from './ScanModal';

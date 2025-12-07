@@ -4,7 +4,74 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛 [2025-01-26] Fixed ScanModal state reset issue after successful scan
+  - Issue: Modal auto-reset to initial state after showing success message
+  - Root cause: Progress state reset in finally block with setTimeout(500ms)
+  - Solution: Only reset state when modal closes (via onClose handler)
+  - Added handleScanModalClose to properly cleanup state after modal animation
+  - Success message now persists until user clicks "Đóng" button
+  - Better state lifecycle management
+
+- 🐛 [2025-01-26] Enhanced ScanModal with path validation and better UX
+  - Added path format validation: Rejects backslashes (\), leading/trailing slashes
+  - Validates against double slashes (//) and invalid characters (< > : " | ? *)
+  - Shows clear error messages for invalid path formats
+  - Example validation: "Albums\Rock" → Error, suggests using "Albums/Rock"
+  - Changed modal behavior: No auto-close after scan success
+  - User must manually click "Đóng" button to close modal after reviewing stats
+  - Scan button hides after successful scan, only "Đóng" button remains
+  - Better UX: User can review results before closing
+
+- 🐛 [2025-01-26] Fixed partial scan not detecting target folder in music database
+  - Issue: Scanning path "Albums" didn't detect the Albums folder itself, only children
+  - Root cause: Scan started from target path instead of root, missing parent folder detection
+  - Solution: Always scan from root but filter processing to scope path
+  - Added scope boundary check: Only process items in scope or on path to scope
+  - Parent folders on path to scope are marked as scanned to prevent deletion
+  - Prevents accidental deletion of folders outside scan scope
+  - Example: Scanning "Albums/Rock" now correctly detects "Albums" → "Rock" hierarchy
+
 ### Added
+
+- ✨ [2025-01-26] Integrated ScanModal into DatabaseActions component
+  - Moved scan functionality from Sidebar to DatabaseActions for better UX
+  - Scan button now appears in "Công cụ Music/Movie/Manga" section (context-aware)
+  - Each content type (music/movie/manga) has its own scan button with type-specific behavior
+  - ScanModal opens when clicking scan button in DatabaseActions
+  - Removed redundant "Scan Database" section from Sidebar
+  - Cleaner architecture: scan feature lives with other database operations
+
+- ✨ [2025-01-26] Added partial scan functionality for music database
+  - Backend: Updated `music-scan.js` to support path parameter for scoped scanning
+  - Scope-aware marking: Only marks items in specified path for scan (UPDATE WHERE path = ? OR path LIKE ?)
+  - Scope-aware cleanup: Only deletes orphaned items within scope path
+  - API: `/api/music/scan-music` now accepts `path` parameter in request body
+  - Full scan: Pass empty path or omit to scan entire database
+  - Partial scan: Pass relative path (e.g., "Albums/Rock") to scan only that folder tree
+  - Logging: Added console logs for scope marking and cleanup operations
+  - Stats: Returns inserted/updated/skipped/deleted counts for transparency
+
+- ✨ [2025-01-26] Connected scan UI to backend API
+  - Frontend: Integrated real API calls in Sidebar `handleScanConfirm()`
+  - Multi-type support: Handles music/movie/manga scan based on `scanType`
+  - Validation: Checks for `sourceKey` before initiating scan
+  - Progress feedback: Shows real-time status messages during scan
+  - Stats display: Shows inserted/updated/deleted counts on success
+  - Error handling: Displays backend error messages in modal
+  - Auto-close: Modal closes automatically 2s after successful scan
+  - Import: Added `apiService` from utils/api.js
+
+- ✨ [2025-01-26] Added scan database UI with sidebar integration
+  - Created `ScanModal.jsx` component for manual path input with scan progress display
+  - Added "Scan Database" button in Sidebar under "Công cụ" section
+  - Modal features: path input field, example paths, progress indicator, success/error states
+  - Reusable design: supports manga/movie/music types via `type` prop
+  - UI includes: path validation, example shortcuts, real-time progress bar
+  - Integrated with Sidebar state management (scanModalOpen, scanType, isScanning, scanProgress)
+  - Handler stub: `handleScanConfirm()` ready for backend integration
+  - Export: Added ScanModal to common/index.js for centralized export
 
 - ✨ [2025-12-06] Added delete functionality for manga folders
   - Backend: Created `/api/manga/delete-item` endpoint with cascade deletion
