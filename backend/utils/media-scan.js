@@ -84,20 +84,53 @@ function extractDateTaken(filePath, fileName) {
  * @param {string} dbkey - Database key (MEDIA_PHOTOS, etc.)
  * @param {string} currentPath - Current relative path
  * @param {object} stats - Scan statistics
+ * @param {string} scopePath - 🎯 Partial scan: path to scan from (e.g., "Photos/2024")
+ * @param {boolean} shallow - 📦 Shallow scan: don't recurse into subfolders
  */
 async function scanMediaFolderToDB(
   dbkey,
   currentPath = "",
-  stats = { folders: 0, inserted: 0, updated: 0, skipped: 0, deleted: 0 }
+  stats = { folders: 0, inserted: 0, updated: 0, skipped: 0, deleted: 0 },
+  scopePath = null,
+  shallow = false
 ) {
   const db = getMediaDB(dbkey);
   const rootPath = getRootPath(dbkey);
   const basePath = path.join(rootPath, currentPath);
 
-  // 🗑️ PHASE 1: Mark all as unscanned (only on root scan)
+  // 🗑️ PHASE 1: Mark items as unscanned (scope-aware & shallow-aware)
   if (currentPath === "") {
-    db.prepare(`UPDATE media_items SET scanned = 0`).run();
-    db.prepare(`UPDATE folders SET scanned = 0`).run();
+    if (scopePath) {
+      // 🎯 Partial scan
+      if (shallow) {
+        // Shallow: only mark direct children of scope
+        db.prepare(`UPDATE media_items SET scanned = 0 WHERE path = ? OR (path LIKE ? AND path NOT LIKE ?)`)
+          .run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
+        db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR (path LIKE ? AND path NOT LIKE ?)`)
+          .run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
+        console.log(`📦 Shallow partial scan: Marking scope "${scopePath}" (direct children only)`);
+      } else {
+        // Deep: mark scope and all descendants
+        db.prepare(`UPDATE media_items SET scanned = 0 WHERE path = ? OR path LIKE ?`)
+          .run(scopePath, `${scopePath}/%`);
+        db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR path LIKE ?`)
+          .run(scopePath, `${scopePath}/%`);
+        console.log(`🎯 Deep partial scan: Marking scope "${scopePath}" (all descendants)`);
+      }
+    } else {
+      // 🌍 Full scan
+      if (shallow) {
+        // Shallow: only mark root level items
+        db.prepare(`UPDATE media_items SET scanned = 0 WHERE path NOT LIKE ?`).run('%/%');
+        db.prepare(`UPDATE folders SET scanned = 0 WHERE path NOT LIKE ?`).run('%/%');
+        console.log(`📦 Shallow full scan: Marking root level items only`);
+      } else {
+        // Deep: mark all items
+        db.prepare(`UPDATE media_items SET scanned = 0`).run();
+        db.prepare(`UPDATE folders SET scanned = 0`).run();
+        console.log(`🎯 Deep full scan: Marking all items`);
+      }
+    }
   }
 
   if (!fs.existsSync(basePath)) return stats;
@@ -115,10 +148,41 @@ async function scanMediaFolderToDB(
     const relPath = path.posix.join(currentPath, entry.name);
     const fullPath = path.join(basePath, entry.name);
 
+    // 🎯 Scope boundary check for partial scan
+    if (scopePath) {
+      const isInScope = relPath === scopePath || relPath.startsWith(scopePath + "/");
+      const isParentOfScope = scopePath.startsWith(relPath + "/");
+      
+      // Skip if not in scope and not a parent folder of scope
+      if (!isInScope && !isParentOfScope) {
+        continue;
+      }
+      
+      // If this is a parent folder of scope, mark it as scanned (preserve it)
+      if (isParentOfScope && !isInScope) {
+        const existingItem = db.prepare(`SELECT * FROM media_items WHERE path = ?`).get(relPath);
+        if (existingItem) {
+          db.prepare(`UPDATE media_items SET scanned = 1 WHERE path = ?`).run(relPath);
+        }
+        const existingFolder = db.prepare(`SELECT * FROM folders WHERE root = ? AND path = ?`).get(dbkey, relPath);
+        if (existingFolder) {
+          db.prepare(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
+        }
+        // Continue scanning to reach the scope path
+        if (entry.isDirectory()) {
+          await scanMediaFolderToDB(dbkey, relPath, stats, scopePath, shallow);
+        }
+        continue;
+      }
+    }
+
     // 📁 FOLDER - Store and recurse
     if (entry.isDirectory()) {
-      // Recurse first to get subfolder's thumbnail
-      await scanMediaFolderToDB(dbkey, relPath, stats);
+      // 📦 Shallow scan: Skip recursion into subfolders
+      if (!shallow) {
+        // Recurse first to get subfolder's thumbnail
+        await scanMediaFolderToDB(dbkey, relPath, stats, scopePath, shallow);
+      }
       
       // Find first image in .thumbnail of this subfolder
       let folderThumb = null;
@@ -292,20 +356,100 @@ async function scanMediaFolderToDB(
     }
   }
 
-  // 🗑️ PHASE 3: Sweep orphaned records (only on root scan completion)
+  // 🗑️ PHASE 3: Sweep orphaned records (scope-aware & shallow-aware cleanup)
   if (currentPath === "") {
-    const orphanedItems = db.prepare(`SELECT COUNT(*) as count FROM media_items WHERE scanned = 0`).get().count;
-    if (orphanedItems > 0) {
-      db.prepare(`DELETE FROM media_items WHERE scanned = 0`).run();
-      stats.deleted += orphanedItems;
-      console.log(`🗑️ Deleted ${orphanedItems} orphaned media items`);
-    }
+    if (scopePath) {
+      // 🎯 Partial scan cleanup
+      if (shallow) {
+        // Shallow: only delete unscanned direct children
+        const orphanedItems = db.prepare(
+          `SELECT COUNT(*) as count FROM media_items WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?))`
+        ).get(scopePath, `${scopePath}/%`, `${scopePath}/%/%`).count;
+        
+        if (orphanedItems > 0) {
+          db.prepare(
+            `DELETE FROM media_items WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?))`
+          ).run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
+          stats.deleted += orphanedItems;
+          console.log(`🗑️ Deleted ${orphanedItems} orphaned media items in scope (shallow): "${scopePath}"`);
+        }
 
-    const orphanedFolders = db.prepare(`SELECT COUNT(*) as count FROM folders WHERE scanned = 0`).get().count;
-    if (orphanedFolders > 0) {
-      db.prepare(`DELETE FROM folders WHERE scanned = 0`).run();
-      stats.deleted += orphanedFolders;
-      console.log(`🗑️ Deleted ${orphanedFolders} orphaned folders`);
+        const orphanedFolders = db.prepare(
+          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?))`
+        ).get(scopePath, `${scopePath}/%`, `${scopePath}/%/%`).count;
+        
+        if (orphanedFolders > 0) {
+          db.prepare(
+            `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?))`
+          ).run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
+          stats.deleted += orphanedFolders;
+          console.log(`🗑️ Deleted ${orphanedFolders} orphaned folders in scope (shallow): "${scopePath}"`);
+        }
+      } else {
+        // Deep: delete all unscanned items in scope
+        const orphanedItems = db.prepare(
+          `SELECT COUNT(*) as count FROM media_items WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
+        ).get(scopePath, `${scopePath}/%`).count;
+        
+        if (orphanedItems > 0) {
+          db.prepare(
+            `DELETE FROM media_items WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
+          ).run(scopePath, `${scopePath}/%`);
+          stats.deleted += orphanedItems;
+          console.log(`🗑️ Deleted ${orphanedItems} orphaned media items in scope (deep): "${scopePath}"`);
+        }
+
+        const orphanedFolders = db.prepare(
+          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
+        ).get(scopePath, `${scopePath}/%`).count;
+        
+        if (orphanedFolders > 0) {
+          db.prepare(
+            `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
+          ).run(scopePath, `${scopePath}/%`);
+          stats.deleted += orphanedFolders;
+          console.log(`🗑️ Deleted ${orphanedFolders} orphaned folders in scope (deep): "${scopePath}"`);
+        }
+      }
+    } else {
+      // 🌍 Full scan cleanup
+      if (shallow) {
+        // Shallow: only delete root level unscanned items
+        const orphanedItems = db.prepare(
+          `SELECT COUNT(*) as count FROM media_items WHERE scanned = 0 AND path NOT LIKE ?`
+        ).get('%/%').count;
+        
+        if (orphanedItems > 0) {
+          db.prepare(`DELETE FROM media_items WHERE scanned = 0 AND path NOT LIKE ?`).run('%/%');
+          stats.deleted += orphanedItems;
+          console.log(`🗑️ Deleted ${orphanedItems} orphaned root media items (shallow)`);
+        }
+
+        const orphanedFolders = db.prepare(
+          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND path NOT LIKE ?`
+        ).get('%/%').count;
+        
+        if (orphanedFolders > 0) {
+          db.prepare(`DELETE FROM folders WHERE scanned = 0 AND path NOT LIKE ?`).run('%/%');
+          stats.deleted += orphanedFolders;
+          console.log(`🗑️ Deleted ${orphanedFolders} orphaned root folders (shallow)`);
+        }
+      } else {
+        // Deep: delete all unscanned items
+        const orphanedItems = db.prepare(`SELECT COUNT(*) as count FROM media_items WHERE scanned = 0`).get().count;
+        if (orphanedItems > 0) {
+          db.prepare(`DELETE FROM media_items WHERE scanned = 0`).run();
+          stats.deleted += orphanedItems;
+          console.log(`🗑️ Deleted ${orphanedItems} orphaned media items (deep)`);
+        }
+
+        const orphanedFolders = db.prepare(`SELECT COUNT(*) as count FROM folders WHERE scanned = 0`).get().count;
+        if (orphanedFolders > 0) {
+          db.prepare(`DELETE FROM folders WHERE scanned = 0`).run();
+          stats.deleted += orphanedFolders;
+          console.log(`🗑️ Deleted ${orphanedFolders} orphaned folders (deep)`);
+        }
+      }
     }
   }
 

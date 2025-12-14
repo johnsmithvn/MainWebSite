@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ## [Unreleased]
 
+### Added
+
+- ✨ [2024-12-14] Added scope-aware thumbnail extraction for music and movie
+  - Music and movie extract-thumbnail now support scopePath and shallow mode
+  - Backend: Updated extractThumbnailSmart and extractMovieThumbnailSmart functions
+  - Added scopePath parameter to define which folder to extract (default: full extraction)
+  - Added shallow parameter to only extract 1 level without recursing into subfolders
+  - Scope checking: Skip items outside scopePath during extraction
+  - API endpoints now accept path and shallow: POST /api/music/extract-thumbnail { key, path, overwrite, shallow }
+  - Frontend: Updated DatabaseActions to use ScanModal for thumbnail extraction
+  - Added thumbnailModalOpen state and handleThumbnailConfirm handler
+  - ScanModal now supports mode="thumbnail" with overwrite checkbox
+  - performThumbnailExtraction updated to pass shallow parameter to API
+  - Users can now extract thumbnails for specific folder with shallow option via UI
+  - Example: Extract thumbnails for "Albums/Rock" without processing nested folders
+
+### Changed
+- 🔄 [2024-12-13] Enhanced MusicCard visual distinction between folders and files
+  - Folders now have 2px border with blue/purple accent color (border-blue-500/60 dark:border-purple-500/60)
+  - Folders have stronger shadow (shadow-lg hover:shadow-xl) compared to files (shadow-sm hover:shadow-md)
+  - Folders get colored badge (blue/purple gradient) for type indicator instead of black
+  - Folders display item count badge in top-right corner (gradient blue to purple)
+  - Folder titles now use font-semibold with accent text color
+  - Files keep subtle border (border-gray-200 dark:border-gray-700) for minimal look
+  - Improved hover effects: folders have more prominent scale and shadow transitions
+  - Better UX: Users can now easily distinguish folder cards from file cards at a glance
+
 ### Fixed
 
 - 🐛 [2025-01-26] Fixed shallow scan deleting nested folders issue
@@ -16,6 +43,19 @@ All notable changes to this project will be documented in this file. Dates use Y
   - Example: Shallow scan at root only affects root items, preserves all nested folders
 
 ### Added
+
+- ✨ [2025-01-26] Added partial scan and shallow scan support for media module
+  - Implemented scope-aware scanning with scopePath parameter in scanMediaFolderToDB
+  - Supports partial scan via path input (e.g., "Photos/2024")
+  - Shallow scan option to only process items at current level
+  - Scope-aware marking: Only marks items in scope as unscanned during Phase 1
+  - Scope boundary check: Processes only items in scope or parent folders
+  - Parent folder preservation: Marks parent folders as scanned to prevent deletion
+  - Scope-aware cleanup: Only deletes orphaned items within scope during Phase 3
+  - Shallow-aware logic: Prevents deletion of nested folders when shallow scan
+  - Updated API endpoint to accept path and shallow parameters: POST /api/media/scan-media { key, path, shallow }
+  - Added media case to DatabaseActions for ScanModal integration
+  - Reuses existing ScanModal component for consistent UX across all modules
 
 - ✨ [2025-01-26] Added shallow scan option for music and movie modules
   - New checkbox in ScanModal: "Scan Shallow (không đệ quy)"

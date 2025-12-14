@@ -103,8 +103,13 @@ const MusicCard = ({
     );
   }
 
+  // Styling khác biệt cho folder vs file
+  const cardClasses = isFolder 
+    ? `relative cursor-pointer group overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl border-2 border-blue-500/60 dark:border-purple-500/60 hover:border-blue-600 dark:hover:border-purple-600 transition-all duration-200 ${className}`
+    : `relative cursor-pointer group overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-700 transition-shadow duration-200 ${className}`;
+
   return (
-    <motion.div className={`relative cursor-pointer group overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 ${className}`} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleClick}>
+    <motion.div className={cardClasses} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleClick}>
       <div className="relative aspect-square overflow-hidden">
         <img src={getThumbnailUrl()} alt={displayName} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" decoding="async" onError={(e) => { e.target.src = isAudio ? DEFAULT_IMAGES.music : DEFAULT_IMAGES.folder; }} />
         {(isAudio || isPlaylist) && (
@@ -118,15 +123,26 @@ const MusicCard = ({
           </motion.button>
         )}
         <div className="absolute top-1 sm:top-2 left-1 sm:left-2">
-          <div className="flex items-center space-x-0.5 sm:space-x-1 bg-black/60 backdrop-blur-sm text-white px-1 sm:px-2 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs">
+          <div className={`flex items-center space-x-0.5 sm:space-x-1 backdrop-blur-sm text-white px-1 sm:px-2 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs ${
+            isFolder ? 'bg-blue-600/80 dark:bg-purple-600/80' : 'bg-black/60'
+          }`}>
             {getTypeIcon()}<span>{getTypeLabel()}</span>
           </div>
         </div>
+        {isFolder && item.itemCount > 0 && (
+          <div className="absolute top-1 sm:top-2 right-1 sm:right-2">
+            <div className="bg-gradient-to-br from-blue-500 to-purple-600 dark:from-purple-500 dark:to-pink-600 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-semibold shadow-lg">
+              {item.itemCount} items
+            </div>
+          </div>
+        )}
       </div>
       <div className="p-2 sm:p-3">
-        <h3 className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm line-clamp-2 mb-0.5 sm:mb-1">{displayName}</h3>
+        <h3 className={`font-medium text-xs sm:text-sm line-clamp-2 mb-0.5 sm:mb-1 ${
+          isFolder ? 'text-blue-900 dark:text-blue-100 font-semibold' : 'text-gray-900 dark:text-white'
+        }`}>{displayName}</h3>
         <div className="flex items-center justify-between text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">
-          <span>{getTypeLabel()}</span>
+          <span className={isFolder ? 'text-blue-600 dark:text-purple-400 font-medium' : ''}>{getTypeLabel()}</span>
           {showViews && item.views && <span className="flex items-center gap-0.5 sm:gap-1"><FiMusic className="w-2 h-2 sm:w-3 sm:h-3" />{item.views}</span>}
         </div>
       </div>
