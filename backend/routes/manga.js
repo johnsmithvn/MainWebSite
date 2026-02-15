@@ -11,5 +11,6 @@ router.use("/", require("../api/manga/scan"));
 router.use("/", require("../api/manga/favorite"));
 router.use("/", require("../api/manga/root-thumbnail"));
 router.use("/", require("../api/manga/pdf"));
+router.use("/", require("../api/manga/delete-item"));
 
 module.exports = router;

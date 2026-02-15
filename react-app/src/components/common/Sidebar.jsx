@@ -1,6 +1,3 @@
-// 📁 src/components/common/Sidebar.jsx
-// 🗂️ Sidebar navigation component
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -13,7 +10,8 @@ import {
   FiSettings,
   FiHeart,
   FiList,
-  FiDownload
+  FiDownload,
+  FiImage
 } from 'react-icons/fi';
 import { useAuthStore } from '../../store';
 import useDownloadQueueStore from '../../store/downloadQueueStore';
@@ -47,6 +45,7 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
         { path: '/manga', icon: FiBook, label: 'Manga' },
         { path: '/movie', icon: FiFilm, label: 'Movie' },
         { path: '/music', icon: FiMusic, label: 'Music' },
+        { path: '/media', icon: FiImage, label: 'Media Gallery' },
         { path: '/downloads', icon: FiDownload, label: 'Downloads', count: activeDownloadsCount },
       ]
     },
@@ -120,8 +119,8 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
           </div>
         ))}
 
-        {/* Admin tools - Only show for valid content type */}
-        {sourceKey && currentContentType && (
+        {/* Admin tools - Only show for valid content type (manga/movie/music) */}
+        {sourceKey && currentContentType && currentContentType !== 'media' && (
           <div>
             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
               Công cụ {currentContentType === 'manga' ? '📚 Manga' : currentContentType === 'movie' ? '🎬 Movie' : '🎵 Music'}
@@ -136,6 +135,22 @@ const Sidebar = ({ isOpen = false, onClose, type }) => {
               variant="outline"
               showLabels={true}
               className="space-y-1"
+            />
+          </div>
+        )}
+
+        {/* Media Gallery tools */}
+        {currentContentType === 'media' && (
+          <div>
+            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+              Công cụ 📸 Media
+            </h3>
+            <DatabaseActions 
+              contentType="media"
+              sourceKey={sourceKey}
+              layout="vertical"
+              size="sm"
+              showLabels={true}
             />
           </div>
         )}

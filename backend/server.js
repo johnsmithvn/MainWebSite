@@ -94,6 +94,17 @@ for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
         setHeaders: setStaticHeaders("audio"),
       })
     );
+  } else if (key.startsWith("MEDIA_")) {
+    app.use(
+      "/media",
+      express.static(absPath, {
+        dotfiles: "allow",
+        maxAge: ONE_HOUR * 1000,
+        etag: true,
+        lastModified: true,
+        setHeaders: setStaticHeaders("image"),
+      })
+    );
   } else {
     app.use(
       "/manga",
@@ -168,7 +179,7 @@ app.get(/^\/app\/.*$/, (_req, res) => {
 });
 
 // ✅ URL decode middleware - giữ nguyên logic cũ
-for (const base of ["/manga", "/video", "/audio"]) {
+for (const base of ["/manga", "/video", "/audio", "/media"]) {
   app.use(base, (req, res, next) => {
     try {
       const decoded = req.url
@@ -218,6 +229,7 @@ app.use((req, res, next) => {
     req.path.startsWith("/manga/") ||
     req.path.startsWith("/video/") ||
     req.path.startsWith("/audio/") ||
+    req.path.startsWith("/media/") ||
     req.path.startsWith("/default/") ||
     req.path.startsWith("/src/") ||
     req.path.startsWith("/dist/")

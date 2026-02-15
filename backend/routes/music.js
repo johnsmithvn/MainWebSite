@@ -16,5 +16,6 @@ router.use("/", require("../api/music/update-lyrics"));
 router.use("/", require("../api/music/reset-music-db"));
 router.use("/", require("../api/music/extract-thumbnail"));
 router.use("/", require("../api/music/set-thumbnail"));
+router.use("/", require("../api/music/delete-item"));
 
 module.exports = router;

@@ -143,6 +143,40 @@
   border: 1px solid rgba(239, 68, 68, 0.6); /* Stronger border on hover */
 }
 
+/* Delete button - bottom right corner */
+.manga-card-delete {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  color: white;
+  background-color: rgba(220, 38, 38, 0.9); /* Red background */
+  border: none;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.manga-card:hover .manga-card-delete {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.manga-card-delete:hover {
+  background-color: rgba(185, 28, 28, 1);
+  transform: scale(1.1) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
 .manga-card-title {
   padding: 0.75rem;
   font-size: 0.875rem;

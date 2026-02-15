@@ -27,6 +27,7 @@ function createProxyConfig(target) {
     '/manga': mangaConfig,
     '/video': baseConfig,
     '/audio': baseConfig,
+    '/media': baseConfig,
     '/.thumbnail': baseConfig,
     '/default': baseConfig,
   }

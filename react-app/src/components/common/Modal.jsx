@@ -192,19 +192,20 @@ export const useModal = () => {
     }));
   };
 
-  const confirmModal = (config) => {
+  const confirmModal = (titleOrConfig, message, type) => {
     // Support both object config and legacy (title, message, type) params
     let modalConfig;
     
-    if (typeof config === 'string') {
+    if (typeof titleOrConfig === 'string') {
       // Legacy format: confirmModal(title, message, type)
-      const title = config;
-      const message = arguments[1];
-      const type = arguments[2] || 'confirm';
-      modalConfig = { title, message, type };
+      modalConfig = { 
+        title: titleOrConfig, 
+        message: message, 
+        type: type || 'confirm' 
+      };
     } else {
       // New object format: confirmModal({ title, message, ... })
-      modalConfig = { type: 'confirm', ...config };
+      modalConfig = { type: 'confirm', ...titleOrConfig };
     }
     
     return new Promise((resolve) => {

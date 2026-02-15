@@ -25,6 +25,7 @@ import MusicCard from '@/components/music/MusicCard';
 import Breadcrumb from '@/components/common/Breadcrumb';
 import Pagination from '@/components/common/Pagination';
 import MusicRandomSection from '@/components/music/MusicRandomSection';
+import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 
 const MusicHome = () => {
   const navigate = useNavigate();
@@ -40,13 +41,16 @@ const MusicHome = () => {
     searchTerm,
     setSearchTerm,
     fetchMusicFolders,
-    clearMusicCache 
+    clearMusicCache,
+    deleteItem 
   } = useMusicStore();
   
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('name');
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [musicPerPage, setMusicPerPage] = useState(() => {
     const urlVal = parseInt(searchParams.get('size') || '', 10);
     if (!Number.isNaN(urlVal) && urlVal > 0) return urlVal;
@@ -440,6 +444,7 @@ const MusicHome = () => {
                   item={music}
                   showViews={true}
                   variant="grid"
+                  onDeleteClick={(item) => setItemToDelete(item)}
                 />
               ))}
             </div>
@@ -471,6 +476,7 @@ const MusicHome = () => {
                   item={music}
                   showViews={true}
                   variant="list"
+                  onDeleteClick={(item) => setItemToDelete(item)}
                 />
               ))}
             </div>
@@ -496,6 +502,27 @@ const MusicHome = () => {
         )}
         </div> {/* End of music-main-container */}
       </div>
+
+      {/* Delete Confirmation Modal - Single instance */}
+      <DeleteConfirmModal
+        isOpen={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={async () => {
+          if (!itemToDelete) return;
+          setIsDeleting(true);
+          try {
+            await deleteItem(itemToDelete.path);
+            setItemToDelete(null);
+          } catch (err) {
+            console.error('Delete failed:', err);
+          } finally {
+            setIsDeleting(false);
+          }
+        }}
+        itemName={itemToDelete?.name || itemToDelete?.path?.split('/').pop() || ''}
+        itemType={itemToDelete?.type === 'folder' ? 'folder' : 'file'}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 };

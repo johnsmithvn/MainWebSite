@@ -14,6 +14,7 @@ import { getContentTypeFromSourceKey } from '@/utils/databaseOperations';
 import Button from '@/components/common/Button';
 import DatabaseActions from '@/components/common/DatabaseActions';
 import { useModal } from '@/components/common/Modal';
+import { apiService } from '@/utils/api';
 
 const Settings = () => {
   const { 
@@ -243,12 +244,7 @@ const Settings = () => {
       cancelText: 'Cancel',
       onConfirm: async () => {
         try {
-          const response = await fetch('/api/manga/scan', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ root: rootFolder, key: sourceKey })
-          });
-          const result = await response.json();
+          const result = await apiService.manga.scan({ root: rootFolder, key: sourceKey });
           
           if (result.success) {
             successModal({
@@ -297,10 +293,7 @@ const Settings = () => {
       cancelText: 'Cancel',
       onConfirm: async () => {
         try {
-          const response = await fetch(`/api/manga/reset-cache?key=${sourceKey}&root=${rootFolder}&mode=delete`, {
-            method: 'DELETE'
-          });
-          const result = await response.json();
+          const result = await apiService.manga.resetCache({ key: sourceKey, root: rootFolder, mode: 'delete' });
           
           if (result.success) {
             successModal({
@@ -350,10 +343,7 @@ const Settings = () => {
       cancelText: 'Cancel',
       onConfirm: async () => {
         try {
-          const response = await fetch(`/api/manga/reset-cache?key=${sourceKey}&root=${rootFolder}&mode=reset`, {
-            method: 'DELETE'
-          });
-          const result = await response.json();
+          const result = await apiService.manga.resetCache({ key: sourceKey, root: rootFolder, mode: 'reset' });
           
           if (result.success) {
             successModal({
@@ -510,12 +500,7 @@ const Settings = () => {
       cancelText: 'Cancel',
       onConfirm: async () => {
         try {
-          const response = await fetch('/api/movie/scan-movie', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: sourceKey })
-          });
-          const result = await response.json();
+          const result = await apiService.movie.scan({ key: sourceKey });
           
           if (result.success) {
             successModal({
@@ -564,10 +549,7 @@ const Settings = () => {
       cancelText: 'Cancel',
       onConfirm: async () => {
         try {
-          const response = await fetch(`/api/movie/reset-cache-movie?key=${sourceKey}&mode=delete`, {
-            method: 'DELETE'
-          });
-          const result = await response.json();
+          const result = await apiService.movie.resetDb({ key: sourceKey, mode: 'delete' });
           
           if (result.success) {
             successModal({
@@ -617,10 +599,7 @@ const Settings = () => {
       cancelText: 'Cancel',
       onConfirm: async () => {
         try {
-          const response = await fetch(`/api/movie/reset-cache-movie?key=${sourceKey}&mode=reset`, {
-            method: 'DELETE'
-          });
-          const result = await response.json();
+          const result = await apiService.movie.resetDb({ key: sourceKey, mode: 'reset' });
           
           if (result.success) {
             successModal({
@@ -777,12 +756,7 @@ const Settings = () => {
       cancelText: 'Cancel',
       onConfirm: async () => {
         try {
-          const response = await fetch('/api/music/scan-music', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: sourceKey })
-          });
-          const result = await response.json();
+          const result = await apiService.music.scan({ key: sourceKey });
           
           if (result.success) {
             successModal({
@@ -832,10 +806,7 @@ const Settings = () => {
       cancelText: 'Cancel',
       onConfirm: async () => {
         try {
-          const response = await fetch(`/api/music/reset-cache-music?key=${sourceKey}&mode=delete`, {
-            method: 'DELETE'
-          });
-          const result = await response.json();
+          const result = await apiService.music.resetDb({ key: sourceKey, mode: 'delete' });
           
           if (result.success) {
             successModal({
@@ -886,10 +857,7 @@ const Settings = () => {
       cancelText: 'Cancel',
       onConfirm: async () => {
         try {
-          const response = await fetch(`/api/music/reset-cache-music?key=${sourceKey}&mode=reset`, {
-            method: 'DELETE'
-          });
-          const result = await response.json();
+          const result = await apiService.music.resetDb({ key: sourceKey, mode: 'reset' });
           
           if (result.success) {
             successModal({
@@ -1710,7 +1678,7 @@ const Settings = () => {
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              About MainWebSite
+              About Project
             </h3>
             
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
@@ -1767,7 +1735,7 @@ const Settings = () => {
             Settings
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Customize your MainWebSite experience
+            Customize your page experience
           </p>
         </div>
 

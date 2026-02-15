@@ -434,6 +434,53 @@ export const useMangaStore = create(
           set({ error: error.response?.data?.message || error.message });
         }
       },
+
+      deleteItem: async (path) => {
+        try {
+          const { sourceKey, rootFolder } = useAuthStore.getState();
+          
+          console.log('🗑️ MangaStore deleteItem:', { sourceKey, rootFolder, path });
+          
+          // Call API to delete item
+          const result = await apiService.manga.deleteItem({ dbkey: sourceKey, root: rootFolder, path });
+          
+          console.log('✅ Delete result:', result.data);
+          
+          // Update local state - remove deleted item and all children
+          set((state) => {
+            const updatedMangaList = state.mangaList.filter(manga => {
+              // Remove the deleted folder itself
+              if (manga.path === path) return false;
+              // Remove all children (path starts with deleted path)
+              if (manga.path.startsWith(`${path}/`)) return false;
+              return true;
+            });
+            
+            // Also remove from favorites if it was favorited
+            const updatedFavorites = state.favorites.filter(f => {
+              if (f.path === path) return false;
+              if (f.path.startsWith(`${path}/`)) return false;
+              return true;
+            });
+            
+            return { 
+              mangaList: updatedMangaList,
+              favorites: updatedFavorites,
+              favoritesRefreshTrigger: state.favoritesRefreshTrigger + 1
+            };
+          });
+          
+          // Clear manga cache to force refresh
+          const currentPath = get().currentPath;
+          setMangaCache(sourceKey, rootFolder, currentPath, null);
+          
+          return result;
+          
+        } catch (error) {
+          console.error('Delete item error:', error);
+          throw error;
+        }
+      },
     }),
     {
       name: 'manga-storage',
@@ -717,6 +764,50 @@ export const useMovieStore = create(
           console.error('Error clearing movie recent history:', error);
         }
       },
+
+      // ✅ Delete item from database
+      deleteItem: async (path) => {
+        const { sourceKey } = useAuthStore.getState();
+        const { showToast } = useUIStore.getState();
+        
+        if (!sourceKey) {
+          showToast?.('Thiếu source key', 'error');
+          throw new Error('No source key');
+        }
+        
+        try {
+          const result = await apiService.movie.deleteItem({ key: sourceKey, path });
+          
+          // Update local state: remove from movieList
+          set((state) => ({
+            movieList: state.movieList.filter(item => {
+              // Remove exact match
+              if (item.path === path) return false;
+              
+              // If deleted item is folder, remove children
+              if (result.type === 'folder' && item.path.startsWith(`${path}/`)) {
+                return false;
+              }
+              
+              return true;
+            }),
+            allMovies: state.allMovies.filter(item => {
+              if (item.path === path) return false;
+              if (result.type === 'folder' && item.path.startsWith(`${path}/`)) {
+                return false;
+              }
+              return true;
+            })
+          }));
+          
+          showToast?.(result.message, 'success');
+          return result;
+        } catch (err) {
+          console.error('Delete movie item error:', err);
+          showToast?.('Không thể xóa: ' + err.message, 'error');
+          throw err;
+        }
+      },
     }),
     {
       name: 'movie-storage',
@@ -898,6 +989,43 @@ export const useMusicStore = create(
       setVolume: (volume) => set({ volume }),
       toggleShuffle: () => set((state) => ({ shuffle: !state.shuffle })),
       setRepeat: (repeat) => set({ repeat }),
+      
+      // ✅ Delete item from database
+      deleteItem: async (path) => {
+        const { sourceKey } = useAuthStore.getState();
+        const { showToast } = useUIStore.getState();
+        
+        if (!sourceKey) {
+          showToast?.('Thiếu source key', 'error');
+          throw new Error('No source key');
+        }
+        
+        try {
+          const result = await apiService.music.deleteItem({ key: sourceKey, path });
+          
+          // Update local state: remove from musicList
+          set((state) => ({
+            musicList: state.musicList.filter(item => {
+              // Remove exact match
+              if (item.path === path) return false;
+              
+              // If deleted item is folder, remove children
+              if (result.type === 'folder' && item.path.startsWith(`${path}/`)) {
+                return false;
+              }
+              
+              return true;
+            })
+          }));
+          
+          showToast?.(result.message, 'success');
+          return result;
+        } catch (err) {
+          console.error('Delete item error:', err);
+          showToast?.('Không thể xóa: ' + err.message, 'error');
+          throw err;
+        }
+      },
       setShuffle: (shuffle) => set({ shuffle }),
       
       // Playlist management

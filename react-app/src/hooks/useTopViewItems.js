@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import { apiService } from '@/utils/api';
 import { processThumbnails } from '@/utils/thumbnailUtils';
+import { AUTO_REFRESH } from '@/constants';
 import { useEffect } from 'react';
 
 export const useTopViewItems = (type = 'manga', options = {}) => {
@@ -17,7 +18,7 @@ export const useTopViewItems = (type = 'manga', options = {}) => {
   
   const {
     enabled = true,
-    staleTime = 10 * 60 * 1000, // 10 minutes - top view ít thay đổi
+    staleTime = AUTO_REFRESH.TOP_VIEW_ITEMS, // ⏱️ 15 phút - Top view ít thay đổi
     ...restOptions
   } = options;
 

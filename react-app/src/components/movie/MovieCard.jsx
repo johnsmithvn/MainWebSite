@@ -2,13 +2,13 @@
 // 🎬 Movie card component for folders and videos
 
 import React from 'react';
-import { Heart, Play, Folder, Clock } from 'lucide-react';
+import { Heart, Play, Folder, Clock, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMovieStore } from '@/store';
 import { useRecentMoviesManager } from '@/hooks/useMovieData';
 import { DEFAULT_IMAGES } from '@/constants';
 
-const MovieCard = ({ item, showViews = false, onFavoriteChange, variant = 'grid' }) => {
+const MovieCard = ({ item, showViews = false, onFavoriteChange, variant = 'grid', onDeleteClick }) => {
   const navigate = useNavigate();
   const { toggleFavorite } = useMovieStore();
   const { addRecentMovie } = useRecentMoviesManager();
@@ -42,6 +42,13 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange, variant = 'grid'
       console.log('✅ MovieCard favorite toggle completed');
     } catch (error) {
       console.error('❌ Error toggling favorite in MovieCard:', error);
+    }
+  };
+
+  const handleDeleteClickInternal = (e) => {
+    e.stopPropagation();
+    if (onDeleteClick) {
+      onDeleteClick(item);
     }
   };
 
@@ -119,6 +126,16 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange, variant = 'grid'
               />
             </button>
           )}
+
+          {/* Delete button */}
+          <button
+            onClick={handleDeleteClickInternal}
+            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 
+                     dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            title={`Xóa ${item.type === 'folder' ? 'folder' : 'video'} khỏi DB`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
     );
@@ -167,6 +184,15 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange, variant = 'grid'
                 : 'text-white'
             }`} 
           />
+        </button>
+
+        {/* Delete button */}
+        <button
+          onClick={handleDeleteClickInternal}
+          className="absolute bottom-1 sm:bottom-2 right-1 sm:right-2 p-0.5 sm:p-1 rounded-full bg-red-500 
+                     opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all duration-200 z-10"
+        >
+          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
         </button>
 
         {/* Type indicator */}

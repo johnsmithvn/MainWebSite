@@ -1,7 +1,7 @@
 // 📁 src/components/common/DatabaseActions.jsx
 // 🔄 Centralized database actions component with loading and confirmations
 
-import React from 'react';
+import React, { useState } from 'react';
 import { FiRefreshCw, FiTrash2, FiRotateCcw, FiImage } from 'react-icons/fi';
 import { useAuthStore, useMovieStore, useMusicStore } from '@/store';
 import { useModal } from './Modal';
@@ -15,6 +15,8 @@ import {
   getDatabaseOperationLabels
 } from '@/utils/databaseOperations';
 import Button from './Button';
+import ScanModal from './ScanModal';
+import { apiService } from '@/utils/api';
 
 const ThumbnailOverwriteToggle = ({
   defaultChecked = false,
@@ -64,6 +66,16 @@ const DatabaseActions = ({
   const { sourceKey: authSourceKey, rootFolder: authRootFolder } = useAuthStore();
   const { confirmModal, successModal, errorModal, Modal: ModalComponent } = useModal();
   
+  // Scan modal state
+  const [scanModalOpen, setScanModalOpen] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(null);
+  
+  // Thumbnail extraction modal state
+  const [thumbnailModalOpen, setThumbnailModalOpen] = useState(false);
+  const [isThumbnailExtracting, setIsThumbnailExtracting] = useState(false);
+  const [thumbnailProgress, setThumbnailProgress] = useState(null);
+  
   // Use provided values or fallback to auth store
   const currentSourceKey = sourceKey || authSourceKey;
   const currentRootFolder = rootFolder || authRootFolder;
@@ -91,128 +103,153 @@ const DatabaseActions = ({
     return null; // Don't render if invalid
   }
   
-  // Handle scan operation
+  // Handle scan operation - Open ScanModal for partial scan
   const handleScan = () => {
-    confirmModal({
-      title: `🔍 ${labels.scan}`,
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">{labels.scanDescription}</p>
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-blue-800 dark:text-blue-200 mb-2">📋 Thông tin:</p>
-            <ul className="text-sm space-y-1 text-blue-700 dark:text-blue-300">
-              <li>• Source: <strong>{currentSourceKey}</strong></li>
-              {currentContentType === 'manga' && (
-                <li>• Root: <strong>{currentRootFolder}</strong></li>
-              )}
-              <li>• Thao tác này sẽ KHÔNG xóa dữ liệu hiện có</li>
-              <li>• Chỉ thêm mới các folder/file được tìm thấy</li>
-            </ul>
-          </div>
-        </div>
-      ),
-      confirmText: '🔍 Bắt đầu quét',
-      cancelText: 'Hủy',
-      onConfirm: () => {
-        performDatabaseScan(
-          currentContentType,
-          currentSourceKey,
-          currentRootFolder,
-          (data, message) => {
-            // Build detailed stats message
-            const stats = data.stats || {};
-            const statsDetails = [];
-            
-            if (stats.inserted > 0) statsDetails.push(`✨ ${stats.inserted} mới`);
-            if (stats.updated > 0) statsDetails.push(`🔄 ${stats.updated} cập nhật`);
-            if (stats.skipped > 0) statsDetails.push(`⏭️ ${stats.skipped} bỏ qua`);
-            if (stats.deleted > 0) statsDetails.push(`🗑️ ${stats.deleted} đã xóa`);
-            
-            const statsMessage = statsDetails.length > 0 
-              ? `\n\n📊 Kết quả:\n${statsDetails.join('\n')}` 
-              : '';
-            
-            successModal({
-              title: '✅ Quét hoàn tất!',
-              message: `${message}${statsMessage}`
-            });
-          },
-          (error) => {
-            errorModal({
-              title: '❌ Lỗi quét',
-              message: error
-            });
-          }
-        );
-      }
-    });
+    setScanModalOpen(true);
   };
 
-  // Handle thumbnail extraction (movie & music)
+  // Handle modal close - Reset state
+  const handleScanModalClose = () => {
+    setScanModalOpen(false);
+    // Reset state after modal animation completes
+    setTimeout(() => {
+      setScanProgress(null);
+      setIsScanning(false);
+    }, 300);
+  };
+
+  // Handle scan confirm from modal
+  const handleScanConfirm = async (path, shallow = false) => {
+    console.log('🔄 Starting scan:', { type: currentContentType, path, shallow, sourceKey: currentSourceKey });
+    
+    if (!currentSourceKey) {
+      console.error('❌ No sourceKey available');
+      setScanProgress({ message: 'Chưa chọn database. Vui lòng chọn source trước.' });
+      return;
+    }
+
+    setIsScanning(true);
+    setScanProgress({ current: 0, total: 0, message: 'Đang khởi tạo...' });
+
+    try {
+      let response;
+      
+      // Call appropriate API based on type
+      switch (currentContentType) {
+        case 'music':
+          setScanProgress({ current: 1, total: 3, message: 'Đang scan music folders...' });
+          response = await apiService.music.scan({ key: currentSourceKey, path, shallow });
+          break;
+        case 'movie':
+          setScanProgress({ current: 1, total: 3, message: 'Đang scan movie folders...' });
+          response = await apiService.movie.scan({ key: currentSourceKey, path, shallow });
+          break;
+        case 'manga':
+          setScanProgress({ current: 1, total: 3, message: 'Đang scan manga folders...' });
+          response = await apiService.manga.scan({ dbkey: currentSourceKey, path, shallow });
+          break;
+        case 'media':
+          setScanProgress({ current: 1, total: 3, message: 'Đang scan media folders...' });
+          response = await apiService.media.scan({ key: currentSourceKey, path, shallow });
+          break;
+        default:
+          throw new Error(`Unknown scan type: ${currentContentType}`);
+      }
+      
+      console.log('✅ Scan response:', response.data);
+      
+      // Show success with stats
+      const stats = response.data.stats || {};
+      const statsMsg = `Thêm: ${stats.inserted || 0}, Sửa: ${stats.updated || 0}, Xóa: ${stats.deleted || 0}`;
+      
+      setScanProgress({ 
+        current: 3, 
+        total: 3, 
+        message: `Hoàn tất! ${statsMsg}`, 
+        success: true 
+      });
+      
+      // Don't auto-close - let user close manually
+      // User can review stats and close when ready
+      
+    } catch (error) {
+      console.error('❌ Scan failed:', error);
+      setScanProgress({ 
+        message: `Scan thất bại: ${error.response?.data?.error || error.message}` 
+      });
+    } finally {
+      setIsScanning(false);
+      // Don't reset progress here - let it persist until modal closes
+    }
+  };
+
+  // Handle thumbnail extraction - Open ScanModal
   const handleThumbnailExtraction = () => {
     if (!['movie', 'music'].includes(currentContentType)) {
       return;
     }
+    setThumbnailModalOpen(true);
+  };
 
-    const folderLabel = currentPath || 'Thư mục gốc (root)';
-    overwriteRef.current = false;
+  // Handle thumbnail modal close
+  const handleThumbnailModalClose = () => {
+    setThumbnailModalOpen(false);
+    setTimeout(() => {
+      setThumbnailProgress(null);
+      setIsThumbnailExtracting(false);
+    }, 300);
+  };
 
-    confirmModal({
-      title: `🖼️ ${labels.thumbnail || 'Quét thumbnail'}`,
-      message: (
-        <div className="text-left space-y-3">
-          <p className="font-medium">{labels.thumbnailDescription || 'Tạo lại thumbnail cho thư mục hiện tại.'}</p>
-          <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
-            <p className="font-semibold text-purple-800 dark:text-purple-200 mb-2">📁 Phạm vi quét:</p>
-            <ul className="text-sm space-y-1 text-purple-700 dark:text-purple-300">
-              <li>• Source: <strong>{currentSourceKey}</strong></li>
-              <li>• Thư mục: <strong>{folderLabel}</strong></li>
-              <li>
-                • Bao gồm toàn bộ {currentContentType === 'movie' ? 'video' : 'bài hát'} và thư mục con hiện có
-              </li>
-            </ul>
-          </div>
-          <ThumbnailOverwriteToggle
-            defaultChecked={false}
-            onChange={(value) => {
-              overwriteRef.current = value;
-            }}
-          />
-          <p className="text-xs text-purple-600 dark:text-purple-300">
-            Lưu ý: thao tác có thể mất vài phút tùy số lượng file. Vui lòng giữ ứng dụng mở trong khi xử lý.
-          </p>
-        </div>
-      ),
-      confirmText: '🖼️ Bắt đầu quét thumbnail',
-      cancelText: 'Hủy',
-      onConfirm: () => {
-        performThumbnailExtraction(
-          currentContentType,
-          currentSourceKey,
-          { path: currentPath, overwrite: overwriteRef.current },
-          (data) => {
-            const countInfo = data.count ? `Đã xử lý ${data.count} mục.` : '';
-            const successTitle = labels.thumbnailSuccess || '✅ Hoàn tất!';
-            const successMessage = [
-              labels.thumbnailSuccessDetail || 'Đã hoàn tất quét thumbnail.',
-              countInfo
-            ]
-              .filter(Boolean)
-              .join(' ');
-            successModal({
-              title: successTitle,
-              message: successMessage || 'Đã hoàn tất quét thumbnail.',
-            });
-          },
-          (error) => {
-            errorModal({
-              title: '❌ Lỗi quét thumbnail',
-              message: error,
-            });
-          }
-        );
-      }
+  // Handle thumbnail extraction confirm from modal
+  const handleThumbnailConfirm = async (path, shallow = false, overwrite = false) => {
+    console.log('🖼️ Starting thumbnail extraction:', { 
+      type: currentContentType, 
+      path, 
+      shallow, 
+      overwrite, 
+      sourceKey: currentSourceKey 
     });
+    
+    if (!currentSourceKey) {
+      console.error('❌ No sourceKey available');
+      setThumbnailProgress({ message: 'Chưa chọn database. Vui lòng chọn source trước.' });
+      return;
+    }
+
+    setIsThumbnailExtracting(true);
+    setThumbnailProgress({ current: 0, total: 0, message: 'Đang khởi tạo...' });
+
+    try {
+      setThumbnailProgress({ current: 1, total: 3, message: 'Đang extract thumbnails...' });
+      
+      await performThumbnailExtraction(
+        currentContentType,
+        currentSourceKey,
+        { path: path || '', overwrite, shallow },
+        (data) => {
+          const countInfo = data.count ? `Đã xử lý ${data.count} mục.` : '';
+          setThumbnailProgress({ 
+            current: 3, 
+            total: 3, 
+            message: `Hoàn tất! ${countInfo}`, 
+            success: true 
+          });
+        },
+        (error) => {
+          console.error('❌ Thumbnail extraction failed:', error);
+          setThumbnailProgress({ 
+            message: `Extraction thất bại: ${error}` 
+          });
+        }
+      );
+    } catch (error) {
+      console.error('❌ Thumbnail extraction error:', error);
+      setThumbnailProgress({ 
+        message: `Lỗi: ${error.message}` 
+      });
+    } finally {
+      setIsThumbnailExtracting(false);
+    }
   };
 
   // Handle delete operation
@@ -342,15 +379,19 @@ const DatabaseActions = ({
       label: showLabels ? labels.delete : '',
       onClick: handleDelete,
       className: 'text-red-600 hover:text-red-700 border-red-300 hover:border-red-400'
-    },
-    {
+    }
+  );
+
+  // Media doesn't support reset operation
+  if (currentContentType !== 'media') {
+    buttons.push({
       key: 'reset',
       icon: FiRotateCcw,
       label: showLabels ? labels.reset : '',
       onClick: handleReset,
       className: 'text-yellow-600 hover:text-yellow-700 border-yellow-300 hover:border-yellow-400'
-    }
-  );
+    });
+  }
   
   // Layout classes
   const layoutClasses = {
@@ -376,6 +417,27 @@ const DatabaseActions = ({
       
       {/* Modal Component */}
       <ModalComponent />
+      
+      {/* Scan Modal for partial scan */}
+      <ScanModal
+        isOpen={scanModalOpen}
+        onClose={handleScanModalClose}
+        onConfirm={handleScanConfirm}
+        type={currentContentType}
+        isScanning={isScanning}
+        progress={scanProgress}
+      />
+      
+      {/* Thumbnail Extraction Modal */}
+      <ScanModal
+        isOpen={thumbnailModalOpen}
+        onClose={handleThumbnailModalClose}
+        onConfirm={handleThumbnailConfirm}
+        type={currentContentType}
+        isScanning={isThumbnailExtracting}
+        progress={thumbnailProgress}
+        mode="thumbnail"
+      />
     </div>
   );
 };

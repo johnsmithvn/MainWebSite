@@ -20,7 +20,8 @@ const PlaylistModal = () => {
   const { showToast } = useUIStore();
 
   const [open, setOpen] = useState(false);
-  const [track, setTrack] = useState(null); // { path, name, ... }
+  const [track, setTrack] = useState(null); // { path, name, ... } - single track
+  const [tracks, setTracks] = useState([]); // multiple tracks
   const [loading, setLoading] = useState(false);
   const [playlists, setPlaylists] = useState([]);
   const [search, setSearch] = useState('');
@@ -32,9 +33,22 @@ const PlaylistModal = () => {
   // Listen for global event to open modal
   useEffect(() => {
     const handler = (e) => {
-  const item = e.detail?.item || null;
-  setTrack(item || null);
-  setOpen(true);
+      const item = e.detail?.item || null;
+      const items = e.detail?.items || null;
+      
+      if (items && Array.isArray(items)) {
+        // Multiple tracks mode
+        setTracks(items);
+        setTrack(null);
+      } else if (item) {
+        // Single track mode
+        setTrack(item);
+        setTracks([]);
+      } else {
+        setTrack(null);
+        setTracks([]);
+      }
+      setOpen(true);
     };
     window.addEventListener('openPlaylistModal', handler);
     return () => window.removeEventListener('openPlaylistModal', handler);
@@ -69,6 +83,7 @@ const PlaylistModal = () => {
   const close = () => {
     setOpen(false);
     setTrack(null);
+    setTracks([]);
     setSearch('');
     setCreating(false);
     setNewName('');
@@ -92,27 +107,46 @@ const PlaylistModal = () => {
 
   // Toggle add/remove without closing modal; keep current order until modal is reopened
   const toggleTrackInPlaylist = async (p) => {
-    if (!sourceKey || !track?.path) return;
+    const isMultiple = tracks.length > 0;
+    const itemsToAdd = isMultiple ? tracks : (track ? [track] : []);
+    
+    if (!sourceKey || itemsToAdd.length === 0) return;
+    
     try {
       setLoading(true);
-      if (p.hasTrack) {
-        await fetchJSON(`/api/music/playlist/remove`, {
-          method: 'DELETE',
-          body: JSON.stringify({ key: sourceKey, playlistId: p.id, path: track.path }),
-        });
-        showToast({ type: 'success', message: 'Đã xoá khỏi playlist' });
-      } else {
-        await fetchJSON(`/api/music/playlist/add`, {
+      
+      if (isMultiple) {
+        // Multiple tracks mode - always add
+        const paths = itemsToAdd.map(t => t.path);
+        await fetchJSON(`/api/music/playlist/add-multiple`, {
           method: 'POST',
-          body: JSON.stringify({ key: sourceKey, playlistId: p.id, path: track.path }),
+          body: JSON.stringify({ key: sourceKey, playlistId: p.id, paths }),
         });
-        showToast({ type: 'success', message: 'Đã thêm vào playlist' });
+        showToast({ type: 'success', message: `Đã thêm ${paths.length} bài vào playlist` });
+        // After adding multiple tracks, close modal
+        setTimeout(close, 500);
+      } else {
+        // Single track mode - toggle add/remove
+        if (p.hasTrack) {
+          await fetchJSON(`/api/music/playlist/remove`, {
+            method: 'DELETE',
+            body: JSON.stringify({ key: sourceKey, playlistId: p.id, path: track.path }),
+          });
+          showToast({ type: 'success', message: 'Đã xoá khỏi playlist' });
+        } else {
+          await fetchJSON(`/api/music/playlist/add`, {
+            method: 'POST',
+            body: JSON.stringify({ key: sourceKey, playlistId: p.id, path: track.path }),
+          });
+          showToast({ type: 'success', message: 'Đã thêm vào playlist' });
+        }
+        // Update local state: flip hasTrack but DO NOT reorder
+        setPlaylists((prev) => prev.map((x) => (x.id === p.id ? { ...x, hasTrack: !p.hasTrack } : x)));
       }
-  // Update local state: flip hasTrack but DO NOT reorder
-  setPlaylists((prev) => prev.map((x) => (x.id === p.id ? { ...x, hasTrack: !p.hasTrack } : x)));
     } catch (err) {
       console.error(err);
-      showToast({ type: 'error', message: p.hasTrack ? 'Xoá khỏi playlist thất bại' : 'Thêm vào playlist thất bại' });
+      const action = isMultiple ? 'Thêm nhiều bài vào playlist thất bại' : (p.hasTrack ? 'Xoá khỏi playlist thất bại' : 'Thêm vào playlist thất bại');
+      showToast({ type: 'error', message: action });
     } finally {
       setLoading(false);
     }
@@ -187,7 +221,10 @@ const PlaylistModal = () => {
                 <div>
                   <div className="text-sm opacity-90">Thêm vào playlist</div>
                   <div className="text-lg font-semibold line-clamp-1 flex items-center gap-2">
-                    <FiMusic /> {track?.name || track?.title || track?.path?.split('/')?.pop() || 'Bài hát'}
+                    <FiMusic /> 
+                    {tracks.length > 0 
+                      ? `${tracks.length} bài hát` 
+                      : (track?.name || track?.title || track?.path?.split('/')?.pop() || 'Bài hát')}
                   </div>
                 </div>
               </div>
@@ -243,11 +280,14 @@ const PlaylistModal = () => {
                 {!loading && filtered.length === 0 && (
                   <div className="p-6 text-center text-gray-500">Chưa có playlist nào</div>
                 )}
-                {!loading && filtered.map((p) => (
+                {!loading && filtered.map((p) => {
+                  const isMultiple = tracks.length > 0;
+                  const buttonText = isMultiple ? 'Thêm' : (p.hasTrack ? 'Đã có' : 'Thêm');
+                  return (
                   <button
                     key={p.id}
                     onClick={() => toggleTrackInPlaylist(p)}
-                    className={`w-full group flex items-center gap-3 px-4 py-3 transition-colors ${p.hasTrack ? 'bg-emerald-50/60 dark:bg-emerald-900/10' : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}
+                    className={`w-full group flex items-center gap-3 px-4 py-3 transition-colors ${p.hasTrack && !isMultiple ? 'bg-emerald-50/60 dark:bg-emerald-900/10' : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}
                   >
                     <div className="w-10 h-10 rounded-md overflow-hidden bg-gray-200 dark:bg-dark-700 flex items-center justify-center">
                       {p.thumbnail ? (
@@ -265,11 +305,11 @@ const PlaylistModal = () => {
                         <div className="text-sm text-gray-400">Playlist</div>
                       )}
                     </div>
-                    <div className={`shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-full border-2 ${p.hasTrack ? 'border-emerald-600 text-emerald-600 bg-white/60' : 'border-emerald-600/40 text-emerald-600/70 group-hover:border-emerald-600 group-hover:text-emerald-600'}`}>
-                      {p.hasTrack ? <FiCheck className="w-4 h-4" /> : <FiPlus className="w-4 h-4" />}
+                    <div className={`shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-full border-2 ${p.hasTrack && !isMultiple ? 'border-emerald-600 text-emerald-600 bg-white/60' : 'border-emerald-600/40 text-emerald-600/70 group-hover:border-emerald-600 group-hover:text-emerald-600'}`}>
+                      {p.hasTrack && !isMultiple ? <FiCheck className="w-4 h-4" /> : <FiPlus className="w-4 h-4" />}
                     </div>
                   </button>
-                ))}
+                )})}
               </div>
             </div>
             </motion.div>

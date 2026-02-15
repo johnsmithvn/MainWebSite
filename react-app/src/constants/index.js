@@ -90,6 +90,17 @@ export const CACHE = {
   FALLBACK_IMAGE_SIZE_BYTES: 500 * 1024, // 500KB fallback estimate per image
 };
 
+/**
+ * ⏱️ Auto-Refresh Intervals
+ * Dùng cho React Query staleTime và các tính năng auto-refresh
+ */
+export const AUTO_REFRESH = {
+  RANDOM_ITEMS: 20 * 60 * 1000,        // 5 phút - staleTime cho random sections
+  RANDOM_ITEMS_CACHE: 20 * 60 * 1000, // 10 phút - cacheTime (2x staleTime)
+  RECENT_ITEMS: 10 * 60 * 1000,       // 10 phút - Recent items
+  TOP_VIEW_ITEMS: 15 * 60 * 1000,     // 15 phút - Top viewed items
+};
+
 // Export cache key utilities
 export * from './cacheKeys';
 
@@ -215,6 +226,7 @@ export const API = {
     MANGA: "/api/manga",
     MOVIE: "/api/movie",
     MUSIC: "/api/music",
+    MEDIA: "/api/media",
     SYSTEM: "/api"
   },
   TIMEOUT: 30000,

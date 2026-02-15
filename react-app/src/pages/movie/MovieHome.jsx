@@ -12,6 +12,7 @@ import MovieCard from '@/components/movie/MovieCard';
 import Pagination from '@/components/common/Pagination';
 import Breadcrumb from '@/components/common/Breadcrumb';
 import MovieRandomSection from '@/components/movie/MovieRandomSection';
+import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 import { PAGINATION } from '@/constants';
 
 const MovieHome = () => {
@@ -28,13 +29,16 @@ const MovieHome = () => {
     searchTerm,
     setSearchTerm,
     fetchMovieFolders,
-    clearMovieCache 
+    clearMovieCache,
+    deleteItem 
   } = useMovieStore();
   
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('name');
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [moviesPerPage, setMoviesPerPage] = useState(() => {
     const urlVal = parseInt(searchParams.get('size') || '', 10);
     if (!Number.isNaN(urlVal) && urlVal > 0) return urlVal;
@@ -413,6 +417,7 @@ const MovieHome = () => {
                   item={movie}
                   showViews={false}
                   variant="grid"
+                  onDeleteClick={(item) => setItemToDelete(item)}
                 />
               ))}
             </div>
@@ -445,6 +450,7 @@ const MovieHome = () => {
                   item={movie}
                   showViews={false}
                   variant="list"
+                  onDeleteClick={(item) => setItemToDelete(item)}
                 />
               ))}
             </div>
@@ -470,6 +476,27 @@ const MovieHome = () => {
         )}
         </div> {/* End of movie-main-container */}
       </div>
+
+      {/* Delete Confirmation Modal - Single instance */}
+      <DeleteConfirmModal
+        isOpen={!!itemToDelete}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={async () => {
+          if (!itemToDelete) return;
+          setIsDeleting(true);
+          try {
+            await deleteItem(itemToDelete.path);
+            setItemToDelete(null);
+          } catch (err) {
+            console.error('Delete failed:', err);
+          } finally {
+            setIsDeleting(false);
+          }
+        }}
+        itemName={itemToDelete?.name || itemToDelete?.path?.split('/').pop() || ''}
+        itemType={itemToDelete?.type === 'folder' ? 'folder' : 'file'}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 };

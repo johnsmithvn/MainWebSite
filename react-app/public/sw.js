@@ -14,10 +14,11 @@ const DEFAULT_IMAGES = {
   favicon: '/default/favicon.png'
 };
 
-const CACHE_VERSION = 'v3.0.1'; // ✅ PDF streaming (no cache)
+const CACHE_VERSION = 'v3.1.0'; // ✅ Added thumbnail caching for Movie/Music/Media
 const STATIC_CACHE = `offline-core-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `reader-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'chapter-images'; // Keep existing name for compatibility
+const THUMBNAIL_CACHE = 'media-thumbnails-v1'; // New cache for movie/music/media thumbnails
 
 // Offline essentials - only default images, no offline.html
 const OFFLINE_CORE_ASSETS = [
@@ -46,7 +47,7 @@ const contentChangeTracker = {
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('🔧 SW installing v3.0.1...');
+  console.log('🔧 SW installing v3.1.0...');
 
   event.waitUntil((async () => {
     try {
@@ -71,7 +72,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - cleanup old caches
 self.addEventListener('activate', (event) => {
-  console.log('🚀 SW activating v3.0.1...');
+  console.log('🚀 SW activating v3.1.0...');
 
   event.waitUntil(
     Promise.all([
@@ -82,8 +83,14 @@ self.addEventListener('activate', (event) => {
             const managedPrefixes = ['manga-', 'mainws-', 'offline-core-', 'reader-dynamic-'];
             const isManagedCache = managedPrefixes.some(prefix => cacheName.startsWith(prefix));
 
+            // Keep THUMBNAIL_CACHE and IMAGE_CACHE, clean up old versions
+            const isCurrentCache = cacheName === IMAGE_CACHE || 
+                                   cacheName === THUMBNAIL_CACHE ||
+                                   cacheName === STATIC_CACHE ||
+                                   cacheName === DYNAMIC_CACHE;
+
             // Simplified logic - only check if managed cache and not current
-            if (cacheName !== IMAGE_CACHE && isManagedCache) {
+            if (!isCurrentCache && isManagedCache) {
               console.log('🗑️ Deleting old cache:', cacheName);
               // Remove from cache instances map too
               cacheInstances.delete(cacheName);
@@ -140,6 +147,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE));
   } else if (isMangaImage(request)) {
     event.respondWith(mangaImageStrategy(request));
+  } else if (isThumbnailRequest(request)) {
+    event.respondWith(thumbnailCacheStrategy(request));
   } else if (isNavigation(request)) {
     event.respondWith(navigationStrategy(request));
   } else {
@@ -294,6 +303,86 @@ async function mangaImageStrategy(request) {
   }
 }
 
+// Thumbnail caching strategy for Movie/Music/Media
+// Uses stale-while-revalidate pattern: serve cached, update in background
+async function thumbnailCacheStrategy(request) {
+  try {
+    const thumbnailCache = await getCacheInstance(THUMBNAIL_CACHE);
+    const cachedThumbnail = await thumbnailCache.match(request);
+    
+    // Serve cached thumbnail immediately if available
+    if (cachedThumbnail) {
+      console.log('✅ 📦 THUMBNAIL CACHE HIT:', getResourceName(request.url));
+      
+      // Update cache in background (stale-while-revalidate)
+      if (navigator.onLine) {
+        fetch(request)
+          .then(async networkResponse => {
+            if (networkResponse.ok) {
+              try {
+                // Check if content changed before updating
+                const shouldUpdate = await checkContentChange(request, networkResponse.clone());
+                if (shouldUpdate) {
+                  await thumbnailCache.put(request, networkResponse.clone());
+                  console.log('🔄 Thumbnail cache updated:', getResourceName(request.url));
+                  
+                  // Implement LRU cleanup: keep max 1000 thumbnails (~30MB)
+                  const MAX_THUMBNAILS = 1000;
+                  const keys = await thumbnailCache.keys();
+                  if (keys.length > MAX_THUMBNAILS) {
+                    // Remove oldest entries (first 10%)
+                    const removeCount = Math.floor(MAX_THUMBNAILS * 0.1);
+                    for (let i = 0; i < removeCount; i++) {
+                      await thumbnailCache.delete(keys[i]);
+                    }
+                    console.log(`🗑️ Cleaned ${removeCount} old thumbnails (LRU)`);
+                  }
+                } else {
+                  console.log('⏭️ Thumbnail unchanged, skip cache update:', getResourceName(request.url));
+                }
+              } catch (cacheError) {
+                console.warn('⚠️ Failed to update thumbnail cache:', cacheError);
+              }
+            }
+          })
+          .catch(() => {
+            // Silent fail for background updates
+          });
+      }
+      
+      return cachedThumbnail;
+    }
+    
+    // No cache: fetch from network and cache
+    console.log('❌ 🌐 THUMBNAIL CACHE MISS, fetching:', getResourceName(request.url));
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      try {
+        await thumbnailCache.put(request, networkResponse.clone());
+        console.log('✅ Thumbnail cached:', getResourceName(request.url));
+      } catch (cacheError) {
+        console.warn('⚠️ Failed to cache thumbnail:', cacheError);
+      }
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    console.error('❌ Thumbnail cache strategy failed:', error);
+    
+    // Try to return fallback default images
+    if (request.url.includes('/movie')) {
+      return getFallbackImage(DEFAULT_IMAGES.video);
+    } else if (request.url.includes('/music')) {
+      return getFallbackImage(DEFAULT_IMAGES.music);
+    } else if (request.url.includes('/media')) {
+      return getFallbackImage(DEFAULT_IMAGES.folder);
+    }
+    
+    return handleFetchError(request, error);
+  }
+}
+
 // Navigation strategy for SPA
 async function navigationStrategy(request) {
   try {
@@ -419,6 +508,23 @@ function isMangaImage(request) {
          request.destination === 'image';
 }
 
+function isThumbnailRequest(request) {
+  const url = request.url;
+  // Match thumbnail requests for Movie, Music, and Media
+  return (
+    // Movie thumbnails: /movie-thumb/:id or /movie/.../*.jpg
+    url.includes('/movie-thumb/') ||
+    (url.includes('/movie/') && url.match(/\.(jpg|jpeg|png|webp)$/i)) ||
+    
+    // Music thumbnails: /music-thumb/:id or /music/.../*.jpg
+    url.includes('/music-thumb/') ||
+    (url.includes('/music/') && url.match(/\.(jpg|jpeg|png|webp)$/i)) ||
+    
+    // Media thumbnails: /media/.../*.jpg (except full images in lightbox)
+    (url.includes('/media/') && url.match(/\.(jpg|jpeg|png|webp|avif)$/i))
+  );
+}
+
 function isNavigation(request) {
   return request.mode === 'navigate';
 }
@@ -505,11 +611,14 @@ async function simpleHash(text) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
 }
 
-async function getFallbackImage() {
+async function getFallbackImage(imageUrl = null) {
   try {
     // Use centralized cache getter
     const cache = await getCacheInstance(STATIC_CACHE);
-    const fallback = await cache.match(DEFAULT_IMAGES.cover);
+    
+    // Use provided imageUrl or default to cover
+    const fallbackUrl = imageUrl || DEFAULT_IMAGES.cover;
+    const fallback = await cache.match(fallbackUrl);
     
     if (fallback) {
       return fallback;
@@ -779,6 +888,7 @@ function getCacheType(cacheName) {
   if (cacheName === STATIC_CACHE) return 'offline-core';
   if (cacheName === DYNAMIC_CACHE) return 'dynamic';
   if (cacheName === IMAGE_CACHE) return 'images';
+  if (cacheName === THUMBNAIL_CACHE) return 'thumbnails';
   if (cacheName.includes('manga-') || cacheName.includes('mainws-')) return 'legacy';
   return 'unknown';
 }
