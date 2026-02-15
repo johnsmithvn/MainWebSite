@@ -1,9 +1,28 @@
 // 📁 src/pages/music/MusicPlayer.jsx
 // 🎵 Spotify-style Music Player với design đẹp và hiện đại (single-file implementation)
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   FiPlay,
   FiPause,
@@ -29,6 +48,179 @@ import FullPlayerModal from '../../components/music/FullPlayerModal';
 import LyricsModal from '../../components/music/LyricsModal';
 import MusicDownloadModal from '../../components/music/MusicDownloadModal';
 import { musicDownloadQueue } from '@/utils/musicDownloadQueue';
+
+// ====== Sortable Track Row Component (using @dnd-kit) ======
+const SortableTrackRow = React.memo(({
+  track,
+  index,
+  currentIndex,
+  isPlaying,
+  isSelected,
+  isSelectionMode,
+  currentPlaylistId,
+  isDraggingMultiple,
+  selectedCount,
+  toggleSelectTrack,
+  handleRowClick,
+  handleRemoveFromPlaylist,
+  navigate,
+  formatTime,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: track.path,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  // If this item is part of a multi-drag group and is NOT the active drag item, dim it
+  const isGhosted = isDraggingMultiple && isSelected && !isDragging;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={(e) => {
+        // Ctrl+Click (or Cmd+Click on Mac) = toggle selection
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleSelectTrack(track.path);
+          return;
+        }
+        if (isSelectionMode) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleSelectTrack(track.path);
+        } else {
+          handleRowClick(e, track, index);
+        }
+      }}
+      className={`relative grid ${
+        isSelectionMode 
+          ? currentPlaylistId 
+            ? 'grid-cols-[40px_40px_1fr_56px_40px] md:grid-cols-[40px_40px_1fr_1fr_56px_72px_56px_40px] lg:grid-cols-[40px_40px_1fr_1fr_1fr_56px_72px_56px_40px]'
+            : 'grid-cols-[40px_40px_1fr_56px] md:grid-cols-[40px_40px_1fr_1fr_56px_72px_56px] lg:grid-cols-[40px_40px_1fr_1fr_1fr_56px_72px_56px]'
+          : currentPlaylistId
+            ? 'grid-cols-[40px_1fr_56px_40px] md:grid-cols-[40px_1fr_1fr_56px_72px_56px_40px] lg:grid-cols-[40px_1fr_1fr_1fr_56px_72px_56px_40px]'
+            : 'grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_56px_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_56px_72px_56px]'
+      } gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${
+        index === currentIndex ? 'bg-white/10' : ''
+      } ${isSelected ? 'bg-green-500/20' : ''} ${
+        isGhosted ? 'opacity-30' : ''
+      } ${isDragging ? 'shadow-lg' : ''}`}
+    >
+      {isSelectionMode && (
+        <div 
+          className="text-center flex items-center justify-center"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleSelectTrack(track.path);
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => {}}
+            onClick={(e) => e.stopPropagation()}
+            className="w-5 h-5 rounded border-2 border-white/30 bg-white/10 checked:bg-green-500 checked:border-green-500 cursor-pointer transition-colors"
+          />
+        </div>
+      )}
+      <div className="text-center text-white/60">
+        {index === currentIndex && isPlaying ? (
+          <span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+        ) : (
+          index + 1
+        )}
+      </div>
+
+      <div className="min-w-0 flex items-center gap-3">
+        <img
+          src={buildThumbnailUrl(track, 'music')}
+          onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)}
+          alt={track.name}
+          className="w-10 h-10 rounded object-cover flex-none"
+        />
+        <div className="min-w-0">
+          <div className={`${index === currentIndex ? 'text-green-400' : 'text-white'} truncate`}>
+            {track.name}
+          </div>
+          <div className="text-xs text-white/60 truncate">{track.artist || 'Unknown Artist'}</div>
+        </div>
+      </div>
+
+      <div className="hidden lg:block text-sm text-white/70 truncate">{track.album || '\u2014'}</div>
+
+      <div className="hidden md:block text-sm text-white/70 truncate">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            const parentPath = (track.path || '').split('/').slice(0, -1).join('/');
+            if (parentPath) {
+              navigate(`/music?path=${encodeURIComponent(parentPath)}`);
+            } else {
+              navigate('/music');
+            }
+          }}
+          className="hover:underline hover:text-white"
+          title="M\u1edf th\u01b0 m\u1ee5c ch\u1ee9a"
+        >
+          {(() => {
+            const p = (track.path || '').split('/').slice(0, -1).join('/');
+            const name = p ? p.split('/').pop() : '';
+            return name || 'Home';
+          })()}
+        </button>
+      </div>
+
+      <div className="hidden md:block text-sm text-white/70 text-center">
+        {(() => {
+          const ext = track.path?.split('.').pop();
+          return ext ? `${ext.toLowerCase()}` : '\u2014';
+        })()}
+      </div>
+
+      <div className="hidden md:flex items-center justify-end pr-2 text-white/70 tabular-nums">
+        {Number(track.viewCount ?? track.views ?? 0).toLocaleString()}
+      </div>
+
+      <div className="flex items-center justify-end gap-3 pr-2 text-white/70">
+        <span className="tabular-nums text-sm">{track.duration ? formatTime(track.duration) : '\u2014'}</span>
+      </div>
+
+      {currentPlaylistId && (
+        <div className="flex items-center justify-center">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRemoveFromPlaylist(track.path);
+            }}
+            className="p-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors"
+            title="X\u00f3a kh\u1ecfi playlist"
+          >
+            <FiTrash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+});
+
+SortableTrackRow.displayName = 'SortableTrackRow';
 
 const MusicPlayer = () => {
   const navigate = useNavigate();
@@ -97,10 +289,36 @@ const MusicPlayer = () => {
   const audioRef = useRef(null);
   // Removed viewedTracksRef to allow counting on every playback start
   const latestTrackRef = useRef(null);
-  const dragIndexRef = useRef(-1);
   const isDraggingRef = useRef(false);
-  const [dropIndicator, setDropIndicator] = useState({ index: -1, position: 'above' });
+  const dragEndTimeRef = useRef(0);
+  const [activeDragId, setActiveDragId] = useState(null);
   const prevOrderBeforeShuffleRef = useRef(null);
+  const effectivePlaylistRef = useRef(null);
+  const isPlaylistIdRef = useRef(null);
+
+  // @dnd-kit sensors - PointerSensor for desktop, TouchSensor for mobile
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // 5px of movement before drag starts
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200, // 200ms long press to start drag on mobile
+        tolerance: 5, // 5px of movement allowed during delay
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Sortable item IDs for @dnd-kit
+  const sortableIds = useMemo(
+    () => currentPlaylist.map((t) => t.path || `track-${Math.random()}`),
+    [currentPlaylist]
+  );
 
   // Selection states for multi-select
   const [selectedTracks, setSelectedTracks] = useState(new Set());
@@ -131,8 +349,8 @@ const MusicPlayer = () => {
   // Row click handler to avoid re-triggering the same track (prevents view loop)
   const handleRowClick = useCallback((e, track, index) => {
     e?.preventDefault?.();
-    if (isDraggingRef.current) {
-      // Ignore click triggered by drag-drop
+    // Ignore click triggered right after drag-drop (within 200ms)
+    if (isDraggingRef.current || (Date.now() - dragEndTimeRef.current < 200)) {
       return;
     }
     // If clicking the same track that's already selected
@@ -154,66 +372,73 @@ const MusicPlayer = () => {
     playTrack(track, currentPlaylist, index);
   }, [currentTrack?.path, currentIndex, isPlaying, playTrack, currentPlaylist, resumeTrack]);
 
-  // DnD handlers
-  const handleDragStart = (index) => {
-    dragIndexRef.current = index;
+  // @dnd-kit DnD handlers
+  const handleDndDragStart = useCallback((event) => {
+    const dragId = event.active.id;
+    setActiveDragId(dragId);
     isDraggingRef.current = true;
-  };
 
-  const handleDragOver = (e, overIndex) => {
-    // Needed to allow drop
-    e.preventDefault();
-    if (!e.currentTarget) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const position = y < rect.height / 2 ? 'above' : 'below';
-    setDropIndicator({ index: overIndex, position });
-  };
-
-  const handleDragEnd = () => {
-    // Allow click again shortly after drag
-    setTimeout(() => {
-      isDraggingRef.current = false;
-      dragIndexRef.current = -1;
-      setDropIndicator({ index: -1, position: 'above' });
-    }, 0);
-  };
-
-  const handleDrop = async (e, dropIndex) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const from = dragIndexRef.current;
-    if (from === -1 || dropIndex === -1) {
-      handleDragEnd();
-      return;
+    // If the dragged item is not selected, clear selection and only select it
+    // This ensures single drag still works without Ctrl
+    if (!selectedTracks.has(dragId)) {
+      setSelectedTracks(new Set([dragId]));
     }
+  }, [selectedTracks]);
 
-    // Determine insertion index based on indicator position
-    let insertIndex = dropIndicator.position === 'below' ? dropIndex + 1 : dropIndex;
-    if (from < insertIndex) insertIndex -= 1; // adjust for removal shift
+  const handleDndDragEnd = useCallback(async (event) => {
+    const { active, over } = event;
+    // Always clear drag state immediately
+    setActiveDragId(null);
+    isDraggingRef.current = false;
+    dragEndTimeRef.current = Date.now();
 
-    // Reorder playlist locally
+    if (!over || active.id === over.id) return;
+
     const prev = useMusicStore.getState().currentPlaylist;
-    if (!Array.isArray(prev) || prev.length === 0) {
-      handleDragEnd();
-      return;
+    if (!Array.isArray(prev) || prev.length === 0) return;
+
+    const activeIndex = prev.findIndex((t) => t.path === active.id);
+    const overIndex = prev.findIndex((t) => t.path === over.id);
+    if (activeIndex === -1 || overIndex === -1) return;
+
+    let updated;
+    const draggedIsSelected = selectedTracks.has(active.id) && selectedTracks.size > 1;
+
+    if (draggedIsSelected) {
+      // Multi-drag: move all selected items to the drop position
+      const selectedItems = prev.filter((t) => selectedTracks.has(t.path));
+      const remaining = prev.filter((t) => !selectedTracks.has(t.path));
+      // Find insertion point in the remaining array
+      const overInRemaining = remaining.findIndex((t) => t.path === over.id);
+      const insertAt = overInRemaining === -1 ? remaining.length : overInRemaining;
+      updated = [
+        ...remaining.slice(0, insertAt),
+        ...selectedItems,
+        ...remaining.slice(insertAt),
+      ];
+    } else {
+      // Single-drag: move one item
+      updated = [...prev];
+      const [moved] = updated.splice(activeIndex, 1);
+      const newOverIndex = updated.findIndex((t) => t.path === over.id);
+      const insertAt = newOverIndex === -1 ? updated.length : newOverIndex;
+      updated.splice(insertAt, 0, moved);
     }
-    const updated = [...prev];
-    const [moved] = updated.splice(from, 1);
-    updated.splice(Math.max(0, Math.min(insertIndex, updated.length)), 0, moved);
 
     // Keep the current track selection
     const currTrack = useMusicStore.getState().currentTrack;
-  const newIndex = currTrack ? Math.max(0, updated.findIndex((t) => t.path === currTrack.path)) : insertIndex;
+    const newIndex = currTrack ? Math.max(0, updated.findIndex((t) => t.path === currTrack.path)) : 0;
     useMusicStore.setState({ currentPlaylist: updated, currentIndex: newIndex });
 
     // Persist only when this session is a playlist id
     try {
       const shuffledOn = useMusicStore.getState().shuffle;
-      if (!shuffledOn && effectivePlaylist && isPlaylistId(effectivePlaylist) && sourceKey) {
+      const ep = effectivePlaylistRef.current;
+      const checkPlaylistId = isPlaylistIdRef.current;
+      if (!shuffledOn && ep && checkPlaylistId && checkPlaylistId(ep) && sourceKey) {
         const body = {
           key: sourceKey,
-          playlistId: Number(effectivePlaylist),
+          playlistId: Number(ep),
           order: updated.map((t) => t.path),
         };
         const res = await fetch('/api/music/playlist/order', {
@@ -225,14 +450,22 @@ const MusicPlayer = () => {
           const msg = await res.text();
           throw new Error(msg || 'Failed to save order');
         }
-        showToast('Đã lưu thứ tự playlist', 'success');
+        showToast(draggedIsSelected ? `Đã di chuyển ${selectedTracks.size} bài` : 'Đã lưu thứ tự playlist', 'success');
       }
     } catch (err) {
       showToast('Không thể lưu thứ tự: ' + (err.message || 'Lỗi không rõ'), 'error');
-    } finally {
-      handleDragEnd();
     }
-  };
+
+    // Clear selection state after DnD
+    setSelectedTracks(new Set());
+    setIsSelectionMode(false);
+  }, [selectedTracks, sourceKey, showToast]);
+
+  const handleDndDragCancel = useCallback(() => {
+    setActiveDragId(null);
+    isDraggingRef.current = false;
+    dragEndTimeRef.current = Date.now();
+  }, []);
 
   // Keep a ref of the latest track for event handlers
   useEffect(() => {
@@ -288,6 +521,11 @@ const MusicPlayer = () => {
   const effectivePath = stateFile || path || null;
   const effectivePlaylist = statePlaylist ?? playlistPath ?? null; // allow ''
   const effectiveKind = stateKind || (effectivePlaylist && !String(effectivePlaylist).includes('/') ? 'playlist' : (effectivePath ? 'audio' : 'folder'));
+
+  // Keep refs in sync for use inside DnD callbacks (avoids TDZ issues)
+  useEffect(() => {
+    effectivePlaylistRef.current = effectivePlaylist;
+  }, [effectivePlaylist]);
 
   // ========= Helpers =========
   function buildAudioUrl(audioPath) {
@@ -615,6 +853,9 @@ const MusicPlayer = () => {
     if (typeof val === 'string') return !val.includes('/');
     return false;
   };
+
+  // Keep ref in sync for DnD callback
+  isPlaylistIdRef.current = isPlaylistId;
 
   const loadPlaylistById = async (playlistIdArg, selectedFileArg) => {
     try {
@@ -1138,8 +1379,8 @@ const MusicPlayer = () => {
               <div className="flex items-center gap-2 text-white/90">
                 <span className="font-semibold">
                   {selectedTracks.size === 0 
-                    ? 'Select tracks to add to playlist' 
-                    : `Selected ${selectedTracks.size} tracks`}
+                    ? 'Select tracks (or Ctrl+Click)' 
+                    : `Selected ${selectedTracks.size} tracks — drag any selected to reorder`}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -1197,127 +1438,69 @@ const MusicPlayer = () => {
               {currentPlaylistId && <div className="text-center">Action</div>}
             </div>
 
-    <div className="divide-y divide-white/5 flex-1 overflow-y-auto">
-              {currentPlaylist.map((track, index) => {
-                const isSelected = selectedTracks.has(track.path);
-                return (
-                <div
-                  key={track.path || index}
-                  draggable={!isSelectionMode}
-                  onDragStart={() => !isSelectionMode && handleDragStart(index)}
-                  onDragOver={(e) => !isSelectionMode && handleDragOver(e, index)}
-                  onDrop={(e) => !isSelectionMode && handleDrop(e, index)}
-                  onDragEnd={handleDragEnd}
-                  onClick={(e) => {
-                    if (isSelectionMode) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleSelectTrack(track.path);
-                    } else {
-                      handleRowClick(e, track, index);
-                    }
-                  }}
-      className={`relative grid ${
-        isSelectionMode 
-          ? currentPlaylistId 
-            ? 'grid-cols-[40px_40px_1fr_56px_40px] md:grid-cols-[40px_40px_1fr_1fr_56px_72px_56px_40px] lg:grid-cols-[40px_40px_1fr_1fr_1fr_56px_72px_56px_40px]'
-            : 'grid-cols-[40px_40px_1fr_56px] md:grid-cols-[40px_40px_1fr_1fr_56px_72px_56px] lg:grid-cols-[40px_40px_1fr_1fr_1fr_56px_72px_56px]'
-          : currentPlaylistId
-            ? 'grid-cols-[40px_1fr_56px_40px] md:grid-cols-[40px_1fr_1fr_56px_72px_56px_40px] lg:grid-cols-[40px_1fr_1fr_1fr_56px_72px_56px_40px]'
-            : 'grid-cols-[40px_1fr_56px] md:grid-cols-[40px_1fr_1fr_56px_72px_56px] lg:grid-cols-[40px_1fr_1fr_1fr_56px_72px_56px]'
-      } gap-3 px-4 py-2 items-center cursor-pointer hover:bg-white/5 transition-colors ${index === currentIndex ? 'bg-white/10' : ''} ${isSelected ? 'bg-green-500/20' : ''}`}
-                >
-                  {dropIndicator.index === index && !isSelectionMode && (
-                    <div className={`absolute left-2 right-2 ${dropIndicator.position === 'above' ? 'top-0' : 'bottom-0'} h-0.5 bg-emerald-400 shadow-[0_0_0_2px_rgba(16,185,129,0.35)] rounded pointer-events-none`} />
-                  )}
-                  {isSelectionMode && (
-                    <div 
-                      className="text-center flex items-center justify-center"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleSelectTrack(track.path);
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {}} // Controlled by parent div onClick
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-5 h-5 rounded border-2 border-white/30 bg-white/10 checked:bg-green-500 checked:border-green-500 cursor-pointer transition-colors"
+    <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDndDragStart}
+                onDragEnd={handleDndDragEnd}
+                onDragCancel={handleDndDragCancel}
+              >
+                <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                  <div className="divide-y divide-white/5 flex-1 overflow-y-auto">
+                    {currentPlaylist.map((track, index) => (
+                      <SortableTrackRow
+                        key={track.path || index}
+                        track={track}
+                        index={index}
+                        currentIndex={currentIndex}
+                        isPlaying={isPlaying}
+                        isSelected={selectedTracks.has(track.path)}
+                        isSelectionMode={isSelectionMode}
+                        currentPlaylistId={currentPlaylistId}
+                        isDraggingMultiple={activeDragId && selectedTracks.has(activeDragId) && selectedTracks.size > 1}
+                        selectedCount={selectedTracks.size}
+                        toggleSelectTrack={toggleSelectTrack}
+                        handleRowClick={handleRowClick}
+                        handleRemoveFromPlaylist={handleRemoveFromPlaylist}
+                        navigate={navigate}
+                        formatTime={formatTime}
                       />
-                    </div>
-                  )}
-                  <div className="text-center text-white/60">
-                    {index === currentIndex && isPlaying ? (<span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse" />) : (index + 1)}
+                    ))}
+
+                    {currentPlaylist.length === 0 && (
+                      <div className="px-4 py-10 text-center text-white/60">Chưa có danh sách phát. Hãy chọn một bài để bắt đầu.</div>
+                    )}
                   </div>
+                </SortableContext>
 
-                  <div className="min-w-0 flex items-center gap-3">
-                    <img src={buildThumbnailUrl(track, 'music')} onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)} alt={track.name} className="w-10 h-10 rounded object-cover flex-none" />
-                    <div className="min-w-0">
-                      <div className={`${index === currentIndex ? 'text-green-400' : 'text-white'} truncate`}>{track.name}</div>
-                      <div className="text-xs text-white/60 truncate">{track.artist || 'Unknown Artist'}</div>
-                    </div>
-                  </div>
-
-                  <div className="hidden lg:block text-sm text-white/70 truncate">{track.album || '—'}</div>
-
-                  <div className="hidden md:block text-sm text-white/70 truncate">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const parentPath = (track.path || '').split('/').slice(0, -1).join('/');
-                        if (parentPath) {
-                          navigate(`/music?path=${encodeURIComponent(parentPath)}`);
-                        } else {
-                          navigate('/music');
-                        }
-                      }}
-                      className="hover:underline hover:text-white"
-                      title="Mở thư mục chứa"
-                    >
-                      {(() => {
-                        const p = (track.path || '').split('/').slice(0, -1).join('/');
-                        const name = p ? p.split('/').pop() : '';
-                        return name || 'Home';
-                      })()}
-                    </button>
-                  </div>
-
-                  <div className="hidden md:block text-sm text-white/70 text-center">
-                    {(() => {
-                      const ext = track.path?.split('.').pop();
-                      return ext ? `${ext.toLowerCase()}` : '—';
-                    })()}
-                  </div>
-
-                  <div className="hidden md:flex items-center justify-end pr-2 text-white/70 tabular-nums">{Number(track.viewCount ?? track.views ?? 0).toLocaleString()}</div>
-
-                  <div className="flex items-center justify-end gap-3 pr-2 text-white/70">
-                    <span className="tabular-nums text-sm">{track.duration ? formatTime(track.duration) : '—'}</span>
-                  </div>
-
-                  {/* Action button - only show when viewing a playlist */}
-                  {currentPlaylistId && (
-                    <div className="flex items-center justify-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveFromPlaylist(track.path);
-                        }}
-                        className="p-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/20 transition-colors"
-                        title="Xóa khỏi playlist"
-                      >
-                        <FiTrash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )})}
-
-              {currentPlaylist.length === 0 && (
-                <div className="px-4 py-10 text-center text-white/60">Chưa có danh sách phát. Hãy chọn một bài để bắt đầu.</div>
-              )}
-            </div>
+                {/* Drag overlay - shows floating preview when dragging */}
+                <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+                  {activeDragId ? (() => {
+                    const dragTrack = currentPlaylist.find((t) => t.path === activeDragId);
+                    const isMulti = selectedTracks.has(activeDragId) && selectedTracks.size > 1;
+                    if (!dragTrack) return null;
+                    return (
+                      <div className="relative bg-white/10 backdrop-blur-lg rounded-lg px-4 py-2 shadow-2xl border border-white/20 flex items-center gap-3 max-w-md">
+                        <img
+                          src={buildThumbnailUrl(dragTrack, 'music')}
+                          onError={(e) => (e.currentTarget.src = DEFAULT_IMAGES.music)}
+                          alt={dragTrack.name}
+                          className="w-10 h-10 rounded object-cover flex-none"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-white truncate text-sm font-medium">{dragTrack.name}</div>
+                          <div className="text-xs text-white/60 truncate">{dragTrack.artist || 'Unknown Artist'}</div>
+                        </div>
+                        {isMulti && (
+                          <div className="absolute -top-2 -right-2 min-w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg px-1.5">
+                            {selectedTracks.size}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })() : null}
+                </DragOverlay>
+              </DndContext>
           </div>
         </div>
       </div>
