@@ -6,6 +6,18 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Added
 
+- ✨ [2026-02-15] Added multi-drag support for Music Player playlist using @dnd-kit
+  - Installed @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities
+  - Replaced native HTML5 DnD with @dnd-kit for smoother drag experience
+  - Multi-drag: select multiple tracks (checkbox mode) then drag one → all selected tracks move together
+  - DragOverlay shows floating preview card with track info and badge count when dragging multiple items
+  - Ghost effect: selected items dim during multi-drag to indicate they're being moved
+  - PointerSensor with 5px activation constraint prevents accidental drag on click
+  - Smooth drop animation (200ms ease)
+  - Auto-persist playlist order to server when reordering in a saved playlist
+  - Created SortableTrackRow component using React.memo for optimal performance
+  - File: react-app/src/pages/music/MusicPlayer.jsx
+
 - ✨ [2026-02-15] Added total playlist duration calculation in Music Player
   - Displays total duration of all songs in playlist (e.g., "2h 15m 30s")
   - Duration shown next to song count in player header
