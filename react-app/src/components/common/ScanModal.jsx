@@ -56,13 +56,10 @@ const ScanModal = ({
     e.preventDefault();
     
     // Validate path format
-    const cleanPath = path.trim();
+    let cleanPath = path.trim();
     
-    // Check for backslashes (Windows path)
-    if (cleanPath.includes('\\')) {
-      setError('❌ Sử dụng dấu / thay vì \\ (ví dụ: Albums/Rock)');
-      return;
-    }
+    // Auto-convert backslashes to forward slashes (Windows path support)
+    cleanPath = cleanPath.replace(/\\/g, '/');
     
     // Check for leading/trailing slashes
     if (cleanPath.startsWith('/') || cleanPath.endsWith('/')) {
@@ -143,7 +140,8 @@ const ScanModal = ({
                     <div className="ml-3">
                       <p className="text-sm text-blue-800 dark:text-blue-200">
                         Nhập đường dẫn folder để scan (relative path từ root).
-                      </p>
+                        Nghĩa là nó đã chứa vd: E:\Music\" thì chỉ cần nhập thêm Anime\....                      </p>
+                      
                       <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
                         Để trống để scan toàn bộ database.
                       </p>

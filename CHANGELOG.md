@@ -21,6 +21,12 @@ All notable changes to this project will be documented in this file. Dates use Y
   - Example: Extract thumbnails for "Albums/Rock" without processing nested folders
 
 ### Changed
+- 🔄 [2026-02-15] Improved ScanModal path validation to auto-convert backslashes
+  - ScanModal now automatically converts backslashes `\` to forward slashes `/`
+  - Removed error message for backslash input, improved Windows path compatibility
+  - Users can now paste Windows-style paths (e.g., `Albums\Rock`) and they'll be auto-converted
+  - File: react-app/src/components/common/ScanModal.jsx
+
 - 🔄 [2024-12-13] Enhanced MusicCard visual distinction between folders and files
   - Folders now have 2px border with blue/purple accent color (border-blue-500/60 dark:border-purple-500/60)
   - Folders have stronger shadow (shadow-lg hover:shadow-xl) compared to files (shadow-sm hover:shadow-md)
