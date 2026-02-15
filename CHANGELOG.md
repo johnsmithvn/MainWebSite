@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file. Dates use Y
 
 ### Added
 
+- ✨ [2026-02-15] Added total playlist duration calculation in Music Player
+  - Displays total duration of all songs in playlist (e.g., "2h 15m 30s")
+  - Duration shown next to song count in player header
+  - Reads duration metadata from tracks (duration/totalTime fields)
+  - Smart formatting: Shows hours/minutes/seconds or just minutes/seconds
+  - File: react-app/src/pages/music/MusicPlayer.jsx
+
 - ✨ [2024-12-14] Added scope-aware thumbnail extraction for music and movie
   - Music and movie extract-thumbnail now support scopePath and shallow mode
   - Backend: Updated extractThumbnailSmart and extractMovieThumbnailSmart functions

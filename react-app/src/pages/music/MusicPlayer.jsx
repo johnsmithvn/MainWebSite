@@ -336,6 +336,29 @@ const MusicPlayer = () => {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Calculate total duration of all tracks in playlist
+  const calculateTotalPlaylistDuration = useCallback(() => {
+    return currentPlaylist.reduce((total, track) => {
+      const duration = track.duration || track.totalTime || 0;
+      return total + (typeof duration === 'number' ? duration : 0);
+    }, 0);
+  }, [currentPlaylist]);
+
+  const formatPlaylistDuration = (totalSeconds) => {
+    if (!totalSeconds || totalSeconds === 0) return '0:00';
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
   const togglePlayPause = useCallback(async () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -1061,6 +1084,10 @@ const MusicPlayer = () => {
               {/* Stats info */}
               <div className="mt-4 text-white/80 text-sm flex flex-wrap items-center gap-2">
                 <span className="whitespace-nowrap">{currentPlaylist.length} {currentPlaylist.length === 1 ? 'song' : 'songs'}</span>
+                <span className="w-1 h-1 rounded-full bg-white/40" />
+                <span className="whitespace-nowrap" title="Total duration of all songs in playlist">
+                  ⏱️ {formatPlaylistDuration(calculateTotalPlaylistDuration())}
+                </span>
                 <span className="w-1 h-1 rounded-full bg-white/40" />
                 <span className="whitespace-nowrap">{Number(currentTrack?.viewCount ?? currentTrack?.views ?? 0).toLocaleString()} Plays</span>
                 {/* Genre info from metadata */}
