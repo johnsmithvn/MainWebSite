@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const { getMusicDB } = require("../../utils/db");
+const { escapeLike } = require("../../utils/sqlLike");
 
 router.get("/music-folder", (req, res) => {
   const dbkey = req.query.key;
@@ -17,12 +18,12 @@ router.get("/music-folder", (req, res) => {
       SELECT folders.*, songs.artist, songs.album, songs.genre, songs.lyrics
       FROM folders
       LEFT JOIN songs ON folders.path = songs.path
-      WHERE folders.path LIKE ?
+      WHERE folders.path LIKE ? ESCAPE '\\'
         AND folders.name != '.thumbnail'
       ORDER BY folders.type DESC, folders.name COLLATE NOCASE ASC
     `
     )
-    .all(relPath ? `${relPath}/%` : "%");
+    .all(relPath ? `${escapeLike(relPath)}/%` : "%");
 
   const baseDepth = relPath ? relPath.split("/").filter(Boolean).length : 0;
   const folders = items

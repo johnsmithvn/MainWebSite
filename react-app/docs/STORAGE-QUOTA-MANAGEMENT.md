@@ -1,4 +1,4 @@
-# Storage Quota Management Documentation (2024 refresh)
+# Storage Quota Management
 
 ## 1. Mục tiêu & phạm vi
 
@@ -59,8 +59,7 @@ const result = await checkStorageForDownload(pageUrls);
 
 - `showStorageConfirmDialog(checkResult, modalConfirm)` – tạo confirm dialog (dùng modal nội bộ nếu truyền hàm, fallback sang `window.confirm/alert` nếu không).
 - `createStorageInfoModal(storageInfo)` – trả về payload để render modal thông tin quota nhanh (bao gồm màu sắc tương ứng với ngưỡng).
-
-Hai helper trên hiện được `StorageQuotaModal` sử dụng trực tiếp, đồng thời cũng có thể tái dùng ở nơi khác nếu muốn hiển thị thông tin quota mà không cần modal mặc định.
+- ⚠️ Hai helper `showStorageConfirmDialog` và `createStorageInfoModal` hiện **không được gọi ở đâu** — `MangaReader` render trực tiếp `StorageQuotaModal` (xem [DEAD-CODE-REPORT.md](../../docs/DEAD-CODE-REPORT.md)).
 
 ## 5. Luồng tích hợp trong MangaReader
 

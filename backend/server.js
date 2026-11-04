@@ -5,7 +5,8 @@ const path = require("path");
 const fs = require("fs");
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
-const { getRootPath, ROOT_PATHS } = require("./utils/config");
+const { getRootPath, ROOT_PATHS, SECURITY_KEYS } = require("./utils/config");
+const protectStatic = require("./middleware/protectStatic");
 const logRouter = require("./api/log");
 
 const { setupMiddleware, setupErrorHandling } = require("./middleware");
@@ -71,52 +72,27 @@ function setStaticHeaders(kind) {
 }
 
 // ✅ Static files với cache headers tối ưu và consistent
+const STATIC_MOUNTS = [
+  { prefix: "V_", base: "/video", kind: "video" },
+  { prefix: "M_", base: "/audio", kind: "audio" },
+  { prefix: "MEDIA_", base: "/media", kind: "image" },
+];
+
 for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
-  if (key.startsWith("V_")) {
-    app.use(
-      "/video",
-      express.static(absPath, {
-        dotfiles: "allow", // Giữ theo yêu cầu
-        maxAge: ONE_HOUR * 1000,
-        etag: true,
-        lastModified: true,
-        setHeaders: setStaticHeaders("video"),
-      })
-    );
-  } else if (key.startsWith("M_")) {
-    app.use(
-      "/audio",
-      express.static(absPath, {
-        dotfiles: "allow", // Giữ theo yêu cầu
-        maxAge: ONE_HOUR * 1000,
-        etag: true,
-        lastModified: true,
-        setHeaders: setStaticHeaders("audio"),
-      })
-    );
-  } else if (key.startsWith("MEDIA_")) {
-    app.use(
-      "/media",
-      express.static(absPath, {
-        dotfiles: "allow",
-        maxAge: ONE_HOUR * 1000,
-        etag: true,
-        lastModified: true,
-        setHeaders: setStaticHeaders("image"),
-      })
-    );
-  } else {
-    app.use(
-      "/manga",
-      express.static(absPath, {
-        dotfiles: "allow", // Giữ theo yêu cầu
-        maxAge: ONE_HOUR * 1000,
-        etag: true,
-        lastModified: true,
-        setHeaders: setStaticHeaders("manga"),
-      })
-    );
-  }
+  const mount = STATIC_MOUNTS.find((m) => key.startsWith(m.prefix)) || {
+    base: "/manga",
+    kind: "manga",
+  };
+  const staticMiddleware = express.static(absPath, {
+    dotfiles: "allow", // Giữ theo yêu cầu
+    maxAge: ONE_HOUR * 1000,
+    etag: true,
+    lastModified: true,
+    setHeaders: setStaticHeaders(mount.kind),
+  });
+  // 🔐 Nguồn trong SECURITY: file tĩnh cần cookie đăng nhập (ISSUES S4)
+  const isSecure = SECURITY_KEYS.includes(key.toUpperCase());
+  app.use(mount.base, isSecure ? protectStatic(absPath, staticMiddleware) : staticMiddleware);
 }
 
 app.use(express.static(path.join(__dirname, "../frontend/public")));

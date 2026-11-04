@@ -6,6 +6,7 @@ const router = express.Router();
 const path = require("path");
 const fs = require("fs");
 const { getRootPath } = require("../../utils/config");
+const { resolveInsideRoot } = require("../../utils/pathSafety");
 
 /**
  * 🎯 API: Serve PDF file
@@ -25,10 +26,10 @@ router.get("/pdf", async (req, res) => {
       return res.status(400).json({ error: "Invalid root" });
     }
 
-    const fullPath = path.join(rootPath, root, pdfPath);
-
     // Security check: ensure path is within root directory
-    if (!fullPath.startsWith(path.join(rootPath, root))) {
+    const mangaRoot = resolveInsideRoot(rootPath, root);
+    const fullPath = mangaRoot && resolveInsideRoot(mangaRoot, pdfPath);
+    if (!fullPath) {
       return res.status(403).json({ error: "Access denied" });
     }
 

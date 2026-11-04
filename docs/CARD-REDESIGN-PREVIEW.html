@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thiết kế lại card và trang Manga</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  /* Bố cục: cột chữ 68ch, khung mock rộng tới 1180px. Tài liệu xám lạnh + xanh ngọc, tách khỏi màu xanh dương của app trong mock. */
+  --paper:#f2f4f7;
+  --surface:#ffffff;
+  --ink:#152030;
+  --muted:#566275;
+  --line:#d9e0e8;
+  --accent:#0b6e7f;
+  --accent-soft:#e1f1f4;
+  --bad:#c2410c; --bad-soft:#fdeee4;
+  --good:#18794e; --good-soft:#e3f3ea;
+  --font-display:"Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body:"Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0d131a; --surface:#141c26; --ink:#e5eaf0; --muted:#9aa6b6; --line:#253241;
+    --accent:#5cc8d8; --accent-soft:#11313a;
+    --bad:#fb923c; --bad-soft:#2d1b0f; --good:#4ade80; --good-soft:#0f2a1b;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0d131a; --surface:#141c26; --ink:#e5eaf0; --muted:#9aa6b6; --line:#253241;
+  --accent:#5cc8d8; --accent-soft:#11313a;
+  --bad:#fb923c; --bad-soft:#2d1b0f; --good:#4ade80; --good-soft:#0f2a1b;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-padding-top:64px}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--font-body)}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+.prose{max-width:68ch}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;line-height:1.25;margin:0}
+h1{font-size:clamp(28px,5.2vw,42px);font-weight:700;letter-spacing:-.015em}
+h2{font-size:clamp(23px,3.4vw,30px);font-weight:700;margin:64px 0 8px}
+h3{font-size:19px;font-weight:600;margin:40px 0 4px}
+p{margin:10px 0}
+.lead{font-size:clamp(17px,2.2vw,20px);line-height:1.55;color:var(--ink);margin-top:16px}
+.meta{font-size:14px;color:var(--muted)}
+.note{font-size:14px;color:var(--muted);margin:6px 0 0;font-variant-numeric:tabular-nums}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:0 4px}
+
+/* thanh điều hướng */
+.bar{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:1px solid var(--line)}
+@supports (backdrop-filter:blur(8px)){.bar{background:color-mix(in srgb,var(--paper) 86%,transparent);backdrop-filter:blur(10px)}}
+.bar .wrap{display:flex;gap:10px;align-items:center;height:52px}
+.nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+.nav::-webkit-scrollbar{display:none}
+.nav a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:14px;padding:6px 10px;border-radius:8px}
+.nav a:hover{background:var(--surface);color:var(--ink)}
+.seg-ctl{display:flex;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:2px;flex:none}
+.seg-ctl span{font-size:12px;color:var(--muted);padding:0 6px 0 8px}
+.seg-ctl button{font:inherit;font-size:13px;border:0;background:none;color:var(--muted);padding:5px 9px;border-radius:8px;cursor:pointer}
+.seg-ctl button[aria-pressed="true"]{background:var(--accent);color:var(--surface);font-weight:600}
+@media (max-width:520px){.seg-ctl span{display:none}}
+
+header.hero{padding:40px 0 8px}
+.hero .meta{margin-top:14px}
+
+.two{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));margin-top:20px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.panel h3{margin:0 0 10px;font-size:17px}
+.panel.bad{border-top:3px solid var(--bad)}
+.panel.good{border-top:3px solid var(--good)}
+ul.dots{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:15px}
+ul.dots li::marker{color:var(--muted)}
+
+.tw{overflow-x:auto;margin-top:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table.t{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums;min-width:560px}
+.t th,.t td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.t tr:last-child td{border-bottom:0}
+.t th{font-weight:600;color:var(--muted);font-size:13px;background:var(--paper)}
+.t td.n{white-space:nowrap}
+.up{color:var(--good);font-weight:600}
+.dn{color:var(--bad);font-weight:600}
+
+ol.pri{list-style:none;padding:0;margin:16px 0 0;display:flex;flex-direction:column;gap:10px;counter-reset:p}
+ol.pri li{display:grid;grid-template-columns:40px 1fr;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:15px}
+ol.pri li::before{counter-increment:p;content:"P" counter(p);font-weight:700;color:var(--accent);font-size:18px;line-height:1.4}
+ol.pri b{font-weight:600}
+.eff{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:1px}
+
+.tag{display:inline-flex;align-items:center;font-size:13px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.tag.cur{background:var(--bad-soft);color:var(--bad)}
+.tag.new{background:var(--good-soft);color:var(--good)}
+.cmp{display:grid;gap:28px 24px;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));align-items:start;margin-top:18px}
+.cmp.stack{grid-template-columns:1fr}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.col-h{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.col-h small{font-size:13px;color:var(--muted)}
+.fit{width:100%;overflow:hidden;position:relative;margin:0 auto}
+.fit.real{overflow-x:auto}
+.frame{transform-origin:0 0}
+.realbtn{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:4px 10px;cursor:pointer}
+
+ol.iss,ul.chg{margin:4px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:15px}
+ol.iss{counter-reset:i}
+ol.iss li,ul.chg li{display:grid;grid-template-columns:22px 1fr;gap:8px}
+ol.iss li::before{counter-increment:i;content:counter(i);width:20px;height:20px;border-radius:50%;background:#ea580c;color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;margin-top:2px}
+ul.chg li::before{content:"✓";color:var(--good);font-weight:700;text-align:center}
+.lists{display:grid;gap:16px 28px;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));margin-top:14px}
+
+.spec{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end;margin-top:14px}
+.spec figure{margin:0;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted)}
+.spec figure b{color:var(--ink);font-weight:600;font-size:14px}
+.panel-app{border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.ttcmp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.ttcmp > div{display:flex;flex-direction:column;gap:10px}
+.legend{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;font-size:15px}
+.legend li{display:grid;grid-template-columns:24px 1fr;gap:8px}
+.legend li i{width:20px;height:20px;border-radius:50%;background:var(--good);color:var(--surface);font-style:normal;font-size:12px;font-weight:700;display:grid;place-items:center;margin-top:2px}
+.badge-demo{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;margin-top:16px}
+.sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px;border:1px solid rgb(0 0 0/.15)}
+.files{margin:12px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:15px}
+footer{margin:72px 0 40px;padding-top:20px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+
+/* ================= MOCK APP ================= */
+.app{
+  --a-outer:#f9fafb;--a-bg:#f9fafb;--a-box:#ffffff;--a-card:#ffffff;--a-text:#111827;--a-muted:#6b7280;--a-line:#e5e7eb;
+  --a-chip:#f3f4f6;--a-accent:#2563eb;--a-accent-ink:#ffffff;--a-acc-soft:#eff6ff;--a-ph:#e5e7eb;--a-ph2:#f3f4f6;--a-mf:#f3f4f6;
+  --a-hdr:rgba(255,255,255,.85);--a-ring:rgb(15 23 42/.08);--a-stack1:#cbd5e1;--a-stack2:#e2e8f0;--a-danger:#dc2626;
+  position:relative;background:var(--a-outer);color:var(--a-text);text-align:left;
+  font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Sans","Noto Sans JP","Yu Gothic UI",sans-serif;
+}
+.app.dark{color-scheme:dark;
+  --a-outer:#0f172a;--a-bg:#111827;--a-box:#1f2937;--a-card:#1f2937;--a-text:#ffffff;--a-muted:#9ca3af;--a-line:#374151;
+  --a-chip:#374151;--a-accent:#3b82f6;--a-acc-soft:rgb(59 130 246/.14);--a-ph:#374151;--a-ph2:#4b5563;--a-mf:#1f2937;
+  --a-hdr:rgba(30,41,59,.8);--a-ring:rgb(255 255 255/.08);--a-stack1:#475569;--a-stack2:#334155;--a-danger:#f87171}
+.app.prop{--a-outer:#f8fafc;--a-bg:#f8fafc;--a-text:#0f172a;--a-muted:#64748b;--a-line:#e2e8f0;--a-chip:#eef2f6;--a-ph:#e2e8f0;--a-ph2:#f1f5f9}
+.app.prop.dark{--a-outer:#0f172a;--a-bg:#0f172a;--a-box:#1e293b;--a-card:#1e293b;--a-text:#f1f5f9;--a-muted:#94a3b8;--a-line:#2b3a4f;
+  --a-chip:#1e293b;--a-accent:#60a5fa;--a-accent-ink:#0f172a;--a-acc-soft:rgb(96 165 250/.13);--a-ph:#1e293b;--a-ph2:#2a3a52;--a-ring:rgb(255 255 255/.07)}
+.app h3,.app h4{font-family:inherit;margin:0;text-wrap:wrap}
+.ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:-.125em}
+.ic.fill{fill:currentColor}
+
+.frame.phone{width:406px;border:8px solid #0a0d12;border-radius:36px;overflow:hidden;background:#0a0d12;box-shadow:0 14px 34px -16px rgb(0 0 0/.45)}
+.frame.phone > .app{border-radius:28px;overflow:hidden}
+.frame.desk{width:1282px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface);box-shadow:0 14px 34px -18px rgb(0 0 0/.35)}
+.desk-bar{height:34px;display:flex;align-items:center;gap:7px;padding:0 14px;background:var(--paper);border-bottom:1px solid var(--line)}
+.desk-bar i{width:11px;height:11px;border-radius:50%;background:var(--line)}
+.desk-bar span{margin-left:14px;font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:1px 12px}
+
+.m-hdr{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 16px;background:var(--a-hdr);border-bottom:1px solid var(--a-line)}
+.m-hdr .l,.m-hdr .r{display:flex;align-items:center;gap:6px}
+.m-brand{color:var(--a-accent);font-weight:700;font-size:18px;white-space:nowrap;margin-left:6px}
+.m-ib{display:inline-flex;align-items:center;gap:6px;height:32px;min-width:32px;justify-content:center;border-radius:8px;color:var(--a-muted);font-size:17px;padding:0 6px}
+.m-ib small{font-size:13px}
+
+/* placeholder ảnh */
+.ph{position:absolute;inset:0;overflow:hidden;background:linear-gradient(165deg,hsl(var(--h) 55% 68%),hsl(calc(var(--h) + 35) 45% 34%))}
+.ph::before,.ph::after{content:"";position:absolute}
+.ph.cv::before{left:14%;right:14%;top:8%;height:12%;border-radius:3px;background:rgb(255 255 255/.62)}
+.ph.cv::after{left:24%;right:24%;top:36%;bottom:0;border-radius:46% 46% 0 0;background:hsl(calc(var(--h) + 190) 35% 22%/.5)}
+.ph.wd::before{left:0;right:0;bottom:0;height:38%;background:hsl(calc(var(--h) + 20) 35% 20%/.55)}
+.ph.wd::after{width:16%;aspect-ratio:1;border-radius:50%;right:16%;top:18%;background:rgb(255 255 255/.55)}
+.ph.sq::before{inset:20%;border-radius:50%;background:radial-gradient(circle,hsl(var(--h) 45% 85%) 0 15%,rgb(0 0 0/.5) 16% 100%)}
+.ph.pt::before{left:-10%;right:-10%;bottom:0;height:56%;background:hsl(calc(var(--h) + 30) 30% 22%/.7);clip-path:polygon(0 100%,0 55%,22% 20%,40% 60%,62% 8%,85% 55%,100% 35%,100% 100%)}
+.ph.pt::after{width:15%;aspect-ratio:1;border-radius:50%;left:18%;top:14%;background:rgb(255 255 255/.7)}
+.app.dark .ph{filter:brightness(.88) saturate(.92)}
+
+/* vạch chú thích */
+.mk{position:absolute;z-index:12;width:18px;height:18px;border-radius:50%;background:#ea580c;color:#fff;font:700 11px/18px system-ui,sans-serif;text-align:center;box-shadow:0 0 0 2px #fff}
+.mk.g{background:#16a34a}
+.gh{position:absolute;z-index:9;border:1.5px dashed #ea580c;border-radius:50%;background:rgb(234 88 12/.10)}
+
+/* ---- hiện tại: khung trang ---- */
+.cur-layout{background:var(--a-outer);padding:24px 16px}
+.cur-page{background:var(--a-bg)}
+.cur-box{position:relative;background:var(--a-box);border:1px solid var(--a-line);border-radius:8px}
+.cg{position:relative;display:grid;grid-template-columns:repeat(var(--c),minmax(0,1fr));gap:var(--g)}
+
+/* slider hiện tại (UniversalCard compact-slider) */
+.cur-sl{position:relative;background:var(--a-box);border:1px solid var(--a-line);border-radius:8px;margin-bottom:4px;overflow:hidden}
+.cur-sl-h{display:flex;align-items:center;justify-content:space-between;padding:8px 8px 4px}
+.cur-sl-h .l{display:flex;align-items:center;gap:8px;min-width:0}
+.cur-sl-h h4{font-size:16px;font-weight:700;white-space:nowrap}
+.is-desk .cur-sl-h{padding:12px 12px 8px}
+.is-desk .cur-sl-h h4{font-size:20px}
+.ts{font-size:12px;color:var(--a-muted);display:inline-flex;gap:4px;align-items:center;white-space:nowrap}
+.cur-sl-h .r{display:flex;gap:2px;color:#9ca3af;font-size:17px}
+.cur-sl-h .r span{width:30px;height:30px;display:grid;place-items:center}
+.cur-row{display:flex;gap:4px;overflow:hidden}
+.is-desk .cur-row{gap:6px}
+.cur-dots{display:flex;justify-content:center;gap:6px;padding:8px 0}
+.cur-dots i{width:6px;height:6px;border-radius:50%;background:var(--a-line)}
+.cur-dots i.on{width:18px;border-radius:3px;background:var(--a-accent)}
+.u{position:relative;flex:none;background:var(--a-card);border-radius:8px;box-shadow:0 1px 2px rgb(0 0 0/.08);overflow:hidden}
+.u-th{position:relative;aspect-ratio:3/4;overflow:hidden;background:var(--a-ph)}
+.u-fav{position:absolute;z-index:2;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:rgb(0 0 0/.22);color:#fff;display:grid;place-items:center;font-size:12px}
+.u-fav.on{background:rgb(239 68 68/.85)}
+.u-del{position:absolute;z-index:2;bottom:8px;right:8px;width:24px;height:24px;border-radius:50%;background:rgb(17 24 39/.82);color:#fff;display:grid;place-items:center;font-size:12px}
+.u-bdg{position:absolute;z-index:2;bottom:8px;left:8px;display:flex;gap:3px;align-items:center;background:rgb(0 0 0/.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:999px}
+.u-rank{position:absolute;z-index:3;top:4px;left:4px;width:16px;height:16px;border-radius:50%;color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center}
+.u-time{position:absolute;z-index:3;top:4px;left:4px;background:rgb(59 130 246/.9);color:#fff;font-size:9px;padding:2px 5px;border-radius:999px;white-space:nowrap}
+.is-desk .u-rank{width:24px;height:24px;top:8px;left:8px;font-size:12px}
+.is-desk .u-time{top:8px;left:8px;font-size:12px;padding:3px 8px}
+.u-b{padding:8px}
+.u-t{font-size:12px;line-height:1.25;font-weight:500;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:2px}
+.u-m{display:flex;justify-content:space-between;gap:4px;font-size:10px;color:var(--a-muted)}
+.u-m span{display:inline-flex;gap:2px;align-items:center}
+
+/* thanh công cụ hiện tại */
+.cur-tb{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.is-desk .cur-tb{flex-direction:row;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+.cur-tb .l,.cur-tb .r{display:flex;align-items:center;gap:8px}
+.btn-o{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid var(--a-line);border-radius:6px;background:var(--a-box);color:var(--a-text);font-size:13px;white-space:nowrap}
+.sel{height:28px;padding:0 6px;border:1px solid var(--a-line);border-radius:6px;font-size:12px;display:inline-flex;align-items:center;gap:4px;background:var(--a-box)}
+.lbl{font-size:13px;color:var(--a-muted)}
+.vt{display:inline-flex;background:var(--a-chip);border-radius:8px;padding:2px;gap:2px}
+.vt span{width:30px;height:28px;display:grid;place-items:center;border-radius:6px;color:var(--a-muted);font-size:15px}
+.vt span.on{background:var(--a-accent);color:#fff}
+.cur-search{max-width:448px;height:34px;border:1px solid var(--a-line);border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--a-muted);font-size:14px;margin-bottom:16px;background:var(--a-box)}
+.is-desk .cur-search{height:40px;margin-bottom:32px}
+.cur-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:24px}
+.is-desk .cur-stats{gap:16px;margin-bottom:32px}
+.cur-stat{border:1px solid var(--a-line);border-radius:8px;padding:8px;display:flex;align-items:center;gap:8px;background:var(--a-box);min-width:0}
+.cur-stat .sti{display:grid;font-size:20px;flex:none}
+.cur-stat b{display:block;font-size:18px;line-height:1.2}
+.cur-stat small{display:block;font-size:11px;color:var(--a-muted);white-space:nowrap}
+.is-desk .cur-stat{padding:16px;gap:12px}
+.is-desk .cur-stat .sti{font-size:32px}
+.is-desk .cur-stat b{font-size:24px}
+.is-desk .cur-stat small{font-size:14px}
+.cur-pag{display:flex;justify-content:center;gap:8px;margin-top:16px;font-size:12px}
+.cur-pag span{height:30px;padding:0 10px;border:1px solid var(--a-line);border-radius:6px;display:inline-flex;align-items:center;background:var(--a-box);white-space:nowrap}
+.cur-pag span.mid{background:var(--a-chip);border-color:transparent}
+
+/* card manga hiện tại */
+.c-mg{position:relative;background:var(--a-card);border-radius:8px;box-shadow:0 4px 6px -1px rgb(0 0 0/.1);overflow:visible;min-width:0}
+.c-mg-th{position:relative;aspect-ratio:3/4;background:var(--a-ph);border-radius:8px 8px 0 0;overflow:hidden}
+.c-mg-t{padding:6px;font-size:11px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--a-text)}
+.app.dark .c-mg-t{color:#e5e7eb}
+.is-desk .c-mg-t{padding:12px;font-size:14px}
+.c-mg-fav{position:absolute;z-index:2;top:3px;right:3px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#ef4444;background:rgb(239 68 68/.2);border:1px solid rgb(239 68 68/.4);font-size:14px}
+.is-desk .c-mg-fav{top:8px;right:8px;width:40px;height:40px;font-size:20px}
+.gh-fav{top:3px;right:3px;width:28px;height:28px}
+.is-desk .gh-fav{top:8px;right:8px;width:40px;height:40px}
+.gh-del{bottom:8px;right:8px;width:32px;height:32px}
+.brk{position:absolute;inset:0;background:var(--a-card);padding:4px;display:flex;gap:3px;align-items:flex-start;font-size:10px;line-height:1.25;color:var(--a-muted);overflow:hidden}
+.brk .ic{font-size:14px}
+.c-def{position:absolute;inset:0;display:grid;place-items:center;background:var(--a-ph2);color:var(--a-muted);font-size:30px}
+
+/* card movie hiện tại */
+.c-mv{position:relative;background:var(--a-card);border:1px solid var(--a-line);border-radius:8px;box-shadow:0 4px 6px -1px rgb(0 0 0/.1);min-width:0}
+.c-mv-th{position:relative;aspect-ratio:16/9;background:var(--a-ph);border-radius:7px 7px 0 0;overflow:hidden}
+.c-mv-fav{position:absolute;z-index:2;top:4px;right:4px;padding:3px;border-radius:50%;background:rgb(0 0 0/.5);color:#fff;font-size:12px;display:grid;place-items:center}
+.c-mv-fav.on{color:#ef4444}
+.is-desk .c-mv-fav{top:8px;right:8px;padding:4px;font-size:16px}
+.c-mv-ty{position:absolute;z-index:2;bottom:4px;left:4px;display:flex;gap:2px;align-items:center;background:rgb(0 0 0/.75);color:#fff;font-size:9px;padding:2px 4px;border-radius:4px}
+.is-desk .c-mv-ty{bottom:8px;left:8px;font-size:12px;padding:4px 8px;gap:4px}
+.gh-mvd{bottom:4px;right:4px;width:20px;height:20px}
+.is-desk .gh-mvd{bottom:8px;right:8px;width:24px;height:24px}
+.c-mv-b{position:relative;padding:8px}
+.is-desk .c-mv-b{padding:12px}
+.c-mv-t{font-size:12px;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:2px}
+.is-desk .c-mv-t{font-size:14px;margin-bottom:4px}
+.c-mv-m{display:flex;justify-content:space-between;gap:4px;font-size:9px;color:var(--a-muted)}
+.c-mv-m span{display:inline-flex;gap:2px;align-items:center;white-space:nowrap}
+.is-desk .c-mv-m{font-size:12px}
+
+/* card music hiện tại */
+.c-mu{position:relative;background:var(--a-card);border:1px solid var(--a-line);border-radius:8px;box-shadow:0 1px 2px rgb(0 0 0/.06);min-width:0}
+.c-mu.fo{border:2px solid rgb(59 130 246/.6);box-shadow:0 10px 15px -3px rgb(0 0 0/.12)}
+.app.dark .c-mu.fo{border-color:rgb(168 85 247/.6)}
+.c-mu-th{position:relative;aspect-ratio:1/1;background:var(--a-ph);border-radius:7px 7px 0 0;overflow:hidden}
+.c-mu-ty{position:absolute;z-index:2;top:4px;left:4px;display:flex;gap:2px;align-items:center;background:rgb(0 0 0/.6);color:#fff;font-size:9px;padding:2px 4px;border-radius:999px}
+.c-mu-ty.fo{background:rgb(37 99 235/.8)}
+.app.dark .c-mu-ty.fo{background:rgb(147 51 234/.8)}
+.is-desk .c-mu-ty{top:8px;left:8px;font-size:12px;padding:4px 8px;gap:4px}
+.c-mu-add{position:absolute;z-index:2;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:1.5px solid rgb(255 255 255/.8);background:rgb(0 0 0/.3);color:#fff;display:grid;place-items:center;font-size:12px}
+.is-desk .c-mu-add{top:8px;right:8px;width:32px;height:32px;font-size:16px;border-width:2px}
+.c-mu-b{position:relative;padding:8px}
+.is-desk .c-mu-b{padding:12px}
+.c-mu-t{font-size:12px;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:2px}
+.c-mu.fo .c-mu-t{color:#1e3a8a;font-weight:600}
+.app.dark .c-mu.fo .c-mu-t{color:#dbeafe}
+.is-desk .c-mu-t{font-size:14px;margin-bottom:4px}
+.c-mu-m{display:flex;justify-content:space-between;gap:4px;font-size:9px;color:var(--a-muted)}
+.c-mu-m span{display:inline-flex;gap:2px;align-items:center}
+.c-mu.fo .c-mu-m span:first-child{color:#2563eb;font-weight:500}
+.app.dark .c-mu.fo .c-mu-m span:first-child{color:#c084fc}
+.is-desk .c-mu-m{font-size:12px}
+.gh-mud{bottom:8px;right:8px;width:24px;height:24px;border-radius:8px}
+.is-desk .gh-mud{width:32px;height:32px}
+
+/* media hiện tại */
+.cur-media{padding:0 16px}
+.c-fh{font-size:18px;font-weight:600;margin-bottom:16px !important}
+.c-mf{position:relative;display:flex;flex-direction:column;align-items:center;padding:16px;border-radius:8px;background:var(--a-mf);min-width:0}
+.c-mf .im{position:relative;width:100%;height:128px;border-radius:4px;overflow:hidden;margin-bottom:8px;background:var(--a-ph)}
+.c-mf .nm{font-size:14px;font-weight:500;text-align:center;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.c-mf .ct{font-size:12px;color:var(--a-muted);margin-top:4px}
+.gh-mf{top:8px;right:8px;width:24px;height:24px}
+.c-ph{position:relative;aspect-ratio:1/1;background:var(--a-ph);overflow:hidden}
+.c-ck{position:absolute;z-index:3;top:8px;left:8px;width:24px;height:24px;border-radius:50%;background:rgb(255 255 255/.9);display:grid;place-items:center;box-shadow:0 1px 3px rgb(0 0 0/.3)}
+.c-ck i{width:16px;height:16px;border-radius:50%;border:2px solid #4b5563}
+.c-vb{position:absolute;z-index:3;bottom:8px;left:8px;background:rgb(0 0 0/.7);color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;display:flex;gap:4px;align-items:center}
+.gh-pf{top:8px;right:8px;width:24px;height:24px}
+.gh-pd{bottom:8px;right:8px;width:24px;height:24px}
+
+/* ---- đề xuất ---- */
+.p-tb{position:relative;z-index:5;display:flex;align-items:center;gap:2px;height:48px;padding:0 6px 0 4px;background:var(--a-bg);border-bottom:1px solid var(--a-line)}
+.is-desk .p-tb{height:56px;padding:0 16px 0 10px;gap:10px}
+.crumb{display:flex;align-items:center;gap:6px;min-width:0;flex:1;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden}
+.crumb .dim{color:var(--a-muted);font-weight:500}
+.crumb .last{overflow:hidden;text-overflow:ellipsis}
+.p-ib{width:40px;height:40px;display:grid;place-items:center;border-radius:10px;color:var(--a-text);font-size:19px;flex:none}
+.p-ib.sm{width:32px;height:32px;font-size:16px;color:var(--a-muted)}
+.p-ib.lined{border:1px solid var(--a-line);background:var(--a-box)}
+.p-tools{display:flex;align-items:center;gap:8px}
+.p-input{display:flex;align-items:center;gap:8px;width:300px;height:38px;padding:0 12px;border-radius:10px;background:var(--a-chip);color:var(--a-muted);font-size:14px}
+.p-page{padding:14px 16px 24px;display:flex;flex-direction:column;gap:26px}
+.is-desk .p-page{padding:20px 16px 40px;gap:34px}
+.p-sh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;min-height:32px}
+.p-sh h4{font-size:17px;font-weight:650;white-space:nowrap}
+.is-desk .p-sh h4{font-size:19px}
+.p-sh .cnt{font-weight:400;color:var(--a-muted);font-size:13px;margin-left:8px}
+.p-arr{display:flex;gap:4px}
+.p-row{display:flex;gap:10px;overflow:hidden;margin-right:-16px}
+.is-desk .p-row{gap:16px;margin-right:0}
+.p-row > .pc{flex:none;width:104px}
+.is-desk .p-row > .pc{width:152px}
+.seg{display:inline-flex;background:var(--a-chip);border-radius:10px;padding:3px;gap:2px}
+.seg span{padding:5px 12px;border-radius:8px;font-size:13px;font-weight:500;color:var(--a-muted);white-space:nowrap}
+.seg span.on{background:var(--a-box);color:var(--a-text);box-shadow:0 1px 2px rgb(0 0 0/.14)}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--a-line);font-size:13px;color:var(--a-text);background:var(--a-box);white-space:nowrap}
+.is-desk .chip{height:38px;border-radius:10px}
+.p-filter{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:10px;background:var(--a-chip);color:var(--a-muted);font-size:14px;margin-bottom:14px}
+.p-pag{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:26px}
+.p-pag .pb{min-width:40px;height:40px;display:grid;place-items:center;border-radius:10px;border:1px solid var(--a-line);background:var(--a-box);font-size:14px;padding:0 8px;font-variant-numeric:tabular-nums}
+.p-pag .pb.on{background:var(--a-accent);color:var(--a-accent-ink);border-color:transparent;font-weight:600}
+.p-pag .pg-l{font-size:14px;padding:0 10px;color:var(--a-muted)}
+.p-pag .pg-l b{color:var(--a-text)}
+
+.pg{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--min),1fr));column-gap:var(--gx);row-gap:var(--gy)}
+.is-phone .pg{--gx:8px;--gy:16px}
+.is-desk .pg{--gx:16px;--gy:24px}
+.pg-manga,.pg-music{--min:104px}
+.is-desk .pg-manga,.is-desk .pg-music{--min:144px}
+.pg-movie{--min:152px}
+.is-desk .pg-movie{--min:220px}
+.pm-grid{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:2px}
+.is-desk .pm-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px}
+
+.pc{position:relative;display:flex;flex-direction:column;min-width:0}
+.pc-th{position:relative;margin-top:6px}
+.pc-im{position:relative;z-index:1;aspect-ratio:var(--ar,5/7);border-radius:8px;overflow:hidden;background:var(--a-ph)}
+.pc-im::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px var(--a-ring);pointer-events:none;z-index:5}
+.r-57{--ar:5/7}.r-169{--ar:16/9}.r-11{--ar:1/1}
+.is-folder .pc-th::before,.is-folder .pc-th::after{content:"";position:absolute;height:12px;border-radius:6px 6px 0 0}
+.is-folder .pc-th::before{left:12%;right:12%;top:-6px;background:var(--a-stack2)}
+.is-folder .pc-th::after{left:6%;right:6%;top:-3px;background:var(--a-stack1)}
+.pc-t{margin:8px 0 0;font-size:13px;line-height:1.3;font-weight:500;color:var(--a-text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em;overflow-wrap:anywhere}
+.is-desk .pc-t{font-size:14px}
+.pc-m{display:flex;align-items:center;gap:2px;margin-top:2px;min-height:20px}
+.pc-s{flex:1;min-width:0;display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--a-muted);white-space:nowrap;overflow:hidden}
+.pc-s span{overflow:hidden;text-overflow:ellipsis}
+.is-desk .pc-s{font-size:12.5px}
+.pc-x{flex:none;width:24px;height:20px;display:grid;place-items:center;margin-right:-4px;border-radius:6px;color:var(--a-muted);font-size:16px}
+.bd{position:absolute;z-index:6;display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:600;line-height:1;padding:4px 6px;border-radius:6px;background:rgb(0 0 0/.62);color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+.is-desk .bd{font-size:11.5px;padding:5px 7px}
+.bd.tl{top:6px;left:6px}.bd.br{bottom:6px;right:6px}
+.bd.r1{background:#b7791f}.bd.r2{background:#64748b}.bd.r3{background:#9a5b2e}
+.fv{position:absolute;z-index:6;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:rgb(0 0 0/.5);color:#fb7185;display:grid;place-items:center;font-size:12px}
+.pc-play{position:absolute;inset:0;z-index:4;display:grid;place-items:center;background:rgb(0 0 0/.32);color:#fff;font-size:30px;opacity:0}
+.hov .pc-play{opacity:1}
+.hov .pc-im::after{box-shadow:inset 0 0 0 2px var(--a-accent)}
+.hov .pc-t{color:var(--a-accent)}
+.tip{position:absolute;z-index:30;left:-8px;top:calc(100% - 26px);width:250px;padding:7px 9px;border-radius:7px;background:#0f172a;color:#f8fafc;font-size:12px;line-height:1.4;box-shadow:0 6px 18px rgb(0 0 0/.3)}
+.fb{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:hsl(var(--h) 28% 88%);color:hsl(var(--h) 25% 36%)}
+.app.dark .fb{background:hsl(var(--h) 18% 19%);color:hsl(var(--h) 25% 72%)}
+.fb .ic{font-size:26px}
+.fb b{font-size:13px;font-weight:600}
+.pm{position:relative;aspect-ratio:1/1;overflow:hidden;background:var(--a-ph)}
+.pm .ck{position:absolute;z-index:6;top:6px;left:6px;width:22px;height:22px;border-radius:50%;border:2px solid #fff;background:rgb(0 0 0/.25);opacity:0}
+.pm.hov .ck{opacity:1}
+.pm.hov::after{content:"";position:absolute;inset:0;z-index:5;background:linear-gradient(rgb(0 0 0/.35),transparent 35%)}
+
+/* trong một bộ truyện */
+.sr-h{display:flex;gap:14px;align-items:flex-start}
+.sr-cv{width:96px;flex:none}
+.sr-i{min-width:0;display:flex;flex-direction:column;gap:6px}
+.sr-i h3{font-size:17px;font-weight:650;line-height:1.3}
+.sr-i p{margin:0;font-size:13px;color:var(--a-muted)}
+.sr-b{display:flex;gap:8px;margin-top:4px}
+.btn-p{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;border-radius:10px;background:var(--a-accent);color:var(--a-accent-ink);font-size:14px;font-weight:600;white-space:nowrap}
+.btn-i{width:38px;height:38px;border-radius:10px;border:1px solid var(--a-line);display:grid;place-items:center;color:#f43f5e;background:var(--a-box);font-size:16px}
+.lr{display:flex;gap:12px;align-items:center;padding:8px;border-radius:10px;margin:0 -8px}
+.lr + .lr{border-top:1px solid var(--a-line)}
+.lr.now{background:var(--a-acc-soft);border-top-color:transparent}
+.lr.now + .lr{border-top-color:transparent}
+.lr-th{width:44px;flex:none}
+.lr-th .pc-im{border-radius:6px}
+.lr-tx{flex:1;min-width:0}
+.lr-t{font-size:14px;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lr-s{font-size:12px;color:var(--a-muted);margin-top:2px;display:flex;gap:6px;align-items:center}
+.now-chip{font-size:11px;font-weight:600;color:var(--a-accent)}
+.more-row{font-size:13px;color:var(--a-muted);text-align:center;padding:4px 0 8px}
+
+/* bảng thao tác */
+.dimmer{position:absolute;inset:0;z-index:20;background:rgb(2 6 23/.5)}
+.sheet{position:absolute;z-index:21;left:0;right:0;bottom:0;background:var(--a-box);border-radius:18px 18px 0 0;padding:8px 16px 18px;box-shadow:0 -8px 24px rgb(0 0 0/.2)}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--a-line);margin:2px auto 12px}
+.sh-h{display:flex;gap:12px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--a-line)}
+.sh-h .pc-im{width:52px;flex:none;border-radius:6px}
+.sh-h b{display:block;font-size:15px;font-weight:600;line-height:1.35}
+.sh-h small{display:block;font-size:12.5px;color:var(--a-muted);margin-top:4px}
+.sheet ul{list-style:none;margin:6px 0 0;padding:0}
+.sheet li{display:flex;align-items:center;gap:14px;height:48px;font-size:15px}
+.sheet li .ic{font-size:19px;color:var(--a-muted)}
+.sheet li.danger,.sheet li.danger .ic{color:var(--a-danger)}
+
+/* skeleton */
+.sk{background:linear-gradient(90deg,var(--a-ph) 0 40%,var(--a-ph2) 50%,var(--a-ph) 60% 100%);background-size:250% 100%;animation:sh 1.4s linear infinite;border-radius:6px}
+.pc-im.sk{border-radius:8px}
+@keyframes sh{from{background-position:100% 0}to{background-position:0 0}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
+.demo-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
+.demo-row > .pc{width:104px}
+.demo-row > .pc.w{width:175px}
+.demo-row > .pm{width:104px}
+.demo-cap{font-size:12px;color:var(--a-muted);margin-top:6px;text-align:center}
+</style>
+</head>
+<body>
+
+<nav class="bar" aria-label="Mục lục">
+  <div class="wrap">
+    <div class="nav">
+      <a href="#verdict">Nhận định</a>
+      <a href="#manga-page">Trang Manga</a>
+      <a href="#cards-manga">Card Manga</a>
+      <a href="#cards-movie">Movie</a>
+      <a href="#cards-music">Music</a>
+      <a href="#cards-media">Media</a>
+      <a href="#rules">Quy tắc chung</a>
+      <a href="#files">Nếu làm thật</a>
+    </div>
+    <div class="seg-ctl" role="group" aria-label="Giao diện app trong bản mock">
+      <span>App</span>
+      <button type="button" id="th-auto" data-th="auto" aria-pressed="true">Tự động</button>
+      <button type="button" id="th-light" data-th="light" aria-pressed="false">Sáng</button>
+      <button type="button" id="th-dark" data-th="dark" aria-pressed="false">Tối</button>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+  <header class="hero prose">
+    <h1>Card và trang Manga: nên nâng cấp gì</h1>
+    <p class="lead">Nên nâng cấp, nhưng không cần làm lại từ đầu. Giữ tỉ lệ ảnh theo loại, ba slider và cách phân trang. Phần cần sửa là chữ, khoảng trắng, vùng bấm và trạng thái tải.</p>
+    <p class="meta">Đối chiếu với code <code>react-app/src</code> ngày 04/11/2026. Ảnh trong mock là placeholder. Số đo dưới mỗi khung lấy từ chính bản mock, vốn dùng cùng padding và số cột với code thật. Nút <b>App</b> trên thanh đầu trang đổi mock giữa sáng và tối.</p>
+  </header>
+
+  <!-- ============ NHẬN ĐỊNH ============ -->
+  <section id="verdict">
+    <h2>Nhận định</h2>
+    <div class="two">
+      <div class="panel bad">
+        <h3>Vì sao nên nâng cấp</h3>
+        <ul class="dots">
+          <li><b>Tên khó đọc trên điện thoại.</b> Card manga chỉ có 1 dòng chữ 11px, tên tiếng Nhật dài còn khoảng 7 ký tự. Movie và Music có 2 dòng nhưng chữ 12px, dòng thông tin 9px.</li>
+          <li><b>Có vùng bấm vô hình.</b> Nút ❤ và nút xoá của Manga, Music và Media có độ trong suốt 0 nhưng vẫn nhận chạm. Chạm vào góc ảnh trên điện thoại có thể bật yêu thích hoặc mở hộp xoá.</li>
+          <li><b>Phí bề rộng.</b> Ba lớp padding chồng nhau (Layout, trang, khung trắng) nên lưới chỉ dùng 79–85% bề rộng điện thoại. Trên máy tính 1280px, Movie chia 9 cột nên ảnh chỉ còn 117×66px.</li>
+          <li><b>Bốn card, bốn kiểu.</b> Badge mỗi loại đặt một góc. Loại file hiện hai lần. Movie in dung lượng dạng byte thô. MangaCard không có ảnh dự phòng khi ảnh lỗi.</li>
+          <li><b>Tải trang bị giật.</b> Spinner che cả trang, slider dùng khối xám cao cố định 256px, rồi bố cục nhảy khi dữ liệu về.</li>
+        </ul>
+      </div>
+      <div class="panel good">
+        <h3>Giữ nguyên</h3>
+        <ul class="dots">
+          <li>Tỉ lệ ảnh theo loại: dọc cho manga, 16:9 cho phim, vuông cho nhạc và ảnh. Riêng manga đổi 3:4 sang 5:7 cho sát khổ trang truyện.</li>
+          <li>Lưới ảnh khít, không chữ, kiểu Google Photos của Media.</li>
+          <li>Ba slider Ngẫu nhiên, Xem nhiều, Đọc gần đây. Ở Manga, slider vẫn chỉ hiện ở thư mục gốc.</li>
+          <li>Trang hiện tại lưu trên URL, và khi quay lại từ trình đọc thì tự nhảy tới truyện vừa đọc.</li>
+          <li>❤ cho Manga và Movie, Playlist cho Music. Header chung, breadcrumb và sidebar không đổi.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Điện thoại 390px: bề rộng lưới và cỡ card</h3>
+    <div class="tw">
+      <table class="t">
+        <thead><tr><th>Loại</th><th>Lưới hiện tại</th><th>Card</th><th>Lưới đề xuất</th><th>Card</th><th>Tên</th></tr></thead>
+        <tbody>
+          <tr><td>Manga</td><td class="n">332px · 3 cột</td><td class="n">105px</td><td class="n up">358px · 3 cột</td><td class="n up">114px</td><td>11px, 1 dòng → 13px, 2 dòng</td></tr>
+          <tr><td>Movie</td><td class="n">308px · 2 cột</td><td class="n">150px</td><td class="n up">358px · 2 cột</td><td class="n up">175px</td><td>12px → 13px, bỏ đuôi file</td></tr>
+          <tr><td>Music</td><td class="n">308px · 3 cột</td><td class="n">97px</td><td class="n up">358px · 3 cột</td><td class="n up">114px</td><td>12px → 13px, thêm ca sĩ</td></tr>
+          <tr><td>Media (ảnh)</td><td class="n">326px · 2 cột</td><td class="n">161px</td><td class="n up">358px · 3 cột</td><td class="n">118px</td><td>Không có chữ (giữ nguyên)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Thứ tự ưu tiên</h3>
+    <ol class="pri">
+      <li><div><b>Chữ và vùng bấm</b><span class="eff">Nhỏ</span><br>Tên 2 dòng 13–14px, luôn giữ chỗ 2 dòng, có tooltip tên đầy đủ. Bỏ mọi nút trong suốt mà vẫn bấm được, thay bằng nút ⋯ và nhấn giữ. Thêm ảnh dự phòng cho MangaCard. Sửa dung lượng dạng byte thô của MovieCard.</div></li>
+      <li><div><b>Khoảng trắng và lưới</b><span class="eff">Nhỏ</span><br>Bỏ khung trắng và padding chồng. Lưới tự chia cột theo bề rộng tối thiểu của từng loại. Khe dọc lớn hơn khe ngang để chữ có chỗ thở.</div></li>
+      <li><div><b>Trạng thái tải</b><span class="eff">Nhỏ</span><br>Skeleton đúng hình card cho lưới và slider, thay spinner toàn trang. Ảnh hiện dần khi tải xong. Thanh công cụ vẫn hiện trong lúc tải.</div></li>
+      <li><div><b>Bố cục trang Manga</b><span class="eff">Vừa</span><br>Thanh công cụ dính dưới header. Bỏ 3 ô thống kê. Đưa "Đọc tiếp" lên đầu. Gộp Ngẫu nhiên và Xem nhiều thành một hàng có tab. Nút phân trang to hơn.</div></li>
+      <li><div><b>Phụ đề có dữ liệu</b><span class="eff">Vừa</span><br>Manga hiện số chương hoặc số trang: cột <code>chapterCount</code>, <code>imageCount</code> đã có trong DB, chỉ thiếu trong câu SELECT. Phim hiện thời lượng, nhạc hiện ca sĩ, slider hiện tên bộ cha. Trang của một bộ truyện có nút "Đọc tiếp".</div></li>
+      <li><div><b>Một card dùng chung</b><span class="eff">Lớn</span><br>Gộp 4 card thành <code>ItemCard</code> với bộ hằng số kích thước theo loại, đúng Bước 3 của báo cáo UI. Dùng một bảng màu tối duy nhất.</div></li>
+    </ol>
+  </section>
+
+  <!-- ============ TRANG MANGA ============ -->
+  <section id="manga-page">
+    <h2>Bố cục trang Manga</h2>
+    <p class="prose">Ở thư mục gốc trên điện thoại, hiện phải cuộn qua 3 slider, thanh công cụ 2 hàng, ô tìm kiếm và 3 ô thống kê rồi mới tới lưới truyện. Bản đề xuất đưa lưới lên sớm hơn và giữ thanh công cụ luôn trong tầm tay. Khung thứ ba là trang bên trong một bộ truyện, ở chế độ danh sách.</p>
+
+    <div class="cmp">
+      <div class="col">
+        <div class="col-h"><span class="tag cur">Hiện tại</span><small>Thư mục gốc</small></div>
+        <div class="fit" id="pg-cur-phone" data-w="406"></div>
+        <p class="note" data-m="top"></p>
+      </div>
+      <div class="col">
+        <div class="col-h"><span class="tag new">Đề xuất</span><small>Thư mục gốc</small></div>
+        <div class="fit" id="pg-new-phone" data-w="406"></div>
+        <p class="note" data-m="top"></p>
+      </div>
+      <div class="col">
+        <div class="col-h"><span class="tag new">Đề xuất</span><small>Trong một bộ truyện</small></div>
+        <div class="fit" id="pg-series-phone" data-w="406"></div>
+        <p class="note">Trang tự cuộn tới chương đang đọc, giống cách tham số <code>focus</code> đang làm với lưới.</p>
+      </div>
+    </div>
+
+    <div class="lists">
+      <div>
+        <h3 style="margin-top:28px">Vấn đề của bản hiện tại</h3>
+        <ol class="iss">
+          <li>Ba slider xếp chồng, mỗi cái có tiêu đề, nút và chấm trang riêng, chiếm khoảng 720px trên điện thoại.</li>
+          <li>Thanh công cụ 2 hàng nằm trong khung trắng và cuộn mất theo trang. Muốn lọc hay đổi chế độ xem phải cuộn lại lên đầu.</li>
+          <li>Nút "Filter" mở ra chỉ có một lựa chọn sắp xếp (Tên).</li>
+          <li>Ba ô thống kê (Total Items, Favorites, Search Results) chiếm một hàng nhưng ít khi cần xem.</li>
+          <li>Chữ trộn Anh và Việt: "Per page", "Total Items", "5 minutes ago", cạnh "Tìm kiếm manga…".</li>
+          <li>Slider "Recently" chỉ hiện tên chương ("Chương 12") mà không có tên bộ. Mọi card Top Views đều có sẵn nút thùng rác.</li>
+        </ol>
+      </div>
+      <div>
+        <h3 style="margin-top:28px">Thay đổi đề xuất</h3>
+        <ul class="chg">
+          <li>Thanh công cụ dính dưới header: Back hoặc Home, breadcrumb rút gọn, nút đổi lưới/danh sách và nút ⋯ (sắp xếp, số mục mỗi trang). Trên máy tính, ô lọc, sắp xếp và số mục/trang nằm luôn trên thanh.</li>
+          <li>"Đọc tiếp" lên đầu, lấy từ lịch sử Recent: tên chương, tên bộ và thời điểm đọc.</li>
+          <li>Ngẫu nhiên và Xem nhiều gộp một hàng có tab, tắt tự chạy. Vuốt ngang được, card kế tiếp lộ một phần để báo còn nữa, bỏ chấm trang.</li>
+          <li>Bỏ 3 ô thống kê. Số mục ghi cạnh tiêu đề: "Tất cả · 1.248 mục".</li>
+          <li>Ô lọc ghi rõ "Lọc trong thư mục này" để phân biệt với ô tìm kiếm chung trên header.</li>
+          <li>Nút phân trang 40px. Vẫn lưu trang trên URL và tự nhảy tới truyện vừa đọc.</li>
+          <li>Trong một bộ truyện: đầu trang có bìa, tên đầy đủ, số chương và nút "Đọc tiếp · Chương 12". Chương hiện thành hàng, chương đang đọc được tô nền. Mỗi thư mục nhớ chế độ lưới/danh sách riêng.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Máy tính 1280px</h3>
+    <div class="cmp stack">
+      <div class="col">
+        <div class="col-h"><span class="tag cur">Hiện tại</span><button type="button" class="realbtn" data-real="pg-cur-desk">Xem cỡ thật</button></div>
+        <div class="fit" id="pg-cur-desk" data-w="1282"></div>
+        <p class="note" data-m="top"></p>
+      </div>
+      <div class="col">
+        <div class="col-h"><span class="tag new">Đề xuất</span><button type="button" class="realbtn" data-real="pg-new-desk">Xem cỡ thật</button></div>
+        <div class="fit" id="pg-new-desk" data-w="1282"></div>
+        <p class="note" data-m="top"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CARD TỪNG LOẠI ============ -->
+  <section id="cards">
+    <h2>Card từng loại</h2>
+    <p class="prose">Mỗi loại có khung điện thoại 390px và máy tính 1280px. Vòng đứt nét màu cam là nút trong suốt nhưng vẫn nhận chạm. Số tròn màu cam khớp với danh sách vấn đề bên dưới. Card thứ hai ở bản máy tính đang ở trạng thái rê chuột.</p>
+
+    <div id="cards-manga"></div>
+    <div id="cards-movie"></div>
+    <div id="cards-music"></div>
+    <div id="cards-media"></div>
+  </section>
+
+  <!-- ============ QUY TẮC CHUNG ============ -->
+  <section id="rules">
+    <h2>Quy tắc chung</h2>
+
+    <h3>Tỉ lệ ảnh</h3>
+    <p class="prose">Mỗi loại một tỉ lệ cố định, khai báo một lần trong hằng số. Ảnh dùng <code>object-fit: cover</code>. Với manga, căn ảnh lên trên (<code>object-position: top</code>) để không mất tên truyện in ở đầu bìa.</p>
+    <div class="panel-app"><div class="app prop is-phone" id="ratio-demo" style="padding:18px 16px"></div></div>
+
+    <h3>Lưới và khoảng cách</h3>
+    <p class="prose">Lưới dùng <code>repeat(auto-fill, minmax(bề_rộng_tối_thiểu, 1fr))</code> nên tự chia cột theo bề rộng thật, kể cả khi mở sidebar. Chỉ còn một lớp đệm 16px là của Layout. Trang không bọc thêm khung trắng.</p>
+    <div class="tw">
+      <table class="t">
+        <thead><tr><th>Loại</th><th>Bề rộng tối thiểu<br>&lt;640 / ≥640 / ≥1024</th><th>390px</th><th>768px</th><th>1024px</th><th>1280px</th></tr></thead>
+        <tbody>
+          <tr><td>Manga</td><td class="n">104 / 128 / 144px</td><td class="n">3 → 3</td><td class="n">5 → 5</td><td class="n">6 → 6</td><td class="n">6 → <span class="up">7</span></td></tr>
+          <tr><td>Movie</td><td class="n">152 / 200 / 220px</td><td class="n">2 → 2</td><td class="n">5 → <span class="up">3</span></td><td class="n">7 → <span class="up">4</span></td><td class="n">9 → <span class="up">5</span></td></tr>
+          <tr><td>Music</td><td class="n">104 / 128 / 144px</td><td class="n">3 → 3</td><td class="n">6 → <span class="up">5</span></td><td class="n">8 → <span class="up">6</span></td><td class="n">10 → <span class="up">7</span></td></tr>
+          <tr><td>Media (ảnh)</td><td class="n">104 / 132 / 150px</td><td class="n">2 → <span class="up">3</span></td><td class="n">4 → <span class="up">5</span></td><td class="n">5 → <span class="up">6</span></td><td class="n">6 → <span class="up">8</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Số cột: hiện tại → đề xuất. Màu xanh là chỗ thay đổi. Movie và Music ít cột hơn vì card hiện tại quá nhỏ.</p>
+    <ul class="dots" style="margin-top:14px">
+      <li>Khe ngang 8px (điện thoại), 12px (≥640), 16px (≥1024). Khe dọc lớn hơn: 16, 20, 24px, vì dưới mỗi ảnh còn 2 dòng tên.</li>
+      <li>Media giữ lưới khít: khe 2px trên điện thoại, 4px trên máy tính, không bo góc.</li>
+      <li>Slider dùng card cùng cỡ với lưới: manga và nhạc rộng 104/136/152px, phim 200/240/260px. Hiện slider dùng chung một bề rộng 90–190px cho mọi loại, nên card phim trong slider rất nhỏ.</li>
+      <li>Card không còn nền trắng và bóng đổ. Ảnh bo góc 8px, có viền mờ 1px. Chữ nằm thẳng trên nền trang.</li>
+    </ul>
+
+    <h3>Tên và phụ đề</h3>
+    <p class="prose">Tên tối đa 2 dòng và luôn giữ chỗ đủ 2 dòng để các hàng thẳng nhau. Trên máy tính, rê chuột hiện tên đầy đủ (thuộc tính <code>title</code>). Trên điện thoại, nhấn giữ mở bảng thao tác có tên đầy đủ ở đầu. File bỏ đuôi (<code>.mkv</code>, <code>.mp3</code>, <code>.pdf</code>) vì đuôi đã có ở phụ đề.</p>
+    <div class="panel-app"><div class="app prop is-phone" id="title-demo" style="padding:18px 16px"></div></div>
+    <div class="tw">
+      <table class="t">
+        <thead><tr><th>Loại</th><th>Trường hợp</th><th>Phụ đề</th><th>Lấy từ</th></tr></thead>
+        <tbody>
+          <tr><td>Manga</td><td>Thư mục bộ truyện</td><td>24 chương</td><td><code>chapterCount</code>: có trong bảng <code>folders</code>, cần thêm vào SELECT của <code>loadFolderFromDB</code></td></tr>
+          <tr><td>Manga</td><td>Chương có ảnh</td><td>186 trang</td><td><code>imageCount</code> (như trên)</td></tr>
+          <tr><td>Manga</td><td>File PDF</td><td>PDF</td><td><code>type: 'pdf'</code></td></tr>
+          <tr><td>Manga</td><td>Slider Đọc tiếp, Ngẫu nhiên</td><td>Tên bộ cha</td><td>Phần cha của <code>path</code></td></tr>
+          <tr><td>Movie</td><td>Video</td><td>MKV · 4,2 GB, thời lượng nằm trên ảnh</td><td><code>path</code>, <code>size</code>, <code>duration</code> (API đã trả)</td></tr>
+          <tr><td>Movie, Music</td><td>Thư mục</td><td>Thư mục</td><td><code>type</code>. Muốn hiện "36 video" thì backend phải đếm thêm.</td></tr>
+          <tr><td>Music</td><td>Bài hát</td><td>Ca sĩ · 3:58</td><td><code>artist</code>, <code>duration</code> (API đã trả)</td></tr>
+          <tr><td>Media</td><td>Thư mục</td><td>134 mục</td><td><code>itemCount</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Badge và thao tác</h3>
+    <div class="badge-demo">
+      <div class="panel-app" style="flex:none"><div class="app prop is-desk" id="badge-demo" style="padding:20px 24px;width:232px"></div></div>
+      <ul class="legend" style="flex:1;min-width:min(100%,300px)">
+        <li><i>1</i><span><b>Góc trên trái: trạng thái theo ngữ cảnh.</b> Hạng #1–#3 ở hàng Xem nhiều, thời điểm đọc ở hàng Đọc tiếp. Lưới thường để trống góc này.</span></li>
+        <li><i>2</i><span><b>Góc trên phải: ❤ khi đã thích.</b> Chỉ là dấu hiệu, không phải nút. Muốn bật hay tắt thì dùng ⋯.</span></li>
+        <li><i>3</i><span><b>Góc dưới phải: một con số.</b> Thời lượng video, hoặc lượt xem ở hàng Xem nhiều.</span></li>
+        <li><i>4</i><span><b>Nút ⋯ cạnh phụ đề</b>, vùng chạm 32px. Trên điện thoại, nhấn giữ card cũng mở bảng thao tác. Trên máy tính, chuột phải mở menu tương tự.</span></li>
+        <li><i>5</i><span><b>Thư mục có mép xếp chồng</b> phía trên ảnh, thay cho viền màu và chip "Folder". Dùng chung cho cả 4 loại.</span></li>
+      </ul>
+    </div>
+    <ul class="dots" style="margin-top:16px">
+      <li>Tối đa 2 badge và một dấu ❤ trên mỗi ảnh. Mọi badge cùng kiểu: nền đen 62%, chữ trắng 10,5px, bo 6px.</li>
+      <li>Bỏ badge loại file (Folder, mp4, mp3), chip gradient số mục, viền xanh/tím của thư mục nhạc và chip thời gian xanh dương của Recent.</li>
+      <li>Biểu tượng ▶ chỉ hiện khi rê chuột, và chỉ với nội dung phát được (phim, nhạc). Bỏ hiệu ứng nhấc card lên và phóng to ảnh.</li>
+    </ul>
+    <div class="cmp" style="margin-top:20px">
+      <div class="col">
+        <div class="col-h"><span class="tag new">Bảng thao tác</span><small>Nhấn giữ hoặc bấm ⋯</small></div>
+        <div class="fit" id="sheet-phone" data-w="406"></div>
+      </div>
+      <div class="col">
+        <div class="col-h"><span class="tag new">Thao tác theo loại</span></div>
+        <div class="tw" style="margin-top:0">
+          <table class="t" style="min-width:0">
+            <tbody>
+              <tr><td>Manga</td><td>Yêu thích, Đọc từ đầu, Mở thư mục chứa, Xoá khỏi DB</td></tr>
+              <tr><td>Movie</td><td>Yêu thích, Mở thư mục chứa, Xoá khỏi DB</td></tr>
+              <tr><td>Music</td><td>Thêm vào playlist, Phát tiếp theo, Xoá khỏi DB</td></tr>
+              <tr><td>Media</td><td>Yêu thích, Chọn nhiều, Xoá khỏi DB</td></tr>
+              <tr><td>Hàng Xem nhiều</td><td>Thêm "Xoá lượt xem" (thay cho thùng rác luôn hiện)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">"Xoá khỏi DB" luôn ở cuối, chữ đỏ, và vẫn hỏi lại bằng hộp xác nhận hiện có.</p>
+      </div>
+    </div>
+
+    <h3>Đang tải và ảnh lỗi</h3>
+    <div class="two" style="margin-top:14px">
+      <div class="panel-app"><div class="app prop is-phone" id="skeleton-demo" style="padding:18px 16px"></div></div>
+      <div class="panel-app"><div class="app prop is-phone" id="fallback-demo" style="padding:18px 16px"></div></div>
+    </div>
+    <ul class="dots" style="margin-top:16px">
+      <li><b>Skeleton</b> có đúng tỉ lệ ảnh và 2 dòng tên của card thật. Lúc đầu hiện 12 card, hoặc bằng số mục mỗi trang nếu ít hơn. Header, thanh công cụ và tiêu đề mục vẫn hiện như bình thường.</li>
+      <li>Ảnh nằm trên nền xám nhạt và hiện dần trong 150ms khi tải xong. Giữ <code>loading="lazy"</code> và <code>decoding="async"</code>. Bỏ hiệu ứng blur của <code>LazyLoadImage</code>, vì nó tải thêm ảnh <code>default-cover.jpg</code>.</li>
+      <li><b>Ảnh lỗi</b> hoặc không có thumbnail: hiện ô màu (sinh từ tên), biểu tượng theo loại và 1–2 chữ đầu của tên. Không gọi thêm file ảnh mặc định. <code>onerror</code> chỉ chạy một lần để tránh vòng lặp.</li>
+      <li>Media hiện đổi ảnh lỗi sang <code>folder-thumb.png</code>, nên một tấm ảnh hỏng trông như một thư mục. Ô dự phòng sửa luôn lỗi này.</li>
+    </ul>
+
+    <h3>Sáng và tối</h3>
+    <p class="prose">Hiện có hai màu nền tối lệch nhau: Layout dùng xanh đen (<code>dark-900</code>, #0f172a), còn các trang dùng xám (<code>gray-900</code>, #111827). Card tối cùng màu với khung chứa nó (#1f2937) nên mất viền. Đề xuất dùng một bảng màu xanh đen duy nhất, ảnh có viền mờ 1px để tách khỏi nền.</p>
+    <div class="two">
+      <div class="panel-app" id="ld-light"></div>
+      <div class="panel-app" id="ld-dark"></div>
+    </div>
+    <div class="tw">
+      <table class="t">
+        <thead><tr><th>Vai trò</th><th>Sáng</th><th>Tối</th></tr></thead>
+        <tbody>
+          <tr><td>Nền trang</td><td><i class="sw" style="background:#f8fafc"></i>#f8fafc</td><td><i class="sw" style="background:#0f172a"></i>#0f172a</td></tr>
+          <tr><td>Bề mặt (thanh, chip, bảng)</td><td><i class="sw" style="background:#ffffff"></i>#ffffff</td><td><i class="sw" style="background:#1e293b"></i>#1e293b</td></tr>
+          <tr><td>Chữ chính</td><td><i class="sw" style="background:#0f172a"></i>#0f172a</td><td><i class="sw" style="background:#f1f5f9"></i>#f1f5f9</td></tr>
+          <tr><td>Chữ phụ</td><td><i class="sw" style="background:#64748b"></i>#64748b</td><td><i class="sw" style="background:#94a3b8"></i>#94a3b8</td></tr>
+          <tr><td>Viền</td><td><i class="sw" style="background:#e2e8f0"></i>#e2e8f0</td><td><i class="sw" style="background:#2b3a4f"></i>#2b3a4f</td></tr>
+          <tr><td>Nhấn (nút, trang đang chọn)</td><td><i class="sw" style="background:#2563eb"></i>#2563eb</td><td><i class="sw" style="background:#60a5fa"></i>#60a5fa</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ NẾU LÀM THẬT ============ -->
+  <section id="files" class="prose">
+    <h2>Nếu làm thật</h2>
+    <p>Chi tiết từng bước nằm trong <code>docs/CARD-REDESIGN-PROPOSAL.md</code>. Các file chính:</p>
+    <ul class="files">
+      <li><code>constants/uiStyles.js</code>: tỉ lệ ảnh, bề rộng tối thiểu, khe lưới, cỡ chữ theo loại.</li>
+      <li><code>components/manga/MangaCard.jsx</code>, <code>movie/MovieCard.jsx</code>, <code>music/MusicCard.jsx</code>, <code>common/UniversalCard.jsx</code>: chữ, badge, nút ⋯, ảnh dự phòng. Về sau gộp thành <code>common/ItemCard.jsx</code>.</li>
+      <li>Mới: <code>common/CardSkeleton.jsx</code>, <code>common/Thumb.jsx</code> (ảnh, ảnh dự phòng, hiện dần), <code>common/CardActions.jsx</code> (bảng thao tác).</li>
+      <li><code>styles/components/manga-card.css</code>, <code>embla.css</code>: bỏ cỡ chữ 11px và bề rộng slide chung cho mọi loại.</li>
+      <li><code>pages/manga/MangaHome.jsx</code>, <code>MovieHome.jsx</code>, <code>MusicHome.jsx</code>, <code>media/MediaHome.jsx</code>, <code>media/MediaGrid.jsx</code>: lưới, padding, thanh công cụ, skeleton.</li>
+      <li><code>common/RandomSlider.jsx</code>, <code>TopViewSlider.jsx</code>, <code>RecentSlider.jsx</code>, <code>manga/MangaRandomSection.jsx</code>: card cỡ theo loại, hàng có tab, skeleton.</li>
+      <li>Backend, một dòng: thêm <code>imageCount, chapterCount</code> vào câu SELECT trong <code>backend/utils/folder-loader.js</code>.</li>
+    </ul>
+    <p class="note">Nhiều file ở trên (UniversalCard, MovieCard, MusicCard, các trang Home) đang được một phiên khác sửa. Nên làm sau khi phiên đó xong.</p>
+  </section>
+
+  <footer>Bản đề xuất cho react-app, 04/11/2026. Mọi tên truyện, phim, bài hát và ảnh trong mock đều là ví dụ đặt ra.</footer>
+</main>
+
+<script>
+(function () {
+'use strict';
+
+/* ---------- biểu tượng ---------- */
+var P = {
+  heart:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/>',
+  folder:'<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  play:'<path d="M7 4.5v15l12.5-7.5z" fill="currentColor" stroke="none"/>',
+  music:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  more:'<circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  left:'<path d="M15 18l-6-6 6-6"/>',
+  right:'<path d="M9 18l6-6-6-6"/>',
+  back:'<path d="M19 12H5M12 19l-7-7 7-7"/>',
+  home:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  list:'<path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+  refresh:'<path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/>',
+  eye:'<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+  film:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 12h18M3 7.5h4M3 16.5h4M17 7.5h4M17 16.5h4"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
+  imgx:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9l6 6M15 9l-6 6"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  trash:'<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
+  filter:'<path d="M22 3H2l8 9.5V19l4 2v-8.5z"/>',
+  menu:'<path d="M3 6h18M3 12h18M3 18h18"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  sliders:'<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+  sort:'<path d="M3 6h11M3 12h8M3 18h5M18 4v16M15 17l3 3 3-3"/>',
+  chev:'<path d="M6 9l6 6 6-6"/>',
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+  video:'<path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>',
+  open:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v1H3z"/><path d="M3 10h18l-2 9H5z"/>',
+  rewind:'<path d="M11 19 2 12l9-7zM22 19l-9-7 9-7z"/>',
+  book2:'<path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2zM22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/>'
+};
+function ic(n, c) { return '<svg class="ic ' + (c || '') + '" viewBox="0 0 24 24" aria-hidden="true">' + P[n] + '</svg>'; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function noExt(s) { return s.replace(/\.(mkv|mp4|webm|mp3|flac|m4a|pdf|jpg)$/i, ''); }
+function mk(n, pos, g) { return '<b class="mk' + (g ? ' g' : '') + '" style="' + pos + '">' + n + '</b>'; }
+function ph(it, kind) { return '<div class="ph ' + kind + '" style="--h:' + it.h + '"></div>'; }
+function take(arr, n) {
+  var out = [];
+  for (var i = 0; i < n; i++) {
+    var b = arr[i % arr.length];
+    if (i < arr.length) { out.push(b); continue; }
+    var c = {}; for (var k in b) c[k] = b[k];
+    c.h = (b.h + 47) % 360; c.fav = false; c.broken = false;
+    out.push(c);
+  }
+  return out;
+}
+function initials(s) {
+  var w = s.replace(/[\[\]().,–\-:]/g, ' ').trim().split(/\s+/);
+  if (/[぀-ヿ一-鿿]/.test(w[0].charAt(0))) return w[0].slice(0, 2);
+  return (w[0].charAt(0) + (w[1] ? w[1].charAt(0) : '')).toUpperCase();
+}
+
+/* ---------- dữ liệu mẫu (tên đặt ra) ---------- */
+var MANGA = [
+  { t: 'Kiếm Sĩ Cuối Cùng Của Vương Quốc Sương Mù', h: 205, k: 'series', n: 24, fav: true },
+  { t: '異世界の図書館で司書をしていたら、いつの間にか最強の魔導士になっていた件', h: 330, k: 'series', n: 104 },
+  { t: 'Nhật Ký Phù Thủy Tập Sự', h: 280, k: 'series', n: 12 },
+  { t: '放課後のバンド活動記録 アンソロジーコミック Vol.2', h: 15, k: 'chapter', n: 164 },
+  { t: 'Chương 12 – Trận chiến trên tháp chuông', h: 180, k: 'chapter', n: 32, broken: true },
+  { t: '星降る夜の喫茶店.pdf', h: 250, k: 'pdf' },
+  { t: 'Mèo Đen', h: 40, k: 'series', n: 3 },
+  { t: 'Tuyển tập truyện ngắn mùa hè 2025', h: 140, k: 'series', n: 8 },
+  { t: '月曜日の朝、君と。', h: 350, k: 'chapter', n: 24 },
+  { t: 'Người Gác Đèn Biển Và Con Cá Voi Trắng – Bản Đặc Biệt Kỷ Niệm 10 Năm', h: 195, k: 'series', n: 5 },
+  { t: '雨の日のロボット修理屋', h: 100, k: 'series', n: 18, fav: true },
+  { t: 'Lớp Học Bí Ẩn Lúc Nửa Đêm', h: 300, k: 'series', n: 40 },
+  { t: '猫と魔女の小さな引っ越し', h: 60, k: 'chapter', n: 30 },
+  { t: 'Thành Phố Không Ngủ', h: 225, k: 'series', n: 7 }
+];
+var RECENT = [
+  { t: 'Chương 12 – Trận chiến trên tháp chuông', p: 'Kiếm Sĩ Cuối Cùng Của Vương Quốc Sương Mù', time: '2 giờ trước', en: 'about 2 hours ago', h: 180 },
+  { t: '第104話 最強の司書、王都へ行く', p: '異世界の図書館で司書をしていたら…', time: 'Hôm qua', en: '1 day ago', h: 330 },
+  { t: 'Tập 3 – Khu rừng biết hát', p: 'Nhật Ký Phù Thủy Tập Sự', time: '3 ngày trước', en: '3 days ago', h: 280 },
+  { t: '放課後のバンド活動記録 アンソロジーコミック Vol.2', p: 'Tuyển tập 4koma', time: '5 ngày trước', en: '5 days ago', h: 15 },
+  { t: 'Chương 7', p: 'Mèo Đen', time: '1 tuần trước', en: '7 days ago', h: 40 },
+  { t: '第3話 雨の日の約束', p: '雨の日のロボット修理屋', time: '2 tuần trước', en: '14 days ago', h: 100 },
+  { t: 'Chương 40 – Hết', p: 'Lớp Học Bí Ẩn Lúc Nửa Đêm', time: '3 tuần trước', en: '21 days ago', h: 300 },
+  { t: 'Tập 1', p: 'Thành Phố Không Ngủ', time: '1 tháng trước', en: 'about 1 month ago', h: 225 }
+];
+var RANDOM = [
+  { t: 'Người Gác Đèn Biển Và Con Cá Voi Trắng – Bản Đặc Biệt Kỷ Niệm 10 Năm', h: 195, k: 'series', n: 5, v: 41 },
+  { t: '第3話 雨の日の約束', h: 100, k: 'chapter', p: '雨の日のロボット修理屋', v: 12 },
+  { t: 'Lớp Học Bí Ẩn Lúc Nửa Đêm', h: 300, k: 'series', n: 40, v: 230 },
+  { t: 'Tập 2 – Bến cảng mùa đông', h: 60, k: 'chapter', p: 'Thành Phố Không Ngủ', v: 8 },
+  { t: '月曜日の朝、君と。', h: 350, k: 'chapter', p: 'Tuyển tập ngắn', v: 19 },
+  { t: 'Mèo Đen', h: 40, k: 'series', n: 3, v: 64 },
+  { t: 'Chương 5', h: 140, k: 'chapter', p: 'Tuyển tập truyện ngắn mùa hè 2025', v: 3 },
+  { t: '猫と魔女の小さな引っ越し', h: 250, k: 'series', n: 9, v: 27 }
+];
+var TOPV = ['1,2k', '860', '544', '310', '295', '201', '188', '150'];
+var MOVIE = [
+  { t: 'Hành Trình Về Phương Bắc (2024) 1080p.mkv', h: 205, ext: 'mkv', size: '4,2 GB', bytes: '4509715660', dur: '1:52:10' },
+  { t: '夏の終わりのプロローグ 劇場版 [BD 1920x1080 HEVC].mp4', h: 20, ext: 'mp4', size: '2,8 GB', bytes: '3006477107', dur: '1:41:03', fav: true },
+  { t: 'Phim gia đình', h: 120, folder: true },
+  { t: 'Buổi hòa nhạc ngoài trời.webm', h: 260, ext: 'webm', size: '1,1 GB', bytes: '1181116006', dur: '47:15', broken: true },
+  { t: 'Vlog Đà Lạt tháng 12.mp4', h: 160, ext: 'mp4', size: '640 MB', bytes: '671088640', dur: '18:24' },
+  { t: 'Tuyển tập phim hoạt hình ngắn của sinh viên năm cuối', h: 300, folder: true },
+  { t: 'Tài liệu – Những rạn san hô cuối cùng.mkv', h: 185, ext: 'mkv', size: '3,1 GB', bytes: '3328599654', dur: '58:02' },
+  { t: '東京ナイトドライブ 4K.mp4', h: 235, ext: 'mp4', size: '1,9 GB', bytes: '2040109465', dur: '12:40' },
+  { t: 'Hướng dẫn nấu ăn', h: 30, folder: true },
+  { t: 'Đám cưới anh Hai 2023.mp4', h: 340, ext: 'mp4', size: '8,4 GB', bytes: '9019431321', dur: '2:05:44' }
+];
+var MUSIC = [
+  { t: 'Mưa Tháng Sáu.mp3', h: 210, ext: 'mp3', artist: 'Ngọt Ngào Band', dur: '4:12', plays: 38 },
+  { t: '夜明けのメロディー (Acoustic Version).flac', h: 330, ext: 'flac', artist: '青空レコーズ', dur: '3:58', plays: 12 },
+  { t: 'Nhạc không lời buổi sáng', h: 150, folder: true },
+  { t: 'Đêm Sài Gòn (Live).mp3', h: 262, ext: 'mp3', artist: 'Ngọt Ngào Band', dur: '6:02', plays: 5 },
+  { t: 'Bản Tình Ca Cho Những Ngày Mưa Rơi Không Dứt Bên Hiên Nhà Cũ.mp3', h: 10, ext: 'mp3', artist: 'Hạ Vy', dur: '5:31' },
+  { t: 'Lofi để học', h: 190, folder: true, broken: true },
+  { t: '君の街まで歩いていく.m4a', h: 300, ext: 'm4a', artist: 'ミナト', dur: '4:45', plays: 7 },
+  { t: 'Phố Cũ.mp3', h: 95, ext: 'mp3', artist: 'Nhóm Gác Mái', dur: '3:20', plays: 21 },
+  { t: 'Nhạc phim hoạt hình', h: 230, folder: true },
+  { t: 'ゆめのあと.flac', h: 40, ext: 'flac', artist: '青空レコーズ', dur: '4:01' }
+];
+var MFOLD = [
+  { t: 'Đà Lạt 12-2025', h: 150, count: '134 mục' },
+  { t: 'Sinh nhật bé Na lần thứ 5 ở nhà bà ngoại', h: 20, count: '64 mục' },
+  { t: 'Ảnh chụp màn hình', h: 220, count: '1.204 mục' },
+  { t: '京都旅行 2024年 秋の紅葉', h: 10, count: '420 mục' },
+  { t: 'Tết 2026', h: 355, count: '263 mục' },
+  { t: 'Giấy tờ', h: 200, count: '36 mục' },
+  { t: 'Camera điện thoại', h: 180, count: '8.112 mục' }
+];
+var MEDIA = [];
+for (var mi = 0; mi < 16; mi++) {
+  var vi = [3, 8, 13].indexOf(mi);
+  MEDIA.push({ t: 'IMG_20251214_' + (1000 + mi) + '.jpg', h: (mi * 53 + 20) % 360, vid: vi >= 0 ? ['0:42', '2:17', '12:05'][vi] : null, fav: mi === 5, broken: mi === 4 });
+}
+
+/* ---------- khung ---------- */
+function phoneF(inner) { return '<div class="frame phone">' + inner + '</div>'; }
+function deskF(inner, url) { return '<div class="frame desk"><div class="desk-bar"><i></i><i></i><i></i><span>' + url + '</span></div>' + inner + '</div>'; }
+function app(cls, inner) { return '<div class="app ' + cls + '">' + inner + '</div>'; }
+function hdr(d, name) {
+  return '<div class="m-hdr"><div class="l"><span class="m-ib">' + ic('menu') + '</span><span class="m-brand">⸜(｡˃ ᵕ ˂ )⸝♡' + (d ? ' ' + (name || 'Truyện tranh') : '') + '</span></div>' +
+    '<div class="r"><span class="m-ib">' + ic('search') + (d ? '<small>Tìm kiếm</small>' : '') + '</span><span class="m-ib">' + ic('sun') + '</span><span class="m-ib">' + ic('sliders') + '</span></div></div>';
+}
+
+/* ---------- card hiện tại ---------- */
+function curMangaCard(it, i) {
+  var th = it.broken ? '<div class="brk">' + ic('imgx') + '<span>' + esc(it.t) + '</span></div>' : ph(it, 'cv');
+  var fav = it.fav ? '<span class="c-mg-fav">' + ic('heart', 'fill') + '</span>' : '<span class="gh gh-fav"></span>';
+  var m = '';
+  if (i === 0) m = mk(1, 'left:-6px;bottom:-6px') + mk(2, 'right:-6px;top:30px');
+  if (it.broken) m += mk(3, 'left:-6px;top:-6px');
+  return '<div class="c-mg">' + m + '<div class="c-mg-th">' + th + fav + '<span class="gh gh-del"></span></div><div class="c-mg-t" title="' + esc(it.t) + '">' + esc(it.t) + '</div></div>';
+}
+function curMovieCard(it, i) {
+  var f = i === 0;
+  var th = it.broken ? '<div class="c-def">' + ic('film') + '</div>' : ph(it, 'wd');
+  var lbl = it.folder ? 'Folder' : it.ext;
+  var tic = it.folder ? 'folder' : 'play';
+  return '<div class="c-mv"><div class="c-mv-th">' + th +
+    '<span class="c-mv-fav' + (it.fav ? ' on' : '') + '">' + ic('heart', it.fav ? 'fill' : '') + '</span>' +
+    '<span class="c-mv-ty">' + ic(tic) + lbl + '</span><span class="gh gh-mvd"></span>' +
+    (f ? mk(2, 'left:30px;bottom:2px') + mk(5, 'right:26px;bottom:2px') : '') + '</div>' +
+    '<div class="c-mv-b">' + (f ? mk(4, 'right:-6px;top:-4px') : '') + '<div class="c-mv-t" title="' + esc(it.t) + '">' + esc(it.t) + '</div>' +
+    '<div class="c-mv-m"><span>' + ic(tic) + lbl + '</span><span>' + (it.folder ? '' : it.bytes) + '</span></div>' +
+    (f ? mk(3, 'right:-6px;bottom:-8px') : '') + '</div></div>';
+}
+function curMusicCard(it, i) {
+  var folder = !!it.folder, audio = !folder;
+  var th = it.broken ? '<div class="c-def">' + ic('folder') + '</div>' : ph(it, 'sq');
+  var lbl = folder ? 'Folder' : it.ext;
+  var tic = folder ? 'folder' : 'play';
+  return '<div class="c-mu' + (folder ? ' fo' : '') + '"><div class="c-mu-th">' + th +
+    '<span class="c-mu-ty' + (folder ? ' fo' : '') + '">' + ic(tic) + lbl + '</span>' +
+    (audio ? '<span class="c-mu-add">' + ic('plus') + '</span>' : '') +
+    (i === 2 ? mk(1, 'right:4px;top:4px') : '') +
+    (i === 0 ? mk(3, 'left:4px;top:24px') + mk(4, 'right:4px;top:32px') : '') + '</div>' +
+    '<div class="c-mu-b"><div class="c-mu-t">' + esc(it.t) + '</div><div class="c-mu-m"><span>' + lbl + '</span>' +
+    (it.plays ? '<span>' + ic('music') + it.plays + '</span>' : '') + '</div>' + (i === 0 ? mk(5, 'left:-6px;bottom:-8px') : '') + '</div>' +
+    '<span class="gh gh-mud"></span></div>';
+}
+function curU(it, kind, d, i) {
+  var w = d ? 190 : 105;
+  var th = ph(it, 'cv');
+  var top = kind === 'top', rec = kind === 'recent';
+  var rank = top && i < 3 ? '<span class="u-rank" style="background:' + ['#eab308', '#9ca3af', '#d97706'][i] + '">' + (i + 1) + '</span>' : '';
+  var bdg = top ? '<span class="u-bdg">' + ic('eye') + TOPV[i] + '</span>' : '<span class="u-bdg">' + ic('folder') + 'Folder</span>';
+  var meta = '<span>Folder</span>' + (kind === 'random' ? '<span>' + ic('eye') + (it.v || 0) + '</span>' : '');
+  return '<div class="u" style="width:' + w + 'px"><div class="u-th">' + th +
+    '<span class="u-fav' + (it.fav ? ' on' : '') + '">' + ic('heart', it.fav ? 'fill' : '') + '</span>' +
+    (top ? '<span class="u-del">' + ic('trash') + '</span>' : '') + bdg + rank +
+    (rec ? '<span class="u-time">' + it.en + '</span>' : '') +
+    '</div><div class="u-b"><div class="u-t">' + esc(it.t) + '</div><div class="u-m">' + meta + '</div></div></div>';
+}
+function curSlider(title, kind, d, mark) {
+  var src = kind === 'recent' ? RECENT : kind === 'top' ? MANGA : RANDOM;
+  var n = d ? 7 : 5;
+  var cards = take(src, n).map(function (it, i) { return curU(it, kind, d, i); }).join('');
+  var dots = ''; for (var j = 0; j < 6; j++) dots += '<i' + (j === 0 ? ' class="on"' : '') + '></i>';
+  var right = (d ? '<span>' + ic('left') + '</span><span>' + ic('right') + '</span>' : '') + (kind !== 'recent' ? '<span>' + ic('refresh') + '</span>' : '');
+  return '<div class="cur-sl">' + (mark || '') + '<div class="cur-sl-h"><div class="l"><h4>' + title + '</h4>' +
+    (kind !== 'top' ? '<span class="ts">' + ic('clock') + '5 minutes ago</span>' : '') + '</div><div class="r">' + right + '</div></div>' +
+    '<div class="cur-row">' + cards + '</div><div class="cur-dots">' + dots + '</div></div>';
+}
+function curWrap(type, d, inner) {
+  var pad = { manga: [4, 8], movie: [12, 24], music: [12, 24] }[type];
+  var box = { manga: [8, 12], movie: [12, 24], music: [12, 24] }[type];
+  return '<div class="cur-layout"><div class="cur-page" style="padding:' + pad[d ? 1 : 0] + 'px"><div class="cur-box" style="padding:' + box[d ? 1 : 0] + 'px">' + inner + '</div></div></div>';
+}
+var CUR_CFG = {
+  manga: { c: [3, 6], g: [8, 16], n: [6, 12], data: MANGA, r: curMangaCard },
+  movie: { c: [2, 9], g: [8, 12], n: [4, 18], data: MOVIE, r: curMovieCard },
+  music: { c: [3, 10], g: [8, 12], n: [6, 20], data: MUSIC, r: curMusicCard }
+};
+function curGrid(type, d, marker) {
+  var c = CUR_CFG[type], k = d ? 1 : 0;
+  var cards = take(c.data, c.n[k]).map(function (it, i) { return c.r(it, i, d); }).join('');
+  return '<div class="cg" data-grid style="--c:' + c.c[k] + ';--g:' + c.g[k] + 'px">' + (marker || '') + cards + '</div>';
+}
+function curGridFrame(type, d) {
+  var marker = '';
+  if (type === 'manga') marker = '';
+  if (type === 'movie') marker = mk(1, 'left:-12px;top:-12px');
+  if (type === 'music') marker = mk(2, 'left:-12px;top:-12px');
+  var inner = curGrid(type, d, marker);
+  if (type === 'manga') inner = mk(4, 'right:-9px;top:-9px') + inner;
+  var a = app('cur ' + (d ? 'is-desk' : 'is-phone'), curWrap(type, d, inner));
+  if (type === 'manga') a = a.replace('<div class="cur-layout">', '<div class="cur-layout" style="position:relative">' + mk(5, 'left:4px;top:4px'));
+  return a;
+}
+function curPhoto(m, i) {
+  var th = m.broken ? '<div class="c-def">' + ic('folder') + '</div>' : ph(m, 'pt');
+  return '<div class="c-ph">' + th + '<span class="c-ck"><i></i></span>' +
+    (m.vid ? '<span class="c-vb">' + ic('video') + m.vid + '</span>' : '') +
+    '<span class="gh gh-pf"></span><span class="gh gh-pd"></span>' +
+    (i === 0 ? mk(2, 'left:34px;top:10px') + mk(5, 'right:36px;top:10px') : '') +
+    (m.broken ? mk(4, 'left:6px;bottom:6px') : '') + '</div>';
+}
+function curMediaFrame(d) {
+  var folders = take(MFOLD, d ? 6 : 2).map(function (f, i) {
+    return '<div class="c-mf">' + (i === 0 ? mk(3, 'left:-6px;top:-6px') : '') + '<div class="im">' + ph(f, 'pt') + '</div><div class="nm">' + esc(f.t) + '</div><div class="ct">' + f.count.replace(' mục', ' items') + '</div><span class="gh gh-mf"></span></div>';
+  }).join('');
+  var photos = take(MEDIA, d ? 12 : 6).map(curPhoto).join('');
+  return app('cur ' + (d ? 'is-desk' : 'is-phone'),
+    '<div class="cur-layout"><div class="cur-media"><h4 class="c-fh">Folders</h4><div class="cg" style="--c:' + (d ? 6 : 2) + ';--g:16px">' + folders + '</div>' +
+    '<div class="cg" data-grid style="--c:' + (d ? 6 : 2) + ';--g:4px;margin-top:32px">' + mk(1, 'left:-10px;top:-10px') + photos + '</div></div></div>');
+}
+
+/* ---------- card đề xuất ---------- */
+function subOf(it, type) {
+  if (type === 'manga') {
+    if (it.k === 'series') return ic('folder') + '<span>' + it.n + ' chương</span>';
+    if (it.k === 'pdf') return ic('file') + '<span>PDF</span>';
+    return '<span>' + it.n + ' trang</span>';
+  }
+  if (type === 'movie') return it.folder ? ic('folder') + '<span>Thư mục</span>' : '<span>' + it.ext.toUpperCase() + ' · ' + it.size + '</span>';
+  if (type === 'music') {
+    if (it.folder) return ic('folder') + '<span>Thư mục</span>';
+    if (it.pl) return ic('list') + '<span>Playlist</span>';
+    return '<span>' + esc(it.artist) + ' · ' + it.dur + '</span>';
+  }
+  if (type === 'mfold') return '<span>' + it.count + '</span>';
+  return '';
+}
+function fb(it, type, folder) {
+  var n = folder ? 'folder' : ({ manga: 'book', movie: 'film', music: 'music', mfold: 'image', media: 'image' })[type];
+  return '<div class="fb" style="--h:' + it.h + '">' + ic(n) + '<b>' + esc(initials(noExt(it.t))) + '</b></div>';
+}
+function pCard(it, type, d, o) {
+  o = o || {};
+  var ar = { manga: 'r-57', movie: 'r-169', music: 'r-11', mfold: 'r-11' }[type];
+  var kind = { manga: 'cv', movie: 'wd', music: 'sq', mfold: 'pt' }[type];
+  var folder = it.k === 'series' || !!it.folder || !!it.pl;
+  var th = it.broken ? fb(it, type, folder) : ph(it, kind);
+  var sub = o.sub !== undefined ? o.sub : subOf(it, type);
+  var tl = o.tl ? '<span class="bd tl' + (o.rank ? ' r' + o.rank : '') + '">' + o.tl + '</span>' : '';
+  var br = o.br ? '<span class="bd br">' + o.br + '</span>' : (type === 'movie' && it.dur ? '<span class="bd br">' + it.dur + '</span>' : '');
+  var fv = it.fav ? '<span class="fv">' + ic('heart', 'fill') + '</span>' : '';
+  var playable = (type === 'movie' || type === 'music') && !folder;
+  var play = playable ? '<span class="pc-play">' + ic('play') + '</span>' : '';
+  var tip = o.tip ? '<span class="tip">' + esc(it.t) + '</span>' : '';
+  return '<article class="pc' + (folder ? ' is-folder' : '') + (o.hov ? ' hov' : '') + '">' + (o.mk || '') +
+    '<div class="pc-th"><div class="pc-im ' + ar + '">' + th + play + tl + br + fv + '</div></div>' +
+    '<h3 class="pc-t" title="' + esc(it.t) + '">' + esc(noExt(it.t)) + '</h3>' +
+    '<div class="pc-m"><span class="pc-s">' + sub + '</span><span class="pc-x">' + ic('more') + '</span></div>' + tip + '</article>';
+}
+var HOV = { manga: 1, movie: 0, music: 0 };
+var PN = { manga: [9, 14], movie: [4, 10], music: [6, 14] };
+function pGridFrame(type, d) {
+  var data = { manga: MANGA, movie: MOVIE, music: MUSIC }[type];
+  var cards = take(data, PN[type][d ? 1 : 0]).map(function (it, i) {
+    var h = d && i === HOV[type];
+    return pCard(it, type, d, { hov: h, tip: h && type === 'manga' });
+  }).join('');
+  return app('prop ' + (d ? 'is-desk' : 'is-phone'), '<div class="p-page"><div class="pg pg-' + type + '" data-grid>' + cards + '</div></div>');
+}
+function pPhoto(m, i, d) {
+  var th = m.broken ? fb(m, 'media', false) : ph(m, 'pt');
+  return '<div class="pm' + (d && i === 2 ? ' hov' : '') + '">' + th + '<span class="ck"></span>' +
+    (m.vid ? '<span class="bd br">' + ic('play') + m.vid + '</span>' : '') +
+    (m.fav ? '<span class="fv">' + ic('heart', 'fill') + '</span>' : '') + '</div>';
+}
+function pMediaFrame(d) {
+  var folders = take(MFOLD, d ? 7 : 3).map(function (f) { var c = {}; for (var k in f) c[k] = f[k]; c.folder = true; return pCard(c, 'mfold', d); }).join('');
+  var photos = take(MEDIA, d ? 16 : 9).map(function (m, i) { return pPhoto(m, i, d); }).join('');
+  return app('prop ' + (d ? 'is-desk' : 'is-phone'),
+    '<div class="p-page"><section><div class="p-sh"><h4>Thư mục<span class="cnt">7</span></h4></div><div class="pg pg-music">' + folders + '</div></section>' +
+    '<section><div class="p-sh"><h4>Ảnh và video<span class="cnt">134 mục</span></h4></div><div class="pm-grid" data-grid>' + photos + '</div></section></div>');
+}
+
+/* ---------- trang Manga ---------- */
+function curMangaPage(d) {
+  var tb = '<div class="cur-tb"><div class="l"><span class="btn-o">' + ic('home') + (d ? 'Home' : '') + '</span><span style="font-size:14px">📖 Manga</span></div>' +
+    '<div class="r">' + (d ? '<span class="lbl">Per page:</span>' : '') + '<span class="sel">30 ' + ic('chev') + '</span><span class="btn-o" style="position:relative">' + ic('filter') + (d ? 'Filter' : '') + mk(3, 'right:-9px;top:-9px') + '</span>' +
+    '<span class="vt"><span class="on">' + ic('grid') + '</span><span>' + ic('list') + '</span></span></div></div>';
+  var search = '<div class="cur-search" style="position:relative">' + ic('search') + 'Tìm kiếm manga...' + mk(5, 'right:-9px;top:-9px') + '</div>';
+  var stats = '<div class="cur-stats">' +
+    '<div class="cur-stat"><span class="sti" style="color:#3b82f6">' + ic('book') + '</span><div><b>1248</b><small>Total Items</small></div></div>' +
+    '<div class="cur-stat"><span class="sti" style="color:#ef4444">' + ic('heart') + '</span><div><b>37</b><small>Favorites</small></div></div>' +
+    '<div class="cur-stat"><span class="sti" style="color:#22c55e">' + ic('search') + '</span><div><b>1248</b><small>Search Results</small></div></div></div>';
+  var grid = curGrid('manga', d).replace(/<b class="mk[^"]*" style="[^"]*">\d+<\/b>/g, '');
+  var pag = '<div class="cur-pag"><span>⬅ Prev</span><span class="mid">' + (d ? 'Page ' : '') + '1 / 42</span><span>Next ➡</span></div>';
+  var p = d ? 8 : 4;
+  return app('cur ' + (d ? 'is-desk' : 'is-phone'), hdr(d) +
+    '<div class="cur-layout"><div class="cur-page" style="padding:' + p + 'px">' +
+    curSlider('📚 Random', 'random', d, mk(1, 'right:4px;top:4px')) + curSlider('🔥 Top Views', 'top', d, mk(6, 'right:4px;top:4px')) + curSlider('🕒 Recently', 'recent', d) +
+    '<div class="cur-box" style="padding:' + (d ? 12 : 8) + 'px;margin-top:' + p + 'px">' + mk(2, 'right:-9px;top:-9px') + tb + search +
+    '<div style="position:relative">' + mk(4, 'right:-9px;top:-9px') + stats + '</div>' + grid + pag + '</div></div></div>');
+}
+function pMangaPage(d) {
+  var tb = d
+    ? '<div class="p-tb"><span class="p-ib">' + ic('home') + '</span><div class="crumb">Manga <span class="dim">›</span> <span class="last">Thư viện chính</span></div>' +
+      '<div class="p-tools"><span class="p-input">' + ic('search') + 'Lọc trong thư mục này…</span><span class="chip">' + ic('sort') + 'Tên A→Z ' + ic('chev') + '</span>' +
+      '<span class="vt"><span class="on">' + ic('grid') + '</span><span>' + ic('list') + '</span></span><span class="chip">30 mục/trang ' + ic('chev') + '</span></div></div>'
+    : '<div class="p-tb"><span class="p-ib">' + ic('home') + '</span><div class="crumb">Manga <span class="dim">› Thư viện chính</span></div><span class="p-ib">' + ic('list') + '</span><span class="p-ib">' + ic('more') + '</span></div>';
+  var n = d ? 8 : 5;
+  var recent = RECENT.slice(0, n).map(function (it) { return pCard(it, 'manga', d, { tl: it.time, sub: '<span>' + esc(it.p) + '</span>' }); }).join('');
+  var rnd = take(RANDOM, n).map(function (it) { return pCard(it, 'manga', d, it.p ? { sub: '<span>' + esc(it.p) + '</span>' } : {}); }).join('');
+  var grid = take(MANGA, d ? 14 : 9).map(function (it, i) { return pCard(it, 'manga', d, { hov: d && i === 1 }); }).join('');
+  var pag = d
+    ? '<div class="p-pag"><span class="pb">' + ic('left') + '</span><span class="pb on">1</span><span class="pb">2</span><span class="pb">3</span><span class="pg-l">…</span><span class="pb">42</span><span class="pb">' + ic('right') + '</span></div>'
+    : '<div class="p-pag"><span class="pb">' + ic('left') + '</span><span class="pg-l">Trang <b>1</b> / 42</span><span class="pb">' + ic('right') + '</span></div>';
+  var arrows = d ? '<span class="p-arr"><span class="p-ib sm lined">' + ic('left') + '</span><span class="p-ib sm lined">' + ic('right') + '</span></span>' : '';
+  return app('prop ' + (d ? 'is-desk' : 'is-phone'), hdr(d) + tb +
+    '<div class="p-page">' +
+    '<section><div class="p-sh"><h4>Đọc tiếp</h4>' + arrows + '</div><div class="p-row">' + recent + '</div></section>' +
+    '<section><div class="p-sh"><span class="seg"><span class="on">Ngẫu nhiên</span><span>Xem nhiều</span></span><span style="display:flex;gap:4px">' + arrows.replace('<span class="p-arr">', '').replace(/<\/span>$/, '') + '<span class="p-ib sm' + (d ? ' lined' : '') + '">' + ic('refresh') + '</span></span></div><div class="p-row">' + rnd + '</div></section>' +
+    '<section><div class="p-sh"><h4>Tất cả<span class="cnt">1.248 mục</span></h4>' + (d ? '' : '<span class="chip">' + ic('sort') + 'Tên A→Z</span>') + '</div>' +
+    (d ? '' : '<div class="p-filter">' + ic('search') + 'Lọc trong thư mục này…</div>') +
+    '<div class="pg pg-manga" data-grid>' + grid + '</div>' + pag + '</section></div>');
+}
+function pSeriesPage() {
+  var s = MANGA[0];
+  var names = ['Chương 10 – Lời thề dưới gốc sồi', 'Chương 11 – 鐘の音が聞こえる夜', 'Chương 12 – Trận chiến trên tháp chuông', 'Chương 13 – Khi những cánh cổng của thành phố cổ mở ra lần cuối cùng trước bình minh', 'Chương 14 – Người đưa thư', 'Chương 15 – Mùa đông thứ ba', 'Chương 16 – Bản đồ bị xé'];
+  var pages = [30, 28, 32, 36, 26, 31, 29];
+  var rows = names.map(function (t, i) {
+    var now = i === 2;
+    var sub = now ? '<span class="now-chip">Đang đọc</span><span>' + pages[i] + ' trang · 2 giờ trước</span>' : '<span>' + pages[i] + ' trang</span>';
+    return '<div class="lr' + (now ? ' now' : '') + '"><div class="lr-th"><div class="pc-im r-57">' + ph({ h: 200 + i * 9 }, 'cv') + '</div></div>' +
+      '<div class="lr-tx"><div class="lr-t">' + esc(t) + '</div><div class="lr-s">' + sub + '</div></div><span class="pc-x">' + ic('more') + '</span></div>';
+  }).join('');
+  return app('prop is-phone', hdr(false) +
+    '<div class="p-tb"><span class="p-ib">' + ic('back') + '</span><div class="crumb"><span class="dim">… ›</span> <span class="last">' + esc(s.t) + '</span></div><span class="p-ib">' + ic('grid') + '</span><span class="p-ib">' + ic('more') + '</span></div>' +
+    '<div class="p-page"><div class="sr-h"><div class="sr-cv"><div class="pc-im r-57">' + ph(s, 'cv') + '</div></div><div class="sr-i"><h3>' + esc(s.t) + '</h3><p>24 chương · 3.840 trang</p>' +
+    '<div class="sr-b"><span class="btn-p">' + ic('play') + 'Đọc tiếp · Ch. 12</span><span class="btn-i">' + ic('heart', 'fill') + '</span></div></div></div>' +
+    '<section><div class="p-sh"><h4>24 chương</h4><span class="chip">' + ic('sort') + 'Cũ → mới</span></div><div class="more-row">↑ 9 chương trước</div>' + rows + '</section></div>');
+}
+
+/* ---------- khối so sánh card ---------- */
+var CARD_SECTIONS = {
+  manga: {
+    title: 'Manga',
+    iss: [
+      'Tên chỉ 1 dòng, chữ 11px trên điện thoại (<code>white-space: nowrap</code>). Tên dài còn vài chữ đầu, không có phụ đề.',
+      'Nút ❤ (góc trên phải) và nút xoá (góc dưới phải) trong suốt nhưng vẫn bấm được. Trên điện thoại không thấy nút mà vẫn chạm nhầm được.',
+      'Ảnh lỗi hiện biểu tượng ảnh hỏng của trình duyệt: <code>LazyLoadImage</code> không có <code>onError</code>.',
+      'Card nền trắng có bóng nằm trong khung trắng. Ở chế độ tối, card cùng màu với khung (#1f2937) nên mất viền.',
+      'Ba lớp đệm (Layout 16px, trang 4px, khung 9px) nên lưới chỉ dùng 332 trên 390px.'
+    ],
+    chg: [
+      'Tỉ lệ 5:7, ảnh căn lên trên. Tên 2 dòng, 13px trên điện thoại, 14px trên máy tính.',
+      'Phụ đề: "24 chương" cho bộ truyện, "186 trang" cho chương, "PDF" cho file PDF. Bỏ đuôi .pdf khỏi tên.',
+      'Thư mục có mép xếp chồng trên ảnh. ❤ chỉ hiện khi đã thích. Thao tác nằm trong ⋯ hoặc nhấn giữ.',
+      'Ảnh lỗi dùng ô dự phòng có biểu tượng sách và chữ đầu của tên.',
+      'Bỏ khung trắng: lưới rộng 358px, card 114px. Máy tính 1280px chia 7 cột.'
+    ]
+  },
+  movie: {
+    title: 'Movie',
+    iss: [
+      'Máy tính 1280px chia 9 cột nên ảnh chỉ 117×66px, khó nhận ra phim.',
+      'Loại file ("mkv") hiện hai lần: badge trên ảnh và dòng dưới tên, chữ 9px trên điện thoại.',
+      'Dòng thông tin in dung lượng dạng byte thô ("4509715660"), vì MovieCard in thẳng <code>item.size</code>.',
+      'Tên giữ đuôi file và chuỗi kỹ thuật ([BD 1920x1080 HEVC]) nên tốn chỗ.',
+      'Nút xoá trong suốt ở góc dưới phải ảnh. Trên điện thoại mỗi bên mất 41px đệm.'
+    ],
+    chg: [
+      '2 cột trên điện thoại (card 175px), 5 cột trên máy tính 1280px (card 237px).',
+      'Thời lượng đặt ở góc dưới phải ảnh, đúng quy ước của video.',
+      'Tên bỏ đuôi file. Phụ đề "MKV · 4,2 GB", dung lượng đã định dạng. Thư mục ghi "Thư mục".',
+      '▶ chỉ hiện khi rê chuột. ❤ chỉ hiện khi đã thích, bật hoặc tắt qua ⋯.'
+    ]
+  },
+  music: {
+    title: 'Music',
+    iss: [
+      'Thư mục có viền xanh 2px, chữ xanh đậm và badge xanh nên nổi hơn bài hát, lưới trông loang lổ.',
+      'Máy tính 1280px chia 10 cột, ảnh bìa còn 104px. Điện thoại chỉ 97px.',
+      'Badge loại (Folder, mp3) ở góc trên trái và lặp lại dưới tên, chữ 9px.',
+      'Nút ➕ luôn hiện trên mọi bài. Nút xoá đỏ trong suốt nằm ở góc dưới phải, đè lên dòng thông tin.',
+      'Không hiện ca sĩ và thời lượng dù API đã trả <code>artist</code>, <code>duration</code>.'
+    ],
+    chg: [
+      'Thư mục dùng mép xếp chồng giống các loại khác, không dùng viền màu.',
+      'Điện thoại 3 cột (114px), máy tính 1280px 7 cột (165px).',
+      'Phụ đề "Ca sĩ · 3:58" cho bài hát, "Thư mục" hoặc "Playlist" cho tập hợp.',
+      '"Thêm vào playlist" chuyển vào ⋯ và bảng nhấn giữ. ▶ hiện khi rê chuột.'
+    ]
+  },
+  media: {
+    title: 'Media',
+    iss: [
+      'Điện thoại chỉ 2 cột ảnh, trong khi ứng dụng ảnh thường dùng 3–4 cột, nên phải cuộn nhiều.',
+      'Ô chọn (checkbox) luôn hiện trên mọi ảnh và che góc ảnh.',
+      'Card thư mục khác hẳn 3 loại kia: ảnh cao cố định 128px, chữ căn giữa, đệm 16px.',
+      'Ảnh lỗi rơi về <code>/default/folder-thumb.png</code> nên trông như một thư mục.',
+      '❤ và nút xoá chỉ hiện khi rê chuột: điện thoại không dùng được nhưng vẫn chạm nhầm được.'
+    ],
+    chg: [
+      'Điện thoại 3 cột, khe 2px. Máy tính 1280px 8 cột, khe 4px. Vẫn khít, không bo góc, không chữ.',
+      'Ô chọn chỉ hiện khi rê chuột hoặc khi đang chọn nhiều (nhấn giữ một ảnh để bắt đầu).',
+      'Thư mục dùng chung card với các loại khác: ảnh vuông, tên 2 dòng, "134 mục".',
+      'Thời lượng video ở góc dưới phải. Ảnh lỗi dùng ô dự phòng biểu tượng ảnh.'
+    ]
+  }
+};
+function cardSection(type) {
+  var c = CARD_SECTIONS[type];
+  var id = 'c-' + type;
+  return '<h3>' + c.title + '</h3>' +
+    '<div class="cmp">' +
+    '<div class="col"><div class="col-h"><span class="tag cur">Hiện tại</span><small>Điện thoại 390px</small></div><div class="fit" id="' + id + '-cur-phone" data-w="406"></div><p class="note" data-m="grid"></p></div>' +
+    '<div class="col"><div class="col-h"><span class="tag new">Đề xuất</span><small>Điện thoại 390px</small></div><div class="fit" id="' + id + '-new-phone" data-w="406"></div><p class="note" data-m="grid"></p></div>' +
+    '</div>' +
+    '<div class="lists"><div><ol class="iss"><li>' + c.iss.join('</li><li>') + '</li></ol></div><div><ul class="chg"><li>' + c.chg.join('</li><li>') + '</li></ul></div></div>' +
+    '<div class="cmp stack">' +
+    '<div class="col"><div class="col-h"><span class="tag cur">Hiện tại · máy tính 1280px</span><button type="button" class="realbtn" data-real="' + id + '-cur-desk">Xem cỡ thật</button></div><div class="fit" id="' + id + '-cur-desk" data-w="1282"></div><p class="note" data-m="grid"></p></div>' +
+    '<div class="col"><div class="col-h"><span class="tag new">Đề xuất · máy tính 1280px</span><button type="button" class="realbtn" data-real="' + id + '-new-desk">Xem cỡ thật</button></div><div class="fit" id="' + id + '-new-desk" data-w="1282"></div><p class="note" data-m="grid"></p></div>' +
+    '</div>';
+}
+
+/* ---------- các khối minh hoạ quy tắc ---------- */
+function ratioDemo() {
+  var it = MANGA[2];
+  function fig(label, sub, w, inner) { return '<figure style="width:' + w + 'px">' + inner + '<figcaption><b>' + label + '</b><br>' + sub + '</figcaption></figure>'; }
+  return '<div class="spec">' +
+    fig('Manga 5:7', 'Đang dùng 3:4 (đường đứt nét)', 104, '<div class="pc-im r-57" style="position:relative">' + ph(it, 'cv') + '<span style="position:absolute;z-index:7;left:0;right:0;top:2.4%;bottom:2.4%;border:1.5px dashed #fff;border-radius:2px;opacity:.9"></span></div>') +
+    fig('Movie 16:9', 'Giữ nguyên', 175, '<div class="pc-im r-169">' + ph(MOVIE[0], 'wd') + '</div>') +
+    fig('Music 1:1', 'Giữ nguyên', 104, '<div class="pc-im r-11">' + ph(MUSIC[0], 'sq') + '</div>') +
+    fig('Media 1:1', 'Không bo góc, không chữ', 104, '<div class="pm">' + ph(MEDIA[0], 'pt') + '</div>') +
+    '</div>';
+}
+function titleDemo() {
+  var names = [MANGA[1], MANGA[9], MANGA[3]];
+  var cur = names.map(function (it) { return '<div class="c-mg" style="width:105px;flex:none"><div class="c-mg-th">' + ph(it, 'cv') + '</div><div class="c-mg-t">' + esc(it.t) + '</div></div>'; }).join('');
+  var nw = names.map(function (it) { return '<div style="width:114px;flex:none">' + pCard(it, 'manga', false) + '</div>'; }).join('');
+  return '<div class="ttcmp"><div><span class="tag cur" style="align-self:flex-start">Hiện tại · 105px</span><div style="display:flex;gap:8px;overflow:hidden">' + cur + '</div></div>' +
+    '<div><span class="tag new" style="align-self:flex-start">Đề xuất · 114px</span><div style="display:flex;gap:8px;overflow:hidden">' + nw + '</div></div></div>';
+}
+function badgeDemo() {
+  var marks = mk(5, 'left:50%;top:-16px;margin-left:-9px', 1) + mk(1, 'left:-10px;top:2px', 1) + mk(2, 'right:-10px;top:2px', 1) +
+    mk(3, 'right:-10px;top:226px', 1) + mk(4, 'right:-12px;bottom:-4px', 1);
+  return '<div style="width:184px;position:relative">' +
+    pCard(MANGA[10], 'manga', true, { tl: '#1', rank: 1, br: ic('eye') + '1,2k', sub: '<span>Thư viện chính</span>', mk: marks }) + '</div>';
+}
+function sheetFrame() {
+  var bg = take(MANGA, 6).map(function (it) { return pCard(it, 'manga', false); }).join('');
+  var s = MANGA[1];
+  return app('prop is-phone', hdr(false) + '<div class="p-page"><div class="pg pg-manga">' + bg + '</div></div>' +
+    '<div class="dimmer"></div><div class="sheet"><div class="grab"></div>' +
+    '<div class="sh-h"><div class="pc-im r-57">' + ph(s, 'cv') + '</div><div><b>' + esc(s.t) + '</b><small>104 chương · Thư viện chính</small></div></div>' +
+    '<ul><li>' + ic('heart') + 'Thêm vào yêu thích</li><li>' + ic('book2') + 'Đọc từ đầu</li><li>' + ic('open') + 'Mở thư mục chứa</li><li class="danger">' + ic('trash') + 'Xoá khỏi cơ sở dữ liệu</li></ul></div>');
+}
+function skCard(ar, wide) {
+  return '<div class="pc' + (wide ? ' w' : '') + '"><div class="pc-th"><div class="pc-im ' + ar + ' sk"></div></div>' +
+    '<div class="sk" style="height:12px;margin-top:10px;width:92%"></div><div class="sk" style="height:12px;margin-top:5px;width:64%"></div><div class="sk" style="height:10px;margin-top:9px;width:42%"></div></div>';
+}
+function skeletonDemo() {
+  return '<div class="p-sh"><h4>Đang tải</h4></div><div class="demo-row">' + skCard('r-57') + skCard('r-57') + skCard('r-57') + '</div>' +
+    '<div class="demo-row" style="margin-top:16px">' + skCard('r-169', true) + skCard('r-11') + '</div>' +
+    '<div class="demo-row" style="margin-top:16px;gap:2px"><div class="pm sk" style="border-radius:0"></div><div class="pm sk" style="border-radius:0"></div><div class="pm sk" style="border-radius:0"></div></div>';
+}
+function fallbackDemo() {
+  function one(it, type, folder, cap, wide) { return '<div style="width:' + (wide ? 175 : 104) + 'px"><div class="pc-im ' + ({ manga: 'r-57', movie: 'r-169', music: 'r-11', media: 'r-11' })[type] + '">' + fb(it, type, folder) + '</div><div class="demo-cap">' + cap + '</div></div>'; }
+  return '<div class="p-sh"><h4>Ảnh lỗi hoặc chưa có</h4></div><div class="demo-row">' +
+    one(MANGA[4], 'manga', false, 'Chương manga') + one(MANGA[0], 'manga', true, 'Thư mục') + one(MUSIC[0], 'music', false, 'Bài hát') + '</div>' +
+    '<div class="demo-row" style="margin-top:12px">' + one(MOVIE[3], 'movie', false, 'Video', true) + one({ t: 'IMG 0412', h: 120 }, 'media', false, 'Ảnh') + '</div>';
+}
+function ldPanel(dark) {
+  var cards = [MANGA[0], MANGA[1], MANGA[4]].map(function (it) { return pCard(it, 'manga', false); }).join('');
+  return '<div class="app prop fixed is-phone' + (dark ? ' dark' : '') + '"><div class="p-page" style="padding:16px"><div class="p-sh"><h4>' + (dark ? 'Tối' : 'Sáng') + '</h4></div><div class="pg pg-manga">' + cards + '</div></div></div>';
+}
+
+/* ---------- dựng trang ---------- */
+function put(id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; }
+put('pg-cur-phone', phoneF(curMangaPage(false)));
+put('pg-new-phone', phoneF(pMangaPage(false)));
+put('pg-series-phone', phoneF(pSeriesPage()));
+put('pg-cur-desk', deskF(curMangaPage(true), 'media.local/manga'));
+put('pg-new-desk', deskF(pMangaPage(true), 'media.local/manga'));
+['manga', 'movie', 'music', 'media'].forEach(function (t) {
+  put('cards-' + t, cardSection(t));
+  var url = 'media.local/' + t;
+  if (t === 'media') {
+    put('c-media-cur-phone', phoneF(curMediaFrame(false)));
+    put('c-media-new-phone', phoneF(pMediaFrame(false)));
+    put('c-media-cur-desk', deskF(curMediaFrame(true), url));
+    put('c-media-new-desk', deskF(pMediaFrame(true), url));
+  } else {
+    put('c-' + t + '-cur-phone', phoneF(curGridFrame(t, false)));
+    put('c-' + t + '-new-phone', phoneF(pGridFrame(t, false)));
+    put('c-' + t + '-cur-desk', deskF(curGridFrame(t, true), url));
+    put('c-' + t + '-new-desk', deskF(pGridFrame(t, true), url));
+  }
+});
+put('ratio-demo', ratioDemo());
+put('title-demo', titleDemo());
+put('badge-demo', badgeDemo());
+put('sheet-phone', phoneF(sheetFrame()));
+put('skeleton-demo', skeletonDemo());
+put('fallback-demo', fallbackDemo());
+put('ld-light', ldPanel(false));
+put('ld-dark', ldPanel(true));
+
+/* ---------- co khung cho vừa màn hình + đo ---------- */
+function fmt(n) { return n.toLocaleString('vi-VN'); }
+function measure(fit) {
+  var out = fit.parentElement.querySelector('[data-m]');
+  if (!out) return;
+  var s = fit._s || 1;
+  var a = fit.querySelector('.app');
+  var g = fit.querySelector('[data-grid]');
+  if (!a || !g) return;
+  var cards = Array.prototype.filter.call(g.children, function (c) { return !c.classList.contains('mk'); });
+  if (!cards.length) return;
+  var r0 = cards[0].getBoundingClientRect();
+  var cols = cards.filter(function (c) { return Math.abs(c.getBoundingClientRect().top - r0.top) < 2; }).length;
+  var gr = g.getBoundingClientRect(), ar = a.getBoundingClientRect();
+  var gw = Math.round(gr.width / s), aw = Math.round(ar.width / s), cw = Math.round(r0.width / s);
+  var txt = 'Lưới ' + gw + '/' + aw + 'px · ' + cols + ' cột · card ' + cw + 'px';
+  if (out.getAttribute('data-m') === 'top') {
+    var top = Math.round((gr.top - ar.top) / s);
+    txt += ' · lưới bắt đầu ở ' + fmt(top) + 'px';
+    if (aw < 500) txt += ' (≈ ' + (top / 844).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' màn hình iPhone 844px)';
+  }
+  out.textContent = txt;
+}
+function fitAll() {
+  document.querySelectorAll('.fit').forEach(function (f) {
+    var fr = f.firstElementChild;
+    if (!fr) return;
+    var w = +f.getAttribute('data-w') || fr.offsetWidth;
+    f.style.maxWidth = f.classList.contains('real') ? '100%' : w + 'px';
+    if (f.classList.contains('real')) { fr.style.transform = ''; f.style.height = ''; f._s = 1; }
+    else {
+      var s = Math.min(1, f.clientWidth / w);
+      fr.style.transform = s < 1 ? 'scale(' + s + ')' : '';
+      f.style.height = Math.ceil(fr.offsetHeight * s) + 'px';
+      f._s = s;
+    }
+    measure(f);
+  });
+}
+document.querySelectorAll('.realbtn').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var f = document.getElementById(b.getAttribute('data-real'));
+    if (!f) return;
+    var on = f.classList.toggle('real');
+    b.textContent = on ? 'Thu cho vừa' : 'Xem cỡ thật';
+    fitAll();
+  });
+});
+
+/* ---------- sáng / tối cho mock ---------- */
+var mode = 'auto';
+try { mode = localStorage.getItem('cardPreview.theme') || 'auto'; } catch (e) {}
+var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+function pageDark() {
+  var t = document.documentElement.getAttribute('data-theme');
+  if (t === 'dark') return true;
+  if (t === 'light') return false;
+  return !!(mq && mq.matches);
+}
+function applyTheme() {
+  var dark = mode === 'auto' ? pageDark() : mode === 'dark';
+  document.querySelectorAll('.app:not(.fixed)').forEach(function (a) { a.classList.toggle('dark', dark); });
+  document.querySelectorAll('.seg-ctl button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-th') === mode)); });
+}
+document.querySelectorAll('.seg-ctl button').forEach(function (b) {
+  b.addEventListener('click', function () {
+    mode = b.getAttribute('data-th');
+    try { localStorage.setItem('cardPreview.theme', mode); } catch (e) {}
+    applyTheme();
+  });
+});
+if (mq) { if (mq.addEventListener) mq.addEventListener('change', applyTheme); else if (mq.addListener) mq.addListener(applyTheme); }
+if (window.MutationObserver) new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+applyTheme();
+
+var raf = 0;
+window.addEventListener('resize', function () { cancelAnimationFrame(raf); raf = requestAnimationFrame(fitAll); });
+fitAll();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
+window.addEventListener('load', fitAll);
+})();
+</script>
+</body>
+</html>

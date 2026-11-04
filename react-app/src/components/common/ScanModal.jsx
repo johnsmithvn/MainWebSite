@@ -12,7 +12,9 @@ const ScanModal = ({
   onConfirm,
   type = 'music', // 'manga', 'movie', 'music'
   isScanning = false,
-  progress = null // { current, total, message }
+  progress = null, // { current, total, message }
+  supportsPartial = true, // false: ẩn ô path/shallow (manga chỉ quét toàn bộ root — ISSUES B1)
+  scopeNote = '' // ghi chú hiển thị thay cho hướng dẫn nhập path khi supportsPartial = false
 }) => {
   const [path, setPath] = useState('');
   const [error, setError] = useState('');
@@ -54,6 +56,11 @@ const ScanModal = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!supportsPartial) {
+      onConfirm?.('', false);
+      return;
+    }
     
     // Validate path format
     let cleanPath = path.trim();
@@ -138,17 +145,27 @@ const ScanModal = ({
                   <div className="flex">
                     <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                     <div className="ml-3">
-                      <p className="text-sm text-blue-800 dark:text-blue-200">
-                        Nhập đường dẫn folder để scan (relative path từ root).
-                        Nghĩa là nó đã chứa vd: E:\Music\" thì chỉ cần nhập thêm Anime\....                      </p>
-                      
-                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                        Để trống để scan toàn bộ database.
-                      </p>
+                      {supportsPartial ? (
+                        <>
+                          <p className="text-sm text-blue-800 dark:text-blue-200">
+                            Nhập đường dẫn folder để scan (relative path từ root).
+                            Nghĩa là nó đã chứa vd: E:\Music\" thì chỉ cần nhập thêm Anime\....                          </p>
+                          
+                          <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                            Để trống để scan toàn bộ database.
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-sm text-blue-800 dark:text-blue-200">
+                          {scopeNote || 'Quét toàn bộ database.'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
 
+                {supportsPartial && (
+                <>
                 {/* Path Input */}
                 <div className="mb-3">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -188,8 +205,8 @@ const ScanModal = ({
                         Scan Shallow (không đệ quy)
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        Chỉ quét các items ở level hiện tại, không quét vào các folder con. 
-                        Lưu ý <span className="text-red-600 dark:text-red-400 font-semibold">chỉ sử dụng cho root</span> (không truyền path) vì bug logic delete.
+                        Chỉ quét các mục nằm ngay trong folder đã nhập (hoặc ngay trong root nếu để trống),
+                        không đi sâu vào các folder con của chúng.
                       </p>
                     </div>
                   </label>
@@ -212,6 +229,9 @@ const ScanModal = ({
                     ))}
                   </div>
                 </div>
+
+                </>
+                )}
 
                 {/* Progress indicator */}
                 {isScanning && progress && (

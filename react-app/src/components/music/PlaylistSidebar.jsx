@@ -3,30 +3,51 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiList, FiX, FiMusic } from 'react-icons/fi';
+import { FiSearch, FiList, FiX } from 'react-icons/fi';
 import { DEFAULT_IMAGES } from '@/constants';
 
-const PlaylistSidebar = ({ 
-  library, 
-  activePlaylistId, 
-  setActivePlaylistId, 
-  sourceKey 
+// Accent-insensitive match (same idea as MusicHome search)
+const normalize = (str = '') => str
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/\p{Diacritic}/gu, '');
+
+const PlaylistSidebar = ({
+  library,
+  activePlaylistId,
+  setActivePlaylistId,
+  sourceKey
 }) => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const needle = normalize(query.trim());
+  const visiblePlaylists = needle
+    ? library.items.filter((pl) => normalize(pl.name || '').includes(needle))
+    : library.items;
 
   const sidebarContent = (
     <>
       <div className="px-4 py-3 text-xs uppercase tracking-wider text-white/60 border-b border-white/10 flex items-center justify-between">
-        <span>Playlist</span>
-        <span className="text-white/40 text-[11px]">Playlists</span>
+        <span>Playlists</span>
+        {/* Close button - mobile drawer only */}
+        <button
+          onClick={() => setIsOpen(false)}
+          className="md:hidden p-1.5 -mr-1.5 rounded-full text-white/70 hover:text-white hover:bg-white/10"
+          aria-label="Đóng playlist"
+        >
+          <FiX className="w-5 h-5" />
+        </button>
       </div>
       <div className="p-3">
         <div className="relative">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-4 h-4" />
-          <input 
-            placeholder="Tìm playlist" 
-            className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30" 
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Tìm playlist"
+            className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30"
           />
         </div>
       </div>
@@ -35,9 +56,12 @@ const PlaylistSidebar = ({
         {!library.loading && library.items.length === 0 && (
           <div className="px-4 py-6 text-white/60 text-sm">Chưa có playlist</div>
         )}
-        {!library.loading && library.items.length > 0 && (
+        {!library.loading && library.items.length > 0 && visiblePlaylists.length === 0 && (
+          <div className="px-4 py-6 text-white/60 text-sm">Không tìm thấy playlist</div>
+        )}
+        {!library.loading && visiblePlaylists.length > 0 && (
           <div className="px-2 space-y-1">
-            {library.items.map((pl) => (
+            {visiblePlaylists.map((pl) => (
               <button
                 key={pl.id}
                 onClick={() => {
@@ -74,9 +98,10 @@ const PlaylistSidebar = ({
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="md:hidden fixed top-20 left-4 z-50 p-3 rounded-full bg-white/10 hover:bg-white/20 text-gray-400 hover:text-gray-300 shadow-lg transition-all duration-200 backdrop-blur-sm border border-white/10"
-        aria-label="Toggle Playlist"
+        aria-label="Mở playlist"
       >
-        {isOpen ? <FiX className="w-5 h-5" /> : <FiMusic className="w-5 h-5" />}
+        {/* List icon: the header already has a 🎵 button that goes to the music library */}
+        <FiList className="w-5 h-5" />
       </button>
 
       {/* Desktop sidebar - always visible */}
@@ -87,14 +112,14 @@ const PlaylistSidebar = ({
       {/* Mobile sidebar - overlay with backdrop */}
       {isOpen && (
         <>
-          {/* Backdrop */}
-          <div 
-            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+          {/* Backdrop - above the sticky header (z-40) and the player footer (z-50) */}
+          <div
+            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[55]"
             onClick={() => setIsOpen(false)}
           />
-          
+
           {/* Sidebar panel */}
-          <div className="md:hidden fixed left-0 top-0 bottom-0 w-[280px] z-50 rounded-r-2xl border-r border-white/10 bg-gradient-to-b from-[#1f1f1f] via-[#121212] to-[#000] shadow-2xl flex flex-col animate-slide-in">
+          <div className="md:hidden fixed left-0 top-0 bottom-0 w-[280px] z-[60] rounded-r-2xl border-r border-white/10 bg-gradient-to-b from-[#1f1f1f] via-[#121212] to-[#000] shadow-2xl flex flex-col animate-slide-in">
             {sidebarContent}
           </div>
         </>

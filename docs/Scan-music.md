@@ -1,3 +1,5 @@
+> **Ghi chú 2026-10-29:** phân tích luồng scan music (12/2025). Các rủi ro scan đã được tổng hợp lại trong [ISSUES-REPORT.md](ISSUES-REPORT.md) (D1, B2, B13, B20).
+
 Tôi sẽ phân tích chi tiết luồng scan của Music, kiểm tra cả frontend và backend.
 
 ## 🔍 Phân Tích Luồng Scan Music

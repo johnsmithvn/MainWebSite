@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "build:prod": "set NODE_ENV=production && vite build --mode production",
+    "build:prod": "set \"NODE_ENV=production\" && vite build --mode production",
     "build:prod:unix": "NODE_ENV=production vite build --mode production",
     "preview": "vite preview --host",
     "preview:prod": "npm run build:prod && vite preview --host --port 3002",

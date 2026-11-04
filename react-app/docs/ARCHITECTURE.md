@@ -1,5 +1,22 @@
 # Architecture Overview - MainWebSite React
 
+> **⚠️ Viết 09/2025 — một phần mô tả kiến trúc *dự kiến*, không phải code hiện tại.** Bảng dưới đối chiếu từng mục với code (kiểm tra 2026-11-04). Trạng thái hiện tại: [README.md](README.md) · [docs/SYSTEM-REPORT.md](../../docs/SYSTEM-REPORT.md).
+>
+> | Mục trong tài liệu | Khớp code? | Thực tế |
+> |--------------------|-----------|---------|
+> | High-Level / Module Architecture | ⚠️ Thiếu | Đúng cho manga/movie/music; thiếu Media Gallery (`/media`), Downloads (`/downloads`), Offline (`/offline/*`), PDF reader |
+> | State Management (Zustand) | ⚠️ Thiếu | Ngoài 5 store còn `useSharedSettingsStore` (`store/index.js`) và `useDownloadQueueStore` (`store/downloadQueueStore.js`) |
+> | API Integration — dedup GET | ✅ | `inflightGet` gộp request trùng cho `getFolders`; riêng manga có thêm `recentGetCache` TTL 1,5 s |
+> | API — "automatic retry", "response caching with TTL" | ❌ | Không có retry. Interceptor chỉ gắn token và xử lý 401 (xoá token, về `/`) |
+> | Token Management | ✅ | Interceptor gắn `Authorization: Bearer` + `x-secure-token`; `fetch()` trực tiếp thì không (ISSUES B6) |
+> | Route Protection / `ProtectedRoute`, route guards | ❌ | Không có. Nguồn bảo mật do backend trả 401 |
+> | Code Splitting `lazy()` | ❌ | Mọi page import tĩnh trong `App.jsx`; `utils/lazyLoadComponents.js` là dead code |
+> | Image Optimization `LazyLoadImage` | ⚠️ | Chỉ `MangaCard` dùng `react-lazy-load-image-component` |
+> | Virtual Scrolling `react-window` | ❌ | `react-window` không có trong dependencies; `react-virtualized` có nhưng không dùng |
+> | Testing Architecture | ❌ | Repo không có test và thư viện test |
+> | Environment Configuration | ⚠️ | Danh sách biến đầy đủ: [readme.md §3.2](../../readme.md#32-react-appenv); không đặt `NODE_ENV` trong `.env` (ISSUES C8) |
+> | Offline Storage Architecture | ✅ | Bản cập nhật: [OFFLINE-GUIDE.md](OFFLINE-GUIDE.md) |
+
 This document provides a comprehensive overview of the application architecture, design patterns, and technical decisions implemented in the MainWebSite React application.
 
 ## 🏗️ High-Level Architecture

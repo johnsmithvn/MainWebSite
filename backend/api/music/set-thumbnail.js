@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const router = express.Router();
 const { getRootPath } = require("../../utils/config");
+const { resolveInsideRoot } = require("../../utils/pathSafety");
 const { getMusicDB } = require("../../utils/db");
 
 function findThumbFile(baseDir, baseName) {
@@ -20,13 +21,16 @@ router.post("/folder-thumbnail", (req, res) => {
     return res.status(400).json({ error: "Missing data" });
   try {
     const root = getRootPath(key);
-    const srcAbs = path.join(root, srcPath);
+    if (!root) return res.status(400).json({ error: "Invalid key" });
+    const srcAbs = resolveInsideRoot(root, srcPath);
+    const folderAbs = resolveInsideRoot(root, folderPath);
+    if (!srcAbs || !folderAbs) return res.status(403).json({ error: "Invalid path" });
+
     const srcThumbDir = path.join(path.dirname(srcAbs), ".thumbnail");
     const baseName = path.basename(srcPath, path.extname(srcPath));
     const found = findThumbFile(srcThumbDir, baseName);
     if (!found) return res.status(404).json({ error: "Thumbnail not found" });
 
-    const folderAbs = path.join(root, folderPath);
     const folderName = path.basename(folderAbs);
     const destDir = path.join(folderAbs, ".thumbnail");
     if (!fs.existsSync(destDir)) fs.mkdirSync(destDir);
@@ -51,7 +55,10 @@ router.post("/playlist-thumbnail", (req, res) => {
     return res.status(400).json({ error: "Missing data" });
   try {
     const root = getRootPath(key);
-    const srcAbs = path.join(root, srcPath);
+    if (!root) return res.status(400).json({ error: "Invalid key" });
+    const srcAbs = resolveInsideRoot(root, srcPath);
+    if (!srcAbs) return res.status(403).json({ error: "Invalid path" });
+
     const srcThumbDir = path.join(path.dirname(srcAbs), ".thumbnail");
     const baseName = path.basename(srcPath, path.extname(srcPath));
     const found = findThumbFile(srcThumbDir, baseName);

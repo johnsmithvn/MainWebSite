@@ -21,9 +21,15 @@ function isAllowedClient(clientIP) {
 
 // Middleware kiểm tra IP/hostname
 module.exports = async function (req, res, next) {
-  let clientIP = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+  // ⚠️ Không đọc header X-Forwarded-For: server nhận kết nối trực tiếp (không qua reverse proxy)
+  // nên client tự gửi được header này để giả IP nằm trong whitelist
+  let clientIP = req.socket.remoteAddress || "";
   if (clientIP.startsWith("::ffff:")) {
     clientIP = clientIP.replace("::ffff:", "");
+  }
+  if (clientIP === "::1") clientIP = "127.0.0.1";
+  if (!clientIP) {
+    return res.status(403).send("Forbidden (unknown client)");
   }
 
   // 🛡️ Cho phép IP nội bộ

@@ -3,14 +3,13 @@
 
 import React, { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import LoadingOverlay from './LoadingOverlay';
 import DownloadBadge from './DownloadBadge';
 import { useUIStore } from '../../store';
-import PlaylistModal from '@/components/music/PlaylistModal';
+import { useMiniPlayerVisible, MINI_PLAYER_HEIGHT } from '@/components/music/MiniPlayer';
 
 const Layout = () => {
   const { sidebarOpen, loading, setSidebarOpen } = useUIStore();
@@ -19,6 +18,7 @@ const Layout = () => {
   const isMoviePlayer = location.pathname.startsWith('/movie/player');
   const isHomePage = location.pathname === '/';
   const isSelectPage = location.pathname === '/manga/select';
+  const miniPlayerVisible = useMiniPlayerVisible();
 
   useEffect(() => {
     const offlineAllowedPrefixes = ['/offline', '/manga/reader'];
@@ -118,7 +118,11 @@ const Layout = () => {
           )}
         </AnimatePresence>
 
-        <main className="flex-1 transition-all duration-200">
+        {/* Keep the end of each page clear of the fixed music mini player */}
+        <main
+          className="flex-1 transition-all duration-200"
+          style={miniPlayerVisible ? { paddingBottom: MINI_PLAYER_HEIGHT } : undefined}
+        >
           <div className="container mx-auto px-4 py-6">
             <Outlet />
           </div>
@@ -130,35 +134,10 @@ const Layout = () => {
         {loading && <LoadingOverlay loading={loading} />}
       </AnimatePresence>
 
-      {/* Toast notifications */}
-      <Toaster
-        position="bottom-center"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: 'var(--bg-primary)',
-            color: 'var(--text-primary)',
-          },
-          success: {
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#ffffff',
-            },
-          },
-          error: {
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#ffffff',
-            },
-          },
-        }}
-      />
+      {/* Toast notifications (<Toaster>) and Playlist Modal are mounted once in App.jsx for all routes */}
 
       {/* Floating Download Badge */}
       <DownloadBadge />
-
-  {/* Global Playlist Modal */}
-  <PlaylistModal />
     </div>
   );
 };

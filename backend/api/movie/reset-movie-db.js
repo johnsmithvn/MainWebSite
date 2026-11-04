@@ -5,7 +5,7 @@ const { getMovieDB } = require("../../utils/db");
 const{scanMovieFolderToDB} = require("../../utils/movie-scan");
 
 
-router.delete("/reset-cache-movie", (req, res) => {
+router.delete("/reset-cache-movie", async (req, res) => {
   const key = req.query.key || req.body.key;
   const mode = req.query.mode;
 
@@ -25,7 +25,8 @@ router.delete("/reset-cache-movie", (req, res) => {
     }
     if (mode === "reset") {
       db.prepare("DELETE FROM folders").run();
-      const stats = scanMovieFolderToDB(key);
+      // Chờ scan xong: trả stats thật và bắt được lỗi scan (trước đây chạy nền → unhandled rejection, ISSUES B2)
+      const stats = await scanMovieFolderToDB(key);
       console.log(`🔁 Reset cache cho ${key}:`, stats);
       return res.json({
         success: true,

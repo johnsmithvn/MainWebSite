@@ -53,8 +53,8 @@ export default defineConfig(({ mode }) => {
   const allowedHosts = [
     'localhost',
     '127.0.0.1',
-    // Cho phép toàn bộ domain Tailscale theo mẫu *.ts.net
-    /.*\.ts\.net$/,
+    // Cho phép toàn bộ domain Tailscale (*.ts.net): Vite chỉ so khớp chuỗi, dấu "." ở đầu = mọi subdomain
+    '.ts.net',
     HMR_HOST || '',
     ...extraHosts,
   ].filter(Boolean)

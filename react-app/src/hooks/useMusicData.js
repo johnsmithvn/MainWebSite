@@ -125,11 +125,13 @@ export const useRecentMusicManager = () => {
   const { sourceKey } = useAuthStore();
   const queryClient = useQueryClient();
 
-  const addRecentMusic = async (item) => {
-    if (!sourceKey || !item) return;
+  // keyOverride: the global player passes the queue's M_* key, since the user may be browsing another source
+  const addRecentMusic = async (item, keyOverride) => {
+    const key = keyOverride || sourceKey;
+    if (!key || !item) return;
 
     try {
-      const cacheKey = getRecentViewedCacheKey('music', sourceKey);
+      const cacheKey = getRecentViewedCacheKey('music', key);
       const cached = localStorage.getItem(cacheKey);
       const existingItems = cached ? JSON.parse(cached) : [];
       
@@ -149,7 +151,7 @@ export const useRecentMusicManager = () => {
       localStorage.setItem(cacheKey, JSON.stringify(updatedItems));
       
       // Invalidate query to refresh UI
-      queryClient.invalidateQueries(['recentMusic', sourceKey]);
+      queryClient.invalidateQueries(['recentMusic', key]);
       
       console.log('✅ Added to recent music:', item.name);
     } catch (error) {

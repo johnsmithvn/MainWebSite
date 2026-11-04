@@ -2,6 +2,7 @@
 // 🗑️ Delete media item or folder
 
 const { getMediaDB } = require("../../utils/db");
+const { escapeLike } = require("../../utils/sqlLike");
 
 /**
  * DELETE /api/media/delete-item
@@ -25,22 +26,22 @@ const deleteItem = (req, res) => {
       const deleteFolder = db.transaction(() => {
         // Delete all child folders AND the folder itself (path starts with this folder OR equals this path)
         const deletedFolders = db.prepare(
-          "DELETE FROM folders WHERE path = ? OR path LIKE ?"
-        ).run(path, `${path}/%`);
+          "DELETE FROM folders WHERE path = ? OR path LIKE ? ESCAPE '\\'"
+        ).run(path, `${escapeLike(path)}/%`);
 
         // Delete all media items in this folder and subfolders
         const deletedItems = db.prepare(
-          "DELETE FROM media_items WHERE path LIKE ?"
-        ).run(`${path}/%`);
+          "DELETE FROM media_items WHERE path LIKE ? ESCAPE '\\'"
+        ).run(`${escapeLike(path)}/%`);
 
         // Also remove all these items from albums
         try {
           db.prepare(`
             DELETE FROM album_items 
             WHERE item_id IN (
-              SELECT id FROM media_items WHERE path LIKE ?
+              SELECT id FROM media_items WHERE path LIKE ? ESCAPE '\\'
             )
-          `).run(`${path}/%`);
+          `).run(`${escapeLike(path)}/%`);
         } catch (error) {
           // Album tables might not exist yet, ignore
           console.warn('Could not delete from album_items:', error.message);

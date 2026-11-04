@@ -840,7 +840,7 @@ const Settings = () => {
             <p className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">🔄 What will happen:</p>
             <ul className="text-sm space-y-1 text-yellow-700 dark:text-yellow-300">
               <li>• Delete ALL existing music database entries</li>
-              <li>• Delete ALL playlists and playlist items</li>
+              <li>• Playlists are kept (songs that no longer exist are skipped)</li>
               <li>• Scan all audio files in: <strong>{sourceKey || 'current source'}</strong></li>
               <li>• Rebuild database from scratch</li>
               <li>• View counts will be reset to 0</li>
@@ -848,7 +848,7 @@ const Settings = () => {
           </div>
           <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg border border-yellow-300 dark:border-yellow-700">
             <p className="font-bold text-yellow-800 dark:text-yellow-200">
-              ⚠️ This will reset all view counts, statistics, and playlists!
+              ⚠️ This will reset all view counts and statistics!
             </p>
           </div>
         </div>

@@ -1,5 +1,7 @@
 # 📸 Media Gallery Implementation Summary
 
+> **📜 Tài liệu lịch sử (11/2025).** Một số chi tiết đã thay đổi: `backend/api/media/test-media.js` và endpoint `/api/media/test` đã bị xoá; đã thêm `media-folders.js`, `delete-item.js`; scanner index mọi loại file. Tài liệu hiện hành: [MEDIA-GALLERY.md](MEDIA-GALLERY.md).
+
 ## ✅ Hoàn thành
 
 Đã tạo thành công **Media Gallery** - một trang quản lý ảnh/video giống Google Photos cho dự án MainWebSite.

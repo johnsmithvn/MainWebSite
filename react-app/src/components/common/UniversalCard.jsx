@@ -7,7 +7,6 @@ import { FiPlay, FiFolder, FiMusic, FiHeart, FiEye, FiClock, FiPlus, FiTrash2 } 
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store';
 import { useRecentManager } from '@/hooks/useRecentManager';
-import { apiService } from '@/utils/api';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import { 
   DEFAULT_IMAGES, 
@@ -36,7 +35,7 @@ const UniversalCard = ({
   overlayMode = 'type'
 }) => {
   const navigate = useNavigate();
-  const { sourceKey, rootFolder } = useAuthStore();
+  const { sourceKey } = useAuthStore();
   const { addRecentItem } = useRecentManager(type);
   
   // Internal state for favorite status to update UI immediately
@@ -122,17 +121,9 @@ const UniversalCard = ({
     }
     
     // Increase view count for content items (not folders)
-    if (type === 'manga' && (item.name === '__self__' || (item.images && item.images.length > 0))) {
-      try {
-        await apiService.system.increaseViewManga({
-          path: item.path,
-          dbkey: sourceKey,
-          rootKey: rootFolder
-        });
-        console.log('📈 View count increased for manga:', item.path);
-      } catch (error) {
-        console.warn('Failed to increase view count for manga:', error);
-      }
+    if (type === 'manga') {
+      // NOTE: View count is handled by MangaReader when the reader opens
+      // Don't increase view count here to avoid counting twice
     } else if (type === 'movie' && (item.type === 'video' || item.type === 'file')) {
       // NOTE: View count is handled by MoviePlayer component
       // Don't increase view count here to avoid duplicate calls

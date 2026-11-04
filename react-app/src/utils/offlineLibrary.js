@@ -381,6 +381,8 @@ export async function downloadChapter(meta, onProgress = null) {
   
   // Get cover image (first page) for thumbnail
   const coverImage = pageUrls.length > 0 ? pageUrls[0] : null;
+  const cachedUrls = []; // trang đã lưu vào cache trong lần tải này
+  const failedPages = []; // số thứ tự (1-based) các trang lỗi
   
   for (let i = 0; i < pageUrls.length; i++) {
     const url = pageUrls[i];
@@ -408,6 +410,7 @@ export async function downloadChapter(meta, onProgress = null) {
       }
       
       await cache.put(url, resp.clone());
+      cachedUrls.push(url);
       
       // Calculate size only if we can read the response body
       if (isNoCorsMode || resp.type === 'opaque') {
@@ -425,6 +428,7 @@ export async function downloadChapter(meta, onProgress = null) {
       }
     } catch (err) {
       console.error(`Error downloading page ${i + 1}:`, err);
+      failedPages.push(i + 1);
       // Tiếp tục với trang tiếp theo thay vì dừng hoàn toàn
       if (onProgress) {
         onProgress({ 
@@ -435,6 +439,16 @@ export async function downloadChapter(meta, onProgress = null) {
         });
       }
     }
+  }
+  
+  // ❗ Thiếu trang → không lưu là "đã tải" (trước đây vẫn lưu và báo hoàn tất — ISSUES D3).
+  // Dọn các trang lẻ vừa cache nếu chapter chưa có bản đầy đủ từ trước.
+  if (failedPages.length > 0) {
+    if (!(await getChapter(id))) {
+      await Promise.all(cachedUrls.map((u) => cache.delete(u).catch(() => false)));
+    }
+    const shown = failedPages.slice(0, 10).join(', ') + (failedPages.length > 10 ? ', …' : '');
+    throw new Error(`Tải thiếu ${failedPages.length}/${totalPages} trang (trang ${shown}). Hãy tải lại chapter.`);
   }
   
   // Enhanced metadata với cover image và title extraction

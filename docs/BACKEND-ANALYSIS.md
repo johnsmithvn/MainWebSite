@@ -1,18 +1,21 @@
 # 📊 PHÂN TÍCH TOÀN BỘ BACKEND - MEDIA SERVER
 
+> **Cập nhật 2026-10-29** (đối chiếu code tại commit `a511bcd`): thêm Media Gallery (`MEDIA_*`), cập nhật cây thư mục, danh mục API, trạng thái thật của rate limiter và các lớp bảo mật. Các module không còn được dùng được đánh dấu *(UNUSED)*. Lỗi/rủi ro: [ISSUES-REPORT.md](ISSUES-REPORT.md) · tổng quan: [SYSTEM-REPORT.md](SYSTEM-REPORT.md).
+
 ## 🎯 TỔNG QUAN DỰ ÁN
 
 ### Mục đích chính:
-**Media Server cá nhân** quản lý 3 loại nội dung: **Manga**, **Movie**, **Music**
-- Đọc truyện manga từ thư mục hình ảnh
+**Media Server cá nhân** quản lý 4 loại nội dung: **Manga**, **Movie**, **Music**, **Media Gallery**
+- Đọc truyện manga từ thư mục hình ảnh và file PDF
 - Xem phim từ thư mục video
-- Nghe nhạc từ thư mục audio
+- Nghe nhạc từ thư mục audio (playlist, lyrics, tải về)
+- Thư viện ảnh/video kiểu Google Photos (album, timeline, mọi loại file)
 - Hỗ trợ tính năng yêu thích, tìm kiếm, thống kê lượt xem
 
 ### Kiến trúc Backend:
-- **Node.js** + **Express** server
+- **Node.js** + **Express 5** server
 - **SQLite** databases để cache metadata 
-- **FFmpeg** để xử lý video/audio metadata
+- **ffprobe-static** (duration, kích thước ảnh) + **ffmpeg** trong PATH (chụp thumbnail video)
 - **Music-metadata** để đọc thông tin nhạc
 - **Better-sqlite3** làm database driver
 
@@ -33,77 +36,78 @@
 ### 📁 Cấu trúc Thư mục
 ```
 backend/
-├── 📄 server.js                    # Entry point chính
-├── 📄 constants.js                 # Constants toàn hệ thống
+├── 📄 server.js                    # Entry point: middleware, static mounts, SPA fallback, HTTPS
+├── 📄 constants.js                 # FILE_EXTENSIONS, SECURITY, API_RESPONSE… (một phần không dùng)
 ├── 📄 package.json                 # Dependencies & scripts
-├── 📄 .env                         # Environment configuration
-├── 📄 .env.template                # Template cho environment setup
+├── 📄 .env                         # Cấu hình (BẮT BUỘC, copy từ .env.template)
+├── 📄 .env.template
 │
-├── 📁 api/                         # Individual API handlers
-│   ├── 📄 increase-view.js         # API tăng view count
-│   ├── 📁 manga/                   # Manga API handlers
-│   │   ├── 📄 favorite.js          # Quản lý manga favorites
-│   │   ├── 📄 folder-cache.js      # API chính manga (browse/search)
-│   │   ├── 📄 reset-cache.js       # Reset manga database
-│   │   ├── 📄 root-thumbnail.js    # Thumbnail cho root folders
-│   │   └── 📄 scan.js              # Scan manga folders
-│   ├── 📁 movie/                   # Movie API handlers
-│   │   ├── 📄 extract-movie-thumbnail.js # Extract video thumbnails
-│   │   ├── 📄 favorite-movie.js    # Quản lý movie favorites
-│   │   ├── 📄 movie-folder-empty.js # Check empty folders
-│   │   ├── 📄 movie-folder.js      # Browse movie folders
-│   │   ├── 📄 reset-movie-db.js    # Reset movie database
-│   │   ├── 📄 scan-movie.js        # Scan movie folders
-│   │   ├── 📄 set-thumbnail.js     # Set custom thumbnails
-│   │   ├── 📄 video-cache.js       # Video cache management
-│   │   └── 📄 video.js             # Stream video files
-│   └── 📁 music/                   # Music API handlers
-│       ├── 📄 audio-cache.js       # Audio cache management
-│       ├── 📄 audio.js             # Stream audio files
-│       ├── 📄 extract-thumbnail.js # Extract audio thumbnails
-│       ├── 📄 music-folder.js      # Browse music folders
-│       ├── 📄 music-meta.js        # Music metadata extraction
-│       ├── 📄 playlist.js          # Playlist management
-│       ├── 📄 reset-music-db.js    # Reset music database
-│       ├── 📄 scan-music.js        # Scan music folders
-│       └── 📄 set-thumbnail.js     # Set custom thumbnails
+├── 📁 api/
+│   ├── 📄 health.js                # GET/HEAD /api/health
+│   ├── 📄 increase-view.js         # Tăng/xoá lượt xem manga, movie, music
+│   ├── 📄 log.js                   # POST /api/log (log từ client)
+│   ├── 📁 manga/
+│   │   ├── 📄 delete-item.js       # Xoá folder khỏi DB
+│   │   ├── 📄 favorite.js          # Favorites
+│   │   ├── 📄 folder-cache.js      # API chính: path/random/top/search/folders + next-chapter
+│   │   ├── 📄 pdf.js               # Stream PDF
+│   │   ├── 📄 reset-cache.js       # Xoá/reset DB theo root
+│   │   ├── 📄 root-thumbnail.js    # Thumbnail cho root
+│   │   └── 📄 scan.js              # Scan manga
+│   ├── 📁 movie/
+│   │   ├── 📄 delete-item.js
+│   │   ├── 📄 extract-movie-thumbnail.js # ffmpeg chụp frame
+│   │   ├── 📄 favorite-movie.js
+│   │   ├── 📄 movie-folder-empty.js
+│   │   ├── 📄 movie-folder.js      # Duyệt thư mục (từ DB)
+│   │   ├── 📄 reset-movie-db.js
+│   │   ├── 📄 scan-movie.js        # Full/partial/shallow scan
+│   │   ├── 📄 set-thumbnail.js     # POST /folder-thumbnail
+│   │   ├── 📄 video-cache.js       # random/top/search
+│   │   └── 📄 video.js             # Stream video (Range, đọc thẳng từ ổ đĩa)
+│   ├── 📁 music/
+│   │   ├── 📄 audio-cache.js, audio.js, download.js
+│   │   ├── 📄 delete-item.js, extract-thumbnail.js, music-folder.js, music-meta.js
+│   │   ├── 📄 playlist.js          # CRUD playlist + reorder
+│   │   ├── 📄 reset-music-db.js, scan-music.js
+│   │   ├── 📄 set-thumbnail.js     # /folder-thumbnail, /playlist-thumbnail
+│   │   └── 📄 update-lyrics.js
+│   └── 📁 media/                   # Media Gallery
+│       ├── 📄 album-manager.js, delete-item.js, favorite-media.js
+│       ├── 📄 media-cache.js, media-folder.js, media-folders.js, media-stats.js
+│       └── 📄 reset-media-db.js, scan-media.js, set-thumbnail.js
 │
-├── 📁 data/                        # SQLite Database Files
-│   ├── 📄 M_MUSIC.db               # Music database
-│   ├── 📄 ROOT_FANTASY.db          # Manga database (Fantasy)
-│   ├── 📄 V_JAVA.db                # Movie database (Java)
-│   └── 📄 V_MOVIE.db               # Movie database (Movies)
+├── 📁 data/                        # <KEY>.db cho mỗi nguồn (gitignored)
 │
-├── 📁 middleware/                  # Express Middleware
-│   ├── 📄 auth.js                  # IP/Hostname authentication
-│   ├── 📄 cors.js                  # CORS configuration middleware
-│   ├── 📄 errorHandler.js          # Global error handling
-│   ├── 📄 index.js                 # Middleware orchestration
-│   ├── 📄 rateLimiter.js           # Rate limiting protection
-│   └── 📄 security.js              # Token-based security
+├── 📁 middleware/
+│   ├── 📄 auth.js                  # Whitelist IP / reverse-DNS hostname
+│   ├── 📄 cors.js                  # CORS (dev/prod, *.ts.net)
+│   ├── 📄 errorHandler.js          # Global error handler
+│   ├── 📄 index.js                 # Thứ tự middleware
+│   ├── 📄 rateLimiter.js           # Có code nhưng ĐANG TẮT
+│   └── 📄 security.js              # Token cho key thuộc SECURITY
 │
-├── 📁 routes/                      # Express Routes (ACTIVE)
-│   ├── 📄 index.js                 # Main router setup
-│   ├── 📄 manga.js                 # Manga route definitions
-│   ├── 📄 movie.js                 # Movie route definitions
-│   ├── 📄 music.js                 # Music route definitions
-│   └── 📄 system.js                # System routes (auth, keys)
+├── 📁 routes/
+│   ├── 📄 index.js                 # mount manga / movie / music / media / system
+│   ├── 📄 manga.js, movie.js, music.js, media.js
+│   └── 📄 system.js                # health, login, source-keys.js, security-keys.js, list-roots, increase-view
 │
-├── 📁 services/                    # Business Logic Services (UNUSED)
-│   └── 📄 MediaService.js          # Media processing service (legacy)
+├── 📁 services/
+│   └── 📄 MediaService.js          # (UNUSED – require file BaseScanner không tồn tại)
 │
-└── 📁 utils/                       # Utility Functions
-    ├── 📄 cache-scan.js            # Manga folder scanning
-    ├── 📄 config.js                # Environment configuration
-    ├── 📄 DatabaseManager.js       # Database connection manager
-    ├── 📄 databaseUtils.js         # Database utilities
-    ├── 📄 db.js                    # Core database functions
-    ├── 📄 folder-loader.js         # Folder loading utilities
-    ├── 📄 imageUtils.js            # Image processing utilities
-    ├── 📄 movie-scan.js            # Movie folder scanning
-    ├── 📄 music-scan.js            # Music folder scanning
-    ├── 📄 responseHelpers.js       # API response helpers
-    └── 📄 thumbnailUtils.js        # Thumbnail processing
+└── 📁 utils/
+    ├── 📄 cache-scan.js            # Manga scanner (sync)
+    ├── 📄 config.js                # Đọc .env, ROOT_PATHS, SECURITY
+    ├── 📄 corsUtils.js, stringUtils.js
+    ├── 📄 db.js                    # getDB / getMovieDB / getMusicDB / getMediaDB + migration
+    ├── 📄 folder-loader.js         # Đọc folder manga từ DB hoặc đĩa
+    ├── 📄 imageUtils.js            # findFirstImageRecursively, hasImageRecursively
+    ├── 📄 movie-scan.js, music-scan.js, media-scan.js
+    ├── 📄 responseHelpers.js       # (chỉ update-lyrics dùng)
+    ├── 📄 DatabaseManager.js       # (UNUSED)
+    ├── 📄 databaseUtils.js         # (UNUSED)
+    ├── 📄 scan-logger.js           # (UNUSED)
+    └── 📄 thumbnailUtils.js        # (UNUSED)
 ```
 
 ### 🔧 Công nghệ Sử dụng
@@ -128,7 +132,7 @@ backend/
 - **dotenv 16.5.0**: Environment variable management
 
 #### Performance & Caching
-- **lru-cache 11.1.0**: In-memory LRU caching cho file streams
+- **lru-cache 11.1.0**: Còn trong `package.json` nhưng **không còn được dùng** (cache RAM video/audio đã bỏ 2026-11-04, ISSUES P1)
 - **axios 1.9.0**: HTTP client cho external requests (nếu cần)
 
 #### UI & Interaction (Backend side)
@@ -210,9 +214,8 @@ Stream Request → Path Validation → File Access → Range Processing → Chun
 2. **Security**: Check source access permissions
 3. **Path Resolve**: Convert logical path to physical file path
 4. **Range Support**: Parse HTTP Range header cho seeking
-5. **Memory Cache**: Check LRU cache cho frequently accessed files
-6. **Stream Setup**: CreateReadStream với proper MIME headers
-7. **Chunked Delivery**: Stream file chunks to client
+5. **Stream Setup**: CreateReadStream với proper MIME headers
+6. **Chunked Delivery**: Stream file chunks to client
 
 ### 5. ❤️ Favorites Management Workflow
 ```
@@ -246,6 +249,7 @@ routes/
 ├── manga.js    → All manga endpoints (/api/manga/*)
 ├── movie.js    → All movie endpoints (/api/movie/*)
 ├── music.js    → All music endpoints (/api/music/*)
+├── media.js    → All media gallery endpoints (/api/media/*)
 └── system.js   → System endpoints (/api/login, /api/source-keys.js, etc.)
 ```
 
@@ -261,6 +265,7 @@ routes/
 router.use("/manga", require("./manga"));     // /api/manga/*
 router.use("/movie", require("./movie"));     // /api/movie/*  
 router.use("/music", require("./music"));     // /api/music/*
+router.use("/media", require("./media"));     // /api/media/*
 router.use("/", require("./system"));         // /api/login, /api/*
 ```
 
@@ -442,129 +447,20 @@ playlist_items (playlistId, songPath, sortOrder)
 
 ## 🔌 API ENDPOINTS CHÍNH
 
-### 📚 **MANGA APIs**
+Danh mục đầy đủ (method, endpoint, tham số) đã đối chiếu với code nằm ở [SYSTEM-REPORT.md – mục 4.5](SYSTEM-REPORT.md). Tóm tắt:
 
-#### 1. **api/manga/folder-cache.js** - API chính của Manga
-**Endpoint:** `GET /api/manga/folder-cache`  
-**Chức năng:** Universal API xử lý nhiều modes
+| Nhóm | Endpoint chính |
+|------|----------------|
+| System `/api` | `health`, `login`, `source-keys.js`, `security-keys.js`, `list-roots`, `increase-view` (+ `/movie`, `/music`, `/all`), `log` |
+| Manga `/api/manga` | `folder-cache` (mode `path` · `random` · `top` · `search` · `folders`), `next-chapter`, `scan`, `reset-cache`, `reset-cache/all`, `favorite`, `root-thumbnail`, `pdf`, `delete-item` |
+| Movie `/api/movie` | `movie-folder`, `video`, `movie-folder-empty`, `video-cache`, `scan-movie`, `reset-cache-movie`, `favorite-movie`, `extract-thumbnail`, `folder-thumbnail`, `delete-item` |
+| Music `/api/music` | `music-folder`, `audio`, `download`, `audio-cache`, `music-meta`, `update-lyrics`, `scan-music`, `reset-cache-music`, `extract-thumbnail`, `folder-thumbnail`, `playlist-thumbnail`, `playlists`, `playlist` (+ `/:id`, `/add`, `/add-multiple`, `/remove`, `/remove-multiple`, `/order`), `delete-item` |
+| Media `/api/media` | `scan-media`, `media-folders`, `media-folder`, `favorite-media`, `set-thumbnail`, `reset-media-db`, `cache/:filename`, `delete-item`, `albums` (+ `/:id`, `/:id/items`), `stats` |
 
-**Query Parameters:**
-- `key`: Source key (ROOT_XXX)
-- `mode`: path|random|top|search|folders  
-- `root`: Thư mục gốc trong source
-- `path`: Đường dẫn folder (cho mode=path)
-- `q`: Từ khóa search (cho mode=search)
-- `limit`, `offset`: Phân trang
-
-**Modes chi tiết:**
-- **path**: Đọc folder/images trong đường dẫn cụ thể
-- **random**: 30 folders ngẫu nhiên có thumbnail  
-- **top**: Top folders theo lượt xem
-- **search**: Tìm kiếm theo tên hoặc otherName
-- **folders**: Tất cả folders trong root
-
-**Response formats:**
-```json
-// mode=path
-{
-  "type": "folder|reader",
-  "folders": [{"name": "...", "path": "...", "thumbnail": "..."}],
-  "images": ["/manga/root/path/image.jpg"],
-  "total": 100,
-  "totalImages": 50
-}
-
-// mode=random,top,search,folders  
-[
-  {"name": "Naruto", "path": "Naruto", "thumbnail": "/manga/1/Naruto/cover.jpg", "isFavorite": false}
-]
-```
-
-**Đặc điểm:**
-- Support `useDb=1` để đọc từ cache thay vì disk
-- Handle `__self__` suffix để chỉ lấy images trong folder hiện tại
-- Auto-detect reader mode khi có images mà không có subfolders
-
-#### 2. **api/manga/scan.js** - Scan manga folders
-**Endpoint:** `POST /api/manga/scan`
-**Body:** `{"root": "1", "key": "ROOT_FANTASY"}`
-**Chức năng:** Trigger quét và cache toàn bộ folders trong root
-
-#### 3. **api/manga/favorite.js** - Quản lý yêu thích  
-**Endpoints:**
-- `POST /api/manga/favorite`: Toggle favorite status
-- `GET /api/manga/favorite`: Lấy danh sách favorites
-
-#### 4. **api/increase-view.js** - Thống kê lượt xem
-**Endpoints:**
-- `POST /api/increase-view`: Tăng view cho manga folder
-- `POST /api/increase-view/movie`: Tăng view cho video
-- `POST /api/increase-view/music`: Tăng view cho audio
-
-### 🎬 **MOVIE APIs**
-
-#### 1. **api/movie/movie-folder.js** - Browse movie folders
-**Endpoint:** `GET /api/movie/movie-folder?key=V_MOVIE&path=...`
-**Chức năng:** Lấy danh sách folders/videos trong path
-
-**Response:**
-```json
-{
-  "type": "movie-folder",
-  "folders": [
-    {"name": "Avatar.mp4", "path": "Avatar.mp4", "type": "video", "thumbnail": "..."},
-    {"name": "Movies", "path": "Movies", "type": "folder", "thumbnail": null}
-  ],
-  "total": 2
-}
-```
-
-#### 2. **api/movie/video.js** - Stream video files
-**Endpoint:** `GET /api/movie/video?key=V_MOVIE&file=path/to/video.mp4`
-**Chức năng:** Stream video với support Range requests
-
-**Đặc điểm:**
-- Support HTTP Range requests cho seeking
-- RAM cache cho videos nhỏ (<2GB)
-- Auto MIME detection (.mp4, .mkv, .webm, .avi, .ts, .wmv)
-- LRU cache với TTL 1 hour
-
-#### 3. **api/movie/scan-movie.js** - Scan movie folders
-**Endpoint:** `POST /api/movie/scan-movie`
-**Chức năng:** Quét và cache movie folders/files với thumbnail + duration
-
-### 🎵 **MUSIC APIs**
-
-#### 1. **api/music/music-folder.js** - Browse music folders  
-**Endpoint:** `GET /api/music/music-folder?key=M_MUSIC&path=...`
-**Chức năng:** Lấy danh sách folders/audio files với metadata
-
-**Response:**
-```json
-{
-  "type": "music-folder", 
-  "folders": [
-    {
-      "name": "song.mp3", "path": "album/song.mp3", "type": "audio",
-      "artist": "Artist Name", "album": "Album Name", "genre": "Rock",
-      "duration": 210, "viewCount": 5
-    }
-  ]
-}
-```
-
-#### 2. **api/music/audio.js** - Stream audio files
-**Endpoint:** `GET /api/music/audio?key=M_MUSIC&file=path/to/song.mp3`  
-**Chức năng:** Stream audio với support Range requests
-
-**Đặc điểm:**
-- Tương tự video streaming nhưng optimize cho audio
-- Cache size nhỏ hơn (<512MB per file, max 30 files)
-- Support: .mp3, .flac, .wav, .ogg
-
-#### 3. **api/music/scan-music.js** - Scan music folders
-**Endpoint:** `POST /api/music/scan-music`
-**Chức năng:** Quét music với extract full metadata (artist, album, genre, lyrics)
+Lưu ý quan trọng:
+- `scan-movie`, `scan-music`, `scan-media` nhận `{ key, path?, shallow? }` (partial/shallow scan); `manga/scan` chỉ nhận `{ key, root }`.
+- Tên tham số không thống nhất: manga `favorite`/`delete-item`, `favorite-movie` và `increase-view` (manga) dùng **`dbkey`**, phần còn lại dùng **`key`**. Middleware bảo mật đọc cả hai (ISSUES S6, đã sửa 2026-11-04).
+- `video`, `audio`, `download` nhận `file` là đường dẫn tương đối; path ra ngoài root bị từ chối bằng `resolveInsideRoot` → 403 (ISSUES S1, đã sửa 2026-11-04).
 
 ---
 
@@ -599,13 +495,25 @@ SECURITY=
 SECURITY_PASSWORD=123456
 ```
 
+**Media Gallery:**
+```bash
+# Media sources (MEDIA_ prefix)
+MEDIA_PHOTOS=E:\Photos
+```
+
 **Network:**
 ```bash
 PORT=3000
-ALLOWED_HOSTNAMES=
-ALLOWED_IPS=
-CORS_EXTRA_ORIGINS=http://localhost:3001,http://127.0.0.1:3001
+ENABLE_HTTPS=false                # true: cần ssl/private-key.pem + ssl/certificate.pem ở gốc repo
+ALLOWED_IPS=127.0.0.1             # bắt buộc giữ 127.0.0.1 (máy chủ + Vite dev proxy)
+ALLOWED_HOSTNAMES=                # so khớp chính xác tên reverse-DNS (xem log "Truy cập bị chặn từ hostname")
+CORS_DEV_CONFIG=localhost:3000,3001|http;127.0.0.1:3000,3001|http   # chỉ cần thêm domain khác; IP đang mở app và *.ts.net luôn được chấp nhận
+TAILSCALE_DEVICE=your-device-name
+TAILSCALE_TAILNET=tail12345
+TAILSCALE_PORTS=3000,3001
+TAILSCALE_PROTOCOLS=http,https
 ```
+(`CORS_EXTRA_ORIGINS` trong bản cũ của tài liệu này không còn được đọc.) Một key chỉ được nạp khi đường dẫn tồn tại lúc khởi động. Giải thích đầy đủ từng biến: [readme.md §3](../readme.md#3-cấu-hình) và `backend/.env.template`.
 
 ### 📄 **constants.js** - Hằng số toàn hệ thống
 **Chứa:**
@@ -625,6 +533,8 @@ CORS_EXTRA_ORIGINS=http://localhost:3001,http://127.0.0.1:3001
 - `ROOT_FANTASY.db`, `ROOT_MANGAH.db`: Manga databases
 - `V_ANIME.db`, `V_MOVIE.db`: Movie databases  
 - `M_MUSIC.db`: Music database
+- `MEDIA_PHOTOS.db`: Media gallery database (bảng `folders`, `media_items`, `albums` — xem [MEDIA-GALLERY.md](MEDIA-GALLERY.md))
+- Bảng `folders` của manga/movie/music được thêm cột `scanned` (mark & sweep); manga/movie thêm `favoriteAt` khi dùng API favorite
 
 ### **Schema Design**
 
@@ -747,7 +657,7 @@ playlist_items (
 1. Frontend request GET /api/movie/video?key=...&file=...
 2. video.js resolve path từ config.js
 3. Kiểm tra Range header cho seeking
-4. Stream từ disk hoặc RAM cache
+4. Stream từ disk (`utils/streamFile.js`, `stream.pipeline`)
 5. Return với proper MIME và headers
 ```
 
@@ -756,24 +666,23 @@ playlist_items (
 ## 🔒 SECURITY LAYERS
 
 ### **Layer 1: Network Security (auth.js)**
-- IP allowlist từ .env ALLOWED_IPS
-- Hostname verification qua reverse DNS  
-- Tailscale domain support
+- IP allowlist từ `.env` `ALLOWED_IPS`
+- Ngoài allowlist: reverse DNS rồi so với `ALLOWED_HOSTNAMES` (mỗi request một lần tra, không cache)
+- IP lấy từ `req.socket.remoteAddress`, không tin header `X-Forwarded-For` (ISSUES S3, đã sửa 2026-11-04). Ở dev mode, request đi qua Vite proxy luôn có IP `127.0.0.1`
 
 ### **Layer 2: Content Security (security.js)**
-- Password protection cho sensitive sources
-- Token-based authentication
-- Bypass cho static content
+- Request có `key` hoặc `dbkey` (query/body) thuộc `SECURITY` phải gửi token hợp lệ (`x-secure-token`, `Authorization: Bearer`, `?token=` hoặc body `token`)
+- `/api/login` trả về token HMAC tính từ `SECURITY_PASSWORD` + `backend/data/.auth-secret` (`utils/authToken.js`), so sánh mật khẩu bằng `timingSafeEqual`, khoá 15 phút sau 10 lần sai từ cùng IP
+- Đăng nhập đặt cookie HttpOnly `ms_auth`; static `/manga`, `/video`, `/audio`, `/media` của nguồn bảo mật chỉ phục vụ khi có cookie này (`middleware/protectStatic.js`). API không chấp nhận cookie (chống CSRF)
+- (ISSUES S4, S5, S6 — đã sửa 2026-11-04)
 
 ### **Layer 3: Rate Limiting (rateLimiter.js)**
-- 100 requests / 15 minutes per IP
-- Automatic cleanup expired entries
-- Headers cho client feedback
+- **Đang tắt** (`ENABLE_RATE_LIMIT = false` trong `middleware/index.js`) vì đọc manga cần hàng nghìn request ảnh
+- Nếu bật: 50.000 request / 15 phút / IP (`constants.SECURITY.RATE_LIMIT`)
 
 ### **Layer 4: Input Validation**
-- Path traversal prevention
-- URL encoding/decoding safe
-- SQL injection prevention (prepared statements)
+- SQL dùng prepared statements; `ORDER BY` ở `api/media/media-folder.js` dùng whitelist cột (ISSUES S2, đã sửa 2026-11-04)
+- Mọi endpoint nhận đường dẫn từ client đi qua `utils/pathSafety.js` → `resolveInsideRoot(rootPath, ...segments)`, trả `null` nếu path ra ngoài root (ISSUES S1, S7). Endpoint mới nhận path **phải** dùng helper này
 
 ---
 
@@ -784,12 +693,10 @@ playlist_items (
 #### **Database Cache:**
 - SQLite cache cho folder metadata
 - Avoid disk I/O cho repeated folder listing
-- TTL-based cache invalidation
+- Cập nhật khi người dùng chạy scan (mark & sweep), không có TTL
 
 #### **Memory Cache:**
-- LRU cache cho video/audio files
-- RAM size auto-calculation (50% total RAM)
-- Smart size limits per content type
+- Không còn cache RAM cho video/audio (bỏ 2026-11-04, ISSUES P1): file được stream thẳng từ ổ đĩa, hệ điều hành tự cache các file đọc gần đây
 
 #### **HTTP Cache:**
 - Static file cache headers (1 hour TTL)
@@ -879,7 +786,7 @@ playlist_items (
 ### **Utilities:**
 - **glob**: File pattern matching
 - **string-natural-compare**: Natural sorting
-- **lru-cache**: Memory caching
+- **lru-cache**: không còn được dùng (xem ISSUES P1)
 - **mime-types**: MIME type detection
 
 ### **Security & Performance:**

@@ -1,5 +1,7 @@
 # 📊 PHÂN TÍCH TÍNH NĂNG QUÉT DATABASE
 
+> **Cập nhật 2026-10-29:** tài liệu viết 11/2025, trước khi có scanner Media Gallery (`utils/media-scan.js`) và tuỳ chọn `shallow`. Lỗi đã biết của scanner: D1 (shallow + path xoá nhầm), B2 (reset không await), B13 (LIKE không escape), P1 (scan manga đồng bộ) — xem [ISSUES-REPORT.md](ISSUES-REPORT.md); tổng quan scanner: [SYSTEM-REPORT.md](SYSTEM-REPORT.md) §4.4.
+
 > **Ngày phân tích:** 2025-11-08  
 > **Phạm vi:** Tính năng quét database cho Music, Movie, và Manga  
 > **Bao gồm:** Logic quét, thumbnail extraction, và caching

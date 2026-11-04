@@ -42,6 +42,8 @@ const Home = () => {
   useEffect(() => {
     if (isAuthenticated || token) {
       logout();
+      // Xoá cả cookie ms_auth (dùng cho ảnh/video của nguồn bảo mật)
+      fetch('/api/logout', { method: 'POST' }).catch(() => {});
       console.log('🔒 Cleared auth on Home load');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

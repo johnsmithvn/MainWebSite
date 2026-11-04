@@ -4,6 +4,7 @@ const router = express.Router();
 const path = require("path");
 const fs = require("fs");
 const { getRootPath } = require("../../utils/config");
+const { resolveInsideRoot } = require("../../utils/pathSafety");
 
 router.get("/download", (req, res) => {
   const key = req.query.key;
@@ -14,7 +15,10 @@ router.get("/download", (req, res) => {
     return res.status(400).json({ error: "Thiếu key hoặc file" });
   }
 
-  const absPath = path.join(rootPath, relPath);
+  const absPath = resolveInsideRoot(rootPath, relPath);
+  if (!absPath) {
+    return res.status(403).json({ error: "Đường dẫn không hợp lệ" });
+  }
   if (!fs.existsSync(absPath)) {
     return res.status(404).json({ error: "Không tìm thấy file" });
   }

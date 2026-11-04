@@ -2,10 +2,14 @@
 // 🎯 Main App component
 
 import React, { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { useUIStore, useMusicStore } from '@/store';
 import Layout from '@/components/common/Layout';
 import PlaylistModal from '@/components/music/PlaylistModal';
+import MusicPlayerProvider from '@/components/music/MusicPlayerProvider';
+import { useMiniPlayerVisible, MINI_PLAYER_HEIGHT } from '@/components/music/MiniPlayer';
+import Toast from '@/components/common/Toast';
 
 // Pages
 import Home from '@/pages/Home';
@@ -47,6 +51,12 @@ function MusicPlayerRouter() {
 
 function App() {
   const { darkMode } = useUIStore();
+  const location = useLocation();
+  const miniPlayerVisible = useMiniPlayerVisible();
+  // Lift hot-toasts above the music player footer (100px) or the mini player bar
+  const toasterContainerStyle = location.pathname.startsWith('/music/player')
+    ? { bottom: 112 }
+    : miniPlayerVisible ? { bottom: MINI_PLAYER_HEIGHT + 16 } : undefined;
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -60,10 +70,38 @@ function App() {
   }, [darkMode]);
 
   return (
-    <>
+    <MusicPlayerProvider>
       {/* Global Playlist Modal */}
       <PlaylistModal />
-      
+
+      {/* Global toast for useUIStore().showToast (all routes, incl. full-screen players) */}
+      <Toast />
+
+      {/* Global react-hot-toast container (was only inside Layout, so full-screen routes had no toasts) */}
+      <Toaster
+        position="bottom-center"
+        containerStyle={toasterContainerStyle}
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: 'var(--bg-primary)',
+            color: 'var(--text-primary)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#ffffff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#ffffff',
+            },
+          },
+        }}
+      />
+
       <Routes>
         {/* Full-screen routes outside of the main Layout */}
         <Route path="/manga/reader/:folderId" element={<MangaReader />} />
@@ -115,7 +153,7 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
-    </>
+    </MusicPlayerProvider>
   );
 }
 

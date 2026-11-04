@@ -16,9 +16,10 @@ import { useRecentMusicManager } from '@/hooks/useMusicData';
 import { apiService } from '@/utils/api';
 import { DEFAULT_IMAGES } from '@/constants';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
-import LoadingOverlay from '@/components/common/LoadingOverlay';
 import PlayerFooter from '../../components/music/PlayerFooter';
 import PlayerHeader from '../../components/music/PlayerHeader';
+import TrackListSkeleton from '../../components/music/TrackListSkeleton';
+import { useMusicPlayer } from '../../components/music/musicPlayerContext';
 
 const MusicPlayerV2 = () => {
   const navigate = useNavigate();
@@ -65,111 +66,40 @@ const MusicPlayerV2 = () => {
   }, [stateKey, sourceKey, setSourceKey, navigate, showToast]);
 
   const { addRecentMusic } = useRecentMusicManager();
+  // Audio, progress, view count and the full player live in the global MusicPlayerProvider
+  const { togglePlayPause, buildQueue } = useMusicPlayer();
 
   // Local state
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false); // tracklist skeleton while a folder/playlist loads
+  const [error, setError] = useState(null); // tracklist load error (shown with a retry button)
+  const [reloadToken, setReloadToken] = useState(0);
   const [playlistTitle, setPlaylistTitle] = useState(null);
   const [library, setLibrary] = useState({ items: [], loading: false, error: null });
   const [activePlaylistId, setActivePlaylistId] = useState(null);
+  const [playlistQuery, setPlaylistQuery] = useState('');
 
-  // Audio
-  const audioRef = useRef(null);
-  const latestTrackRef = useRef(null);
   const dragIndexRef = useRef(-1);
   const isDraggingRef = useRef(false);
   const [dropIndicator, setDropIndicator] = useState({ index: -1, position: 'above' });
-  const prevOrderBeforeShuffleRef = useRef(null);
 
-  // Helper: bump viewCount locally (UI sync)
-  const bumpViewCount = useCallback((songPath) => {
-    if (!songPath) return;
-    try {
-      useMusicStore.setState((state) => {
-        const idx = state.currentPlaylist.findIndex((t) => t.path === songPath);
-        if (idx === -1) return {};
-        const oldItem = state.currentPlaylist[idx] || {};
-        const newCount = Number(oldItem.viewCount ?? oldItem.views ?? 0) + 1;
-        const updatedItem = { ...oldItem, viewCount: newCount };
-        const newPlaylist = [...state.currentPlaylist];
-        newPlaylist[idx] = updatedItem;
-        const isCurrent = state.currentTrack?.path === songPath;
-        return { currentPlaylist: newPlaylist, currentTrack: isCurrent ? updatedItem : state.currentTrack };
-      });
-    } catch {}
-  }, []);
-
-  // Keep latest track
-  useEffect(() => {
-    latestTrackRef.current = currentTrack || null;
-  }, [currentTrack]);
-
-  // Increase view on play with debounce
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const lastIncRef = { path: '', ts: 0 };
-    const handlePlay = async () => {
-      const track = latestTrackRef.current;
-      const trackPath = track?.path;
-      if (!trackPath || !sourceKey) return;
-      const now = Date.now();
-      if (lastIncRef.path === trackPath && now - lastIncRef.ts < 1000) return;
-      lastIncRef.path = trackPath;
-      lastIncRef.ts = now;
-      try {
-        const res = await fetch('/api/increase-view/music', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: sourceKey, path: trackPath })
-        });
-        if (res.ok) bumpViewCount(trackPath);
-      } catch (err) {
-        console.warn('Failed to increase music view count:', err);
-      }
-    };
-
-    audio.addEventListener('play', handlePlay);
-    return () => audio.removeEventListener('play', handlePlay);
-  }, [sourceKey, bumpViewCount]);
-
-  // Effective inputs
-  const effectivePath = stateFile || path || null;
-  const effectivePlaylist = statePlaylist ?? playlistPath ?? null; // allow ''
-  const effectiveKind = stateKind || (effectivePlaylist && !String(effectivePlaylist).includes('/') ? 'playlist' : (effectivePath ? 'audio' : 'folder'));
-
-  // Helpers
-  function buildAudioUrl(audioPath) {
-    if (!audioPath || !sourceKey) return null;
-    return `/api/music/audio?key=${sourceKey}&file=${encodeURIComponent(audioPath)}`;
-  }
-
-  const formatTime = (time) => {
-    if (!time || isNaN(time)) return '0:00';
-    const m = Math.floor(time / 60);
-    const s = Math.floor(time % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
+  // Effective inputs (same as v1): without a request (mini player, v1/v2 switch) show the playing queue
+  const queueSource = useMusicStore((s) => s.queueSource);
+  const requestedPath = stateFile || path || null;
+  const requestedPlaylist = statePlaylist ?? playlistPath ?? null; // allow ''
+  const hasRequest = requestedPath !== null || requestedPlaylist !== null;
+  const effectivePath = hasRequest ? requestedPath : (queueSource?.file ?? null);
+  const effectivePlaylist = hasRequest ? requestedPlaylist : (queueSource?.playlist ?? null);
+  const effectiveKind = (hasRequest ? stateKind : queueSource?.kind) || (effectivePlaylist && !String(effectivePlaylist).includes('/') ? 'playlist' : (effectivePath ? 'audio' : 'folder'));
 
   const handleRowClick = useCallback((e, track, index) => {
     e?.preventDefault?.();
   if (isDraggingRef.current) return;
     if (currentTrack?.path === track.path && currentIndex === index) {
-      if (!isPlaying) {
-        const audio = audioRef.current;
-        if (audio) {
-          const p = audio.play();
-          if (p) p.catch(() => {});
-        }
-        resumeTrack();
-      }
+      if (!isPlaying) togglePlayPause();
       return;
     }
     playTrack(track, currentPlaylist, index);
-  }, [currentTrack?.path, currentIndex, isPlaying, playTrack, currentPlaylist, resumeTrack]);
+  }, [currentTrack?.path, currentIndex, isPlaying, playTrack, currentPlaylist, togglePlayPause]);
 
   // Drag & Drop handlers
   const handleDragStart = (index) => {
@@ -197,6 +127,9 @@ const MusicPlayerV2 = () => {
     if (typeof val === 'string') return !val.includes('/');
     return false;
   };
+  // A saved playlist (not a folder). Top-level folder names have no '/', so the kind must be checked too.
+  const isPlaylistQueue = effectivePlaylist !== null && effectivePlaylist !== '' && isPlaylistId(effectivePlaylist)
+    && effectiveKind !== 'folder' && effectiveKind !== 'audio';
   const loadPlaylistById = async (playlistIdArg, selectedFileArg) => {
     try {
       if (!sourceKey) {
@@ -215,6 +148,8 @@ const MusicPlayerV2 = () => {
       }));
 
       setPlaylistTitle(data?.name || null);
+      // Remember the title with the queue so the page can show it again without reloading
+      useMusicStore.setState((s) => ({ queueSource: s.queueSource ? { ...s.queueSource, title: data?.name || null } : s.queueSource }));
 
       let startIndex = 0;
       if (selectedFileArg) {
@@ -223,8 +158,9 @@ const MusicPlayerV2 = () => {
       }
 
       if (playlist.length > 0) {
-        playTrack(playlist[startIndex], playlist, startIndex);
-        addRecentMusic(playlist[startIndex]);
+        const { queue, index } = buildQueue(playlist, startIndex);
+        playTrack(queue[index], queue, index);
+        addRecentMusic(queue[index]);
       } else if (selectedFileArg) {
         const fileName = selectedFileArg.split('/').pop();
         const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
@@ -242,6 +178,7 @@ const MusicPlayerV2 = () => {
         showToast('Playlist rỗng', 'warning');
       }
     } catch (err) {
+      setError('Không tải được playlist');
       showToast('Không thể load playlist: ' + (err.message || 'unknown error'), 'error');
     }
   };
@@ -260,15 +197,22 @@ const MusicPlayerV2 = () => {
       return;
     }
     if (from < insertIndex) insertIndex -= 1;
+    if (insertIndex === from) {
+      // Dropped back in place: nothing to reorder or save
+      handleDragEnd();
+      return;
+    }
     const updated = [...prev];
     const [moved] = updated.splice(from, 1);
     updated.splice(Math.max(0, Math.min(insertIndex, updated.length)), 0, moved);
     const currTrack = useMusicStore.getState().currentTrack;
     const newIndex = currTrack ? Math.max(0, updated.findIndex((t) => t.path === currTrack.path)) : insertIndex;
     useMusicStore.setState({ currentPlaylist: updated, currentIndex: newIndex });
+    // Persist only when this session is a playlist id and the list is not shuffled (same as v1)
     try {
-      const effPlaylist = statePlaylist || playlistPath || null;
-      if (effPlaylist && isPlaylistId(effPlaylist) && sourceKey) {
+      const shuffledOn = useMusicStore.getState().shuffle;
+      const effPlaylist = isPlaylistQueue ? effectivePlaylist : null; // a top-level folder like "Vpop" also has no '/'
+      if (!shuffledOn && effPlaylist && sourceKey) {
         const res = await fetch('/api/music/playlist/order', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -293,12 +237,15 @@ const MusicPlayerV2 = () => {
       }
       const folderPath = folderPathArg;
       const selectedPath = selectedFileArg;
-      if (!folderPath && !selectedPath) {
+      if ((folderPath === undefined || folderPath === null) && !selectedPath) {
         showToast('Thiếu thông tin file/folder', 'error');
         return;
       }
-      const folderToLoad = folderPath || (selectedPath ? selectedPath.split('/').slice(0, -1).join('/') : null);
-      if (!folderToLoad) {
+      // Allow '' (empty string) as ROOT path, same as v1
+      const derivedParent = selectedPath ? selectedPath.split('/').slice(0, -1).join('/') : null;
+      const hasExplicitFolder = folderPath !== undefined && folderPath !== null;
+      const folderToLoad = hasExplicitFolder ? folderPath : derivedParent;
+      if (folderToLoad === null || folderToLoad === undefined) {
         showToast('Không thể xác định thư mục chứa bài hát', 'error');
         return;
       }
@@ -315,8 +262,9 @@ const MusicPlayerV2 = () => {
         if (idx >= 0) startIndex = idx;
       }
       if (playlist.length > 0) {
-        playTrack(playlist[startIndex], playlist, startIndex);
-        addRecentMusic(playlist[startIndex]);
+        const { queue, index } = buildQueue(playlist, startIndex);
+        playTrack(queue[index], queue, index);
+        addRecentMusic(queue[index]);
       } else if (selectedPath) {
         const fileName = selectedPath.split('/').pop();
         const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
@@ -351,141 +299,60 @@ const MusicPlayerV2 = () => {
           return;
         } catch {}
       }
+      setError('Không tải được danh sách bài hát');
       showToast('Không thể phát nhạc: ' + (err.response?.data?.message || err.message), 'error');
     }
   };
 
-  // Trigger load when inputs change
+  // Trigger load when inputs change (same rules as v1: a request matching the playing queue is not reloaded)
+  const forceReloadRef = useRef(false);
   useEffect(() => {
+    if (!sourceKey || !sourceKey.startsWith('M_')) return;
+    if (effectivePath === null && effectivePlaylist === null) return; // nothing requested and nothing playing
+
+    const store = useMusicStore.getState();
+    const qs = store.queueSource;
+    const sameAsQueue = qs && store.queueKey === sourceKey && qs.kind === effectiveKind
+      && qs.playlist === effectivePlaylist && qs.file === effectivePath;
+    const force = forceReloadRef.current;
+    forceReloadRef.current = false;
+    if (sameAsQueue && store.currentTrack && !force) {
+      setPlaylistTitle(qs.title || null);
+      return;
+    }
+    useMusicStore.setState({
+      queueSource: { kind: effectiveKind, playlist: effectivePlaylist, file: effectivePath },
+      queueKey: sourceKey,
+    });
+
+    let request;
     if (effectiveKind === 'playlist' && effectivePlaylist !== null && effectivePlaylist !== undefined && effectivePlaylist !== '') {
-      if (isPlaylistId(effectivePlaylist)) {
-        return void loadPlaylistById(effectivePlaylist, effectivePath || null);
-      }
-      return void loadFolderSongs(effectivePlaylist, effectivePath || null);
+      request = isPlaylistId(effectivePlaylist)
+        ? loadPlaylistById(effectivePlaylist, effectivePath || null)
+        : loadFolderSongs(effectivePlaylist, effectivePath || null);
+    } else if (effectiveKind === 'folder') {
+      request = loadFolderSongs(effectivePlaylist ?? '', effectivePath || null);
+    } else if (effectiveKind === 'audio' && effectivePath) {
+      request = loadFolderSongs(null, effectivePath);
+    } else if (effectivePlaylist !== null && effectivePlaylist !== undefined) {
+      request = isPlaylistId(effectivePlaylist)
+        ? loadPlaylistById(effectivePlaylist, effectivePath || null)
+        : loadFolderSongs(effectivePlaylist ?? '', effectivePath || null);
+    } else if (effectivePath) {
+      request = loadFolderSongs(null, effectivePath);
     }
-    if (effectiveKind === 'folder') {
-      return void loadFolderSongs(effectivePlaylist ?? '', effectivePath || null);
-    }
-    if (effectiveKind === 'audio' && effectivePath) {
-      return void loadFolderSongs(null, effectivePath);
-    }
-    if (effectivePlaylist !== null && effectivePlaylist !== undefined) {
-      if (isPlaylistId(effectivePlaylist)) return void loadPlaylistById(effectivePlaylist, effectivePath || null);
-      return void loadFolderSongs(effectivePlaylist ?? '', effectivePath || null);
-    }
-    if (effectivePath) return void loadFolderSongs(null, effectivePath);
+    if (!request) return;
+    setLoading(true);
+    setError(null);
+    request.finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveKind, effectivePlaylist, effectivePath, sourceKey]);
+  }, [effectiveKind, effectivePlaylist, effectivePath, sourceKey, reloadToken]);
 
-  // Audio element lifecycle
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const handleLoadedMetadata = () => setDuration(audio.duration || 0);
-    const handleEnded = () => {
-      if (repeat === 'one') {
-        audio.currentTime = 0;
-        audio.play();
-      } else {
-        nextTrack();
-      }
-    };
-    const handleError = () => {
-      setError('Failed to load audio');
-      showToast('Audio load error', 'error');
-    };
-
-    audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('error', handleError);
-
-    return () => {
-      audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('error', handleError);
-    };
-  }, [repeat, nextTrack, showToast]);
-
-  // Auto update src when track changes (only if changed)
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !currentTrack || !sourceKey) return;
-    const audioUrl = buildAudioUrl(currentTrack.path);
-    if (!audioUrl) return;
-    const absolute = window.location.origin + audioUrl;
-    if (audio.src !== absolute) {
-      audio.src = audioUrl;
-      audio.load();
-    }
-    const handleCanPlay = () => {
-      if (isPlaying && audio.paused) {
-        audio.play().catch((err) => {
-          setError('Failed to play audio: ' + err.message);
-          showToast('Không thể phát nhạc: ' + err.message, 'error');
-        });
-      }
-      audio.removeEventListener('canplay', handleCanPlay);
-    };
-    const handleLoadError = () => {
-      setError('Failed to load audio source');
-      showToast('Không thể load audio', 'error');
-      audio.removeEventListener('error', handleLoadError);
-    };
-    audio.addEventListener('canplay', handleCanPlay);
-    audio.addEventListener('error', handleLoadError);
-    return () => {
-      audio.removeEventListener('canplay', handleCanPlay);
-      audio.removeEventListener('error', handleLoadError);
-    };
-  }, [currentTrack, isPlaying, sourceKey, showToast]);
-
-  // Volume sync
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) audio.volume = volume;
-  }, [volume]);
-
-  // Controls
-  const togglePlayPause = useCallback(async () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    try {
-      if (isPlaying) {
-        audio.pause();
-        pauseTrack();
-      } else {
-        const p = audio.play();
-        if (p) await p;
-        resumeTrack();
-      }
-    } catch (err) {
-      setError('Failed to play/pause audio: ' + err.message);
-      showToast('Không thể play/pause: ' + err.message, 'error');
-    }
-  }, [isPlaying, pauseTrack, resumeTrack, showToast]);
-
-  const handleSeek = (e) => {
-    const audio = audioRef.current;
-    if (!audio || !duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const percent = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-    const newTime = percent * duration;
-    audio.currentTime = newTime;
-    setCurrentTime(newTime);
+  const retryLoad = () => {
+    forceReloadRef.current = true;
+    setReloadToken((n) => n + 1);
   };
 
-  const handleVolumeBar = (e) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const percent = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-    setVolume(percent);
-    audio.volume = percent;
-  };
 
   // Derived
   const folderTitle = (() => {
@@ -536,6 +403,13 @@ const MusicPlayerV2 = () => {
 
   const normalizedFilter = '';
   const visiblePlaylist = currentPlaylist;
+
+  // Playlist panel search (accent-insensitive)
+  const normalizeText = (str = '') => str.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  const playlistNeedle = normalizeText(playlistQuery.trim());
+  const visibleLibrary = playlistNeedle
+    ? library.items.filter((pl) => normalizeText(pl.name || '').includes(playlistNeedle))
+    : library.items;
 
   // Load user playlists for Library (right panel)
   useEffect(() => {
@@ -651,7 +525,16 @@ const MusicPlayerV2 = () => {
               <div className="flex justify-end pr-2"><FiClock className="w-4 h-4" /></div>
             </div>
             <div className="divide-y divide-white/5 flex-1 overflow-y-auto">
-              {visiblePlaylist.map((track, index) => (
+              {loading ? (
+                <TrackListSkeleton rows={8} />
+              ) : error ? (
+                <div className="px-4 py-10 text-center text-white/70">
+                  <p>{error}</p>
+                  <button onClick={retryLoad} className="mt-3 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-sm">
+                    Thử lại
+                  </button>
+                </div>
+              ) : visiblePlaylist.map((track, index) => (
                 <div
                   key={track.path || index}
                   draggable
@@ -716,7 +599,7 @@ const MusicPlayerV2 = () => {
                 </div>
               ))}
 
-              {visiblePlaylist.length === 0 && (
+              {!loading && !error && visiblePlaylist.length === 0 && (
                 <div className="px-4 py-10 text-center text-white/60">Không có bài hát phù hợp</div>
               )}
             </div>
@@ -731,7 +614,12 @@ const MusicPlayerV2 = () => {
             <div className="p-3">
               <div className="relative">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white/60 w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 21L15.803 15.803M18 10.5C18 14.0899 15.0899 17 11.5 17C7.91015 17 5 14.0899 5 10.5C5 6.91015 7.91015 4 11.5 4C15.0899 4 18 6.91015 18 10.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                <input placeholder="Tìm playlist" className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30" />
+                <input
+                  value={playlistQuery}
+                  onChange={(e) => setPlaylistQuery(e.target.value)}
+                  placeholder="Tìm playlist"
+                  className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/10 text-white placeholder-white/60 outline-none focus:ring-2 focus:ring-white/30"
+                />
               </div>
             </div>
             <div className="flex-1 overflow-y-auto divide-y divide-white/10">
@@ -739,9 +627,12 @@ const MusicPlayerV2 = () => {
               {!library.loading && library.items.length === 0 && (
                 <div className="px-4 py-8 text-white/60 text-sm">Chưa có playlist</div>
               )}
-              {!library.loading && library.items.length > 0 && (
+              {!library.loading && library.items.length > 0 && visibleLibrary.length === 0 && (
+                <div className="px-4 py-8 text-white/60 text-sm">Không tìm thấy playlist</div>
+              )}
+              {!library.loading && visibleLibrary.length > 0 && (
                 <div className="px-2 space-y-1">
-                  {library.items.map((pl) => (
+                  {visibleLibrary.map((pl) => (
                     <button
                       key={pl.id}
                       onClick={() => {
@@ -765,22 +656,8 @@ const MusicPlayerV2 = () => {
   </div>
       </div>
 
-      {/* Bottom Controls replaced with PlayerFooter component */}
-      <PlayerFooter
-        audioRef={audioRef}
-        currentTime={currentTime}
-        duration={duration}
-        formatTime={formatTime}
-        handleSeek={handleSeek}
-        handleVolumeBar={handleVolumeBar}
-        prevOrderBeforeShuffleRef={prevOrderBeforeShuffleRef}
-        theme="v2"
-      />
-
-      {/* Audio Element */}
-      <audio ref={audioRef} preload="metadata" className="hidden" />
-
-      {loading && <LoadingOverlay />}
+      {/* Bottom controls (from the global player); clicking the song opens the shared full player */}
+      <PlayerFooter theme="v2" />
     </div>
   );
 };

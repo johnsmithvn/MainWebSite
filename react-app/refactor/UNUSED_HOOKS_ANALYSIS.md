@@ -1,5 +1,7 @@
 # 🔍 PHÂN TÍCH CÁC HOOKS KHÔNG SỬ DỤNG
 
+> **📋 Đề xuất refactor 10/2025 — CHƯA được thực hiện** (kiểm tra 2026-10-29). Các file mục tiêu như `authStore.js`, `mangaStore.js`, `SettingSection.jsx`, `MangaSettings.jsx`… không tồn tại; store vẫn nằm trong `src/store/index.js`. Danh sách dead code đã cập nhật: [docs/DEAD-CODE-REPORT.md](../../docs/DEAD-CODE-REPORT.md).
+
 ## 📋 Tổng Quan
 
 **File:** `src/hooks/index.js`  

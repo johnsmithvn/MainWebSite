@@ -4,6 +4,7 @@
 const express = require("express");
 const router = express.Router();
 const { getMovieDB } = require("../../utils/db");
+const { escapeLike } = require("../../utils/sqlLike");
 
 /**
  * GET /api/movie-folder?key=V_MOVIE&path=...
@@ -19,8 +20,8 @@ router.get("/movie-folder", (req, res) => {
 
   // Query mọi item có path bắt đầu = relPath + "/"
   const items = db.prepare(
-    `SELECT * FROM folders WHERE path LIKE ? ORDER BY type DESC, name COLLATE NOCASE ASC`
-  ).all(relPath ? `${relPath}/%` : "%");
+    `SELECT * FROM folders WHERE path LIKE ? ESCAPE '\\' ORDER BY type DESC, name COLLATE NOCASE ASC`
+  ).all(relPath ? `${escapeLike(relPath)}/%` : "%");
 
   // Chỉ trả về item có cấp ngay dưới (depth)
   const baseDepth = relPath ? relPath.split("/").filter(Boolean).length : 0;
