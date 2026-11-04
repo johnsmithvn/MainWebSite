@@ -1,12 +1,17 @@
 # Offline Architecture & Implementation Guide
 
+> **Updated 2026-10-29** against commit `a511bcd`: the service worker no longer pre-caches the React bundle, the
+> download queue (`/downloads`) is a second download path, `media-thumbnails-v1` was added, and
+> `serviceWorkerManager.js` is not wired into the UI. Known problems are tracked in
+> [docs/ISSUES-REPORT.md](../../docs/ISSUES-REPORT.md) (B14, B15, D3, D4, P4).
+
 This document explains how the manga reader application implements offline support, the storage layers that power it, and how to extend or troubleshoot the flow when building new features.
 
 ## 1. High-level overview
 
 1. The browser registers `public/sw.js` as the service worker when the React bundle boots (`src/main.jsx`).
-2. The service worker pre-caches only the shared app shell assets that are required to boot the SPA while offline (default icons and the React bundle).
-3. When a user chooses to download a chapter in the reader (`src/pages/manga/MangaReader.jsx`), the app collects the page URLs, streams them into the `chapter-images` cache, and stores chapter metadata in IndexedDB via `src/utils/offlineLibrary.js`.
+2. The service worker pre-caches only the default fallback images under `/default/`. The React app shell (`/`, `/index.html`) is cached the first time a navigation succeeds online; JS/CSS bundles are cached on demand by the network-first rule.
+3. When a user chooses to download a chapter in the reader (`src/pages/manga/MangaReader.jsx`) — either directly or by adding it to the download queue (`src/store/downloadQueueStore.js` + `src/workers/downloadWorker.js`, managed at `/downloads`) — the app collects the page URLs, streams them into the `chapter-images` cache, and stores chapter metadata in IndexedDB via `src/utils/offlineLibrary.js`.
 4. Offline library pages (`src/pages/offline/OfflineHome.jsx` and `src/pages/offline/OfflineMangaLibrary.jsx`) read from IndexedDB and the caches to render saved sources, manga, and chapters.
 5. When the network drops, navigation requests fall back to the cached React app shell and the previously downloaded chapter images so the reader can keep working.
 
@@ -18,7 +23,8 @@ This document explains how the manga reader application implements offline suppo
 | --- | --- | --- |
 | `offline-core-<version>` | Default icons & shell assets required to render the SPA while offline. | `install` handler in `public/sw.js` |
 | `reader-dynamic-<version>` | JSON/API responses that are needed while offline (manga metadata, reader payloads, app shell). Uses a network-first strategy with a 5s timeout and falls back to cache on failure. | `fetch` handler for API and navigation requests in `public/sw.js` |
-| `chapter-images` | All downloaded page images for offline chapters. | `downloadChapter()` in `src/utils/offlineLibrary.js` |
+| `chapter-images` | All downloaded page images for offline chapters. | `downloadChapter()` in `src/utils/offlineLibrary.js` and `DownloadWorker.processTask()` in `src/workers/downloadWorker.js` |
+| `media-thumbnails-v1` | Movie/music/media thumbnails (stale-while-revalidate, max 1000 entries). Currently almost never hit because image requests are captured by the manga-image rule first (ISSUES B14). | `thumbnailCacheStrategy()` in `public/sw.js` |
 
 Important implementation notes:
 
@@ -79,8 +85,15 @@ Helper utilities exposed by `offlineLibrary.js`:
 2. Before downloading, the quota modal inspects `navigator.storage.estimate()` to ensure the user has enough space.
 3. `downloadChapter()` iterates over each page URL, fetches it (switching to `no-cors` when the domain disallows CORS), and writes the response into `caches.open('chapter-images')`.
 4. The helper keeps a running byte total. If the response is opaque, it uses `CACHE.FALLBACK_IMAGE_SIZE_BYTES` for the estimate.
-5. After all pages are saved, the function writes enriched metadata to IndexedDB and emits completion to the progress callback.
+5. After the loop finishes, the function writes enriched metadata to IndexedDB and emits completion to the progress callback. If any page failed, nothing is saved: the function throws `Tải thiếu N/M trang (trang …)` (the reader shows it as a toast) and removes the pages it just cached — unless a complete copy of the chapter was already saved, which is kept as is (ISSUES D3, fixed 2026-11-04).
 6. The reader refreshes offline status so the UI updates instantly.
+
+### 3.2b Downloading through the queue
+
+1. `MangaReader` adds a task to `useDownloadQueueStore` (persisted in `localStorage` as `download-queue-storage`). Only unfinished tasks keep `pageUrls` (needed to resume); at most the 200 most recent finished tasks are persisted, and a full `localStorage` no longer throws — the store then saves only unfinished tasks (ISSUES D4, fixed 2026-11-04).
+2. The store starts up to `MAX_CONCURRENT_DOWNLOADS = 2` tasks; `downloadWorker.processTask()` fetches the page list from `/api/manga/folder-cache?mode=path`, downloads images 2 at a time with a 100 ms pause between chunks, supports pause/resume/cancel via `AbortController`, and saves metadata with `saveChapter()`. If any page fails, the task errors with `Tải thiếu N/M trang`, so the store retries it (exponential backoff) and finally marks it `failed` instead of `completed`.
+3. `/downloads` (`DownloadManager.jsx`) shows progress, retry and cleanup actions.
+4. The worker uses a plain `fetch()` without the `x-secure-token` header, so queue downloads fail for password-protected sources (ISSUES B6).
 
 ### 3.3 Reading offline
 
@@ -117,7 +130,9 @@ Follow these steps when adding a new offline-capable feature:
 
 ## 7. Useful utilities & entry points
 
-- `src/utils/serviceWorkerManager.js` – Programmatic control (checking caches, clearing caches, applying updates).
+- `src/utils/serviceWorkerManager.js` – Programmatic control (checking caches, clearing caches, applying updates). **Not used by any rendered component today** (see DEAD-CODE-REPORT).
+- `src/store/downloadQueueStore.js`, `src/workers/downloadWorker.js`, `src/pages/downloads/DownloadManager.jsx` – Download queue.
+- `src/utils/storageQuota.js` – Quota checks (`VITE_MIN_STORAGE_SPACE`, in MB).
 - `src/pages/offline/OfflineHome.jsx` – Source selector and storage statistics UI.
 - `src/pages/offline/OfflineMangaLibrary.jsx` – Library grid & modal interactions for offline chapters.
 - `src/utils/offlineLibrary.js` – IndexedDB helpers and download pipeline.

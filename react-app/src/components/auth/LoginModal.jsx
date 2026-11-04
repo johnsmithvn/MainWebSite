@@ -49,6 +49,8 @@ const LoginModal = ({ isOpen, onClose, sourceKey, onSuccess }) => {
         toast.error('Mật khẩu không đúng');
       } else if (error.response?.data?.error === 'invalid key') {
         toast.error('Source key không hợp lệ');
+      } else if (error.response?.status === 429) {
+        toast.error('Nhập sai quá nhiều lần, thử lại sau 15 phút');
       } else {
         toast.error('Lỗi đăng nhập');
       }

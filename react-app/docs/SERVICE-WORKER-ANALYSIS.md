@@ -1,80 +1,72 @@
-# Service Worker Implementation Analysis (v3.0.0)
+# Service Worker Implementation Analysis (v3.1.0)
 
-> TL;DR: phiên bản service worker hiện tại ưu tiên chạy nhẹ, chỉ giữ lại các asset dự phòng tối thiểu và đảm bảo trải nghiệm đọc offline qua cache chapter images/metadata riêng. Toàn bộ logic được triển khai trong [`react-app/public/sw.js`](../public/sw.js).
+> **Cập nhật:** 2026-10-29, đối chiếu với [`react-app/public/sw.js`](../public/sw.js) tại commit `a511bcd`.
+> TL;DR: service worker giữ tối thiểu asset dự phòng, phục vụ ảnh chapter đã tải offline từ cache riêng và
+> lưu tạm phản hồi API GET để dùng khi mất mạng. Bản v3.1.0 bổ sung cache thumbnail (`media-thumbnails-v1`) nhưng
+> nhánh này hiện **gần như không được kích hoạt** (xem mục 6).
 
 ## 1. Kiến trúc cache hiện tại
 
 | Cache | Nội dung | Ghi chú |
 |-------|----------|---------|
-| `offline-core-v3.0.0` | Bộ ảnh fallback mặc định (`/default/*.png|jpg`) | Không còn precache HTML/CSS/JS – giảm footprint và tránh lệ thuộc vào build cũ. |
-| `reader-dynamic-v3.0.0` | Kết quả điều hướng SPA và (optionally) phản hồi API GET | Được cập nhật mỗi lần điều hướng thành công để bảo đảm app shell còn dùng được khi offline. |
-| `chapter-images` | Ảnh các trang manga đã tải offline | Không bị đụng tới khi nâng version để tránh mất dữ liệu người dùng. |
+| `offline-core-v3.1.0` | Ảnh fallback `/default/*` (favicon, cover, folder, music, video) | Precache khi install; cache-first. |
+| `reader-dynamic-v3.1.0` | Phản hồi điều hướng SPA (kèm bản sao cho `/` và `/index.html`) và **mọi** phản hồi `GET /api/*` status 200 (trừ `/api/manga/pdf`) | Không giới hạn số entry, không tự dọn. |
+| `chapter-images` | Ảnh các trang manga đã tải offline | Do `offlineLibrary` / `downloadWorker` ghi. Không bị xoá khi nâng version. |
+| `media-thumbnails-v1` | Thumbnail movie/music/media (stale-while-revalidate, tối đa 1000 entry) | Mới ở v3.1.0. Không bị xoá khi nâng version. |
 
-Các cache cũ có prefix `manga-` hoặc `mainws-` sẽ bị dọn trong pha `activate` nhằm tránh để sót dữ liệu từ phiên bản service worker trước.
+Pha `activate` xoá các cache có prefix `manga-`, `mainws-`, `offline-core-`, `reader-dynamic-` không thuộc version hiện tại.
 
 ## 2. Vòng đời service worker
 
-1. **Install** – mở `offline-core-*` và thêm các asset fallback (favicon, ảnh cover mặc định…). Không còn precache `index.html`, bundle JS/CSS, hay template offline riêng.
-2. **Activate** – xóa mọi cache có prefix cũ, ghi nhớ các instance cache vào bộ nhớ tạm để tái sử dụng, rồi `clients.claim()` để kiểm soát toàn bộ tab đang mở.
-3. **Runtime** – mỗi request GET sẽ được định tuyến theo chiến lược riêng (chi tiết ở phần 3). Bộ nhớ đệm nội bộ (`cacheInstances`, `cachePromises`) giúp tránh mở cache song song nhiều lần.
-4. **Message & Sync** – nhận các command như `GET_CACHE_INFO`, `CLEAR_CACHE`, `REGISTER_BACKGROUND_SYNC` và forward signal `SW_ACTIVATED`/`BACKGROUND_SYNC` về client.
+1. **Install** – mở `offline-core-*`, thêm từng asset fallback (lỗi từng file chỉ log warning), rồi `skipWaiting()`.
+2. **Activate** – dọn cache cũ, `clients.claim()`, gửi `SW_ACTIVATED` (kèm version) tới mọi tab.
+3. **Runtime** – mỗi request `GET` được định tuyến theo chiến lược ở mục 3. `cacheInstances` + `cachePromises` tránh mở cùng một cache song song.
+4. **Message & Sync** – hỗ trợ `SKIP_WAITING`, `GET_CACHE_INFO` (có cache kết quả 5s), `INVALIDATE_CACHE_INFO`, `CLEAR_CACHE`, `REGISTER_BACKGROUND_SYNC`; sự kiện `sync` với tag `retry-failed-downloads` chỉ chuyển tiếp `BACKGROUND_SYNC` về client.
 
-## 3. Chiến lược xử lý request
+Đăng ký SW nằm ở `src/main.jsx` (chạy cả ở dev mode). Lưu ý: component `ServiceWorkerStatus` và hook `useServiceWorker` / `utils/serviceWorkerManager.js` hiện **không được render/dùng** ở đâu (xem DEAD-CODE-REPORT).
 
-### 3.1 Static assets (`isStaticAsset`)
+## 3. Chiến lược xử lý request (theo thứ tự kiểm tra trong handler `fetch`)
 
-- Chỉ áp dụng cho tài nguyên cùng origin bên trong thư mục `/default/`.
-- **Chiến lược:** cache-first. Lần đầu fetch thành công sẽ lưu lại; các lần sau ưu tiên cache nhưng vẫn cập nhật ngầm khi đang online.
-- **Lý do:** đây là những fallback image được dùng rộng rãi trên web/app, cần sẵn sàng ngay cả khi offline.
+| # | Điều kiện | Chiến lược |
+|---|-----------|-----------|
+| 0 | Không phải `GET` | Bỏ qua (trình duyệt tự xử lý) |
+| 1 | URL chứa `/api/manga/pdf` | Network-only (stream trực tiếp) |
+| 2 | `isStaticAsset`: cùng origin, path bắt đầu `/default/` | Cache-first + cập nhật nền khi online |
+| 3 | `isAPIRequest`: URL chứa `/api/` | Network-first, timeout **5s**; chỉ cache response 200; khi lỗi/timeout trả bản cache hoặc `503` |
+| 4 | `isMangaImage`: (`/manga/` + đuôi ảnh) **hoặc** `request.destination === 'image'` | Ưu tiên `chapter-images`, nếu không có thì fetch mạng (không cache) |
+| 5 | `isThumbnailRequest` | Stale-while-revalidate vào `media-thumbnails-v1` |
+| 6 | `request.mode === 'navigate'` | Network-first, lưu app shell; offline → cache URL → app shell → trang HTML inline "App đang offline" |
+| 7 | Còn lại | Network-first (như #3) |
 
-### 3.2 API (`isAPIRequest`)
-
-- Service worker vẫn dùng network-first + timeout 5s cho mọi `GET` trỏ tới `/api/`.
-- Khi mạng phản hồi trong giới hạn, response được lưu tạm vào `reader-dynamic-*` để có dữ liệu dự phòng trong lần tải lại kế tiếp (chủ yếu phục vụ các view đang mở).
-- Nếu mạng lỗi/timeout, worker thử tìm bản cache tương ứng; nếu không có sẽ trả fallback lỗi.
-- **Lưu ý:** mục tiêu sắp tới là bổ sung bộ lọc allowlist để loại các endpoint như random/favorites khỏi cache. Việc này chưa được triển khai trong `sw.js`; khi thêm mới cần cập nhật bảng ở mục 6.
-
-### 3.3 Ảnh manga (`isMangaImage`)
-
-- Kiểm tra cache `chapter-images` trước (đây là nơi `offlineLibrary` lưu dữ liệu khi người dùng tải chapter).
-- Không tự động cache ảnh online; nếu request thất bại và không có bản offline thì để trình duyệt tự báo lỗi.
-
-### 3.4 Điều hướng (`isNavigation`)
-
-- Network-first. Khi có phản hồi thành công:
-  - Lưu bản sao vào `reader-dynamic-*` cho chính URL đó.
-  - Đồng thời cập nhật `'/index.html'` và `'/'` để tái sử dụng như app shell.
-- Nếu offline: lần lượt thử cache cụ thể của URL, sau đó tới app shell trong dynamic cache, rồi static cache. Cuối cùng mới render fallback HTML inline đơn giản.
+`checkContentChange()` dùng ETag → Last-Modified → SHA-256 nội dung JSON để quyết định có ghi đè cache không; trạng thái này nằm trong bộ nhớ của SW nên mất khi SW bị trình duyệt dừng.
 
 ## 4. Offline fallback & trải nghiệm người dùng
 
-- Không còn file `offline.html`; thay vào đó là trang HTML inline nhẹ (<1KB) hiển thị thông báo “App đang offline” và nút reload.
-- Ảnh fallback luôn sẵn nhờ static cache, giảm trường hợp thumbnail mất hình khi offline.
-- Background sync (`retry-failed-downloads`) chỉ thông báo client chuẩn bị retry; logic thực tế nằm ở phía React app.
+- Không có `offline.html`; fallback cuối là trang HTML inline nhỏ với nút "Thử lại".
+- Ảnh fallback mặc định luôn có sẵn nhờ `offline-core-*`.
+- Khi thumbnail lỗi trong nhánh #5, SW trả ảnh mặc định theo loại (dựa trên URL chứa `/movie`, `/music`, `/media`).
 
 ## 5. Ước lượng footprint
 
-| Thành phần | Ước lượng dung lượng | Ghi chú |
-|------------|----------------------|---------|
-| `offline-core-*` | ~300–500KB | 5 ảnh PNG/JPG mặc định. |
-| `reader-dynamic-*` | <1MB (tuỳ session) | Chủ yếu chứa 1–2 bản `index.html` và vài response API mới nhất. |
-| `chapter-images` | Phụ thuộc người dùng | Do người dùng tải chapter, có thể lên tới hàng trăm MB. |
+| Thành phần | Ước lượng | Ghi chú |
+|------------|-----------|---------|
+| `offline-core-*` | ~300–500KB | 5 ảnh mặc định |
+| `reader-dynamic-*` | Tăng dần theo thời gian | Mọi response API GET; **kể cả file nhạc tải qua `/api/music/download`** (response 200 đầy đủ) |
+| `chapter-images` | Tuỳ người dùng | Có thể hàng trăm MB |
+| `media-thumbnails-v1` | ≤1000 entry | Hiện gần như rỗng (mục 6) |
 
-Việc không precache bundle giúp giảm rủi ro “cache stale” khi deploy phiên bản mới và tránh lãng phí dung lượng với những trang (random, favorites…) không cần offline.
+## 6. Vấn đề đã biết (chi tiết trong [docs/ISSUES-REPORT.md](../../docs/ISSUES-REPORT.md))
 
-## 6. Điểm cần lưu ý/kế hoạch mở rộng
-
-- **Selective API caching:** thêm hàm allowlist/denylist để bỏ qua các endpoint không cần lưu offline (ví dụ `/api/manga/folder-cache?mode=random`).
-- **Quota awareness:** phối hợp với `storageQuota` utilities để tránh cache thêm khi storage đã đầy.
-- **Monitoring:** `GET_CACHE_INFO` trả về số lượng entry từng cache; có thể log ra DevTools để kiểm tra khi debug.
-- **Version bump:** khi thay đổi cấu trúc cache, chỉ cần tăng `CACHE_VERSION`; `activate` sẽ tự dọn dẹp cache cũ (trừ `chapter-images`).
+- **B14 – cache thumbnail không hoạt động:** nhánh #4 bắt mọi request có `destination === 'image'` trước nhánh #5; thêm vào đó `isThumbnailRequest` so khớp `/movie/` và `/music/` trong khi URL thật của thumbnail là `/video/…/.thumbnail/…` và `/audio/…/.thumbnail/…`.
+- **B15 – cache API không chọn lọc:** mọi `GET /api/*` 200 đều được lưu (kể cả download nhạc, danh sách random…), không giới hạn dung lượng; timeout 5s trả `503` cho API chậm nhưng vẫn hoạt động (vd. `folder-cache` đọc trực tiếp từ đĩa).
+- Kế hoạch cũ "allowlist/denylist endpoint" và "quota awareness" vẫn **chưa** được triển khai.
 
 ## 7. Checklist QA nhanh
 
-1. Mở DevTools > Application > Service Workers, đảm bảo SW hiển thị version `v3.0.0`.
-2. Kiểm tra tab Cache Storage:
-   - `offline-core-v3.0.0` chỉ chứa ảnh fallback.
-   - `reader-dynamic-v3.0.0` có `index.html` sau khi load trang.
-   - `chapter-images` giữ nguyên dữ liệu người dùng.
-3. Ngắt mạng và truy cập lại `/offline` hoặc trang đang mở để xác nhận app shell vẫn chạy.
-4. Xem console để nhận log `SW_ACTIVATED`, `Background sync`, giúp xác nhận messaging hoạt động đúng.
+1. DevTools → Application → Service Workers: SW đang chạy và console có log `SW installing v3.1.0` / `SW_ACTIVATED`.
+2. Cache Storage:
+   - `offline-core-v3.1.0` chỉ chứa ảnh `/default/*`.
+   - `reader-dynamic-v3.1.0` có `/` và `/index.html` sau khi tải trang.
+   - `chapter-images` giữ nguyên dữ liệu sau khi đổi version.
+3. Ngắt mạng, mở `/offline` hoặc chapter đã tải → app shell và ảnh offline vẫn hiển thị.
+4. Khi bump `CACHE_VERSION`, kiểm tra cache cũ `offline-core-*`/`reader-dynamic-*` bị xoá trong pha activate.

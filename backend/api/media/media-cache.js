@@ -4,6 +4,7 @@
 const path = require("path");
 const fs = require("fs");
 const { getRootPath } = require("../../utils/config");
+const { resolveInsideRoot } = require("../../utils/pathSafety");
 
 /**
  * GET /api/media/cache/:filename?key=MEDIA_PHOTOS
@@ -19,7 +20,14 @@ const mediaCache = (req, res) => {
 
   try {
     const rootPath = getRootPath(dbkey);
-    const thumbPath = path.join(rootPath, ".thumbnail", filename);
+    if (!rootPath) {
+      return res.status(400).json({ error: "Key không hợp lệ" });
+    }
+    // filename phải nằm trong <root>/.thumbnail/
+    const thumbPath = resolveInsideRoot(path.join(rootPath, ".thumbnail"), filename);
+    if (!thumbPath) {
+      return res.status(403).json({ error: "Đường dẫn không hợp lệ" });
+    }
 
     if (fs.existsSync(thumbPath)) {
       res.sendFile(thumbPath);

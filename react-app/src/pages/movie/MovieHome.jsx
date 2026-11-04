@@ -180,7 +180,7 @@ const MovieHome = () => {
       case 'type':
         return (a.type || '').localeCompare(b.type || '');
       case 'views':
-        return (b.views || 0) - (a.views || 0);
+        return (b.viewCount || 0) - (a.viewCount || 0);
       default:
         return 0;
     }

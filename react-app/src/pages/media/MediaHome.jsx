@@ -446,7 +446,7 @@ function MediaHome() {
         }}
         itemName={itemToDelete?.name || ''}
         itemType="media item"
-        isLoading={isDeleting}
+        isDeleting={isDeleting}
       />
     </div>
   );

@@ -1,5 +1,7 @@
 # 📱 PHÂN TÍCH TOÀN DIỆN FRONTEND V2 - REACT APP
 
+> **⚠️ Viết 09/2025 — một phần đã lỗi thời** (kiểm tra 2026-10-29). Chưa đề cập Media Gallery (`/media`), download queue (`/downloads`), PDF reader, partial/shallow scan, music player v2. Một số pattern được mô tả (`useVirtualizer`, virtual scrolling) có trong code nhưng **không được dùng**. Trạng thái hiện tại: [SYSTEM-REPORT.md](SYSTEM-REPORT.md) · [DEAD-CODE-REPORT.md](DEAD-CODE-REPORT.md).
+
 > **Tài liệu phân tích chi tiết Frontend phiên bản React của MainWebSite**  
 > **Dự án**: Media Management System cho Manga, Movie, Music  
 > **Kiến trúc**: React 18 + Vite + Zustand + TailwindCSS  

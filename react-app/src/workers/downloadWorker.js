@@ -219,6 +219,8 @@ class DownloadWorker {
       const totalPages = pageUrls.length;
       let currentPage = 0;
       let downloadedSize = 0;
+      const cachedUrls = []; // trang đã lưu vào cache trong lần tải này
+      let failedCount = 0;
 
       // Open cache storage
       const cache = await caches.open('chapter-images');
@@ -247,11 +249,13 @@ class DownloadWorker {
 
           if (result.status === 'fulfilled') {
             downloadedSize += result.value;
+            cachedUrls.push(chunk[j]);
             
             // Update progress (throttled)
             this.updateProgress(id, onProgress, currentPage, totalPages, downloadedSize);
           } else {
             console.error(`[DownloadWorker] Failed to download page ${i + j + 1}:`, result.reason);
+            failedCount++;
             // Continue with other pages instead of failing entire download
           }
         }
@@ -260,6 +264,17 @@ class DownloadWorker {
         if (i + CHUNK_SIZE < pageUrls.length) {
           await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY));
         }
+      }
+
+      // ❗ Thiếu trang → KHÔNG lưu là "đã tải" (trước đây vẫn báo hoàn tất — ISSUES D3).
+      // Ném lỗi để queue tự retry / chuyển FAILED. Nếu chapter chưa từng tải đủ thì dọn các
+      // trang lẻ vừa cache; nếu đã có bản cũ đầy đủ thì giữ nguyên bản đó.
+      if (failedCount > 0) {
+        const chapterKey = `${source}/${mangaId}/${chapterId}`;
+        if (!(await getChapter(chapterKey))) {
+          await Promise.all(cachedUrls.map((url) => cache.delete(url).catch(() => false)));
+        }
+        throw new Error(`Tải thiếu ${failedCount}/${totalPages} trang`);
       }
 
       // Get cover image (first page)

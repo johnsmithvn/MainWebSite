@@ -1,7 +1,7 @@
 // 📁 src/components/music/FullPlayerModal.jsx
 // 🎵 Full Screen Player Modal (Spotify-style) - Opens from player footer
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiX,
@@ -25,39 +25,48 @@ import { useMusicStore, useUIStore } from '@/store';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import { DEFAULT_IMAGES } from '@/constants';
 import LyricsModal from './LyricsModal';
+import SeekBar from './SeekBar';
+import { useMusicPlayer, useMusicProgress, formatTime } from './musicPlayerContext';
 
-const FullPlayerModal = ({ 
-  isOpen, 
-  onClose, 
-  audioRef,
-  currentTime,
-  duration,
-  formatTime,
-  handleSeek,
-  handleVolumeBar,
-  prevOrderBeforeShuffleRef,
-  trackMetadata,
-  theme = 'v1'
-}) => {
+// iOS ignores audio.volume (hardware buttons only), so a volume slider there does nothing
+const isIOS = typeof navigator !== 'undefined' && (
+  /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+);
+
+// Rendered once by MusicPlayerProvider; open state and controls come from the global player
+const FullPlayerModal = ({ theme = 'v1' }) => {
   const {
     currentTrack,
-    currentPlaylist,
     isPlaying,
     volume,
     shuffle,
     repeat,
-    pauseTrack,
-    resumeTrack,
     nextTrack,
     prevTrack,
-    setVolume,
   } = useMusicStore();
 
   const { showToast } = useUIStore();
+  const {
+    isFullPlayerOpen: isOpen,
+    closeFullPlayer: onClose,
+    togglePlayPause,
+    seek,
+    setVolumeLevel,
+    toggleMute,
+    toggleShuffle,
+    toggleRepeat,
+    playNext,
+    playPrevious,
+    trackMetadata,
+  } = useMusicPlayer();
+  const { currentTime, duration, buffered } = useMusicProgress();
+  const [scrubTime, setScrubTime] = useState(null); // time shown while dragging the seek bar
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState(0); // 0: none, -1: left, 1: right
+  // Pointer X at press on the album art; a click whose pointer moved (end of a swipe) must not open lyrics
+  const pressXRef = useRef(null);
 
   // Helper function to normalize album name
   const normalizeAlbum = (album) => {
@@ -92,70 +101,13 @@ const FullPlayerModal = ({
     };
   }, [isOpen]);
 
-  const togglePlayPause = async () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    try {
-      if (isPlaying) {
-        audio.pause();
-        pauseTrack();
-      } else {
-        const p = audio.play();
-        if (p) await p;
-        resumeTrack();
-      }
-    } catch (err) {
-      console.error('Failed to play/pause audio:', err);
-    }
-  };
-
-  const toggleShuffle = () => {
-    const store = useMusicStore.getState();
-    const currentlyShuffled = store.shuffle;
-    if (!currentlyShuffled) {
-      const current = [...(store.currentPlaylist || [])];
-      prevOrderBeforeShuffleRef.current = current;
-      if (current.length <= 1) {
-        useMusicStore.setState({ shuffle: true });
-        return;
-      }
-      const shuffled = [...current];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      const currTrack = store.currentTrack;
-      const newIndex = currTrack ? Math.max(0, shuffled.findIndex((t) => t.path === currTrack.path)) : 0;
-      useMusicStore.setState({ shuffle: true, currentPlaylist: shuffled, currentIndex: newIndex });
-    } else {
-      const restore = prevOrderBeforeShuffleRef.current;
-      if (Array.isArray(restore) && restore.length > 0) {
-        const currTrack = store.currentTrack;
-        const newIndex = currTrack ? Math.max(0, restore.findIndex((t) => t.path === currTrack.path)) : 0;
-        useMusicStore.setState({ shuffle: false, currentPlaylist: restore, currentIndex: newIndex });
-      } else {
-        useMusicStore.setState({ shuffle: false });
-      }
-    }
-  };
-
-  const toggleRepeat = () => {
-    const current = useMusicStore.getState().repeat;
-    const next = current === 'none' ? 'all' : current === 'all' ? 'one' : 'none';
-    useMusicStore.setState({ repeat: next });
-  };
-
-  const toggleMute = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (volume === 0) {
-      setVolume(0.5);
-      audio.volume = 0.5;
-    } else {
-      setVolume(0);
-      audio.volume = 0;
-    }
-  };
+  // Esc closes the full player (the lyrics view handles its own back button)
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape' && !isLyricsOpen) onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, isLyricsOpen, onClose]);
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
@@ -300,7 +252,13 @@ const FullPlayerModal = ({
                   }
                 }}
                 className={`relative ${isFullscreen ? 'w-full max-w-2xl' : 'w-full max-w-md'} aspect-square cursor-pointer group`}
-                onClick={handleAlbumArtClick}
+                onPointerDown={(e) => { pressXRef.current = e.clientX; }}
+                onClick={(e) => {
+                  const moved = pressXRef.current !== null && Math.abs(e.clientX - pressXRef.current) > 10;
+                  pressXRef.current = null;
+                  if (moved) return; // click generated at the end of a swipe
+                  handleAlbumArtClick();
+                }}
                 whileTap={{ scale: 0.98 }}
               >
                 <img
@@ -453,19 +411,19 @@ const FullPlayerModal = ({
 
             {/* Progress Bar */}
             <div className="mb-6">
-              <div 
-                className={`h-1.5 ${config.trackColor} rounded-full cursor-pointer mb-2`}
-                onClick={handleSeek}
-              >
-                <div 
-                  className={`h-full ${config.progressColor} rounded-full relative transition-all`}
-                  style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
-                >
-                  <div className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-4 h-4 ${config.progressColor} rounded-full shadow-lg opacity-0 hover:opacity-100 transition-opacity`} />
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs text-white/60">
-                <span>{formatTime(currentTime)}</span>
+              <SeekBar
+                value={currentTime}
+                max={duration}
+                buffered={buffered}
+                step={5}
+                onChange={setScrubTime}
+                onCommit={(t) => { setScrubTime(null); seek(t); }}
+                ariaLabel="Vị trí bài hát"
+                formatValue={formatTime}
+                fillClass={config.progressColor}
+              />
+              <div className="flex items-center justify-between text-xs text-white/60 tabular-nums">
+                <span>{formatTime(scrubTime ?? currentTime)}</span>
                 <span>{formatTime(duration)}</span>
               </div>
             </div>
@@ -475,15 +433,18 @@ const FullPlayerModal = ({
               <button
                 onClick={toggleShuffle}
                 className={`transition-colors ${shuffle ? config.accentColor : 'text-white/60 hover:text-white'}`}
+                aria-label="Phát ngẫu nhiên"
+                aria-pressed={shuffle}
               >
                 <FiShuffle className="w-5 h-5" />
               </button>
-              <button onClick={prevTrack} className="text-white/80 hover:text-white transition-colors">
+              <button onClick={playPrevious} className="text-white/80 hover:text-white transition-colors" aria-label="Bài trước">
                 <FiSkipBack className="w-8 h-8" />
               </button>
               <button
                 onClick={togglePlayPause}
                 className={`w-16 h-16 rounded-full ${config.playButtonBg} ${config.playButtonText} flex items-center justify-center hover:scale-105 transition-transform shadow-xl`}
+                aria-label={isPlaying ? 'Tạm dừng' : 'Phát'}
               >
                 {isPlaying ? (
                   <FiPause className="w-8 h-8" />
@@ -491,12 +452,13 @@ const FullPlayerModal = ({
                   <FiPlay className="w-8 h-8 ml-1" />
                 )}
               </button>
-              <button onClick={nextTrack} className="text-white/80 hover:text-white transition-colors">
+              <button onClick={playNext} className="text-white/80 hover:text-white transition-colors" aria-label="Bài tiếp">
                 <FiSkipForward className="w-8 h-8" />
               </button>
               <button
                 onClick={toggleRepeat}
                 className={`transition-colors relative ${repeat !== 'none' ? config.accentColor : 'text-white/60 hover:text-white'}`}
+                aria-label={repeat === 'one' ? 'Lặp lại 1 bài' : repeat === 'all' ? 'Lặp lại tất cả' : 'Không lặp lại'}
               >
                 <FiRepeat className="w-5 h-5" />
                 {repeat === 'one' && (
@@ -507,28 +469,31 @@ const FullPlayerModal = ({
               </button>
             </div>
 
-            {/* Volume Control */}
-            <div className="flex items-center justify-center gap-4 max-w-md mx-auto w-full">
-              <button onClick={toggleMute} className="text-white/70 hover:text-white transition-colors">
-                {volume === 0 ? (
-                  <FiVolumeX className="w-5 h-5" />
-                ) : (
-                  <FiVolume2 className="w-5 h-5" />
-                )}
-              </button>
-              <div 
-                className={`flex-1 h-1 ${config.trackColor} rounded-full cursor-pointer`}
-                onClick={handleVolumeBar}
-              >
-                <div 
-                  className={`h-full ${config.progressColor} rounded-full relative`}
-                  style={{ width: `${Math.round(volume * 100)}%` }}
-                >
-                  <div className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 ${config.progressColor} rounded-full`} />
+            {/* Volume Control (hidden on iOS: the system ignores it) */}
+            {!isIOS && (
+              <div className="flex items-center justify-center gap-4 max-w-md mx-auto w-full">
+                <button onClick={toggleMute} className="text-white/70 hover:text-white transition-colors" aria-label={volume === 0 ? 'Bật tiếng' : 'Tắt tiếng'}>
+                  {volume === 0 ? (
+                    <FiVolumeX className="w-5 h-5" />
+                  ) : (
+                    <FiVolume2 className="w-5 h-5" />
+                  )}
+                </button>
+                <div className="flex-1">
+                  <SeekBar
+                    value={volume}
+                    max={1}
+                    step={0.05}
+                    onChange={setVolumeLevel}
+                    onCommit={setVolumeLevel}
+                    ariaLabel="Âm lượng"
+                    formatValue={(v) => `${Math.round(v * 100)}%`}
+                    fillClass={config.progressColor}
+                  />
                 </div>
+                <span className="text-xs text-white/60 w-10 text-right tabular-nums">{Math.round(volume * 100)}%</span>
               </div>
-              <span className="text-xs text-white/60 w-10 text-right">{Math.round(volume * 100)}%</span>
-            </div>
+            )}
           </div>
         </motion.div>
       )}

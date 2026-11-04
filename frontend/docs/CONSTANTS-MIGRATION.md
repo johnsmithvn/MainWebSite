@@ -1,5 +1,7 @@
 # 📋 Frontend Constants Migration Guide
 
+> **📜 Tài liệu lịch sử (07/2025) — frontend legacy.** Nội dung thuộc thư mục `frontend/` (vanilla JS), đã được thay thế bởi React app trong `react-app/` và không còn phát triển. Không áp dụng cho React app. Trạng thái hệ thống hiện tại: [docs/SYSTEM-REPORT.md](../../docs/SYSTEM-REPORT.md).
+
 ## 🎯 Tổng quan
 
 File `frontend/src/constants.js` được tạo để **tập trung hóa các giá trị constants** trong frontend mà **không thay đổi logic cũ**.

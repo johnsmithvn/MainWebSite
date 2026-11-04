@@ -100,10 +100,10 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange, variant = 'grid'
                 {isFolder ? <Folder className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                 {typeLabel}
               </span>
-              {showViews && item.views > 0 && (
+              {showViews && item.viewCount > 0 && (
                 <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                   <Clock className="w-3 h-3" />
-                  {item.views} views
+                  {item.viewCount} views
                 </span>
               )}
             </div>
@@ -224,10 +224,10 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange, variant = 'grid'
           </span>
           
           {/* Views count moved here from overlay */}
-          {showViews && item.views !== undefined ? (
+          {showViews && item.viewCount !== undefined ? (
             <span className="flex items-center gap-0.5 sm:gap-1">
               <Clock className="w-2 h-2 sm:w-3 sm:h-3" />
-              {item.views?.toLocaleString() || 0}
+              {item.viewCount?.toLocaleString() || 0}
             </span>
           ) : item.size ? (
             <span>{item.size}</span>

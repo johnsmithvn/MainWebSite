@@ -4,6 +4,7 @@
 const express = require("express");
 const router = express.Router();
 const { getDB } = require("../../utils/db");
+const { escapeLike } = require("../../utils/sqlLike");
 
 /**
  * DELETE /api/manga/delete-item
@@ -33,14 +34,14 @@ router.delete("/delete-item", (req, res) => {
     const deleteFolder = db.transaction(() => {
       // Delete all child folders AND the folder itself
       const deletedFolders = db.prepare(
-        "DELETE FROM folders WHERE root = ? AND (path = ? OR path LIKE ?)"
-      ).run(root, path, `${path}/%`);
+        "DELETE FROM folders WHERE root = ? AND (path = ? OR path LIKE ? ESCAPE '\\')"
+      ).run(root, path, `${escapeLike(path)}/%`);
 
       // Delete view count for this folder and children
       try {
         db.prepare(
-          "DELETE FROM views WHERE root = ? AND (path = ? OR path LIKE ?)"
-        ).run(root, path, `${path}/%`);
+          "DELETE FROM views WHERE root = ? AND (path = ? OR path LIKE ? ESCAPE '\\')"
+        ).run(root, path, `${escapeLike(path)}/%`);
       } catch (error) {
         // Views table might not have entries, ignore
         console.warn('Could not delete from views:', error.message);

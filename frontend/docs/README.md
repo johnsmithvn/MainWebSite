@@ -1,5 +1,7 @@
 # 📚 Frontend Constants Documentation
 
+> **📜 Tài liệu lịch sử (07/2025) — frontend legacy.** Nội dung thuộc thư mục `frontend/` (vanilla JS), đã được thay thế bởi React app trong `react-app/` và không còn phát triển. Không áp dụng cho React app. Trạng thái hệ thống hiện tại: [docs/SYSTEM-REPORT.md](../../docs/SYSTEM-REPORT.md).
+
 Thư mục này chứa toàn bộ documentation liên quan đến việc tổ chức và sử dụng constants trong frontend.
 
 ## 📋 Danh sách tài liệu

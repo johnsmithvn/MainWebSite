@@ -11,7 +11,7 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import downloadWorker from '../workers/downloadWorker';
 
 // ============================================================================
@@ -28,6 +28,8 @@ export const DOWNLOAD_STATUS = {
 };
 
 export const MAX_CONCURRENT_DOWNLOADS = 2;
+// Số task đã kết thúc (completed/failed/cancelled) tối đa được lưu vào localStorage (ISSUES D4)
+export const MAX_PERSISTED_FINISHED_TASKS = 200;
 export const DEFAULT_RETRY_COUNT = 3;
 export const RETRY_DELAY_BASE = 1000; // 1 second, will use exponential backoff
 
@@ -61,6 +63,75 @@ export const RETRY_DELAY_BASE = 1000; // 1 second, will use exponential backoff
 // ============================================================================
 // STORE
 // ============================================================================
+
+// ============================================================================
+// PERSISTENCE HELPERS (ISSUES D4)
+// ============================================================================
+
+const FINISHED_STATUSES = [DOWNLOAD_STATUS.COMPLETED, DOWNLOAD_STATUS.FAILED, DOWNLOAD_STATUS.CANCELLED];
+
+/**
+ * Rút gọn danh sách task trước khi ghi localStorage:
+ * - task đã kết thúc: bỏ `pageUrls` (chỉ cần để resume; retry tự lấy lại danh sách trang từ API)
+ * - chỉ giữ MAX_PERSISTED_FINISHED_TASKS task đã kết thúc gần nhất; task đang chờ/đang tải/tạm dừng giữ hết
+ * @param {Map<string, DownloadTask>} tasks
+ * @returns {Array<[string, DownloadTask]>}
+ */
+function compactTasksForStorage(tasks) {
+  const entries = Array.from(tasks.entries());
+  const finished = entries
+    .filter(([, task]) => FINISHED_STATUSES.includes(task.status))
+    .sort(([, a], [, b]) => (b.completedAt || b.createdAt || 0) - (a.completedAt || a.createdAt || 0));
+  const keepFinished = new Set(finished.slice(0, MAX_PERSISTED_FINISHED_TASKS).map(([id]) => id));
+
+  return entries
+    .filter(([id, task]) => !FINISHED_STATUSES.includes(task.status) || keepFinished.has(id))
+    .map(([id, task]) => {
+      const { abortController, ...rest } = task; // không serialize được, luôn null khi load lại
+      if (FINISHED_STATUSES.includes(task.status)) {
+        const { pageUrls, ...withoutPages } = rest;
+        return [id, withoutPages];
+      }
+      return [id, rest];
+    });
+}
+
+/**
+ * localStorage an toàn: khi đầy (QuotaExceededError) thì thử lưu chỉ các task chưa kết thúc,
+ * và không bao giờ ném lỗi ra ngoài (trước đây lỗi này làm hỏng cả thao tác set() của store).
+ */
+const safeLocalStorage = {
+  getItem: (name) => {
+    try {
+      return localStorage.getItem(name);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (name, value) => {
+    try {
+      localStorage.setItem(name, value);
+    } catch (err) {
+      try {
+        const parsed = JSON.parse(value);
+        const tasks = (parsed?.state?.tasks || []).filter(
+          ([, task]) => !FINISHED_STATUSES.includes(task.status)
+        );
+        localStorage.setItem(name, JSON.stringify({ ...parsed, state: { ...parsed.state, tasks } }));
+        console.warn('[DownloadQueue] localStorage đầy — chỉ lưu các task chưa hoàn tất');
+      } catch (err2) {
+        console.warn('[DownloadQueue] Không lưu được hàng đợi vào localStorage:', err2?.message || err?.message);
+      }
+    }
+  },
+  removeItem: (name) => {
+    try {
+      localStorage.removeItem(name);
+    } catch {
+      // ignore
+    }
+  },
+};
 
 const useDownloadQueueStore = create(
   persist(
@@ -652,9 +723,10 @@ const useDownloadQueueStore = create(
     }),
     {
       name: 'download-queue-storage',
+      storage: createJSONStorage(() => safeLocalStorage),
       // Custom serialization to handle Map and Set
       partialize: (state) => ({
-        tasks: Array.from(state.tasks.entries()),
+        tasks: compactTasksForStorage(state.tasks),
         stats: state.stats,
         settings: state.settings
         // Don't persist activeDownloads - will be recalculated on load

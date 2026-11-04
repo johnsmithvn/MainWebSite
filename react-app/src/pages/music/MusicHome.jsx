@@ -107,8 +107,8 @@ const MusicHome = () => {
     // If already fetched this combination, skip
     if (lastFetchRef.current === fetchKey) return;
 
-    // If path differs from current or it's first load, fetch once
-    if (sourceKey) {
+    // If path differs from current or it's first load, fetch once (only for music sources, like Movie/Manga)
+    if (sourceKey && sourceKey.startsWith('M_')) {
       console.log('🎵 Loading music for path:', urlPath);
       lastFetchRef.current = fetchKey;
       fetchMusicFolders(urlPath);

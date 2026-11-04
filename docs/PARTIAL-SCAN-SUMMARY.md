@@ -1,5 +1,7 @@
 # 🎯 Partial Scan Implementation - Complete Summary
 
+> **Cập nhật 2026-11-04:** sau tài liệu này đã có thêm tuỳ chọn `shallow` cho scan movie/music/media: chỉ xử lý các mục nằm ngay trong thư mục `path` (hoặc ngay trong root), không đi sâu hơn. Lỗi tổ hợp `path` + `shallow` xoá nhầm dữ liệu (ISSUES D1) đã sửa. Manga không hỗ trợ partial/shallow; ScanModal ẩn hai tuỳ chọn này với manga (ISSUES B1). Mô tả đầy đủ: [SYSTEM-REPORT.md §4.4](SYSTEM-REPORT.md).
+
 ## ✅ Hoàn tất
 
 Đã implement thành công tính năng **partial scan** cho music database với khả năng scan toàn bộ hoặc chỉ một folder cụ thể.

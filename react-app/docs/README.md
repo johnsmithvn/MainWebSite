@@ -1,307 +1,196 @@
 # MainWebSite - React
 
-A modern React-based media management application for manga, movies, and music. This is the React version of the MainWebSite project, providing a responsive and interactive interface for managing local media collections.
+> **Last verified against code:** 2026-11-04. Installation and configuration (Vietnamese): root
+> [readme.md](../../readme.md). For a full system overview see
+> [docs/SYSTEM-REPORT.md](../../docs/SYSTEM-REPORT.md); known problems are tracked in
+> [docs/ISSUES-REPORT.md](../../docs/ISSUES-REPORT.md).
+
+React SPA (PWA) for the MainWebSite personal media server: manga, movies, music and a
+Google-Photos-like media gallery served from local disks by the Express backend in `../backend`.
 
 ## 🚀 Features
 
-### 📚 Manga Management
-- Browse manga folders and collections
-- Built-in manga reader with multiple viewing modes (vertical/horizontal)
-- Favorites system with persistent storage
-- Recent viewing history tracking
-- Advanced reader settings (zoom, auto-next, preloading)
-- Database and disk-based loading options
+### 📚 Manga
+- Pick a source key (`ROOT_*`) and a root folder (`/manga/select`), browse folders (`/manga`), favorites (`/manga/favorites`)
+- Reader (`/manga/reader`) for image chapters **and PDF files**, vertical/horizontal modes, zoom, preload, auto-next
+- Folder data from the SQLite cache (`useDb`) or directly from disk
+- Recent / random / top-view sliders (cached in `localStorage`)
+- Download chapters for offline reading — directly from the reader or through the **download queue** (`/downloads`)
 
-### 🎬 Movie Management
-- Browse movie collections and folders
-- Integrated video player with quality controls
-- Thumbnail generation and management
-- Favorites and viewing history
-- Responsive grid layout for movie browsing
+### 🎬 Movie
+- Browse `V_*` sources (`/movie`), favorites (`/movie/favorites`)
+- Web player (`/movie/player`) with Range streaming from `/api/movie/video`; "open in ExoPlayer" bridge for the Android WebView (`window.Android.openExoPlayer`)
+- Thumbnail extraction (needs `ffmpeg` on the server)
 
-### 🎵 Music Management
-- Browse music collections and playlists
-- Full-featured music player with multiple UI variants
-- Playlist creation and management
-- Shuffle, repeat, and queue functionality
-- Audio metadata extraction and display
+### 🎵 Music
+- Browse `M_*` sources (`/music`), playlists (`/music/playlists`), global add-to-playlist modal
+- Player (`/music/player`): v1 (Spotify-like, always used on mobile) or v2 (Zing-like, desktop, chosen in Settings → `playerSettings.playerUI`)
+- Playlist sidebar, drag-to-reorder, lyrics viewer/editor, shuffle/repeat, total playlist duration
+- Download tracks to the device (`utils/musicDownloadQueue.js`, 3 concurrent)
 
-### 🔐 Security & Authentication
-- Multi-source support with secure key authentication
-- Token-based authentication system
-- Protected routes and content access
-- Source key management
+### 📸 Media gallery
+- `MEDIA_*` sources (`/media`): folder navigation, paginated grid, timeline by date, albums, favorites, lightbox
+- Indexes images, videos **and any other file type** (pdf, documents, archives, code…)
 
-### 🎨 Modern UI/UX
-- Dark/Light theme support
-- Responsive design for all screen sizes
-- Smooth animations with Framer Motion
-- Toast notifications and loading states
-- Accessible modal dialogs and components
+### ⚙️ Database management
+- Sidebar / Settings → `DatabaseActions`: full or partial (path) scan with optional *shallow* mode (`ScanModal`), delete/reset DB, thumbnail extraction (movie/music)
 
-### 📥 Offline Chapter Reader
-- Installable Progressive Web App
-- Download chapters for offline reading
-- Offline library with storage management and delete options
+### 📥 Offline
+- `/offline` hub, `/offline/manga` library with storage analytics, per-chapter and bulk delete
+- `/offline/movie` and `/offline/music` are placeholders ("đang phát triển")
 
-## 🛠️ Tech Stack
+## 🛠️ Tech stack
 
-### Core Technologies
-- **React 18** - Modern React with hooks and concurrent features
-- **React Router DOM 6** - Client-side routing with nested routes
-- **Vite** - Fast build tool and development server
-- **TailwindCSS** - Utility-first CSS framework
+| Area | Libraries |
+|------|-----------|
+| Core | React 18, React Router 6, Vite 4 |
+| State | Zustand 4 (with `persist`), TanStack Query 4 (only used by a few hooks) |
+| HTTP | axios (`src/utils/api.js`) plus direct `fetch()` calls in several components |
+| UI | TailwindCSS 3, framer-motion, lucide-react, react-icons, react-hot-toast, react-modal, embla-carousel, react-lazy-load-image-component |
+| Utils | date-fns, use-debounce |
 
-### State Management
-- **Zustand** - Lightweight state management with persistence
-- **TanStack React Query** - Server state management and caching
+Not used even though they are in `package.json`: `clsx`, `react-intersection-observer`, `react-player`,
+`react-virtualized`, `string-natural-compare` (see [DEAD-CODE-REPORT.md](../../docs/DEAD-CODE-REPORT.md)).
 
-### UI Components & Styling
-- **Framer Motion** - Animation library for smooth transitions
-- **React Hot Toast** - Toast notifications
-- **React Modal** - Accessible modal dialogs
-- **Lucide React** - Modern icon library
-- **React Icons** - Additional icon sets
-
-### Media & Performance
-- **React Player** - Video player component
-- **React Lazy Load Image** - Image lazy loading
-- **React Intersection Observer** - Viewport intersection detection
-- **Embla Carousel** - Touch-friendly carousel component
-
-### Development Tools
-- **ESLint** - Code linting and formatting
-- **PostCSS** - CSS processing with Autoprefixer
-- **Axios** - HTTP client with interceptors
-
-## 📁 Project Structure
+## 📁 Project structure
 
 ```
 react-app/
-├── public/                 # Static assets
-│   ├── favicon.ico
-│   └── default/           # Default thumbnails and images
-├── src/
-│   ├── components/        # Reusable UI components
-│   │   ├── auth/         # Authentication components
-│   │   ├── common/       # Shared components (Header, Layout, etc.)
-│   │   ├── manga/        # Manga-specific components
-│   │   ├── movie/        # Movie-specific components
-│   │   └── music/        # Music-specific components
-│   ├── constants/        # Application constants and configuration
-│   ├── hooks/           # Custom React hooks
-│   ├── pages/           # Page components (routes)
-│   │   ├── manga/       # Manga pages
-│   │   ├── movie/       # Movie pages
-│   │   └── music/       # Music pages
-│   ├── store/           # Zustand state management
-│   ├── styles/          # CSS and styling files
-│   ├── utils/           # Utility functions and API services
-│   ├── App.jsx          # Main application component
-│   ├── main.jsx         # Application entry point
-│   └── index.css        # Global styles
-├── docs/                # Documentation files
-├── package.json         # Dependencies and scripts
-├── tailwind.config.js   # TailwindCSS configuration
-├── vite.config.js       # Vite configuration
-└── postcss.config.js    # PostCSS configuration
+├── index.html
+├── vite.config.js          # alias @ → src, dev proxy, allowedHosts (*.ts.net), HMR over Tailscale
+├── tailwind.config.js, postcss.config.js
+├── .env.template           # copy to .env
+├── public/
+│   ├── sw.js               # service worker (v3.1.0)
+│   ├── manifest.webmanifest
+│   └── default/            # fallback images
+└── src/
+    ├── main.jsx            # React root, QueryClient, SW registration
+    ├── App.jsx             # routes
+    ├── styles.css          # global styles (+ styles/components/*.css)
+    ├── components/
+    │   ├── auth/           # LoginModal
+    │   ├── common/         # Layout, Header, Sidebar, sliders, modals, DatabaseActions, ScanModal, UniversalCard…
+    │   ├── manga/          # MangaCard, PDFReader, ReaderHeader, MangaRandomSection
+    │   ├── movie/          # MovieCard, MovieRandomSection
+    │   ├── music/          # MusicCard, PlayerHeader/Footer, FullPlayerModal, LyricsModal, PlaylistModal/Sidebar…
+    │   └── media/          # MediaGrid, MediaTimeline, MediaAlbums, MediaToolbar, MediaLightbox
+    ├── pages/
+    │   ├── Home.jsx, Settings.jsx, NotFound.jsx
+    │   ├── manga/          # MangaSelect, MangaHome, MangaReader, MangaFavorites
+    │   ├── movie/          # MovieHome, MoviePlayer, MovieFavorites
+    │   ├── music/          # MusicHome, MusicPlayer, MusicPlayerV2, MusicPlaylists
+    │   ├── media/          # MediaHome
+    │   ├── downloads/      # DownloadManager, DownloadTaskCard
+    │   └── offline/        # OfflineHome, OfflineMangaLibrary, OfflineMovieLibrary, OfflineMusicLibrary
+    ├── store/
+    │   ├── index.js        # useAuthStore, useUIStore, useMangaStore, useMovieStore, useMusicStore, useSharedSettingsStore
+    │   └── downloadQueueStore.js
+    ├── hooks/              # useRandomItems, useRecentItems, useTopViewItems, useRecentManager, …
+    ├── utils/              # api, offlineLibrary, storageQuota, mangaCache, favoriteCache, thumbnailUtils, …
+    ├── workers/            # downloadWorker.js (plain class running on the main thread, not a Web Worker)
+    └── constants/          # index, cacheKeys, colors, uiStyles, timeFormats
 ```
 
-## 🚦 Getting Started
+## 🚦 Getting started
 
-### Prerequisites
-- Node.js 16+ 
-- npm or yarn
-- Backend server running on port 3000
+Prerequisites: **Node.js 20 or ≥ 22** (several dependencies require `20 || >=22`) and the backend configured
+on port 3000 — see the root [readme.md](../../readme.md) for the full setup (`.env` files, whitelist, first scan).
 
-### Installation
+From the repository root (installs both workspaces and runs both servers):
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd react-app
-   ```
+```bash
+npm install
+npm run dev          # React app: http://localhost:3001 · backend: http://localhost:3000
+```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+Only the React dev server (the backend must already be running on port 3000):
 
-3. **Environment Setup**
-   Create a `.env.local` file for local development:
-   ```env
-   VITE_DISABLE_STRICT_MODE=false
-   VITE_BASE=/
-   ```
+```bash
+cd react-app
+npm run dev          # http://localhost:3001, listens on 0.0.0.0, strictPort
+```
 
-4. **Start development server**
-   ```bash
-   npm run dev
-   ```
-   The app will be available at `http://localhost:3001`
+Production: `npm run prod` from the repository root builds `dist/` and starts the backend with
+`NODE_ENV=production`, serving everything on port 3000.
 
-### Available Scripts
+### Scripts (`react-app/package.json`)
 
-- `npm run dev` - Start development server with hot reload
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build locally
-- `npm run lint` - Run ESLint for code quality
+| Script | Description |
+|--------|-------------|
+| `dev` | Vite dev server on port 3001 (`--host`) |
+| `build` | Production build into `dist/` (served by the backend in production) |
+| `build:prod` / `build:prod:unix` | Build with `NODE_ENV=production` (`set "NODE_ENV=production"` for Windows cmd — the quotes avoid the trailing-space bug of ISSUES C8 — / POSIX). On POSIX shells `build:prod` also works: the `set` is a no-op and Vite defaults to production |
+| `preview`, `preview:prod` | Preview a build (`preview:prod` uses port 3002) |
+| `clean` / `clean:unix` | Remove `dist/` |
+| `lint`, `lint:fix` | ⚠️ Currently fail: there is no ESLint config file in the repo |
 
 ## 🔧 Configuration
 
-### Vite Configuration
-The app uses Vite with React plugin and includes:
-- Path aliases (`@` points to `src/`)
-- Proxy configuration for backend API calls
-- Production build optimization
+### Environment variables (`react-app/.env`)
 
-### TailwindCSS Configuration
-Custom theme extensions include:
-- Primary and dark color palettes
-- Custom animations (fade-in, slide-up, scale-in)
-- Aspect ratios for media content
-- Responsive breakpoints
+All variables are optional (`.env.template` documents each one).
 
-### API Proxy Setup
-Development server proxies API calls to backend:
-- `/api/*` → `http://localhost:3000`
-- `/manga/*` → `http://localhost:3000`
-- `/video/*` → `http://localhost:3000`
-- `/audio/*` → `http://localhost:3000`
+| Variable | Purpose |
+|----------|---------|
+| `VITE_BASE` | Vite `base` (default `/`) |
+| `VITE_MIN_STORAGE_SPACE` | Minimum free space (**MB**) that must remain after an offline download. Default 50 (desktop) / 25 (mobile) |
+| `VITE_ALLOWED_HOSTS` | Extra comma-separated hostnames allowed by the dev server. `localhost`, **any IP address** (Vite built-in) and every `*.ts.net` domain (`'.ts.net'` in `vite.config.js`) are always allowed |
+| `VITE_HMR_HOST`, `VITE_HMR_PORT` | HMR host/port when the dev server is opened through a Tailscale domain; the host is also added to the allowed hosts |
+| `VITE_ENABLE_HTTPS` | Serve the dev server over HTTPS — no certificate is configured, so this likely breaks the dev server (ISSUES C4) |
+| `VITE_DISABLE_HMR`, `VITE_DISABLE_STRICT_MODE` | Debug switches (`=true`) |
 
-## 🎯 Key Features Deep Dive
+⚠️ Do **not** put `NODE_ENV` in `react-app/.env`: Vite 4 applies `NODE_ENV=development` from `.env` files to
+`vite build` as well, producing a development bundle. `vite.config.js` also turns on `server.https` when
+`NODE_ENV=production`.
 
-### State Management Architecture
-- **Auth Store**: User authentication, source keys, tokens
-- **UI Store**: Theme, sidebar, modals, loading states
-- **Manga Store**: Manga data, reader settings, favorites
-- **Movie Store**: Movie data, player settings, favorites  
-- **Music Store**: Music data, playlists, player state
+### Dev proxy (`vite.config.js`)
 
-### Caching Strategy
-- Local storage persistence for user preferences
-- In-memory caching for API responses
-- Deduplication of in-flight requests
-- Cache invalidation and cleanup utilities
+`/api`, `/manga` (HTML requests fall back to the SPA), `/video`, `/audio`, `/media`, `/.thumbnail`, `/default` → `http://localhost:3000`.
 
-### Responsive Design
-- Mobile-first approach with TailwindCSS
-- Adaptive layouts for different screen sizes
-- Touch-friendly interactions
-- Progressive enhancement
+### Persisted state (`localStorage`)
 
-## 🔒 Security Features
+`auth-storage`, `manga-storage`, `movie-storage`, `music-storage`, `download-queue-storage`, `userToken`, plus many
+cache keys defined in `src/constants/cacheKeys.js` (recent / random / top-view / folder caches).
 
-- Token-based authentication with automatic refresh
-- Secure source key validation
-- Protected routes with authentication guards
-- XSS protection with proper data sanitization
+## 🔒 Authentication
 
-## 🚀 Performance Optimizations
+- Source keys come from `GET /api/source-keys.js`; keys listed in the backend `SECURITY` variable require a password.
+- `LoginModal` calls `POST /api/login`; the returned token (an HMAC derived from the password, **not** the password
+  itself) is stored in `localStorage.userToken` and `auth-storage`. The response also sets the HttpOnly cookie
+  `ms_auth`, which is what lets `<img>`/`<video>`/`<audio>` load static files of secure sources (`/manga`, `/video`,
+  `/audio`, `/media`). Landing on Home clears the token and calls `POST /api/logout` to clear the cookie.
+- `utils/api.js` adds `Authorization: Bearer` and `x-secure-token` headers. **Direct `fetch()` calls do not** — see
+  ISSUES B6. API endpoints never accept the cookie alone (CSRF). There is no token refresh, no route guard and no
+  error boundary.
+- `POST /api/login` returns `429` after 10 wrong passwords in 15 minutes from the same IP.
 
-- Code splitting with React.lazy()
-- Image lazy loading with intersection observer
-- Virtual scrolling for large lists
-- Debounced search and input handling
-- Optimized re-renders with proper dependency arrays
+## 📥 Offline mode
 
-## 🧪 Development Guidelines
+| Piece | Role |
+|-------|------|
+| `public/sw.js` | Cache-first for `/default/*`; network-first with a 5 s timeout for every `GET /api/*` (except `/api/manga/pdf`); images are served from the `chapter-images` cache when available; navigation falls back to the cached app shell |
+| `utils/offlineLibrary.js` | IndexedDB `offline-manga` / store `chapters` (metadata) + Cache Storage `chapter-images` (page images); used by the reader's direct download |
+| `store/downloadQueueStore.js` + `workers/downloadWorker.js` | Download queue: max 2 concurrent tasks, 2 images per chunk, 100 ms between chunks, pause/resume/retry |
+| `utils/storageQuota.js` | `navigator.storage.estimate()` checks before downloading |
 
-### Code Style
-- Use functional components with hooks
-- Follow React best practices and patterns
-- Implement proper error boundaries
-- Use TypeScript-style JSDoc comments
-
-### Component Structure
-- Keep components small and focused
-- Use custom hooks for complex logic
-- Implement proper prop validation
-- Follow consistent naming conventions
-
-## 📚 API Integration
-
-The app integrates with a Node.js backend providing:
-- Manga folder scanning and caching
-- Movie metadata and thumbnail generation
-- Music playlist and metadata management
-- User authentication and authorization
-- File serving and streaming capabilities
-
-## 📥 Offline Mode & Storage Management
-
-The React app is installable as a Progressive Web App with comprehensive offline capabilities.
-
-### 📱 Offline Chapter Reading
-- **Download for offline**: Open any manga reader and click **Download offline** to save chapters locally
-- **Hybrid storage**: Chapter metadata stored in IndexedDB, images cached in browser Cache Storage API
-- **Service Worker integration**: Automatic cache-first serving of offline images
-- **Progress tracking**: Real-time download progress with detailed statistics
-
-### 🗂️ Offline Library Management
-- **Dedicated library**: Access via route `/offline` or "Open Offline Library" button on Home page
-- **Storage analytics**: View total chapters, images count, storage size, and browser quota usage
-- **Visual indicators**: Storage quota bar with color-coded warnings (green/yellow/red)
-- **Search & filtering**: Find chapters by name with client-side search
-- **Dual view modes**: Grid cards and list view for optimal browsing
-
-### 🗑️ Advanced Cache Cleanup
-- **Individual deletion**: Smart cleanup that removes both metadata (IndexedDB) and images (Cache Storage)
-- **Bulk operations**: "Clear All" functionality with confirmation and detailed progress reporting
-- **Storage verification**: Post-deletion verification ensures complete cleanup with no orphan data
-- **Detailed feedback**: Success messages show exact numbers (images deleted, storage freed, failure counts)
-- **Error resilience**: Handles partial failures gracefully, continues cleanup process even if some images fail
-
-### 📊 Storage Statistics & Monitoring
-- **Real-time analytics**: Live tracking of chapters count, total images, storage usage, and browser quota
-- **Quota management**: Visual progress bars and warnings when approaching storage limits
-- **Storage breakdown**: Average storage per chapter, success rates, and detailed size formatting
-- **Automatic updates**: Statistics refresh after each operation to reflect current state
-
-### 🔧 Technical Implementation
-- **Approximate storage limit**: 500MB per origin (varies by browser and available space)
-- **Cleanup options**: Delete individual chapters, clear all data, or use browser's "Clear browsing data"
-- **Data persistence**: Offline data survives browser restarts and persists until manually deleted
-- **Performance optimization**: Efficient batch processing for large deletion operations
-- **Cache consistency**: Coordinated cleanup across IndexedDB and Cache Storage to prevent inconsistencies
-
-### 🚀 Progressive Web App Features
-- **Installable**: Add to home screen on mobile devices and desktop
-- **Offline-first**: Cached chapters work completely offline with no network dependency
-- **Service Worker**: Background processing for cache management and network interception
-- **Responsive design**: Optimized interface for all screen sizes and touch interactions
+More details: [OFFLINE-GUIDE.md](OFFLINE-GUIDE.md), [SERVICE-WORKER-ANALYSIS.md](SERVICE-WORKER-ANALYSIS.md),
+[STORAGE-QUOTA-MANAGEMENT.md](STORAGE-QUOTA-MANAGEMENT.md).
 
 ## 🐛 Troubleshooting
 
-### Common Issues
-
-1. **API Connection Issues**
-   - Ensure backend server is running on port 3000
-   - Check proxy configuration in `vite.config.js`
-
-2. **Authentication Problems**
-   - Clear browser localStorage and cookies
-   - Verify source keys are properly configured
-
-3. **Performance Issues**
-   - Check browser developer tools for memory leaks
-   - Verify image lazy loading is working properly
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes following the coding guidelines
-4. Test thoroughly across different browsers and devices
-5. Submit a pull request with detailed description
+1. **API errors in dev** – make sure the backend is running on port 3000 and `backend/.env` exists.
+2. **403 `Forbidden (blocked)`** – the device is not in `ALLOWED_IPS` / `ALLOWED_HOSTNAMES` (backend whitelist).
+3. **Login / scan / favorite fail with `CORS blocked`** – the app was opened through a domain that is neither an IP nor
+   `*.ts.net`; add it to `CORS_DEV_CONFIG` in `backend/.env`.
+4. **"Blocked request. This host is not allowed"** – add that domain to `VITE_ALLOWED_HOSTS`.
+5. **401 then redirect to `/`** – the stored token is no longer valid (old password-as-token from before the update,
+   `SECURITY_PASSWORD` changed, or `backend/data/.auth-secret` deleted); log in again.
+6. **Images of a secure source do not load** – the `ms_auth` cookie is missing; go back to Home and log in again.
+7. **Manga/movie/music/media lists are empty** – these lists come from the database: scan from the sidebar first
+   (manga: *Quét Manga* scans the whole selected root folder; path/shallow options exist only for movie/music/media).
+8. **Stale UI after a deploy** – unregister the service worker / clear site data (DevTools → Application).
 
 ## 📄 License
 
-This project is licensed under the ISC License.
-
-## 🙏 Acknowledgments
-
-- React team for the amazing framework
-- TailwindCSS for the utility-first CSS approach
-- Vite team for the fast build tool
-- All open source contributors whose libraries make this project possible
+ISC

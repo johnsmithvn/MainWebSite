@@ -24,7 +24,14 @@ const PlayerHeader = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { playerSettings, updatePlayerSettings } = useMusicStore();
+  const currentTrackPath = useMusicStore((s) => s.currentTrack?.path);
   const { sourceKey } = useAuthStore();
+
+  // 🎵 opens the folder of the playing song (🏠 goes to the library root)
+  const openCurrentFolder = () => {
+    const folder = (currentTrackPath || '').split('/').slice(0, -1).join('/');
+    navigate(folder ? `/music?path=${encodeURIComponent(folder)}` : '/music');
+  };
 
   // Search states
   const [filterQuery, setFilterQuery] = useState('');
@@ -161,6 +168,9 @@ const PlayerHeader = ({
     }
   }, [debouncedQuery, fetchSuggestions, searchHasMore, searchLoading, searchLoadingMore, searchOffset]);
 
+  // Still waiting for the debounce or the request: show "searching", not "no results"
+  const searchPending = searchLoading || (debouncedQuery || '').trim() !== filterQuery.trim();
+
   return (
     <div
       className={`sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 ${headerCondensed ? 'py-2' : 'py-4'} gap-3 backdrop-blur border-b ${config.borderColor} transition-[background-color,box-shadow,padding] duration-200 ${
@@ -169,10 +179,11 @@ const PlayerHeader = ({
     >
       {/* Left controls: Music Library + Mode Switch */}
       <div className="flex items-center gap-2">
-        <button 
-          onClick={() => navigate('/music')} 
+        <button
+          onClick={openCurrentFolder}
           className={`p-2.5 rounded-full ${config.buttonBg} transition-colors`}
-          title="Browse Music Library"
+          title="Mở thư mục của bài đang phát"
+          aria-label="Mở thư mục của bài đang phát"
         >
           <FiMusic className="w-5 h-5" />
         </button>
@@ -230,13 +241,13 @@ const PlayerHeader = ({
                 className={`absolute left-0 right-0 mt-2 ${config.dropdownBg} border ${config.borderColor} rounded-xl shadow-xl overflow-hidden z-50`}
               >
                 <div className="max-h-80 overflow-y-auto" ref={suggestionsListRef} onScroll={handleSuggestionsScroll}>
-                  {searchLoading && (
+                  {searchPending && (
                     <div className="p-4 text-center text-sm text-white/60">
                       <div className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
                       Đang tìm kiếm…
                     </div>
                   )}
-                  {!searchLoading && searchResults.length > 0 && searchResults.map((item, i) => (
+                  {!searchPending && searchResults.length > 0 && searchResults.map((item, i) => (
                     <div
                       key={(item.path || '') + '-' + i}
                       className="flex items-center gap-3 p-3 hover:bg-white/10 cursor-pointer transition-colors"
@@ -276,7 +287,7 @@ const PlayerHeader = ({
                       Đang tải thêm…
                     </div>
                   )}
-                  {!searchLoading && searchResults.length === 0 && filterQuery.trim().length >= 2 && (
+                  {!searchPending && searchResults.length === 0 && filterQuery.trim().length >= 2 && (
                     <div className="p-4 text-center text-sm text-white/60">
                       Không tìm thấy kết quả cho "{filterQuery}"
                     </div>

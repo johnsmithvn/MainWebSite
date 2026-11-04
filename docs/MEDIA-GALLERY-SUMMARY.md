@@ -1,5 +1,7 @@
 # 📸 MEDIA GALLERY - HOÀN THÀNH! ✅
 
+> **Ghi chú 2026-10-29:** đây là bản tổng kết lúc hoàn thành (11/2025). Endpoint `/api/media/test` đã bị xoá; sau đó có thêm `media-folders` (điều hướng thư mục), `delete-item`, và scanner index mọi loại file. Danh sách API hiện hành: [MEDIA-GALLERY.md](MEDIA-GALLERY.md#-api-endpoints).
+
 ## 🎉 Tổng kết
 
 Đã tạo xong **Media Gallery** - trang quản lý ảnh/video giống **Google Photos** cho dự án MainWebSite của bạn!
@@ -75,7 +77,7 @@ cd react-app && npm run dev
 ### Bước 3: Test API
 
 ```
-https://localhost:3000/api/media/test
+https://localhost:3000/api/media/media-folders?key=MEDIA_PHOTOS
 ```
 
 ### Bước 4: Scan media
@@ -164,9 +166,9 @@ November 2024 (45 items)
 
 ---
 
-## 📡 API Endpoints (10)
+## 📡 API Endpoints
 
-1. `GET /api/media/test` - Test
+1. `GET /api/media/media-folders` - Duyệt thư mục (thay cho `/api/media/test` đã bị xoá)
 2. `POST /api/media/scan-media` - Scan
 3. `GET /api/media/media-folder` - List items
 4. `POST /api/media/favorite-media` - Favorite
@@ -176,6 +178,9 @@ November 2024 (45 items)
 8. `DELETE /api/media/albums/:id` - Delete
 9. `POST /api/media/albums/:id/items` - Add to album
 10. `GET /api/media/stats` - Statistics
+11. `DELETE /api/media/delete-item` - Xoá item/folder khỏi DB
+12. `DELETE /api/media/albums/:id/items` - Gỡ item khỏi album
+13. `POST /api/media/reset-media-db`, `POST /api/media/set-thumbnail`, `GET /api/media/cache/:filename`
 
 ---
 

@@ -146,7 +146,11 @@ const DatabaseActions = ({
           break;
         case 'manga':
           setScanProgress({ current: 1, total: 3, message: 'Đang scan manga folders...' });
-          response = await apiService.manga.scan({ dbkey: currentSourceKey, path, shallow });
+          // Backend manga chỉ quét toàn bộ một thư mục gốc: cần { key, root } (ISSUES B1)
+          if (!currentRootFolder) {
+            throw new Error('Chưa chọn thư mục gốc manga');
+          }
+          response = await apiService.manga.scan({ key: currentSourceKey, root: currentRootFolder });
           break;
         case 'media':
           setScanProgress({ current: 1, total: 3, message: 'Đang scan media folders...' });
@@ -319,6 +323,9 @@ const DatabaseActions = ({
               <li>• 1. Xóa tất cả dữ liệu database hiện có</li>
               <li>• 2. Quét lại và tạo database mới</li>
               <li>• 3. Tất cả lượt xem sẽ về 0</li>
+              {currentContentType === 'music' && (
+                <li>• Playlist được giữ nguyên</li>
+              )}
             </ul>
           </div>
           <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg border border-yellow-300 dark:border-yellow-700">
@@ -426,6 +433,12 @@ const DatabaseActions = ({
         type={currentContentType}
         isScanning={isScanning}
         progress={scanProgress}
+        supportsPartial={currentContentType !== 'manga'}
+        scopeNote={
+          currentContentType === 'manga'
+            ? `Manga quét toàn bộ thư mục gốc đang chọn${currentRootFolder ? `: ${currentRootFolder}` : ''}. Dữ liệu cũ (yêu thích, lượt xem) được giữ; folder không còn trên ổ đĩa sẽ bị xoá khỏi DB.`
+            : ''
+        }
       />
       
       {/* Thumbnail Extraction Modal */}

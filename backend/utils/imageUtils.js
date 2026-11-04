@@ -79,7 +79,86 @@ function hasImageRecursively(dirPath) {
   return false;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ⚡ Bản async (fs.promises) cho scan manga — không chặn event loop (ISSUES P1).
+// Kết quả giống hệt bản sync ở trên, kể cả cách xử lý lỗi: thư mục không tồn tại → false/null,
+// lỗi đọc khác (vd. EACCES) → ném lỗi để scan dừng lại thay vì xoá nhầm dữ liệu.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function pathExists(p) {
+  try {
+    await fs.promises.access(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readDirEntries(dirPath) {
+  try {
+    return await fs.promises.readdir(dirPath, { withFileTypes: true });
+  } catch (err) {
+    if (!(await pathExists(dirPath))) return null; // giống existsSync === false
+    throw err;
+  }
+}
+
+/**
+ * @param {string} dirPath
+ * @param {Map<string, Promise<boolean>>} [memo] - nhớ kết quả trong một lần scan để không
+ *   duyệt lại cây con ở mỗi cấp (trước đây ~O(n·depth))
+ */
+function hasImageRecursivelyAsync(dirPath, memo) {
+  if (memo && memo.has(dirPath)) return memo.get(dirPath);
+  const result = (async () => {
+    const entries = await readDirEntries(dirPath);
+    if (!entries) return false;
+    for (const entry of entries) {
+      if (entry.isFile() && IMAGE_EXTENSIONS.includes(path.extname(entry.name).toLowerCase())) {
+        return true;
+      }
+      if (entry.isDirectory()) {
+        if (await hasImageRecursivelyAsync(path.join(dirPath, entry.name), memo)) return true;
+      }
+    }
+    return false;
+  })();
+  if (memo) memo.set(dirPath, result);
+  return result;
+}
+
+async function findFirstImageRecursivelyAsync(rootFolder, rootPath, dirPath) {
+  const baseUrl = `/manga/${rootFolder}`;
+  const naturalCompare = require("string-natural-compare");
+
+  const entries = await readDirEntries(dirPath);
+  if (!entries) return null;
+  entries.sort((a, b) => naturalCompare(a.name, b.name));
+
+  for (const file of entries.filter((e) => e.isFile())) {
+    const ext = path.extname(file.name).toLowerCase();
+    if (IMAGE_EXTENSIONS.includes(ext)) {
+      const relativePath = path
+        .relative(rootPath, path.join(dirPath, file.name))
+        .replace(/\\/g, "/");
+      const safe = relativePath.split("/").map(encodeURIComponent).join("/");
+      return `${baseUrl}/${safe}`;
+    }
+  }
+  for (const folder of entries.filter((e) => e.isDirectory())) {
+    const found = await findFirstImageRecursivelyAsync(
+      rootFolder,
+      rootPath,
+      path.join(dirPath, folder.name)
+    );
+    if (found) return found;
+  }
+  return null;
+}
+
 module.exports = {
   findFirstImageRecursively,
   hasImageRecursively,
+  hasImageRecursivelyAsync,
+  findFirstImageRecursivelyAsync,
 };

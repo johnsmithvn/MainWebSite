@@ -143,7 +143,7 @@ const MusicCard = ({
         }`}>{displayName}</h3>
         <div className="flex items-center justify-between text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">
           <span className={isFolder ? 'text-blue-600 dark:text-purple-400 font-medium' : ''}>{getTypeLabel()}</span>
-          {showViews && item.views && <span className="flex items-center gap-0.5 sm:gap-1"><FiMusic className="w-2 h-2 sm:w-3 sm:h-3" />{item.views}</span>}
+          {showViews && item.viewCount > 0 && <span className="flex items-center gap-0.5 sm:gap-1"><FiMusic className="w-2 h-2 sm:w-3 sm:h-3" />{item.viewCount}</span>}
         </div>
       </div>
       <motion.button onClick={handleDeleteClickInternal} className="absolute bottom-2 right-2 p-1.5 sm:p-2 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all duration-200 z-10" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} title={`Xóa ${item.type === 'folder' ? 'folder' : 'file'} khỏi DB`}>

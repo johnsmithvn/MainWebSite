@@ -9,6 +9,7 @@ const { FILE_EXTENSIONS } = require("../constants");
 
 const ffmpeg = require("fluent-ffmpeg");
 const ffprobe = require("ffprobe-static");
+const { escapeLike } = require("./sqlLike");
 ffmpeg.setFfprobePath(ffprobe.path);
 
 // Use centralized file extensions from constants and normalize to lowercase
@@ -104,25 +105,25 @@ async function scanMediaFolderToDB(
       // 🎯 Partial scan
       if (shallow) {
         // Shallow: only mark direct children of scope
-        db.prepare(`UPDATE media_items SET scanned = 0 WHERE path = ? OR (path LIKE ? AND path NOT LIKE ?)`)
-          .run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
-        db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR (path LIKE ? AND path NOT LIKE ?)`)
-          .run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
+        db.prepare(`UPDATE media_items SET scanned = 0 WHERE path = ? OR (path LIKE ? ESCAPE '\\' AND path NOT LIKE ? ESCAPE '\\')`)
+          .run(scopePath, `${escapeLike(scopePath)}/%`, `${escapeLike(scopePath)}/%/%`);
+        db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR (path LIKE ? ESCAPE '\\' AND path NOT LIKE ? ESCAPE '\\')`)
+          .run(scopePath, `${escapeLike(scopePath)}/%`, `${escapeLike(scopePath)}/%/%`);
         console.log(`📦 Shallow partial scan: Marking scope "${scopePath}" (direct children only)`);
       } else {
         // Deep: mark scope and all descendants
-        db.prepare(`UPDATE media_items SET scanned = 0 WHERE path = ? OR path LIKE ?`)
-          .run(scopePath, `${scopePath}/%`);
-        db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR path LIKE ?`)
-          .run(scopePath, `${scopePath}/%`);
+        db.prepare(`UPDATE media_items SET scanned = 0 WHERE path = ? OR path LIKE ? ESCAPE '\\'`)
+          .run(scopePath, `${escapeLike(scopePath)}/%`);
+        db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR path LIKE ? ESCAPE '\\'`)
+          .run(scopePath, `${escapeLike(scopePath)}/%`);
         console.log(`🎯 Deep partial scan: Marking scope "${scopePath}" (all descendants)`);
       }
     } else {
       // 🌍 Full scan
       if (shallow) {
         // Shallow: only mark root level items
-        db.prepare(`UPDATE media_items SET scanned = 0 WHERE path NOT LIKE ?`).run('%/%');
-        db.prepare(`UPDATE folders SET scanned = 0 WHERE path NOT LIKE ?`).run('%/%');
+        db.prepare(`UPDATE media_items SET scanned = 0 WHERE path NOT LIKE ? ESCAPE '\\'`).run('%/%');
+        db.prepare(`UPDATE folders SET scanned = 0 WHERE path NOT LIKE ? ESCAPE '\\'`).run('%/%');
         console.log(`📦 Shallow full scan: Marking root level items only`);
       } else {
         // Deep: mark all items
@@ -178,8 +179,9 @@ async function scanMediaFolderToDB(
 
     // 📁 FOLDER - Store and recurse
     if (entry.isDirectory()) {
-      // 📦 Shallow scan: Skip recursion into subfolders
-      if (!shallow) {
+      // 📦 Shallow scan: không đệ quy, NGOẠI TRỪ chính folder scope — phải đi vào một cấp để
+      // xử lý các con trực tiếp đã bị đánh dấu ở phase 1, nếu không phase 3 xoá nhầm chúng (ISSUES D1)
+      if (!shallow || relPath === scopePath) {
         // Recurse first to get subfolder's thumbnail
         await scanMediaFolderToDB(dbkey, relPath, stats, scopePath, shallow);
       }
@@ -198,8 +200,8 @@ async function scanMediaFolderToDB(
 
       // Count items in subfolder
       const folderItemCount = db.prepare(
-        `SELECT COUNT(*) as count FROM media_items WHERE path LIKE ?`
-      ).get(`${relPath}/%`).count;
+        `SELECT COUNT(*) as count FROM media_items WHERE path LIKE ? ESCAPE '\\'`
+      ).get(`${escapeLike(relPath)}/%`).count;
 
       // Insert/update folder
       const existingFolder = db.prepare(
@@ -363,50 +365,50 @@ async function scanMediaFolderToDB(
       if (shallow) {
         // Shallow: only delete unscanned direct children
         const orphanedItems = db.prepare(
-          `SELECT COUNT(*) as count FROM media_items WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?))`
-        ).get(scopePath, `${scopePath}/%`, `${scopePath}/%/%`).count;
+          `SELECT COUNT(*) as count FROM media_items WHERE scanned = 0 AND (path = ? OR (path LIKE ? ESCAPE '\\' AND path NOT LIKE ? ESCAPE '\\'))`
+        ).get(scopePath, `${escapeLike(scopePath)}/%`, `${escapeLike(scopePath)}/%/%`).count;
         
         if (orphanedItems > 0) {
           db.prepare(
-            `DELETE FROM media_items WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?))`
-          ).run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
+            `DELETE FROM media_items WHERE scanned = 0 AND (path = ? OR (path LIKE ? ESCAPE '\\' AND path NOT LIKE ? ESCAPE '\\'))`
+          ).run(scopePath, `${escapeLike(scopePath)}/%`, `${escapeLike(scopePath)}/%/%`);
           stats.deleted += orphanedItems;
           console.log(`🗑️ Deleted ${orphanedItems} orphaned media items in scope (shallow): "${scopePath}"`);
         }
 
         const orphanedFolders = db.prepare(
-          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?))`
-        ).get(scopePath, `${scopePath}/%`, `${scopePath}/%/%`).count;
+          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? ESCAPE '\\' AND path NOT LIKE ? ESCAPE '\\'))`
+        ).get(scopePath, `${escapeLike(scopePath)}/%`, `${escapeLike(scopePath)}/%/%`).count;
         
         if (orphanedFolders > 0) {
           db.prepare(
-            `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?))`
-          ).run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
+            `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? ESCAPE '\\' AND path NOT LIKE ? ESCAPE '\\'))`
+          ).run(scopePath, `${escapeLike(scopePath)}/%`, `${escapeLike(scopePath)}/%/%`);
           stats.deleted += orphanedFolders;
           console.log(`🗑️ Deleted ${orphanedFolders} orphaned folders in scope (shallow): "${scopePath}"`);
         }
       } else {
         // Deep: delete all unscanned items in scope
         const orphanedItems = db.prepare(
-          `SELECT COUNT(*) as count FROM media_items WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
-        ).get(scopePath, `${scopePath}/%`).count;
+          `SELECT COUNT(*) as count FROM media_items WHERE scanned = 0 AND (path = ? OR path LIKE ? ESCAPE '\\')`
+        ).get(scopePath, `${escapeLike(scopePath)}/%`).count;
         
         if (orphanedItems > 0) {
           db.prepare(
-            `DELETE FROM media_items WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
-          ).run(scopePath, `${scopePath}/%`);
+            `DELETE FROM media_items WHERE scanned = 0 AND (path = ? OR path LIKE ? ESCAPE '\\')`
+          ).run(scopePath, `${escapeLike(scopePath)}/%`);
           stats.deleted += orphanedItems;
           console.log(`🗑️ Deleted ${orphanedItems} orphaned media items in scope (deep): "${scopePath}"`);
         }
 
         const orphanedFolders = db.prepare(
-          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
-        ).get(scopePath, `${scopePath}/%`).count;
+          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ? ESCAPE '\\')`
+        ).get(scopePath, `${escapeLike(scopePath)}/%`).count;
         
         if (orphanedFolders > 0) {
           db.prepare(
-            `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
-          ).run(scopePath, `${scopePath}/%`);
+            `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ? ESCAPE '\\')`
+          ).run(scopePath, `${escapeLike(scopePath)}/%`);
           stats.deleted += orphanedFolders;
           console.log(`🗑️ Deleted ${orphanedFolders} orphaned folders in scope (deep): "${scopePath}"`);
         }
@@ -416,21 +418,21 @@ async function scanMediaFolderToDB(
       if (shallow) {
         // Shallow: only delete root level unscanned items
         const orphanedItems = db.prepare(
-          `SELECT COUNT(*) as count FROM media_items WHERE scanned = 0 AND path NOT LIKE ?`
+          `SELECT COUNT(*) as count FROM media_items WHERE scanned = 0 AND path NOT LIKE ? ESCAPE '\\'`
         ).get('%/%').count;
         
         if (orphanedItems > 0) {
-          db.prepare(`DELETE FROM media_items WHERE scanned = 0 AND path NOT LIKE ?`).run('%/%');
+          db.prepare(`DELETE FROM media_items WHERE scanned = 0 AND path NOT LIKE ? ESCAPE '\\'`).run('%/%');
           stats.deleted += orphanedItems;
           console.log(`🗑️ Deleted ${orphanedItems} orphaned root media items (shallow)`);
         }
 
         const orphanedFolders = db.prepare(
-          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND path NOT LIKE ?`
+          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND path NOT LIKE ? ESCAPE '\\'`
         ).get('%/%').count;
         
         if (orphanedFolders > 0) {
-          db.prepare(`DELETE FROM folders WHERE scanned = 0 AND path NOT LIKE ?`).run('%/%');
+          db.prepare(`DELETE FROM folders WHERE scanned = 0 AND path NOT LIKE ? ESCAPE '\\'`).run('%/%');
           stats.deleted += orphanedFolders;
           console.log(`🗑️ Deleted ${orphanedFolders} orphaned root folders (shallow)`);
         }

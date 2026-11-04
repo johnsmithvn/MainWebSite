@@ -130,8 +130,11 @@ function getMovieDB(dbkey) {
   dbMovieMap[dbkey] = db;
   return db;
 }
+// Music: map riêng — trước đây dùng chung `dbMap` với manga nên tuỳ thứ tự gọi, key music có thể
+// nhận connection đã mở bằng getDB (bỏ qua migration songs/playlists) hoặc ngược lại (ISSUES B12)
+const dbMusicMap = {};
 function getMusicDB(dbkey) {
-  if (dbMap[dbkey]) return dbMap[dbkey];
+  if (dbMusicMap[dbkey]) return dbMusicMap[dbkey];
 
   const safeName = dbkey.replace(/[^a-zA-Z0-9_-]/g, "_");
   const dbPath = path.join(DB_DIR, `${safeName}.db`);
@@ -216,7 +219,7 @@ function getMusicDB(dbkey) {
     }
   }
 
-  dbMap[dbkey] = db;
+  dbMusicMap[dbkey] = db;
   return db;
 }
 

@@ -3,6 +3,7 @@ const path = require("path");
 const express = require("express");
 const router = express.Router();
 const { getRootPath } = require("../../utils/config");
+const { resolveInsideRoot } = require("../../utils/pathSafety");
 const { getMusicDB } = require("../../utils/db");
 
 // Hàm extract thumbnail (cho file hoặc folder/subfolder)
@@ -178,6 +179,12 @@ async function extractThumbnailSmart({ key, relPath = "", overwrite = false }) {
 router.post("/extract-thumbnail", async (req, res) => {
   const { key, path: relPath = "", overwrite = false } = req.body;
   if (!key) return res.status(400).json({ error: "Missing key" });
+  const rootPath = getRootPath(key);
+  if (!rootPath) return res.status(400).json({ error: "Invalid key" });
+  // Chỉ cần chặn ở đây: các lần đệ quy chỉ đi xuống thư mục con lấy từ readdir
+  if (!resolveInsideRoot(rootPath, relPath)) {
+    return res.status(403).json({ error: "Invalid path" });
+  }
 
   try {
     const result = await extractThumbnailSmart({ key, relPath, overwrite });

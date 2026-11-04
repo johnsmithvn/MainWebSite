@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useDownloadQueueStore, { DOWNLOAD_STATUS } from '../../store/downloadQueueStore';
+import { useMiniPlayerVisible, MINI_PLAYER_HEIGHT } from '@/components/music/MiniPlayer';
 
 /**
  * Floating Download Badge Component
@@ -41,6 +42,9 @@ const DownloadBadge = () => {
     return totalProgressSum / activeTasksArray.length;
   }, [activeTasksArray, activeDownloads]);
 
+  // Sit above the music mini player bar when it is shown
+  const miniPlayerVisible = useMiniPlayerVisible();
+
   // Don't render if no active downloads
   if (activeDownloads.size === 0) return null;
 
@@ -61,7 +65,7 @@ const DownloadBadge = () => {
         exit={{ scale: 0, opacity: 0 }}
         transition={{ type: 'spring', duration: 0.5 }}
         className="fixed bottom-6 right-6 z-50"
-        style={{ zIndex: 9999 }}
+        style={{ zIndex: 9999, ...(miniPlayerVisible ? { bottom: MINI_PLAYER_HEIGHT + 16 } : {}) }}
       >
         <div className="relative group">
           {/* Main Button */}

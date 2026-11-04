@@ -4,6 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { getMovieDB } = require('../../utils/db');
+const { escapeLike } = require('../../utils/sqlLike');
 
 router.delete('/delete-item', (req, res) => {
   try {
@@ -32,10 +33,10 @@ router.delete('/delete-item', (req, res) => {
       // XÓA FOLDER: Xóa folder và tất cả children (bất kể nested level)
       const stmt = db.prepare(`
         DELETE FROM folders 
-        WHERE path = ? OR path LIKE ?
+        WHERE path = ? OR path LIKE ? ESCAPE '\\'
       `);
       
-      const result = stmt.run(path, `${path}/%`);
+      const result = stmt.run(path, `${escapeLike(path)}/%`);
       
       return res.json({
         success: true,

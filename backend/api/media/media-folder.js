@@ -3,6 +3,9 @@
 
 const { getMediaDB } = require("../../utils/db");
 
+// 🛡️ Cột được phép ORDER BY (không thể bind tham số cho tên cột → phải whitelist)
+const SORT_COLUMNS = ["date_taken", "name", "size", "modified", "createdAt", "type"];
+
 /**
  * GET /api/media/media-folder?key=MEDIA_PHOTOS&page=1&limit=50&sortBy=date_taken&order=DESC&type=image&year=2024&month=11&favorite=true&albumId=1
  * Trả về media items với filters
@@ -11,8 +14,8 @@ const getMediaFolder = (req, res) => {
   const dbkey = req.query.key;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 50;
-  const sortBy = req.query.sortBy || "date_taken";
-  const order = req.query.order || "DESC";
+  const sortBy = SORT_COLUMNS.includes(req.query.sortBy) ? req.query.sortBy : "date_taken";
+  const order = String(req.query.order).toUpperCase() === "ASC" ? "ASC" : "DESC";
   const type = req.query.type; // 'image' | 'video' | null
   const year = req.query.year;
   const month = req.query.month;

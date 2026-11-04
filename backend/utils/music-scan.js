@@ -4,6 +4,7 @@ const path = require("path");
 const { getRootPath } = require("./config");
 const { getMusicDB } = require("./db");
 const { FILE_EXTENSIONS } = require("../constants");
+const { escapeLike } = require("./sqlLike");
 
 // Centralized extensions
 const AUDIO_EXTS = (FILE_EXTENSIONS.AUDIO || []).map(e => e.toLowerCase());
@@ -36,22 +37,22 @@ async function scanMusicFolderToDB(
   if (currentPath === "") {
     if (scopePath) {
       // Partial scan: only mark items in scope path
-      const scopePattern = shallow ? scopePath : `${scopePath}/%`;
+      const scopePattern = shallow ? scopePath : `${escapeLike(scopePath)}/%`;
       if (shallow) {
         // Shallow: only mark direct children of scope, not nested items
-        db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR (path LIKE ? AND path NOT LIKE ?)`)
-          .run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
+        db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR (path LIKE ? ESCAPE '\\' AND path NOT LIKE ? ESCAPE '\\')`)
+          .run(scopePath, `${escapeLike(scopePath)}/%`, `${escapeLike(scopePath)}/%/%`);
         console.log(`📦 Shallow scan: Marking scope "${scopePath}" (direct children only)`);
       } else {
         // Deep: mark scope and all descendants
-        db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR path LIKE ?`)
-          .run(scopePath, `${scopePath}/%`);
+        db.prepare(`UPDATE folders SET scanned = 0 WHERE path = ? OR path LIKE ? ESCAPE '\\'`)
+          .run(scopePath, `${escapeLike(scopePath)}/%`);
         console.log(`🎯 Deep scan: Marking scope "${scopePath}" (all descendants)`);
       }
     } else {
       if (shallow) {
         // Shallow root scan: only mark root level items (no nested paths)
-        db.prepare(`UPDATE folders SET scanned = 0 WHERE path NOT LIKE ?`).run('%/%');
+        db.prepare(`UPDATE folders SET scanned = 0 WHERE path NOT LIKE ? ESCAPE '\\'`).run('%/%');
         console.log(`📦 Shallow scan: Marking root level items only`);
       } else {
         // Full deep scan: mark all
@@ -123,8 +124,11 @@ async function scanMusicFolderToDB(
         stats.skipped++;
       }
 
-      // 📦 Shallow scan: Skip recursion into subfolders
-      if (!shallow) {
+      // 📦 Shallow scan: không đệ quy, NGOẠI TRỪ folder cha của scope (để đi tới scope) và chính
+      // folder scope (để xử lý các con trực tiếp đã bị đánh dấu ở phase 1) — ISSUES D1
+      const isScopeOrParent =
+        !!scopePath && (relPath === scopePath || scopePath.startsWith(`${relPath}/`));
+      if (!shallow || isScopeOrParent) {
         await scanMusicFolderToDB(dbkey, relPath, stats, scopePath, shallow); // 🔁 Đệ quy
       }
     }
@@ -269,19 +273,19 @@ async function scanMusicFolderToDB(
       if (shallow) {
         // Shallow partial scan: only delete unscanned direct children
         orphanedCount = db.prepare(
-          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?))`
-        ).get(scopePath, `${scopePath}/%`, `${scopePath}/%/%`).count;
+          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? ESCAPE '\\' AND path NOT LIKE ? ESCAPE '\\'))`
+        ).get(scopePath, `${escapeLike(scopePath)}/%`, `${escapeLike(scopePath)}/%/%`).count;
         
         if (orphanedCount > 0) {
           // Delete orphaned songs first
           const deletedSongs = db.prepare(
-            `DELETE FROM songs WHERE path IN (SELECT path FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?)))`
-          ).run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
+            `DELETE FROM songs WHERE path IN (SELECT path FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? ESCAPE '\\' AND path NOT LIKE ? ESCAPE '\\')))`
+          ).run(scopePath, `${escapeLike(scopePath)}/%`, `${escapeLike(scopePath)}/%/%`);
           
           // Delete orphaned folders
           db.prepare(
-            `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? AND path NOT LIKE ?))`
-          ).run(scopePath, `${scopePath}/%`, `${scopePath}/%/%`);
+            `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR (path LIKE ? ESCAPE '\\' AND path NOT LIKE ? ESCAPE '\\'))`
+          ).run(scopePath, `${escapeLike(scopePath)}/%`, `${escapeLike(scopePath)}/%/%`);
           
           stats.deleted = orphanedCount;
           console.log(`🗑️ Deleted ${deletedSongs.changes} songs and ${stats.deleted} folders in scope (shallow): ${scopePath}`);
@@ -289,19 +293,19 @@ async function scanMusicFolderToDB(
       } else {
         // Deep partial scan: delete all unscanned items in scope
         orphanedCount = db.prepare(
-          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
-        ).get(scopePath, `${scopePath}/%`).count;
+          `SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ? ESCAPE '\\')`
+        ).get(scopePath, `${escapeLike(scopePath)}/%`).count;
         
         if (orphanedCount > 0) {
           // Delete orphaned songs first (foreign key constraint)
           const deletedSongs = db.prepare(
-            `DELETE FROM songs WHERE path IN (SELECT path FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ?))`
-          ).run(scopePath, `${scopePath}/%`);
+            `DELETE FROM songs WHERE path IN (SELECT path FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ? ESCAPE '\\'))`
+          ).run(scopePath, `${escapeLike(scopePath)}/%`);
           
           // Delete orphaned folders
           db.prepare(
-            `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ?)`
-          ).run(scopePath, `${scopePath}/%`);
+            `DELETE FROM folders WHERE scanned = 0 AND (path = ? OR path LIKE ? ESCAPE '\\')`
+          ).run(scopePath, `${escapeLike(scopePath)}/%`);
           
           stats.deleted = orphanedCount;
           console.log(`🗑️ Deleted ${deletedSongs.changes} songs and ${stats.deleted} folders in scope (deep): ${scopePath}`);
@@ -311,13 +315,13 @@ async function scanMusicFolderToDB(
       // Full scan cleanup
       if (shallow) {
         // Shallow root scan: only delete root level unscanned items
-        orphanedCount = db.prepare(`SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND path NOT LIKE ?`).get('%/%').count;
+        orphanedCount = db.prepare(`SELECT COUNT(*) as count FROM folders WHERE scanned = 0 AND path NOT LIKE ? ESCAPE '\\'`).get('%/%').count;
         if (orphanedCount > 0) {
           // Delete orphaned songs first
-          const deletedSongs = db.prepare(`DELETE FROM songs WHERE path IN (SELECT path FROM folders WHERE scanned = 0 AND path NOT LIKE ?)`).run('%/%');
+          const deletedSongs = db.prepare(`DELETE FROM songs WHERE path IN (SELECT path FROM folders WHERE scanned = 0 AND path NOT LIKE ? ESCAPE '\\')`).run('%/%');
           
           // Delete orphaned folders
-          db.prepare(`DELETE FROM folders WHERE scanned = 0 AND path NOT LIKE ?`).run('%/%');
+          db.prepare(`DELETE FROM folders WHERE scanned = 0 AND path NOT LIKE ? ESCAPE '\\'`).run('%/%');
           stats.deleted = orphanedCount;
           
           console.log(`🗑️ Deleted ${deletedSongs.changes} songs and ${stats.deleted} root folders (shallow)`);

@@ -2,7 +2,8 @@
 const express = require("express");
 const router = express.Router();
 const { getRootPath } = require("../../utils/config");
-const { scanFolderRecursive } = require("../../utils/cache-scan");
+const { resetAndScanRoot } = require("../../utils/cache-scan");
+const { resolveInsideRoot } = require("../../utils/pathSafety");
 const { getDB } = require("../../utils/db");
 
 /**
@@ -12,7 +13,7 @@ const { getDB } = require("../../utils/db");
  * - mode=reset  ➜ Xoá + Scan lại
  * Query: /api/reset-cache?root=1&mode=scan
  */
-router.delete("/reset-cache", (req, res) => {
+router.delete("/reset-cache", async (req, res) => {
   const key = req.query.key;
   const rootFolder = req.query.root;
   const mode = req.query.mode;
@@ -25,6 +26,9 @@ router.delete("/reset-cache", (req, res) => {
   if (!rootPath) {
     return res.status(400).json({ error: "Root không hợp lệ trong .env" });
   }
+  if (!resolveInsideRoot(rootPath, rootFolder)) {
+    return res.status(403).json({ error: "Đường dẫn không hợp lệ" });
+  }
 
   try {
     const db = getDB(key);
@@ -36,8 +40,8 @@ router.delete("/reset-cache", (req, res) => {
       return res.json({ success: true, message: "Đã xoá cache thành công" });
     }
     if (mode === "reset") {
-      db.prepare("DELETE FROM folders WHERE root = ?").run(rootFolder);
-      const stats = scanFolderRecursive(key, rootFolder);
+      // Xoá + quét lại trong cùng khoá với các lần scan khác của root này (scan giờ là async)
+      const stats = await resetAndScanRoot(key, rootFolder);
       console.log(`🔁 Reset cache cho ${key} / ${rootFolder}:`, stats);
       return res.json({
         success: true,

@@ -41,6 +41,8 @@ for (const [key, value] of Object.entries(parsedEnv)) {
  * @returns {string} absolute path
  */
 function getRootPath(rootKey) {
+  // Thiếu key hoặc sai kiểu (query dạng mảng) → undefined thay vì TypeError
+  if (typeof rootKey !== "string") return undefined;
   // Case-insensitive lookup: tìm key trong ROOT_PATHS
   const upperKey = rootKey.toUpperCase();
   const actualKey = Object.keys(ROOT_PATHS).find(k => k.toUpperCase() === upperKey);

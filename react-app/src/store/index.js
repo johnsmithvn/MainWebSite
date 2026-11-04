@@ -204,10 +204,18 @@ export const useUIStore = create((set) => ({
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),
   
-  // Toast methods
-  showToast: (message, type = 'info', duration = 3000) => set({
-    toast: { show: true, message, type, duration }
-  }),
+  // Toast methods - also accepts an object: showToast({ message, type, duration })
+  showToast: (message, type = 'info', duration = 3000) => {
+    const opts = message && typeof message === 'object' ? message : { message, type, duration };
+    set({
+      toast: {
+        show: true,
+        message: String(opts.message ?? ''),
+        type: opts.type || 'info',
+        duration: opts.duration || 3000,
+      }
+    });
+  },
   hideToast: () => set((state) => ({
     toast: { ...state.toast, show: false }
   })),
@@ -777,34 +785,35 @@ export const useMovieStore = create(
         
         try {
           const result = await apiService.movie.deleteItem({ key: sourceKey, path });
-          
+          const data = result.data || {};
+
           // Update local state: remove from movieList
           set((state) => ({
             movieList: state.movieList.filter(item => {
               // Remove exact match
               if (item.path === path) return false;
-              
+
               // If deleted item is folder, remove children
-              if (result.type === 'folder' && item.path.startsWith(`${path}/`)) {
+              if (data.type === 'folder' && item.path.startsWith(`${path}/`)) {
                 return false;
               }
-              
+
               return true;
             }),
             allMovies: state.allMovies.filter(item => {
               if (item.path === path) return false;
-              if (result.type === 'folder' && item.path.startsWith(`${path}/`)) {
+              if (data.type === 'folder' && item.path.startsWith(`${path}/`)) {
                 return false;
               }
               return true;
             })
           }));
-          
-          showToast?.(result.message, 'success');
+
+          showToast?.(data.message || 'Đã xóa khỏi database', 'success');
           return result;
         } catch (err) {
           console.error('Delete movie item error:', err);
-          showToast?.('Không thể xóa: ' + err.message, 'error');
+          showToast?.('Không thể xóa: ' + (err.response?.data?.error || err.message), 'error');
           throw err;
         }
       },
@@ -837,6 +846,10 @@ export const useMusicStore = create(
       currentPlaylist: [],
       currentIndex: 0,
       isPlaying: false,
+      // What the current queue was loaded from (player page skips reloading the same request) and its music key.
+      // queueKey keeps playback on the right M_* source while the user browses other sections (not persisted).
+      queueSource: null,
+      queueKey: null,
       volume: 1,
       shuffle: false,
       repeat: 'none', // 'none', 'one', 'all'
@@ -1002,27 +1015,28 @@ export const useMusicStore = create(
         
         try {
           const result = await apiService.music.deleteItem({ key: sourceKey, path });
-          
+          const data = result.data || {};
+
           // Update local state: remove from musicList
           set((state) => ({
             musicList: state.musicList.filter(item => {
               // Remove exact match
               if (item.path === path) return false;
-              
+
               // If deleted item is folder, remove children
-              if (result.type === 'folder' && item.path.startsWith(`${path}/`)) {
+              if (data.type === 'folder' && item.path.startsWith(`${path}/`)) {
                 return false;
               }
-              
+
               return true;
             })
           }));
-          
-          showToast?.(result.message, 'success');
+
+          showToast?.(data.message || 'Đã xóa khỏi database', 'success');
           return result;
         } catch (err) {
           console.error('Delete item error:', err);
-          showToast?.('Không thể xóa: ' + err.message, 'error');
+          showToast?.('Không thể xóa: ' + (err.response?.data?.error || err.message), 'error');
           throw err;
         }
       },

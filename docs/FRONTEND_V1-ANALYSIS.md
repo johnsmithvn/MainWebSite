@@ -1,5 +1,7 @@
 # 📊 PHÂN TÍCH TOÀN BỘ FRONTEND V1 - MEDIA CLIENT
 
+> **📜 Tài liệu lịch sử — frontend legacy.** Nội dung thuộc thư mục `frontend/` (vanilla JS), đã được thay thế bởi React app trong `react-app/` và không còn phát triển. Không áp dụng cho React app. Trạng thái hệ thống hiện tại: [docs/SYSTEM-REPORT.md](SYSTEM-REPORT.md).
+
 ## 🎯 TỔNG QUAN DỰ ÁN
 
 ### Mục đích chính:

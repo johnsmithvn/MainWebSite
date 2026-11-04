@@ -4,6 +4,7 @@
 const express = require("express");
 const router = express.Router();
 const { getMusicDB } = require("../../utils/db");
+const { escapeLike } = require("../../utils/sqlLike");
 
 /**
  * DELETE /api/music/delete-item
@@ -44,10 +45,10 @@ router.delete("/delete-item", async (req, res) => {
         DELETE FROM songs 
         WHERE path IN (
           SELECT path FROM folders 
-          WHERE path = ? OR path LIKE ?
+          WHERE path = ? OR path LIKE ? ESCAPE '\\'
         )
       `
-      ).run(path, `${path}/%`);
+      ).run(path, `${escapeLike(path)}/%`);
 
       // Delete playlist references
       db.prepare(
@@ -55,20 +56,20 @@ router.delete("/delete-item", async (req, res) => {
         DELETE FROM playlist_items 
         WHERE songPath IN (
           SELECT path FROM folders 
-          WHERE path = ? OR path LIKE ?
+          WHERE path = ? OR path LIKE ? ESCAPE '\\'
         )
       `
-      ).run(path, `${path}/%`);
+      ).run(path, `${escapeLike(path)}/%`);
 
       // Delete folders
       const deleteResult = db
         .prepare(
           `
         DELETE FROM folders 
-        WHERE path = ? OR path LIKE ?
+        WHERE path = ? OR path LIKE ? ESCAPE '\\'
       `
         )
-        .run(path, `${path}/%`);
+        .run(path, `${escapeLike(path)}/%`);
 
       console.log(
         `🗑️ Deleted folder "${item.name}" and ${deleteResult.changes} total items`

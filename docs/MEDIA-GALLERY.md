@@ -1,23 +1,22 @@
 # 📸 Media Gallery - Google Photos Clone
 
+> **Đối chiếu với code ngày 2026-11-04.** Hướng dẫn từng bước: [MEDIA-GALLERY-QUICKSTART.md](MEDIA-GALLERY-QUICKSTART.md). Lỗi đã biết: thumbnail thư mục không hiển thị (ISSUES B8); lỗi SQL injection qua `sortBy/order` (ISSUES S2) đã sửa ngày 2026-11-04 — xem [ISSUES-REPORT.md](ISSUES-REPORT.md).
+
 ## 🎯 Tổng quan
 
-Media Gallery là tính năng mới trong MainWebSite, được thiết kế giống Google Photos để quản lý ảnh và video cá nhân.
+Media Gallery là tính năng trong MainWebSite, được thiết kế giống Google Photos để quản lý ảnh và video cá nhân. Từ bản cập nhật 11/2025 scanner **index mọi loại file** (ảnh, video, audio, pdf, text, document, archive, code, other) và hỗ trợ điều hướng theo thư mục.
 
 ## ✨ Tính năng chính
 
 ### 1. **Photos View** (Grid Layout)
-- Hiển thị ảnh/video dạng lưới (grid)
-- Lazy loading với performance cao
+- Duyệt theo thư mục: thư mục con + file trực tiếp (`?path=`)
 - Multi-select (Shift/Ctrl click)
-- Quick actions: Favorite, Add to Album
+- Quick actions: Favorite, Add to Album, xoá khỏi DB
 - Lightbox viewer với keyboard navigation
 
 ### 2. **Timeline View** (Theo thời gian)
-- Nhóm media theo năm-tháng-ngày
-- Visual calendar layout
-- Click để xem ảnh theo ngày cụ thể
-- Hiển thị số lượng ảnh mỗi ngày
+- Nhóm media theo **tháng**, mới nhất trước
+- Ngày dùng để nhóm là `date_taken`, hiện bằng **ngày sửa file** (chưa đọc EXIF)
 
 ### 3. **Albums** (Bộ sưu tập)
 - Tạo album tùy chỉnh
@@ -59,13 +58,12 @@ react-app/
 
 ## 🔧 Cấu hình
 
-### 1. Thêm root paths vào `.env`:
+### 1. Thêm root paths vào `backend/.env`:
 
 ```env
-# 📸 MEDIA GALLERY ROOT PATHS
-MEDIA_PHOTOS=E:\Photos
-MEDIA_CAMERA=E:\Camera
-MEDIA_DOWNLOAD=E:\Download\Pictures
+# 📸 MEDIA GALLERY ROOT PATHS (thư mục phải tồn tại lúc khởi động server)
+MEDIA_PHOTOS=E:/Photos
+MEDIA_CAMERA=E:/Camera
 ```
 
 ### 2. Database Schema
@@ -79,8 +77,9 @@ CREATE TABLE media_items (
   name TEXT NOT NULL,
   path TEXT NOT NULL UNIQUE,
   thumbnail TEXT,
-  type TEXT NOT NULL,        -- 'image' | 'video'
+  type TEXT NOT NULL,        -- 'image' | 'video' | 'audio' | 'pdf' | 'text' | 'document' | 'archive' | 'code' | 'other'
   size INTEGER,
+  modified INTEGER,          -- mtime, dùng để phát hiện file thay đổi
   width INTEGER,
   height INTEGER,
   duration INTEGER,          -- video duration (seconds)
@@ -91,6 +90,20 @@ CREATE TABLE media_items (
   scanned INTEGER,
   createdAt INTEGER,
   updatedAt INTEGER
+);
+
+-- folders: cache thư mục để điều hướng (thumbnail = tên file trong <folder>/.thumbnail/)
+CREATE TABLE folders (
+  id INTEGER PRIMARY KEY,
+  root TEXT NOT NULL,        -- = key (vd. MEDIA_PHOTOS)
+  path TEXT NOT NULL,
+  name TEXT NOT NULL,
+  thumbnail TEXT,
+  itemCount INTEGER,
+  scanned INTEGER,
+  createdAt INTEGER,
+  updatedAt INTEGER,
+  UNIQUE(root, path)
 );
 
 -- albums: Bộ sưu tập
@@ -106,51 +119,40 @@ CREATE TABLE albums (
 
 ## 🚀 API Endpoints
 
-### Scan Media
-```http
-POST /api/media/scan-media
-Body: { "key": "MEDIA_PHOTOS" }
-```
+Tất cả nằm dưới `/api/media` ([backend/routes/media.js](../backend/routes/media.js)).
 
-### Get Media Items
-```http
-GET /api/media/media-folder?key=MEDIA_PHOTOS&page=1&limit=50&sortBy=date_taken&order=DESC&type=image&year=2024&month=11&favorite=true&albumId=1
-```
+| Method | Endpoint | Tham số |
+|--------|----------|---------|
+| POST | `/scan-media` | `{ key, path?, shallow? }` — `path` = partial scan, `shallow` = chỉ các mục nằm ngay trong `path` (hoặc root) |
+| GET | `/media-folders` | `?key&path=` — thư mục con + file trực tiếp trong `path` |
+| GET | `/media-folder` | `?key&page&limit&sortBy&order&type&year&month&favorite&albumId` — danh sách phân trang + `timeline` |
+| POST | `/favorite-media` | `{ key, id, isFavorite }` |
+| POST | `/set-thumbnail` | `{ key, id, thumbnail }` |
+| POST | `/reset-media-db` | `{ key }` — xoá **toàn bộ** items, folders và albums |
+| DELETE | `/delete-item` | `{ key, path }` — xoá item hoặc folder (kèm con) khỏi DB, không đụng file thật |
+| GET | `/cache/:filename` | `?key` — file trong `<root>/.thumbnail/` |
+| GET | `/albums` | `?key` (kèm `itemCount`, `coverItemPath`, `coverThumbnail`) |
+| POST | `/albums` | `{ key, name, description }` |
+| PUT | `/albums/:id` | `{ key, name, description, coverImage }` |
+| DELETE | `/albums/:id` | `{ key }` |
+| POST / DELETE | `/albums/:id/items` | `{ key, itemIds: [] }` |
+| GET | `/stats` | `?key` — đếm theo type, favorites, timeline theo tháng, 20 item mới nhất |
 
-### Toggle Favorite
-```http
-POST /api/media/favorite-media
-Body: { "key": "MEDIA_PHOTOS", "id": 123, "isFavorite": true }
-```
-
-### Albums
-```http
-GET /api/media/albums?key=MEDIA_PHOTOS
-POST /api/media/albums
-PUT /api/media/albums/:id
-DELETE /api/media/albums/:id
-POST /api/media/albums/:id/items
-DELETE /api/media/albums/:id/items
-```
-
-### Stats
-```http
-GET /api/media/stats?key=MEDIA_PHOTOS
-```
+File gốc được phục vụ tĩnh qua `/media/<path>` (mọi thư mục `MEDIA_*` cùng mount vào `/media`; nếu hai nguồn có file cùng đường dẫn tương đối thì nguồn khai báo trước thắng).
 
 ## 📱 Frontend Routes
 
 ```
-/media                      # Main gallery
-/media?key=MEDIA_PHOTOS     # Specific root
-/media?view=timeline        # Timeline view
-/media?view=albums          # Albums view
-/media?view=favorites       # Favorites only
-/media?type=image           # Images only
-/media?type=video           # Videos only
-/media?year=2024&month=11   # Filter by date
-/media?albumId=1            # Specific album
+/media                                  # Main gallery (mặc định key=MEDIA_PHOTOS nếu thiếu)
+/media?key=MEDIA_PHOTOS                 # Specific root
+/media?key=MEDIA_PHOTOS&path=2024/Trip  # Duyệt thư mục con (Photos view)
+/media?key=…&view=timeline              # Timeline view
+/media?key=…&view=albums                # Danh sách album
+/media?key=…&view=albums&albumId=1      # Một album (albumId chỉ có tác dụng cùng view=albums)
+/media?key=…&view=favorites             # Favorites only
 ```
+
+Bộ lọc `type=image|video`, `year=2024`, `month=11` chỉ áp dụng cho Timeline, Favorites và album (Photos view dùng API `media-folders`, không lọc); chưa có nút lọc trên giao diện.
 
 ## 🎨 UI Features
 
@@ -163,17 +165,16 @@ GET /api/media/stats?key=MEDIA_PHOTOS
 
 ### Lightbox Viewer
 - Full-screen view
-- Keyboard navigation (←/→/Esc)
-- Image zoom
+- Keyboard: `←`/`→` chuyển ảnh, `Esc` đóng, `+`/`-` zoom
 - Video player
-- Download button
-- Metadata display
+- Download button (dùng `window.Android.downloadFile` khi chạy trong Android WebView)
+- Favorite
 
 ### Toolbar
 - View switcher (Photos/Timeline/Albums/Favorites)
-- Scan button
-- Bulk actions (Add to Album)
-- Selection counter
+- Bulk actions khi đang chọn (Add to Album, bỏ chọn)
+
+Nút **Quét Media / Xóa DB / Reset DB** không nằm trên toolbar mà ở **Sidebar → Công cụ 📸 Media**.
 
 ## 🔄 Scan Logic
 
@@ -224,10 +225,11 @@ GET /api/media/stats?key=MEDIA_PHOTOS
 
 ## 📝 Notes
 
-- Supported image formats: jpg, jpeg, png, webp, avif, gif, bmp, heic, heif
-- Supported video formats: mp4, mkv, avi, webm, mov, m4v, 3gp
-- Thumbnail folder: `.thumbnail` (tên giống file gốc)
-- Default pagination: 100 items/page
+- Image formats: jpg, jpeg, jfif, png, webp, avif, gif, bmp, tiff, svg, heic, heif
+- Video formats: mp4, mkv, avi, mov, wmv, flv, webm, m4v, 3gp, ts, mpg, mpeg
+- Các đuôi khác (audio, pdf, text, document, archive, code) được index theo nhóm; đuôi lạ → `other` (danh sách: `backend/constants.js` → `FILE_EXTENSIONS`)
+- Thumbnail folder: `.thumbnail` (tên giống file gốc, đuôi ảnh bất kỳ); scanner không tự tạo thumbnail
+- Pagination: frontend xin 100 items/page (backend mặc định 50)
 - Database location: `backend/data/MEDIA_*.db`
 
 ---

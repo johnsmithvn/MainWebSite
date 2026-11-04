@@ -4,7 +4,7 @@ const router = express.Router();
 const { getMusicDB } = require("../../utils/db");
 const { scanMusicFolderToDB } = require("../../utils/music-scan");
 
-router.delete("/reset-cache-music", (req, res) => {
+router.delete("/reset-cache-music", async (req, res) => {
   const key = req.query.key || req.body.key;
   const mode = req.query.mode;
 
@@ -25,11 +25,12 @@ router.delete("/reset-cache-music", (req, res) => {
       return res.json({ success: true, message: "Đã xoá cache thành công" });
     }
     if (mode === "reset") {
+      // Giữ playlist do người dùng tạo: playlist_items nối theo songPath nên vẫn khớp sau khi
+      // quét lại (ISSUES D2). Muốn xoá cả playlist thì dùng mode=delete.
       db.prepare("DELETE FROM folders").run();
       db.prepare("DELETE FROM songs").run();
-      db.prepare("DELETE FROM playlists").run();
-      db.prepare("DELETE FROM playlist_items").run();
-      const stats = scanMusicFolderToDB(key);
+      // Chờ scan xong: trả stats thật và bắt được lỗi scan (trước đây chạy nền → unhandled rejection, ISSUES B2)
+      const stats = await scanMusicFolderToDB(key);
       console.log(`🔁 Reset cache cho ${key}:`, stats);
       return res.json({
         success: true,

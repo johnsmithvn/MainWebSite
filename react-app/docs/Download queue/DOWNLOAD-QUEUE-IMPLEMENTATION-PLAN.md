@@ -1,5 +1,7 @@
 # 📋 Download Queue - Implementation Plan & Progress Tracker
 
+> **📜 Tài liệu triển khai (10/2025).** Download queue đã hoàn thành và đang chạy (`/downloads`). Lưu ý (2026-10-29): `hooks/useDownloadQueue.js`, `hooks/useDownloadQueueOptimized.js`, `pages/downloads/DownloadSettings.jsx`, `utils/lazyLoadComponents.js`, `utils/downloadHelpers.js`, `utils/downloadNotifications.js` được tạo theo kế hoạch nhưng **không được import ở đâu**; `download-manager.css` cũng không được dùng. Xem [docs/DEAD-CODE-REPORT.md](../../../docs/DEAD-CODE-REPORT.md) và [OFFLINE-GUIDE.md](../OFFLINE-GUIDE.md).
+
 ## 🎯 Project Overview
 
 **Goal**: Implement non-blocking download queue system for manga reader  

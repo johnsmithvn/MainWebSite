@@ -1,5 +1,7 @@
 # 📋 KẾ HOẠCH REFACTOR REACT-APP
 
+> **📋 Đề xuất refactor 10/2025 — CHƯA được thực hiện** (kiểm tra 2026-10-29). Các file mục tiêu như `authStore.js`, `mangaStore.js`, `SettingSection.jsx`, `MangaSettings.jsx`… không tồn tại; store vẫn nằm trong `src/store/index.js`. Danh sách dead code đã cập nhật: [docs/DEAD-CODE-REPORT.md](../../docs/DEAD-CODE-REPORT.md).
+
 ## 🎯 Mục Tiêu
 Tối ưu hóa cấu trúc code, loại bỏ duplicate code, dead code và cải thiện maintainability
 

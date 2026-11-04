@@ -1,5 +1,17 @@
 # Data Flow Documentation - MainWebSite React
 
+> **⚠️ Viết 09/2025 — một phần đã lỗi thời.** Nhiều đoạn code trong tài liệu là **minh hoạ ý tưởng**, không phải code thật. Bảng dưới đối chiếu với code (kiểm tra 2026-11-04); tham khảo thêm [README.md](README.md) và [docs/SYSTEM-REPORT.md](../../docs/SYSTEM-REPORT.md).
+>
+> | Mục trong tài liệu | Khớp code? | Thực tế |
+> |--------------------|-----------|---------|
+> | State Management (auth, UI, manga/movie/music store) | ⚠️ Thiếu | Thiếu `useSharedSettingsStore`, `useDownloadQueueStore`; Media Gallery giữ state cục bộ trong `MediaHome.jsx`, không có store |
+> | Cache Key Strategy — `getCacheKey()` | ❌ | Không có hàm này. Key thật được tạo bởi các hàm trong `constants/cacheKeys.js` (`CACHE_PREFIXES`, dạng `<prefix>::<sourceKey>::<rootFolder>::…`) |
+> | Request Deduplication | ✅ | `inflightGet` trong `utils/api.js` |
+> | Optimistic Updates — `optimisticUpdate()` | ❌ | Không có helper chung; store gọi API rồi mới cập nhật state |
+> | Virtual Scrolling — `useVirtualizedData` | ❌ | Không tồn tại; danh sách phân trang ở client (manga/movie/music) hoặc ở server (media, `page`/`limit`) |
+> | Lazy Loading — `useLazyLoading`, `apiService.getItemDetails` | ❌ | Không tồn tại |
+> | Offline Storage & Cache Management | ✅ | Còn đúng; thiếu download queue — xem [OFFLINE-GUIDE.md](OFFLINE-GUIDE.md) |
+
 This document provides a comprehensive overview of data flow patterns, state management, and data synchronization strategies implemented in the MainWebSite React application.
 
 ## 🔄 Data Flow Architecture Overview

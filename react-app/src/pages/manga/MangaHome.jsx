@@ -297,10 +297,7 @@ const MangaHome = () => {
             caseFirst: 'upper'
           });
         });
-      case 'date':
-        return list.sort((a, b) => new Date(b.lastModified || 0) - new Date(a.lastModified || 0));
-      case 'size':
-        return list.sort((a, b) => (b.size || 0) - (a.size || 0));
+      // API mode=path chỉ trả name/path/thumbnail (không có ngày, size, lượt xem) nên chỉ sort được theo tên
       default:
         return list;
     }
@@ -504,8 +501,6 @@ const MangaHome = () => {
                            bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="name">Name</option>
-                  <option value="date">Last Updated</option>
-                  <option value="views">Most Viewed</option>
                 </select>
               </div>
             </div>
@@ -700,7 +695,7 @@ const MangaHome = () => {
         }}
         itemName={itemToDelete?.name || ''}
         itemType="manga folder"
-        isLoading={isDeleting}
+        isDeleting={isDeleting}
       />
       </div>
     </div>

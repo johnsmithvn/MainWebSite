@@ -10,7 +10,6 @@ import Header from "@/components/common/Header";
 import Sidebar from "@/components/common/Sidebar";
 import SearchModal from "@/components/common/SearchModal";
 import LoadingOverlay from "@/components/common/LoadingOverlay";
-import Toast from "@/components/common/Toast";
 import MovieRandomSection from "@/components/movie/MovieRandomSection";
 import { sendLog } from "@/utils/logger";
 
@@ -797,9 +796,6 @@ const MoviePlayer = () => {
         onClose={toggleSearchModal}
         type="movie"
       />
-
-      {/* Toast */}
-      <Toast />
     </div>
   );
 };

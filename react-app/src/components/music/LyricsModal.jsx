@@ -86,12 +86,17 @@ const LyricsModal = ({ isOpen, onClose, currentTrack }) => {
       const result = await response.json();
       console.log('✅ Success response:', result);
       
-      // Update current track in store
+      // Update the saved song in store: current track (only if still the same song) and its playlist entry,
+      // otherwise bumpViewCount() copies the old playlist entry back over currentTrack on next play
+      const savedPath = currentTrack.path;
+      const savedLyrics = lyrics.trim();
       useMusicStore.setState((state) => ({
-        currentTrack: {
-          ...state.currentTrack,
-          lyrics: lyrics.trim(),
-        },
+        currentTrack: state.currentTrack?.path === savedPath
+          ? { ...state.currentTrack, lyrics: savedLyrics }
+          : state.currentTrack,
+        currentPlaylist: state.currentPlaylist.map((t) => (
+          t.path === savedPath ? { ...t, lyrics: savedLyrics } : t
+        )),
       }));
 
       toast.success('Đã lưu lời bài hát thành công! 🎵', {

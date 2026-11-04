@@ -1,262 +1,106 @@
-# 🚀 Media Gallery - Quick Start Guide
+# 🚀 Media Gallery — Bắt đầu nhanh
 
-## Bước 1: Cấu hình
+> Đối chiếu với code ngày 2026-11-04. Cài đặt chung (Node, `.env`, chạy server): [readme.md](../readme.md). Tài liệu đầy đủ (API, schema): [MEDIA-GALLERY.md](MEDIA-GALLERY.md).
 
-### 1.1. Thêm root paths vào `.env`
+Media Gallery hiển thị ảnh, video và mọi loại file khác trong một thư mục, kiểu Google Photos: duyệt theo thư mục, xem theo dòng thời gian, album, yêu thích.
 
-Mở file `backend/.env` và thêm:
+---
+
+## 1. Khai báo thư mục
+
+Thêm vào `backend/.env` một hoặc nhiều dòng có tiền tố `MEDIA_`:
 
 ```env
-# 📸 MEDIA GALLERY ROOT PATHS
-MEDIA_PHOTOS=E:\Photos
-MEDIA_CAMERA=D:\DCIM\Camera
-MEDIA_DOWNLOAD=E:\Download\Pictures
+MEDIA_PHOTOS=E:/Photos
+MEDIA_CAMERA=D:/DCIM/Camera
 ```
 
-**Lưu ý**: Thay đổi đường dẫn theo thư mục thực tế trên máy bạn.
+- Thư mục phải **tồn tại** lúc server khởi động, nếu không key bị bỏ qua.
+- Muốn bắt đăng nhập mới xem được: thêm key vào `SECURITY` (VD `SECURITY=V_MOVIE,MEDIA_PHOTOS`).
+- Sửa xong thì khởi động lại server (`npm run dev`).
 
-### 1.2. Chuẩn bị thư mục
+## 2. Thumbnail (tuỳ chọn)
 
-Cấu trúc thư mục khuyến nghị:
-
-```
-E:\Photos\
-├── 2024\
-│   ├── 01-January\
-│   │   ├── IMG_001.jpg
-│   │   ├── IMG_002.jpg
-│   │   └── .thumbnail\          # Thumbnail folder (optional)
-│   │       ├── IMG_001.jpg
-│   │       └── IMG_002.jpg
-│   └── 02-February\
-└── 2023\
-```
-
-## Bước 2: Khởi động Server
-
-```bash
-# Terminal 1: Backend
-cd backend
-npm install
-npm start
-
-# Terminal 2: Frontend
-cd react-app
-npm install
-npm run dev
-```
-
-## Bước 3: Test API
-
-Mở trình duyệt và truy cập:
+Scanner **không tự tạo** thumbnail cho ảnh. Nếu một thư mục có thư mục con `.thumbnail` chứa ảnh **cùng tên** (bất kỳ đuôi ảnh nào), ảnh đó được dùng làm thumbnail; nếu không, grid hiển thị ảnh gốc.
 
 ```
-https://localhost:3000/api/media/test
+E:\Photos\2024\
+├── IMG_001.jpg
+├── IMG_002.jpg
+└── .thumbnail\
+    ├── IMG_001.jpg      ← thumbnail của IMG_001.jpg
+    └── IMG_002.webp
 ```
 
-Kết quả mong đợi:
+Tạo hàng loạt bằng ImageMagick (chạy trong `cmd` tại thư mục ảnh):
 
-```json
-{
-  "success": true,
-  "message": "Media Gallery API is working! 📸",
-  "endpoints": { ... },
-  "features": [ ... ]
-}
-```
-
-## Bước 4: Scan Media lần đầu
-
-### 4.1. Qua API (Postman/Thunder Client)
-
-```http
-POST https://localhost:3000/api/media/scan-media
-Content-Type: application/json
-
-{
-  "key": "MEDIA_PHOTOS"
-}
-```
-
-### 4.2. Qua Web UI
-
-1. Mở `https://localhost:3001` (React dev server)
-2. Click sidebar: **Media Gallery**
-3. Click button **Scan** ở toolbar
-4. Chờ scan hoàn tất
-
-Kết quả:
-
-```json
-{
-  "success": true,
-  "stats": {
-    "inserted": 150,  // Số ảnh/video mới
-    "updated": 5,     // Số file đã cập nhật
-    "skipped": 200,   // Số file không đổi
-    "deleted": 10     // Số record đã xóa
-  }
-}
-```
-
-## Bước 5: Sử dụng Media Gallery
-
-### 5.1. Photos View (Mặc định)
-
-```
-https://localhost:3001/media?key=MEDIA_PHOTOS
-```
-
-Tính năng:
-- ✅ Grid layout 2-6 cột (responsive)
-- ✅ Click để mở lightbox
-- ✅ Shift/Ctrl click để multi-select
-- ✅ Hover để hiện actions (favorite, select)
-
-### 5.2. Timeline View
-
-```
-https://localhost:3001/media?key=MEDIA_PHOTOS&view=timeline
-```
-
-Tính năng:
-- ✅ Nhóm theo năm-tháng
-- ✅ Visual calendar cards
-- ✅ Click ngày để xem ảnh
-
-### 5.3. Albums View
-
-```
-https://localhost:3001/media?key=MEDIA_PHOTOS&view=albums
-```
-
-Tính năng:
-- ✅ Tạo album mới
-- ✅ Thêm ảnh vào album (multi-select → Add to Album)
-- ✅ Cover image tự động
-
-### 5.4. Favorites View
-
-```
-https://localhost:3001/media?key=MEDIA_PHOTOS&view=favorites
-```
-
-## Bước 6: Thao tác thường dùng
-
-### 6.1. Đánh dấu Favorite
-
-1. Hover vào ảnh → Click icon ❤️
-2. Hoặc: Mở lightbox → Click ❤️ ở toolbar
-
-### 6.2. Tạo Album
-
-1. Click tab **Albums**
-2. Click **+ New Album**
-3. Nhập tên & mô tả
-4. Click **Create**
-
-### 6.3. Thêm ảnh vào Album
-
-1. View **Photos**
-2. Multi-select ảnh (Shift/Ctrl click)
-3. Click **Add to Album**
-4. Chọn album
-5. Done!
-
-### 6.4. Filter theo thời gian
-
-```
-# Xem ảnh tháng 11/2024
-/media?key=MEDIA_PHOTOS&year=2024&month=11
-
-# Chỉ xem ảnh
-/media?key=MEDIA_PHOTOS&type=image
-
-# Chỉ xem video
-/media?key=MEDIA_PHOTOS&type=video
-```
-
-## Bước 7: Tối ưu Performance
-
-### 7.1. Tạo Thumbnails
-
-Để load nhanh hơn, tạo thumbnail cho ảnh:
-
-```bash
-# Sử dụng ImageMagick hoặc FFmpeg
-cd "E:\Photos\2024\01-January"
+```bat
 mkdir .thumbnail
-
-# Convert tất cả ảnh sang thumbnail
 for %i in (*.jpg) do magick "%i" -resize 400x400 ".thumbnail\%i"
 ```
 
-### 7.2. Cấu hình Cache
+## 3. Mở gallery và quét dữ liệu
 
-Backend tự động cache với headers:
+1. Mở app (`http://localhost:3001` khi dev, `http://localhost:3000` khi production).
+2. Ở trang chủ, chọn nguồn `MEDIA_PHOTOS` → app chuyển tới `/media?key=MEDIA_PHOTOS`.
+3. Mở **Sidebar → Công cụ 📸 Media → Quét Media**. Hộp thoại cho phép nhập đường dẫn con để chỉ quét một thư mục.
+   Bật thêm **shallow** để chỉ quét các file và thư mục nằm ngay trong đường dẫn đó, không đi sâu hơn.
+4. Khi quét xong, hộp thoại hiện số mục *Thêm / Sửa / Xoá*. Quét lại mỗi khi thêm file mới.
 
-```javascript
-Cache-Control: public, max-age=3600, must-revalidate
-```
-
-## 🎯 Tips & Tricks
-
-### Keyboard Shortcuts (Lightbox)
-
-- `←` / `→` : Previous/Next photo
-- `Esc` : Close lightbox
-- `F` : Toggle favorite
-
-### URL Parameters
+Quét bằng API (VD từ script định kỳ):
 
 ```bash
-key=MEDIA_PHOTOS           # Root path
-view=photos|timeline|albums|favorites
-type=image|video
-year=2024
-month=11
-albumId=1
-page=1
-limit=100
-```
-
-### Scan incrementally
-
-Chạy scan định kỳ để update:
-
-```bash
-# Cron job (Linux/Mac)
-0 2 * * * curl -X POST https://localhost:3000/api/media/scan-media \
+curl -X POST http://localhost:3000/api/media/scan-media \
   -H "Content-Type: application/json" \
   -d '{"key":"MEDIA_PHOTOS"}'
 ```
 
-## 🐛 Troubleshooting
+Body có thể thêm `"path": "2024"` (chỉ quét thư mục con) và `"shallow": true`. Kết quả:
 
-### Lỗi: "Root path không tồn tại"
+```json
+{
+  "success": true,
+  "stats": { "folders": 12, "inserted": 150, "updated": 5, "skipped": 200, "deleted": 10 },
+  "message": "Scan media thành công!"
+}
+```
 
-✅ Check đường dẫn trong `.env`  
-✅ Verify folder exists  
-✅ Restart server
+> Gọi API từ chính máy chủ (`127.0.0.1`) là qua được whitelist. Nếu key nằm trong `SECURITY`, request phải kèm header `x-secure-token: <SECURITY_PASSWORD>`.
 
-### Lỗi: Ảnh không hiển thị
+## 4. Các chế độ xem
 
-✅ Check file permissions  
-✅ Verify supported formats (jpg, png, webp, etc.)  
-✅ Run scan lại
+Chuyển bằng các tab trên toolbar; mỗi tab tương ứng một tham số `view` trên URL:
 
-### Performance chậm
+| Tab | URL | Nội dung |
+|-----|-----|----------|
+| Photos | `/media?key=MEDIA_PHOTOS` | Duyệt theo thư mục (`&path=2024/Tet`), hiện thư mục con và file |
+| Timeline | `&view=timeline` | Ảnh/video nhóm theo tháng, mới nhất trước |
+| Albums | `&view=albums` | Danh sách album; mở một album: `&view=albums&albumId=1` |
+| Favorites | `&view=favorites` | Các mục đã đánh dấu yêu thích |
 
-✅ Giảm `limit` xuống 50  
-✅ Tạo thumbnails  
-✅ Enable browser cache
+> Ngày trong Timeline hiện là **ngày sửa file** (scanner chưa đọc EXIF).
 
-## 📚 Đọc thêm
+Lọc thêm bằng tham số URL (chỉ áp dụng cho Timeline, Favorites và album; chưa có nút trên giao diện): `type=image|video`, `year=2024`, `month=11`.
 
-- [Full Documentation](./MEDIA-GALLERY.md)
-- [API Reference](./MEDIA-GALLERY.md#-api-endpoints)
-- [Database Schema](./MEDIA-GALLERY.md#-cấu-hình)
+## 5. Thao tác thường dùng
 
----
+| Việc | Cách làm |
+|------|----------|
+| Xem ảnh/video lớn | Click vào mục → mở lightbox |
+| Chuyển ảnh / đóng / zoom trong lightbox | `←` `→` · `Esc` · `+` `-` |
+| Yêu thích | Nút ❤️ trên ảnh hoặc trong lightbox |
+| Tải file về máy | Nút tải xuống trong lightbox |
+| Chọn nhiều | Giữ `Shift` hoặc `Ctrl` rồi click |
+| Thêm vào album | Chọn nhiều → **Add to Album** trên toolbar → chọn album |
+| Tạo album | Tab **Albums** → **New Album** → nhập tên, mô tả |
+| Xoá một mục | Nút thùng rác → xác nhận. Chỉ xoá khỏi **database**, file trên ổ đĩa vẫn còn (quét lại sẽ thêm lại) |
 
-**Happy organizing your photos! 📸✨**
+## 6. Xử lý sự cố
+
+| Hiện tượng | Cách xử lý |
+|------------|-----------|
+| Không thấy nguồn `MEDIA_…` ở trang chủ | Kiểm tra đường dẫn trong `backend/.env` có tồn tại, khởi động lại server |
+| Gallery trống | Chưa quét — làm bước 3 |
+| Có file mới nhưng không hiện | Quét lại (toàn bộ hoặc chỉ thư mục chứa file mới) |
+| Thumbnail thư mục không hiện | Lỗi đã biết ([ISSUES B8](ISSUES-REPORT.md)) |
+| Tải trang chậm với thư mục rất lớn | Tạo thumbnail (bước 2) để không phải tải ảnh gốc |

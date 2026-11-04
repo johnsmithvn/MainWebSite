@@ -21,13 +21,13 @@ import { useRecentMusicManager } from '@/hooks/useMusicData';
 import { useDebounceValue } from '@/hooks';
 import { apiService } from '@/utils/api';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
-import LoadingOverlay from '@/components/common/LoadingOverlay';
 import PlayerFooter from '../../components/music/PlayerFooter';
 import PlayerHeader from '../../components/music/PlayerHeader';
 import PlaylistSidebar from '../../components/music/PlaylistSidebar';
-import FullPlayerModal from '../../components/music/FullPlayerModal';
 import LyricsModal from '../../components/music/LyricsModal';
 import MusicDownloadModal from '../../components/music/MusicDownloadModal';
+import TrackListSkeleton from '../../components/music/TrackListSkeleton';
+import { useMusicPlayer, formatTime } from '../../components/music/musicPlayerContext';
 import { musicDownloadQueue } from '@/utils/musicDownloadQueue';
 
 const MusicPlayer = () => {
@@ -75,58 +75,29 @@ const MusicPlayer = () => {
   }, [stateKey, sourceKey, setSourceKey, navigate, showToast]);
 
   const { addRecentMusic } = useRecentMusicManager();
+  // Audio, progress, metadata and the full player live in the global MusicPlayerProvider
+  const { togglePlayPause, openFullPlayer, buildQueue, trackMetadata } = useMusicPlayer();
 
-  // Player states
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [buffered, setBuffered] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  // Page states
+  const [loading, setLoading] = useState(false); // tracklist skeleton while a folder/playlist loads
+  const [error, setError] = useState(null); // tracklist load error (shown with a retry button)
+  const [reloadToken, setReloadToken] = useState(0);
   const [playlistTitle, setPlaylistTitle] = useState(null);
   const [currentPlaylistId, setCurrentPlaylistId] = useState(null); // Track current playlist ID
   const [library, setLibrary] = useState({ items: [], loading: false, error: null });
   const [activePlaylistId, setActivePlaylistId] = useState(null);
   const [headerCondensed, setHeaderCondensed] = useState(false);
-  const [isFullPlayerOpen, setIsFullPlayerOpen] = useState(false);
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
-  const [trackMetadata, setTrackMetadata] = useState(null);
   const headerSentinelRef = useRef(null);
 
-  // Audio ref
-  const audioRef = useRef(null);
-  // Removed viewedTracksRef to allow counting on every playback start
-  const latestTrackRef = useRef(null);
   const dragIndexRef = useRef(-1);
   const isDraggingRef = useRef(false);
   const [dropIndicator, setDropIndicator] = useState({ index: -1, position: 'above' });
-  const prevOrderBeforeShuffleRef = useRef(null);
 
   // Selection states for multi-select
   const [selectedTracks, setSelectedTracks] = useState(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-
-  // Helper: bump viewCount locally for UI sync
-  const bumpViewCount = useCallback((songPath) => {
-    if (!songPath) return;
-    try {
-      // Update Zustand state without restarting playback
-      useMusicStore.setState((state) => {
-        const idx = state.currentPlaylist.findIndex((t) => t.path === songPath);
-        if (idx === -1) return {};
-        const oldItem = state.currentPlaylist[idx] || {};
-        const newCount = Number(oldItem.viewCount ?? oldItem.views ?? 0) + 1;
-        const updatedItem = { ...oldItem, viewCount: newCount };
-        const newPlaylist = [...state.currentPlaylist];
-        newPlaylist[idx] = updatedItem;
-        const isCurrent = state.currentTrack?.path === songPath;
-        return {
-          currentPlaylist: newPlaylist,
-          currentTrack: isCurrent ? updatedItem : state.currentTrack,
-        };
-      });
-    } catch {}
-  }, []);
 
   // Row click handler to avoid re-triggering the same track (prevents view loop)
   const handleRowClick = useCallback((e, track, index) => {
@@ -138,21 +109,12 @@ const MusicPlayer = () => {
     // If clicking the same track that's already selected
     if (currentTrack?.path === track.path && currentIndex === index) {
       // If paused, just resume without resetting src
-      if (!isPlaying) {
-        try {
-          const audio = audioRef.current;
-          if (audio) {
-            const p = audio.play();
-            if (p) p.catch(() => {});
-          }
-          resumeTrack();
-        } catch {}
-      }
+      if (!isPlaying) togglePlayPause();
       return; // Do nothing if already playing this track
     }
     // Different track -> start it normally
     playTrack(track, currentPlaylist, index);
-  }, [currentTrack?.path, currentIndex, isPlaying, playTrack, currentPlaylist, resumeTrack]);
+  }, [currentTrack?.path, currentIndex, isPlaying, playTrack, currentPlaylist, togglePlayPause]);
 
   // DnD handlers
   const handleDragStart = (index) => {
@@ -191,6 +153,11 @@ const MusicPlayer = () => {
     // Determine insertion index based on indicator position
     let insertIndex = dropIndicator.position === 'below' ? dropIndex + 1 : dropIndex;
     if (from < insertIndex) insertIndex -= 1; // adjust for removal shift
+    if (insertIndex === from) {
+      // Dropped back in place: nothing to reorder or save
+      handleDragEnd();
+      return;
+    }
 
     // Reorder playlist locally
     const prev = useMusicStore.getState().currentPlaylist;
@@ -210,10 +177,11 @@ const MusicPlayer = () => {
     // Persist only when this session is a playlist id
     try {
       const shuffledOn = useMusicStore.getState().shuffle;
-      if (!shuffledOn && effectivePlaylist && isPlaylistId(effectivePlaylist) && sourceKey) {
+      // currentPlaylistId is only set for saved playlists (a top-level folder like "Vpop" also has no '/')
+      if (!shuffledOn && currentPlaylistId && sourceKey) {
         const body = {
           key: sourceKey,
-          playlistId: Number(effectivePlaylist),
+          playlistId: currentPlaylistId,
           order: updated.map((t) => t.path),
         };
         const res = await fetch('/api/music/playlist/order', {
@@ -234,66 +202,19 @@ const MusicPlayer = () => {
     }
   };
 
-  // Keep a ref of the latest track for event handlers
-  useEffect(() => {
-    latestTrackRef.current = currentTrack || null;
-  }, [currentTrack]);
+  // (View count + recent on playback start are handled by MusicPlayerProvider)
 
-  // Increase view when playback starts (every time)
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const lastIncRef = { path: '', ts: 0 };
-
-    const handlePlay = async () => {
-      const track = latestTrackRef.current;
-      const trackPath = track?.path;
-      if (!trackPath || !sourceKey) return;
-
-      // Debounce duplicate play events for the same track within 1s
-      const now = Date.now();
-      if (lastIncRef.path === trackPath && now - lastIncRef.ts < 1000) return;
-      lastIncRef.path = trackPath;
-      lastIncRef.ts = now;
-
-      // Ensure track is recorded as recently played whenever playback starts
-      try {
-        addRecentMusic(track);
-      } catch (err) {
-        console.warn('Failed to add recent music:', err);
-      }
-
-      try {
-        const res = await fetch('/api/increase-view/music', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: sourceKey, path: trackPath })
-        });
-        if (res.ok) {
-          bumpViewCount(trackPath);
-        }
-      } catch (err) {
-        console.warn('Failed to increase music view count:', err);
-      }
-    };
-
-    audio.addEventListener('play', handlePlay);
-    return () => {
-      audio.removeEventListener('play', handlePlay);
-    };
-  }, [sourceKey, bumpViewCount]);
-
-  // Compute effective inputs (navigation state has priority, fallback to query params)
-  const effectivePath = stateFile || path || null;
-  const effectivePlaylist = statePlaylist ?? playlistPath ?? null; // allow ''
-  const effectiveKind = stateKind || (effectivePlaylist && !String(effectivePlaylist).includes('/') ? 'playlist' : (effectivePath ? 'audio' : 'folder'));
+  // Compute effective inputs (navigation state has priority, fallback to query params).
+  // Without any request (e.g. opened from the mini player) the page shows what the global player is playing.
+  const queueSource = useMusicStore((s) => s.queueSource);
+  const requestedPath = stateFile || path || null;
+  const requestedPlaylist = statePlaylist ?? playlistPath ?? null; // allow ''
+  const hasRequest = requestedPath !== null || requestedPlaylist !== null;
+  const effectivePath = hasRequest ? requestedPath : (queueSource?.file ?? null);
+  const effectivePlaylist = hasRequest ? requestedPlaylist : (queueSource?.playlist ?? null);
+  const effectiveKind = (hasRequest ? stateKind : queueSource?.kind) || (effectivePlaylist && !String(effectivePlaylist).includes('/') ? 'playlist' : (effectivePath ? 'audio' : 'folder'));
 
   // ========= Helpers =========
-  function buildAudioUrl(audioPath) {
-    if (!audioPath || !sourceKey) return null;
-    return `/api/music/audio?key=${sourceKey}&file=${encodeURIComponent(audioPath)}`;
-  }
 
   // Helper function to normalize album name
   const normalizeAlbum = (album) => {
@@ -329,13 +250,6 @@ const MusicPlayer = () => {
     };
   }, [effectivePath]);
 
-  const formatTime = (time) => {
-    if (!time || isNaN(time)) return '0:00';
-    const m = Math.floor(time / 60);
-    const s = Math.floor(time % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
   // Calculate total duration of all tracks in playlist
   const calculateTotalPlaylistDuration = useCallback(() => {
     return currentPlaylist.reduce((total, track) => {
@@ -356,55 +270,6 @@ const MusicPlayer = () => {
       return `${minutes}m ${seconds}s`;
     } else {
       return `${seconds}s`;
-    }
-  };
-
-  const togglePlayPause = useCallback(async () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    try {
-      if (isPlaying) {
-        audio.pause();
-        pauseTrack();
-      } else {
-        const p = audio.play();
-        if (p) await p;
-        resumeTrack();
-      }
-    } catch (err) {
-      setError('Failed to play/pause audio: ' + err.message);
-      showToast('Không thể play/pause: ' + err.message, 'error');
-    }
-  }, [isPlaying, pauseTrack, resumeTrack, showToast]);
-
-  const handleSeek = (e) => {
-    const audio = audioRef.current;
-    if (!audio || !duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const percent = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-    const newTime = percent * duration;
-    audio.currentTime = newTime;
-    setCurrentTime(newTime);
-  };
-
-  const handleVolumeBar = (e) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const percent = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-    setVolume(percent);
-    audio.volume = percent;
-  };
-
-  const toggleMute = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (volume === 0) {
-      setVolume(0.5);
-      audio.volume = 0.5;
-    } else {
-      setVolume(0);
-      audio.volume = 0;
     }
   };
 
@@ -615,6 +480,9 @@ const MusicPlayer = () => {
     if (typeof val === 'string') return !val.includes('/');
     return false;
   };
+  // A saved playlist (not a folder). Top-level folder names have no '/', so the kind must be checked too.
+  const isPlaylistQueue = effectivePlaylist !== null && effectivePlaylist !== '' && isPlaylistId(effectivePlaylist)
+    && effectiveKind !== 'folder' && effectiveKind !== 'audio';
 
   const loadPlaylistById = async (playlistIdArg, selectedFileArg) => {
     try {
@@ -635,6 +503,8 @@ const MusicPlayer = () => {
 
       setPlaylistTitle(data?.name || null);
       setCurrentPlaylistId(Number(playlistId)); // Save current playlist ID
+      // Remember the title with the queue so the page can show it again without reloading
+      useMusicStore.setState((s) => ({ queueSource: s.queueSource ? { ...s.queueSource, title: data?.name || null } : s.queueSource }));
 
       let startIndex = 0;
       if (selectedFileArg) {
@@ -643,8 +513,9 @@ const MusicPlayer = () => {
       }
 
       if (playlist.length > 0) {
-        playTrack(playlist[startIndex], playlist, startIndex);
-        addRecentMusic(playlist[startIndex]);
+        const { queue, index } = buildQueue(playlist, startIndex);
+        playTrack(queue[index], queue, index);
+        addRecentMusic(queue[index]);
       } else if (selectedFileArg) {
         const fileName = selectedFileArg.split('/').pop();
         const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
@@ -662,6 +533,7 @@ const MusicPlayer = () => {
         showToast('Playlist rỗng', 'warning');
       }
     } catch (err) {
+      setError('Không tải được playlist');
       showToast('Không thể load playlist: ' + (err.message || 'unknown error'), 'error');
     }
   };
@@ -724,8 +596,9 @@ const MusicPlayer = () => {
       }
 
       if (playlist.length > 0) {
-        playTrack(playlist[startIndex], playlist, startIndex);
-        addRecentMusic(playlist[startIndex]);
+        const { queue, index } = buildQueue(playlist, startIndex);
+        playTrack(queue[index], queue, index);
+        addRecentMusic(queue[index]);
       } else if (selectedPath) {
         // Fallback: single track only
         const fileName = selectedPath.split('/').pop();
@@ -761,123 +634,67 @@ const MusicPlayer = () => {
           return;
         } catch {}
       }
+      setError('Không tải được danh sách bài hát');
       showToast('Không thể phát nhạc: ' + (err.response?.data?.message || err.message), 'error');
     }
   };
 
-  // Load whenever inputs change
+  // Load whenever inputs change. The music keeps playing in the global player, so a request that matches
+  // the current queue (back navigation, mini player, v1/v2 switch) only restores page info instead of restarting.
+  const forceReloadRef = useRef(false);
   useEffect(() => {
+    if (!sourceKey || !sourceKey.startsWith('M_')) return;
+    if (effectivePath === null && effectivePlaylist === null) return; // nothing requested and nothing playing
+
+    const store = useMusicStore.getState();
+    const qs = store.queueSource;
+    const sameAsQueue = qs && store.queueKey === sourceKey && qs.kind === effectiveKind
+      && qs.playlist === effectivePlaylist && qs.file === effectivePath;
+    const force = forceReloadRef.current;
+    forceReloadRef.current = false;
+    if (sameAsQueue && store.currentTrack && !force) {
+      setCurrentPlaylistId(isPlaylistQueue ? Number(effectivePlaylist) : null);
+      setPlaylistTitle(qs.title || null);
+      return;
+    }
+    useMusicStore.setState({
+      queueSource: { kind: effectiveKind, playlist: effectivePlaylist, file: effectivePath },
+      queueKey: sourceKey,
+    });
+
+    let request;
     // Route by explicit kind first to avoid folder/playlist confusion
     if (effectiveKind === 'playlist' && effectivePlaylist !== null && effectivePlaylist !== undefined && effectivePlaylist !== '') {
-      return void loadPlaylistById(effectivePlaylist, effectivePath || null);
+      request = loadPlaylistById(effectivePlaylist, effectivePath || null);
+    } else if (effectiveKind === 'folder') {
+      request = loadFolderSongs(effectivePlaylist ?? '', effectivePath || null);
+    } else if (effectiveKind === 'audio' && effectivePath) {
+      request = loadFolderSongs(null, effectivePath);
+    } else if (effectivePlaylist !== null && effectivePlaylist !== undefined) {
+      // Fallbacks
+      request = isPlaylistId(effectivePlaylist)
+        ? loadPlaylistById(effectivePlaylist, effectivePath || null)
+        : loadFolderSongs(effectivePlaylist ?? '', effectivePath || null);
+    } else if (effectivePath) {
+      request = loadFolderSongs(null, effectivePath);
     }
-    if (effectiveKind === 'folder') {
-      return void loadFolderSongs(effectivePlaylist ?? '', effectivePath || null);
-    }
-    if (effectiveKind === 'audio' && effectivePath) {
-      return void loadFolderSongs(null, effectivePath);
-    }
-    // Fallbacks
-    if (effectivePlaylist !== null && effectivePlaylist !== undefined) {
-      if (isPlaylistId(effectivePlaylist)) return void loadPlaylistById(effectivePlaylist, effectivePath || null);
-      return void loadFolderSongs(effectivePlaylist ?? '', effectivePath || null);
-    }
-    if (effectivePath) return void loadFolderSongs(null, effectivePath);
+    if (!request) return;
+    setLoading(true);
+    setError(null);
+    request.finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveKind, effectivePlaylist, effectivePath, sourceKey]);
+  }, [effectiveKind, effectivePlaylist, effectivePath, sourceKey, reloadToken]);
 
-  // Initial load (handled by the URL-change effect above)
-  // useEffect(() => {
-  //   if (path && sourceKey && !currentTrack) {
-  //     loadFolderSongs();
-  //   }
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [path, sourceKey]);
-
-  // Audio element effects
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const handleLoadedMetadata = () => setDuration(audio.duration || 0);
-    const updateBuffered = () => {
-      if (audio.buffered?.length > 0) {
-        setBuffered(audio.buffered.end(audio.buffered.length - 1));
-      }
-    };
-    const handleEnded = () => {
-      if (repeat === 'one') {
-        audio.currentTime = 0;
-        audio.play();
-      } else {
-        nextTrack();
-      }
-    };
-    const handleError = (e) => {
-      setError('Failed to load audio');
-      showToast('Audio load error', 'error');
-    };
-
-    audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('progress', updateBuffered);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('error', handleError);
-
-    return () => {
-      audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('progress', updateBuffered);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('error', handleError);
-    };
-  }, [repeat, nextTrack, showToast]);
-
-  // Auto play when track changes
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !currentTrack || !sourceKey) return;
-    const audioUrl = buildAudioUrl(currentTrack.path);
-    if (!audioUrl) return;
-    // Only update src if changed
-    if (audio.src !== window.location.origin + audioUrl) {
-      audio.src = audioUrl;
-      audio.load();
-    }
-    const handleCanPlay = () => {
-      if (isPlaying && audio.paused) {
-        audio.play().catch((err) => {
-          setError('Failed to play audio: ' + err.message);
-          showToast('Không thể phát nhạc: ' + err.message, 'error');
-        });
-      }
-      audio.removeEventListener('canplay', handleCanPlay);
-    };
-    const handleLoadError = (e) => {
-      setError('Failed to load audio source');
-      showToast('Không thể load audio', 'error');
-      audio.removeEventListener('error', handleLoadError);
-    };
-    audio.addEventListener('canplay', handleCanPlay);
-    audio.addEventListener('error', handleLoadError);
-    return () => {
-      audio.removeEventListener('canplay', handleCanPlay);
-      audio.removeEventListener('error', handleLoadError);
-    };
-  }, [currentTrack, isPlaying, sourceKey, showToast]);
-
-  // Volume sync
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) audio.volume = volume;
-  }, [volume]);
+  const retryLoad = () => {
+    forceReloadRef.current = true;
+    setReloadToken((n) => n + 1);
+  };
 
   // ======== Derived UI Data ========
   const isFav = (t) => false; // Music doesn't have favorites system
   const folderTitle = (() => {
     if (effectivePlaylist) {
-      if (isPlaylistId(effectivePlaylist)) return playlistTitle || `Playlist #${effectivePlaylist}`;
+      if (isPlaylistQueue) return playlistTitle || `Playlist #${effectivePlaylist}`;
       return String(effectivePlaylist).split('/').pop();
     }
     if (effectivePath) {
@@ -893,31 +710,6 @@ const MusicPlayer = () => {
 
   const normalizedFilter = '';
   const visiblePlaylist = currentPlaylist;
-
-  // Load metadata for current track
-  useEffect(() => {
-    const loadMetadata = async () => {
-      if (!currentTrack?.path || !sourceKey) {
-        setTrackMetadata(null);
-        return;
-      }
-      
-      try {
-        const response = await fetch(`/api/music/music-meta?key=${encodeURIComponent(sourceKey)}&path=${encodeURIComponent(currentTrack.path)}`);
-        if (response.ok) {
-          const metadata = await response.json();
-          setTrackMetadata(metadata);
-        } else {
-          setTrackMetadata(null);
-        }
-      } catch (err) {
-        console.warn('Failed to load track metadata:', err);
-        setTrackMetadata(null);
-      }
-    };
-    
-    loadMetadata();
-  }, [currentTrack?.path, sourceKey]);
 
   // Load user playlists for Library
   useEffect(() => {
@@ -978,22 +770,15 @@ const MusicPlayer = () => {
             <div className="flex-1 min-w-0">
               {/* Tên file (không extension) - font bé hơn, không uppercase */}
               <h2
-                className="text-xl md:text-2xl font-bold tracking-normal mt-2 leading-tight cursor-pointer hover:opacity-80 active:opacity-60 transition-opacity lg:cursor-default lg:hover:opacity-100 lg:active:opacity-100"
+                className="text-xl md:text-2xl font-bold tracking-normal mt-2 leading-tight cursor-pointer hover:opacity-80 active:opacity-60 transition-opacity"
                 style={{
                   display: '-webkit-box',
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
                 }}
-                title="Click để mở Full Player (mobile/tablet)"
-                onClick={() => {
-                  // Mobile and tablet: Click filename to open full player
-                  const isMobileOrTablet = window.innerWidth <= 1024;
-                  if (isMobileOrTablet) {
-                    console.log('🎵 Opening Full Player from filename click');
-                    setIsFullPlayerOpen(true);
-                  }
-                }}
+                title="Mở trình phát toàn màn hình"
+                onClick={() => { if (currentTrack) openFullPlayer(); }}
               >
                 {currentTrack?.name || (currentTrack?.path ? currentTrack.path.split('/').pop()?.replace(/\.[^/.]+$/, '') : folderTitle || 'NOW PLAYING')}
               </h2>
@@ -1175,8 +960,8 @@ const MusicPlayer = () => {
               </div>
             </motion.div>
           )}
-          {/* Bottom: Full tracklist */}
-          <div className="mt-4 mb-0.5 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 420px)', minHeight: '300px' }}>
+          {/* Bottom: Full tracklist - fixed-height scroll panel on desktop; on mobile it flows with the page (one scrollbar) */}
+          <div className="mt-4 mb-0.5 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden flex flex-col md:h-[calc(100vh-420px)] md:min-h-[300px]">
             <div className={`grid ${
               isSelectionMode 
                 ? currentPlaylistId 
@@ -1197,8 +982,17 @@ const MusicPlayer = () => {
               {currentPlaylistId && <div className="text-center">Action</div>}
             </div>
 
-    <div className="divide-y divide-white/5 flex-1 overflow-y-auto">
-              {currentPlaylist.map((track, index) => {
+    <div className="divide-y divide-white/5 flex-1 md:overflow-y-auto">
+              {loading ? (
+                <TrackListSkeleton rows={8} />
+              ) : error ? (
+                <div className="px-4 py-10 text-center text-white/70">
+                  <p>{error}</p>
+                  <button onClick={retryLoad} className="mt-3 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-sm">
+                    Thử lại
+                  </button>
+                </div>
+              ) : currentPlaylist.map((track, index) => {
                 const isSelected = selectedTracks.has(track.path);
                 return (
                 <div
@@ -1314,7 +1108,7 @@ const MusicPlayer = () => {
                 </div>
               )})}
 
-              {currentPlaylist.length === 0 && (
+              {!loading && !error && currentPlaylist.length === 0 && (
                 <div className="px-4 py-10 text-center text-white/60">Chưa có danh sách phát. Hãy chọn một bài để bắt đầu.</div>
               )}
             </div>
@@ -1322,39 +1116,14 @@ const MusicPlayer = () => {
         </div>
       </div>
 
-      {/* Bottom player bar replaced with PlayerFooter component */}
-      <PlayerFooter
-        audioRef={audioRef}
-        currentTime={currentTime}
-        duration={duration}
-        formatTime={formatTime}
-        handleSeek={handleSeek}
-        handleVolumeBar={handleVolumeBar}
-        prevOrderBeforeShuffleRef={prevOrderBeforeShuffleRef}
-        onOpenFullPlayer={() => setIsFullPlayerOpen(true)}
-        theme="v1"
-      />
-
-      {/* Full Player Modal (Spotify-style) */}
-      <FullPlayerModal
-        isOpen={isFullPlayerOpen}
-        onClose={() => setIsFullPlayerOpen(false)}
-        audioRef={audioRef}
-        currentTime={currentTime}
-        duration={duration}
-        formatTime={formatTime}
-        handleSeek={handleSeek}
-        handleVolumeBar={handleVolumeBar}
-        prevOrderBeforeShuffleRef={prevOrderBeforeShuffleRef}
-        trackMetadata={trackMetadata}
-        theme="v1"
-      />
+      {/* Bottom player bar (controls from the global player); the Full Player Modal is rendered by MusicPlayerProvider */}
+      <PlayerFooter theme="v1" />
 
       {/* Lyrics Modal - Shared with FullPlayerModal */}
       <LyricsModal
         isOpen={isLyricsOpen}
         onClose={() => setIsLyricsOpen(false)}
-        currentTrack={{ ...currentTrack, ...trackMetadata }}
+        currentTrack={{ ...currentTrack, ...trackMetadata, lyrics: currentTrack?.lyrics ?? trackMetadata?.lyrics }}
       />
 
       {/* Download Options Modal */}
@@ -1365,11 +1134,6 @@ const MusicPlayer = () => {
         currentPlaylist={currentPlaylist}
         onDownload={handleDownloadConfirm}
       />
-
-      {/* Audio Element */}
-      <audio ref={audioRef} preload="metadata" className="hidden" />
-
-      {loading && <LoadingOverlay />}
     </div>
   );
 };

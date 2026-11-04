@@ -2,9 +2,11 @@
 const fs = require("fs");
 const path = require("path");
 const { getRootPath } = require("./config");
+const { resolveInsideRoot } = require("./pathSafety");
 const naturalCompare = require("string-natural-compare");
 const { findFirstImageRecursively } = require("./imageUtils");
 const { getDB } = require("./db");
+const { escapeLike } = require("./sqlLike");
 
 /**
  * 📂 Đọc folder thật từ ổ đĩa
@@ -24,10 +26,10 @@ function loadFolderFromDisk(
   limit = 0,
   offset = 0
 ) {
-  const rootPath = path.join(getRootPath(dbkey), root); // Lấy đường dẫn root từ config
-  const basePath = path.join(rootPath, folderPath);
+  const rootPath = resolveInsideRoot(getRootPath(dbkey), root); // Lấy đường dẫn root từ config
+  const basePath = rootPath && resolveInsideRoot(rootPath, folderPath);
   // const basePath = path.join(getRootPath(dbkey), folderPath);
-  if (!fs.existsSync(basePath)) {
+  if (!basePath || !fs.existsSync(basePath)) {
     return { folders: [], images: [], total: 0, totalImages: 0 };
   }
 
@@ -108,8 +110,8 @@ function loadMovieFolderFromDisk(
 ) {
   // 🔥 CHỈ dùng dbkey để lấy rootPath thật
   const rootPath = getRootPath(dbkey);
-  const basePath = path.join(rootPath, folderPath);
-  if (!fs.existsSync(basePath)) {
+  const basePath = resolveInsideRoot(rootPath, folderPath);
+  if (!basePath || !fs.existsSync(basePath)) {
     return { folders: [], images: [], total: 0, totalImages: 0 };
   }
 
@@ -168,10 +170,10 @@ function loadMovieFolderFromDisk(
  */
 function loadFolderFromDB(dbkey, root, folderPath = "", limit = 0, offset = 0) {
   const db = getDB(dbkey);
-  const pathFilter = folderPath ? `${folderPath}/%` : "%";
+  const pathFilter = folderPath ? `${escapeLike(folderPath)}/%` : "%";
   const items = db
     .prepare(
-      `SELECT name, path, thumbnail, isFavorite FROM folders WHERE root = ? AND path LIKE ? ORDER BY name COLLATE NOCASE ASC`
+      `SELECT name, path, thumbnail, isFavorite FROM folders WHERE root = ? AND path LIKE ? ESCAPE '\\' ORDER BY name COLLATE NOCASE ASC`
     )
     .all(root, pathFilter);
 
@@ -188,10 +190,10 @@ function loadFolderFromDB(dbkey, root, folderPath = "", limit = 0, offset = 0) {
     }));
 
   // Đọc ảnh trực tiếp từ ổ đĩa cho folder hiện tại
-  const rootDir = path.join(getRootPath(dbkey), root);
-  const basePath = path.join(rootDir, folderPath);
+  const rootDir = resolveInsideRoot(getRootPath(dbkey), root);
+  const basePath = rootDir && resolveInsideRoot(rootDir, folderPath);
   const images = [];
-  if (fs.existsSync(basePath)) {
+  if (basePath && fs.existsSync(basePath)) {
     try {
       const entries = fs.readdirSync(basePath, { withFileTypes: true });
       entries.sort((a, b) => naturalCompare(a.name, b.name));
