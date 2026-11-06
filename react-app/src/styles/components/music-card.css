@@ -18,7 +18,7 @@
 }
 
 .dark .music-card {
-  background-color: #1f2937;
+  background-color: #1e293b;
 }
 
 .music-card-thumbnail {
@@ -85,7 +85,7 @@
 .music-card-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #1f2937;
+  color: #1e293b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -93,19 +93,19 @@
 }
 
 .dark .music-card-title {
-  color: #e5e7eb;
+  color: #e2e8f0;
 }
 
 .music-card-artist {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: #64748b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .dark .music-card-artist {
-  color: #9ca3af;
+  color: #94a3b8;
 }
 
 .music-card-duration {
@@ -158,12 +158,12 @@
 
 /* Loading state */
 .music-card.loading .music-card-image {
-  background-color: #f3f4f6;
+  background-color: #f1f5f9;
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .dark .music-card.loading .music-card-image {
-  background-color: #374151;
+  background-color: #334155;
 }
 
 @keyframes pulse {

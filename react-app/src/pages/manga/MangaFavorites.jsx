@@ -6,7 +6,15 @@ import { useNavigate } from 'react-router-dom';
 import { Heart, Search, Grid, List, Trash2, BookOpen, Download, RefreshCw } from 'lucide-react';
 import { useMangaStore, useUIStore } from '@/store';
 import Button from '@/components/common/Button';
-import { DEFAULT_IMAGES } from '@/constants';
+import MangaCard from '@/components/manga/MangaCard';
+import { CARD_GRIDS } from '@/constants';
+
+// Dòng phụ của card yêu thích: lần đọc gần nhất, hoặc ngày thêm vào yêu thích
+const favoriteSubtitle = (manga) => {
+  if (manga.lastRead) return `Đọc ${new Date(manga.lastRead).toLocaleDateString('vi-VN')}`;
+  const added = manga.favoriteDate || manga.lastUpdated;
+  return added ? `Thêm ${new Date(added).toLocaleDateString('vi-VN')}` : null;
+};
 
 const MangaFavorites = () => {
   const { favorites, fetchFavorites, toggleFavorite, loading: mangaLoading } = useMangaStore();
@@ -249,137 +257,19 @@ const MangaFavorites = () => {
         </div>
       ) : (
         <>
-          {/* Favorites Grid/List */}
-          <div className={`grid ${
-            viewMode === 'grid' 
-              ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-6' 
-              : 'grid-cols-1'
-          } gap-4 mb-8`}>
+          {/* Favorites Grid/List: dùng chung MangaCard (ItemCard) và lưới của Manga */}
+          <div className={`${viewMode === 'grid' ? CARD_GRIDS.manga : 'flex flex-col gap-1'} mb-8`}>
             {currentItems.map((manga, index) => (
-            <div
-              key={manga.id || manga.path || index}
-              className={`bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg 
-                        transition-all duration-200 group border border-gray-200 dark:border-gray-700
-                        ${viewMode === 'list' ? 'flex items-center p-4' : 'p-3'}`}
-            >
-              {viewMode === 'grid' ? (
-                <>
-                    <div className="relative" onClick={() => handleNavigate(manga)}>
-                    <div
-                      className="aspect-[3/4] bg-gray-200 dark:bg-gray-700 rounded-md mb-3 
-                                  overflow-hidden cursor-pointer"
-                      // inner click delegated to parent
-                    >
-                      <img
-                        src={manga.thumbnail || DEFAULT_IMAGES.cover}
-                        alt={manga.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(manga); }}
-                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full
-                               opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                    >
-                      <Heart className="w-4 h-4 fill-current" />
-                    </button>
-                  </div>
-                  
-                  <h3
-                    className="font-semibold text-gray-900 dark:text-white text-sm mb-2 truncate-3 cursor-pointer hover:text-blue-500 leading-snug"
-                    onClick={() => handleNavigate(manga)}
-                    title={manga.title || manga.name || ''}
-                  >
-                    {manga.title || manga.name || ''}
-                  </h3>
-                  
-                  <div className="flex flex-col gap-1">
-                     <span className="text-xs text-gray-500">
-                       Added: {manga.favoriteDate ? new Date(manga.favoriteDate).toLocaleDateString() : (manga.lastUpdated ? new Date(manga.lastUpdated).toLocaleDateString() : '—')}
-                     </span>
-                    {manga.lastRead && (
-                      <span className="text-xs text-green-600 dark:text-green-400">
-                        Last read: {new Date(manga.lastRead).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex gap-1 mt-2">
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      className="flex-1"
-                      onClick={() => handleNavigate(manga)}
-                    >
-                      <BookOpen className="w-3 h-3 mr-1" />
-                      Open
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="xs"
-                      onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(manga); }}
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div
-                    className="w-16 h-20 bg-gray-200 dark:bg-gray-700 rounded-md mr-4 
-                                flex-shrink-0 overflow-hidden cursor-pointer"
-                    onClick={() => handleNavigate(manga)}
-                  >
-                    <img
-                      src={manga.thumbnail || DEFAULT_IMAGES.cover}
-                      alt={manga.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  
-                  <div className="flex-1">
-                    <h3
-                      className="font-semibold text-gray-900 dark:text-white mb-2 truncate-3 cursor-pointer hover:text-blue-500 leading-snug"
-                      onClick={() => handleNavigate(manga)}
-                      title={manga.title || manga.name || ''}
-                    >
-                      {manga.title || manga.name || ''}
-                    </h3>
-                    <div className="flex flex-col gap-1">
-                       <span className="text-xs text-gray-500">
-                         Added: {manga.favoriteDate ? new Date(manga.favoriteDate).toLocaleDateString() : (manga.lastUpdated ? new Date(manga.lastUpdated).toLocaleDateString() : '—')}
-                       </span>
-                      {manga.lastRead && (
-                        <span className="text-xs text-green-600 dark:text-green-400">
-                          Last read: {new Date(manga.lastRead).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleNavigate(manga)}
-                    >
-                      <BookOpen className="w-4 h-4 mr-1" />
-                      Open
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(manga); }}
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
+              <MangaCard
+                key={manga.id || manga.path || index}
+                manga={{ ...manga, name: manga.title || manga.name || '' }}
+                isFavorite
+                onClick={() => handleNavigate(manga)}
+                onToggleFavorite={() => handleRemoveFavorite(manga)}
+                variant={viewMode === 'list' ? 'list' : 'grid'}
+                subtitle={favoriteSubtitle(manga)}
+              />
+            ))}
           </div>
 
           {/* Pagination */}

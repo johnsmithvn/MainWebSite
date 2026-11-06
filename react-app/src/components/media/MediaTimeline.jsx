@@ -3,6 +3,11 @@
 
 import React from 'react';
 import { Video, Heart, CheckCircle } from 'lucide-react';
+import { FiHeart, FiCheckCircle } from 'react-icons/fi';
+import useCardActions from '@/hooks/useCardActions';
+import CardThumb from '@/components/common/CardThumb';
+import CardActionSheet from '@/components/common/CardActionSheet';
+import { CARD_GRIDS } from '@/constants';
 
 function MediaTimeline({ items, selectedItems, onSelectItem, onItemClick, onFavorite }) {
   // Group items by year-month
@@ -39,11 +44,12 @@ function MediaTimeline({ items, selectedItems, onSelectItem, onItemClick, onFavo
           </div>
 
           {/* Photo Grid - Same size as Photos view */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1">
+          <div className={CARD_GRIDS.media}>
             {group.items.map((item) => (
               <TimelinePhoto
                 key={item.id}
                 item={item}
+                selectionMode={(selectedItems?.size || 0) > 0}
                 isSelected={selectedItems?.has(item.id)}
                 onSelect={() => onSelectItem?.(item.id)}
                 onClick={() => onItemClick(item.originalIndex)}
@@ -57,21 +63,39 @@ function MediaTimeline({ items, selectedItems, onSelectItem, onItemClick, onFavo
   );
 }
 
-function TimelinePhoto({ item, isSelected, onSelect, onClick, onFavorite }) {
+function TimelinePhoto({ item, isSelected, selectionMode, onSelect, onClick, onFavorite }) {
   const isVideo = item.type === 'video';
-  
-  // Thumbnail logic with fallback
-  let thumbSrc;
+  const { open: actionsOpen, closeSheet, pressHandlers } = useCardActions();
+
+  // Nguồn thumbnail thử lần lượt: thumbnail đã tạo → file ảnh gốc. Hết nguồn thì CardThumb hiện ô dự phòng
+  // (trước đây ảnh lỗi rơi về folder-thumb.png nên trông như một thư mục).
+  const thumbSources = [];
   if (item.thumbnail) {
-    thumbSrc = `/media/${item.path.split('/').slice(0, -1).join('/')}/${item.thumbnail}`;
-  } else if (isVideo) {
-    thumbSrc = '/default/video-thumb.png';
-  } else {
-    thumbSrc = `/media/${item.path}`;
+    thumbSources.push(`/media/${item.path.split('/').slice(0, -1).join('/')}/${item.thumbnail}`);
+  }
+  if (!isVideo && item.path) {
+    thumbSources.push(`/media/${item.path}`);
   }
 
+  // Bảng thao tác khi nhấn giữ (cảm ứng) hoặc chuột phải
+  const actions = [
+    onFavorite && {
+      key: 'favorite',
+      label: item.isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích',
+      icon: FiHeart,
+      onClick: () => onFavorite(!item.isFavorite),
+    },
+    {
+      key: 'select',
+      label: isSelected ? 'Bỏ chọn' : 'Chọn',
+      icon: FiCheckCircle,
+      onClick: onSelect,
+    },
+  ];
+
   const handleClick = (e) => {
-    if (e.shiftKey || e.ctrlKey) {
+    // Shift/Ctrl + click, hoặc đang ở chế độ chọn nhiều: chọn / bỏ chọn thay vì mở ảnh
+    if (e.shiftKey || e.ctrlKey || selectionMode) {
       e.preventDefault();
       onSelect();
     } else {
@@ -79,28 +103,20 @@ function TimelinePhoto({ item, isSelected, onSelect, onClick, onFavorite }) {
     }
   };
 
-  const handleImageError = (e) => {
-    // Fallback to default thumbnail on error
-    if (isVideo) {
-      e.target.src = '/default/video-thumb.png';
-    } else {
-      e.target.src = '/default/folder-thumb.png';
-    }
-  };
-
   return (
+    <>
     <div
-      className={`relative aspect-square bg-gray-200 dark:bg-gray-800 cursor-pointer group overflow-hidden ${
+      className={`card-pressable relative aspect-square bg-gray-200 dark:bg-gray-800 cursor-pointer group overflow-hidden ${
         isSelected ? 'ring-4 ring-blue-500' : ''
       }`}
       onClick={handleClick}
+      {...pressHandlers}
     >
-      <img
-        src={thumbSrc}
+      <CardThumb
+        src={thumbSources}
         alt={item.name}
-        className="w-full h-full object-cover transition-transform group-hover:scale-110"
-        loading="lazy"
-        onError={handleImageError}
+        kind={isVideo ? 'movie' : 'media'}
+        className="group-hover:scale-110"
       />
 
       {/* Video indicator */}
@@ -112,14 +128,16 @@ function TimelinePhoto({ item, isSelected, onSelect, onClick, onFavorite }) {
       )}
 
       {/* File name (show on hover or select) */}
-      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white text-xs transition-opacity ${
+      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 text-white text-xs transition-opacity pointer-events-none ${
         isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
       }`}>
         <div className="truncate">{item.name}</div>
       </div>
 
-      {/* Selection checkbox - Always visible */}
-      <div className="absolute top-2 left-2">
+      {/* Ô chọn: chỉ hiện khi rê chuột, khi đang chọn nhiều hoặc ảnh đã được chọn (trên cảm ứng: nhấn giữ → "Chọn") */}
+      <div className={`absolute top-2 left-2 transition-opacity ${
+        isSelected || selectionMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 [@media(hover:none)]:hidden'
+      }`}>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -135,9 +153,9 @@ function TimelinePhoto({ item, isSelected, onSelect, onClick, onFavorite }) {
         </button>
       </div>
 
-      {/* Action buttons (show on hover or select) - Only Favorite */}
+      {/* ❤: hiện khi đã thích hoặc đang chọn; còn lại chỉ hiện lúc rê chuột (ẩn hẳn trên màn hình cảm ứng, dùng nhấn giữ) */}
       <div className={`absolute top-2 right-2 transition-opacity ${
-        isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        isSelected || item.isFavorite ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 [@media(hover:none)]:hidden'
       }`}>
         {/* Favorite */}
         {onFavorite && (
@@ -157,6 +175,11 @@ function TimelinePhoto({ item, isSelected, onSelect, onClick, onFavorite }) {
         )}
       </div>
     </div>
+
+    {actionsOpen && (
+      <CardActionSheet title={item.name} subtitle={item.path} actions={actions} onClose={closeSheet} />
+    )}
+    </>
   );
 }
 

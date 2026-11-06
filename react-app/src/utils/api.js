@@ -3,6 +3,7 @@
 
 import axios from 'axios';
 import { API } from '@/constants';
+import { invalidateSourceCaches, onSourceCachesInvalidated } from './cacheInvalidation';
 
 
 
@@ -20,6 +21,47 @@ const inflightGet = new Map();
 // Short-lived response cache to avoid immediate duplicate server hits
 const recentGetCache = new Map(); // key -> { ts, data }
 const RECENT_CACHE_TTL_MS = 1500;
+// Trước đây entry chỉ được kiểm tra TTL khi đọc, không bao giờ bị xoá → Map lớn dần suốt phiên và
+// giữ nguyên các response chứa mảng ảnh (PERFORMANCE-CACHE-REPORT PF13)
+const RECENT_CACHE_MAX = 50;
+
+const getRecent = (key) => {
+  const cached = recentGetCache.get(key);
+  if (!cached) return null;
+  if (Date.now() - cached.ts >= RECENT_CACHE_TTL_MS) {
+    recentGetCache.delete(key);
+    return null;
+  }
+  return cached;
+};
+
+const setRecent = (key, data) => {
+  recentGetCache.delete(key); // đưa xuống cuối (Map giữ thứ tự cũ → mới)
+  recentGetCache.set(key, { ts: Date.now(), data });
+  if (recentGetCache.size > RECENT_CACHE_MAX) {
+    const now = Date.now();
+    for (const [k, v] of recentGetCache) {
+      if (now - v.ts >= RECENT_CACHE_TTL_MS) recentGetCache.delete(k);
+    }
+    while (recentGetCache.size > RECENT_CACHE_MAX) {
+      recentGetCache.delete(recentGetCache.keys().next().value);
+    }
+  }
+};
+
+// Dữ liệu trên server vừa đổi (scan/reset/xoá) → bỏ cache 1,5 s
+onSourceCachesInvalidated(() => recentGetCache.clear());
+
+/**
+ * Bọc lời gọi API làm thay đổi dữ liệu của một nguồn: thành công thì xoá cache của nguồn đó ở mọi
+ * tầng (PF7). sourceKey lấy từ `key` hoặc `dbkey` trong tham số đầu.
+ * includeRandom=false cho thao tác xoá một item: danh sách "Ngẫu nhiên" đang hiện không bị xáo lại.
+ */
+const invalidatesSource = (fn, { includeRandom = true } = {}) => async (payload, ...rest) => {
+  const result = await fn(payload, ...rest);
+  invalidateSourceCaches(payload && (payload.key || payload.dbkey), { includeRandom });
+  return result;
+};
 
 // Build a stable key for GET requests
 const buildGetKey = (url, params = {}) => {
@@ -89,8 +131,8 @@ export const apiService = {
       const key = buildGetKey(url, params);
 
       // Serve from recent cache if within TTL
-      const cached = recentGetCache.get(key);
-      if (cached && Date.now() - cached.ts < RECENT_CACHE_TTL_MS) {
+      const cached = getRecent(key);
+      if (cached) {
         return Promise.resolve({ data: cached.data });
       }
 
@@ -106,7 +148,7 @@ export const apiService = {
           .get(url, { params, ...config })
           .then((resp) => {
             try {
-              recentGetCache.set(key, { ts: Date.now(), data: resp.data });
+              setRecent(key, resp.data);
             } catch {}
             return resp;
           })
@@ -123,7 +165,7 @@ export const apiService = {
         .get(url, { params, ...config })
         .then((resp) => {
           try {
-            recentGetCache.set(key, { ts: Date.now(), data: resp.data });
+            setRecent(key, resp.data);
           } catch {}
           return resp;
         });
@@ -140,12 +182,15 @@ export const apiService = {
       inflightGet.set(key, req);
       return req;
     },
-    toggleFavorite: (dbkey, path, value) => api.post(`${API.ENDPOINTS.MANGA}/favorite`, { dbkey, path, value }),
-    resetCache: (params) => api.delete(`${API.ENDPOINTS.MANGA}/reset-cache`, { params, timeout: 0 }),
-    scan: (params) => api.post(`${API.ENDPOINTS.MANGA}/scan`, params, { timeout: 0 }),
+    // root: chỉ đổi bản ghi của thư mục gốc đang xem (ISSUES B11)
+    toggleFavorite: (dbkey, path, value, root) =>
+      api.post(`${API.ENDPOINTS.MANGA}/favorite`, { dbkey, path, value, ...(root ? { root } : {}) }),
+    // scan / reset / xoá thành công → xoá cache của nguồn ở mọi tầng (PF7)
+    resetCache: invalidatesSource((params) => api.delete(`${API.ENDPOINTS.MANGA}/reset-cache`, { params, timeout: 0 })),
+    scan: invalidatesSource((params) => api.post(`${API.ENDPOINTS.MANGA}/scan`, params, { timeout: 0 })),
     getRootThumbnail: (params) => api.get(`${API.ENDPOINTS.MANGA}/root-thumbnail`, { params }),
     setRootThumbnail: (data) => api.post(`${API.ENDPOINTS.MANGA}/root-thumbnail`, data),
-    deleteItem: (data) => api.delete(`${API.ENDPOINTS.MANGA}/delete-item`, { data }),
+    deleteItem: invalidatesSource((data) => api.delete(`${API.ENDPOINTS.MANGA}/delete-item`, { data }), { includeRandom: false }),
   },
 
   // Movie APIs
@@ -169,10 +214,10 @@ export const apiService = {
     toggleFavorite: (dbkey, path, value) => api.post(`${API.ENDPOINTS.MOVIE}/favorite-movie`, { dbkey, path, value }),
     extractThumbnail: (params, config = {}) => api.post(`${API.ENDPOINTS.MOVIE}/extract-thumbnail`, params, config),
     setThumbnail: (params) => api.post(`${API.ENDPOINTS.MOVIE}/set-thumbnail`, params),
-    resetDb: (params) => api.delete(`${API.ENDPOINTS.MOVIE}/reset-cache-movie`, { params, timeout: 0 }),
-    scan: (params) => api.post(`${API.ENDPOINTS.MOVIE}/scan-movie`, params, { timeout: 0 }),
+    resetDb: invalidatesSource((params) => api.delete(`${API.ENDPOINTS.MOVIE}/reset-cache-movie`, { params, timeout: 0 })),
+    scan: invalidatesSource((params) => api.post(`${API.ENDPOINTS.MOVIE}/scan-movie`, params, { timeout: 0 })),
     checkEmpty: (params) => api.get(`${API.ENDPOINTS.MOVIE}/movie-folder-empty`, { params }),
-    deleteItem: (data) => api.delete(`${API.ENDPOINTS.MOVIE}/delete-item`, { data }),
+    deleteItem: invalidatesSource((data) => api.delete(`${API.ENDPOINTS.MOVIE}/delete-item`, { data }), { includeRandom: false }),
   },
 
   // Music APIs
@@ -201,9 +246,9 @@ export const apiService = {
     getMusicMeta: (params) => api.get(`${API.ENDPOINTS.MUSIC}/music-meta`, { params }),
     extractThumbnail: (params, config = {}) => api.post(`${API.ENDPOINTS.MUSIC}/extract-thumbnail`, params, config),
     setThumbnail: (params) => api.post(`${API.ENDPOINTS.MUSIC}/set-thumbnail`, params),
-    resetDb: (params) => api.delete(`${API.ENDPOINTS.MUSIC}/reset-cache-music`, { params, timeout: 0 }),
-    scan: (params) => api.post(`${API.ENDPOINTS.MUSIC}/scan-music`, params, { timeout: 0 }),
-    deleteItem: (data) => api.delete(`${API.ENDPOINTS.MUSIC}/delete-item`, { data }),
+    resetDb: invalidatesSource((params) => api.delete(`${API.ENDPOINTS.MUSIC}/reset-cache-music`, { params, timeout: 0 })),
+    scan: invalidatesSource((params) => api.post(`${API.ENDPOINTS.MUSIC}/scan-music`, params, { timeout: 0 })),
+    deleteItem: invalidatesSource((data) => api.delete(`${API.ENDPOINTS.MUSIC}/delete-item`, { data }), { includeRandom: false }),
   },
 
   // Media APIs (Photos/Videos Gallery)
@@ -228,10 +273,10 @@ export const apiService = {
     addItemsToAlbum: (id, data) => api.post(`${API.ENDPOINTS.MEDIA}/albums/${id}/items`, data),
     removeItemsFromAlbum: (id, data) => api.delete(`${API.ENDPOINTS.MEDIA}/albums/${id}/items`, { data }),
     toggleFavorite: (data) => api.post(`${API.ENDPOINTS.MEDIA}/favorite-media`, data),
-    scan: (params) => api.post(`${API.ENDPOINTS.MEDIA}/scan-media`, params, { timeout: 0 }),
-    resetDb: (data) => api.post(`${API.ENDPOINTS.MEDIA}/reset-media-db`, data, { timeout: 0 }),
+    scan: invalidatesSource((params) => api.post(`${API.ENDPOINTS.MEDIA}/scan-media`, params, { timeout: 0 })),
+    resetDb: invalidatesSource((data) => api.post(`${API.ENDPOINTS.MEDIA}/reset-media-db`, data, { timeout: 0 })),
     getStats: (params) => api.get(`${API.ENDPOINTS.MEDIA}/media-stats`, { params }),
-    deleteItem: (data) => api.delete(`${API.ENDPOINTS.MEDIA}/delete-item`, { data }),
+    deleteItem: invalidatesSource((data) => api.delete(`${API.ENDPOINTS.MEDIA}/delete-item`, { data }), { includeRandom: false }),
   },
 
   // System APIs

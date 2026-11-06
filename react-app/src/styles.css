@@ -50,9 +50,9 @@
 :root {
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
-  --text-primary: #1f2937;
-  --text-secondary: #6b7280;
-  --border-color: #e5e7eb;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border-color: #e2e8f0;
 }
 
 [data-theme="dark"] {
@@ -97,7 +97,7 @@ body {
 }
 
 .dark ::-webkit-scrollbar-track {
-  background: #374151;
+  background: #334155;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -106,7 +106,7 @@ body {
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #6b7280;
+  background: #64748b;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -114,7 +114,7 @@ body {
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #94a3b8;
 }
 
 /* Custom components */

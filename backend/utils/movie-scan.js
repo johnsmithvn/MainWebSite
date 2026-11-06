@@ -7,22 +7,13 @@ const { FILE_EXTENSIONS } = require("../constants");
 const ffmpeg = require("fluent-ffmpeg");
 const ffprobe = require("ffprobe-static");
 const { escapeLike } = require("./sqlLike");
+const { createWriteQueue, createThumbnailLookup, pathExists } = require("./scanHelpers");
 ffmpeg.setFfprobePath(ffprobe.path);
 
 // Centralized extensions
 const VIDEO_EXTS = (FILE_EXTENSIONS.VIDEO || []).map(e => e.toLowerCase());
 const IMAGE_EXTS = (FILE_EXTENSIONS.IMAGE || []).map(e => e.toLowerCase());
 
-// 🟢 Hàm tìm thumbnail đúng tên
-function findThumbnail(thumbnailDir, baseName) {
-  for (const ext of IMAGE_EXTS) {
-    const thumbFile = path.join(thumbnailDir, baseName + ext);
-    if (fs.existsSync(thumbFile)) {
-      return path.posix.join(".thumbnail", baseName + ext); // Đường dẫn tương đối
-    }
-  }
-  return null;
-}
 
 // 📏 Hàm đo duration video
 function getVideoDuration(filePath) {
@@ -35,12 +26,13 @@ function getVideoDuration(filePath) {
   });
 }
 
-async function scanMovieFolderToDB(
+async function scanMovieLevel(
   dbkey,
   currentPath = "",
   stats = { inserted: 0, updated: 0, skipped: 0, deleted: 0 },
   scopePath = null, // 🎯 Partial scan: path to scan from (e.g., "Movies/Action")
-  shallow = false // 📦 Shallow scan: don't recurse into subfolders
+  shallow = false, // 📦 Shallow scan: don't recurse into subfolders
+  queue // ⚡ hàng đợi ghi theo lô + tra thumbnail (PF1, PF10) — do scanMovieFolderToDB tạo
 ) {
   const db = getMovieDB(dbkey);
   const rootPath = getRootPath(dbkey);
@@ -75,9 +67,9 @@ async function scanMovieFolderToDB(
     }
   }
 
-  if (!fs.existsSync(basePath)) return stats;
+  if (!(await pathExists(basePath))) return stats;
 
-  const entries = fs.readdirSync(basePath, { withFileTypes: true });
+  const entries = await fs.promises.readdir(basePath, { withFileTypes: true });
 
   for (const entry of entries) {
     // ❌ Skip folder .thumbnail
@@ -96,13 +88,13 @@ async function scanMovieFolderToDB(
       
       // If this is a parent folder of scope, mark it as scanned (preserve it)
       if (isParentOfScope && !isInScope) {
-        const existing = db.prepare(`SELECT * FROM folders WHERE path = ?`).get(relPath);
+        const existing = queue.stmt(`SELECT * FROM folders WHERE path = ?`).get(relPath);
         if (existing) {
-          db.prepare(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
+          queue.stmt(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
         }
         // Continue scanning to reach the scope path (giữ nguyên chế độ shallow — ISSUES D1)
         if (entry.isDirectory()) {
-          await scanMovieFolderToDB(dbkey, relPath, stats, scopePath, shallow);
+          await scanMovieLevel(dbkey, relPath, stats, scopePath, shallow, queue);
         }
         continue;
       }
@@ -113,17 +105,15 @@ async function scanMovieFolderToDB(
       // Tìm thumbnail trong .thumbnail cùng folder, tên trùng tên folder
       let thumb = null;
       const thumbDir = path.join(basePath, entry.name, ".thumbnail");
-      if (fs.existsSync(thumbDir)) {
-        thumb = findThumbnail(thumbDir, entry.name);
-      }
+      thumb = await queue.thumbs.find(thumbDir, entry.name, IMAGE_EXTS);
 
-      const existing = db
-        .prepare(`SELECT * FROM folders WHERE path = ?`)
+      const existing = queue
+        .stmt(`SELECT * FROM folders WHERE path = ?`)
         .get(relPath);
       
       if (!existing) {
         // ✅ NEW FOLDER
-        db.prepare(
+        queue.stmt(
           `
           INSERT INTO folders (name, path, thumbnail, type, scanned, createdAt, updatedAt)
           VALUES (?, ?, ?, 'folder', 1, ?, ?)
@@ -132,7 +122,7 @@ async function scanMovieFolderToDB(
         stats.inserted++;
       } else if (existing.thumbnail !== thumb) {
         // ✅ CHANGED - Thumbnail updated
-        db.prepare(
+        queue.stmt(
           `
           UPDATE folders SET thumbnail = ?, scanned = 1, updatedAt = ? WHERE path = ?
         `
@@ -140,14 +130,14 @@ async function scanMovieFolderToDB(
         stats.updated++;
       } else {
         // ✅ UNCHANGED - Mark as scanned
-        db.prepare(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
+        queue.stmt(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
         stats.skipped++;
       }
 
       // 📦 Shallow scan: không đệ quy, NGOẠI TRỪ chính folder scope — phải đi vào một cấp để
       // xử lý các con trực tiếp đã bị đánh dấu ở phase 1, nếu không phase 3 xoá nhầm chúng (ISSUES D1)
       if (!shallow || relPath === scopePath) {
-        await scanMovieFolderToDB(dbkey, relPath, stats, scopePath, shallow); // Đệ quy với scopePath
+        await scanMovieLevel(dbkey, relPath, stats, scopePath, shallow, queue); // Đệ quy với scopePath
       }
     }
 
@@ -160,22 +150,20 @@ async function scanMovieFolderToDB(
       const baseName = path.basename(entry.name, path.extname(entry.name));
       // Tìm thumbnail trong .thumbnail (cùng folder với file), tên trùng file
       const thumbDir = path.join(basePath, ".thumbnail");
-      if (fs.existsSync(thumbDir)) {
-        thumb = findThumbnail(thumbDir, baseName);
-      }
+      thumb = await queue.thumbs.find(thumbDir, baseName, IMAGE_EXTS);
 
       const fullPath = path.join(basePath, entry.name);
-      const stat = fs.statSync(fullPath);
+      const stat = await fs.promises.stat(fullPath);
       const lastModified = stat.mtimeMs;
 
-      const existing = db
-        .prepare(`SELECT * FROM folders WHERE path = ?`)
+      const existing = queue
+        .stmt(`SELECT * FROM folders WHERE path = ?`)
         .get(relPath);
 
       if (!existing) {
         // ✅ NEW FILE
         const duration = await getVideoDuration(fullPath);
-        db.prepare(
+        queue.stmt(
           `
           INSERT INTO folders (name, path, thumbnail, type, size, modified, duration, scanned, createdAt, updatedAt)
           VALUES (?, ?, ?, 'video', ?, ?, ?, 1, ?, ?)
@@ -194,7 +182,7 @@ async function scanMovieFolderToDB(
       } else if (existing.modified !== lastModified) {
         // ✅ CHANGED FILE - File was modified
         const duration = await getVideoDuration(fullPath);
-        db.prepare(
+        queue.stmt(
           `
           UPDATE folders SET thumbnail = ?, size = ?, modified = ?, duration = ?, scanned = 1, updatedAt = ? WHERE path = ?
         `
@@ -202,7 +190,7 @@ async function scanMovieFolderToDB(
         stats.updated++;
       } else if (existing.thumbnail !== thumb) {
         // ✅ THUMBNAIL CHANGED - Only thumbnail updated
-        db.prepare(
+        queue.stmt(
           `
           UPDATE folders SET thumbnail = ?, scanned = 1, updatedAt = ? WHERE path = ?
         `
@@ -210,11 +198,14 @@ async function scanMovieFolderToDB(
         stats.updated++;
       } else {
         // ✅ UNCHANGED FILE - Mark as scanned
-        db.prepare(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
+        queue.stmt(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
         stats.skipped++;
       }
     }
   }
+
+  // Các lệnh ghi còn trong hàng đợi phải vào DB trước khi đếm/xoá bản ghi scanned = 0
+  if (currentPath === "") queue.flush();
 
   // 🗑️ PHASE 3: Sweep orphaned records (scope-aware & shallow-aware cleanup)
   if (currentPath === "") {
@@ -273,6 +264,20 @@ async function scanMovieFolderToDB(
   }
 
   return stats;
+}
+
+/**
+ * Điểm vào giữ nguyên chữ ký cũ. Tạo hàng đợi ghi cho cả lần scan và luôn flush khi xong hoặc khi
+ * lỗi giữa chừng (code cũ ghi ngay từng lệnh nên phần đã quét vẫn được lưu).
+ */
+async function scanMovieFolderToDB(dbkey, currentPath = "", stats = { inserted: 0, updated: 0, skipped: 0, deleted: 0 }, scopePath = null, shallow = false) {
+  const queue = createWriteQueue(getMovieDB(dbkey));
+  queue.thumbs = createThumbnailLookup();
+  try {
+    return await scanMovieLevel(dbkey, currentPath, stats, scopePath, shallow, queue);
+  } finally {
+    queue.flush();
+  }
 }
 
 module.exports = { scanMovieFolderToDB };

@@ -5,6 +5,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiList, FiPlus } from 'react-icons/fi';
 import { useAuthStore, useUIStore } from '@/store';
+import ItemCard from '@/components/common/ItemCard';
+import { CARD_GRIDS } from '@/constants';
 
 const fetchJSON = async (url, options = {}) => {
   const res = await fetch(url, {
@@ -56,27 +58,25 @@ const MusicPlaylists = () => {
       ) : playlists.length === 0 ? (
         <div className="text-gray-500">Chưa có playlist nào</div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        // Playlist dùng chung ItemCard và lưới của nhạc: ảnh vuông, mép xếp chồng, tên 2 dòng, mô tả ở dòng phụ
+        <div className={CARD_GRIDS.music}>
           {playlists.map((p) => (
-            <button
+            <ItemCard
               key={p.id}
-              onClick={() => navigate('/music/player', { state: { playlist: p.id, key: sourceKey } })}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition overflow-hidden text-left"
-            >
-              <div className="aspect-square bg-gray-200 dark:bg-dark-700 flex items-center justify-center">
-                {p.thumbnail ? (
-                  <img src={p.thumbnail} alt={p.name} className="w-full h-full object-cover" />
-                ) : (
-                  <FiList className="w-10 h-10 text-gray-500" />
-                )}
-              </div>
-              <div className="p-3">
-                <div className="font-medium line-clamp-1">{p.name}</div>
-                {p.description && (
-                  <div className="text-xs text-gray-500 line-clamp-1">{p.description}</div>
-                )}
-              </div>
-            </button>
+              type="music"
+              title={p.name}
+              thumbnail={p.thumbnail}
+              isFolder
+              thumbKind="music"
+              playable
+              subtitle={p.description || (
+                <>
+                  <FiList className="flex-none" aria-hidden="true" />
+                  Playlist
+                </>
+              )}
+              onOpen={() => navigate('/music/player', { state: { playlist: p.id, key: sourceKey } })}
+            />
           ))}
         </div>
       )}

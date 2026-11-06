@@ -2,8 +2,10 @@
 // 📚 Media Albums Component
 
 import React, { useState } from 'react';
-import { Plus, Folder, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useModal } from '../common/Modal.jsx';
+import ItemCard from '../common/ItemCard';
+import { CARD_GRIDS } from '@/constants';
 
 function MediaAlbums({ albums, onCreateAlbum, onSelectAlbum, onDeleteAlbum }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -22,7 +24,7 @@ function MediaAlbums({ albums, onCreateAlbum, onSelectAlbum, onDeleteAlbum }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className={CARD_GRIDS.mediaFolders}>
         {albums.map((album) => (
           <AlbumCard
             key={album.id}
@@ -73,40 +75,26 @@ function AlbumCard({ album, onClick, onDelete }) {
     coverSrc = `/media/${album.coverItemPath}`;
   }
 
+  // Album dùng chung ItemCard: ảnh bìa vuông, mép xếp chồng, "N mục", xoá trong bảng ⋯ (xác nhận bằng confirmModal)
   return (
-    <button
-      onClick={onClick}
-      className="group relative aspect-square rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-800 hover:scale-105 transition-transform"
-    >
-      {coverSrc ? (
-        <img src={coverSrc} alt={album.name} className="w-full h-full object-cover" />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center">
-          <Folder size={64} className="text-gray-400 dark:text-gray-600" />
-        </div>
-      )}
-
-      {/* Delete button */}
-      {onDelete && (
-        <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              // Xác nhận xóa sẽ được xử lý ở handler onDelete (đã dùng confirmModal)
-              onDelete();
-            }}
-            className="w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow flex items-center justify-center"
-            title="Delete album"
-          >
-            <Trash2 size={18} className="text-red-600" />
-          </button>
-        </div>
-      )}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-4">
-        <div className="text-white font-medium">{album.name}</div>
-        <div className="text-white/80 text-sm">{album.itemCount} items</div>
-      </div>
-    </button>
+    <ItemCard
+      type="media"
+      title={album.name}
+      thumbnail={coverSrc}
+      isFolder
+      thumbKind="folder"
+      subtitle={`${Number(album.itemCount || 0).toLocaleString('vi-VN')} mục`}
+      onOpen={onClick}
+      actions={[
+        onDelete && {
+          key: 'delete',
+          label: 'Xoá album',
+          icon: Trash2,
+          danger: true,
+          onClick: onDelete,
+        },
+      ]}
+    />
   );
 }
 

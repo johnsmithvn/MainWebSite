@@ -38,13 +38,71 @@ function parseRange(header, fileSize) {
 }
 
 /**
+ * ETag mạnh dựa trên kích thước + thời điểm sửa file. Nội dung chỉ đổi khi file đổi, nên dùng
+ * được cho If-Range (If-Range bắt buộc validator mạnh).
+ */
+function fileETag(stat) {
+  return `"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+}
+
+function etagMatches(header, etag) {
+  if (typeof header !== "string") return false;
+  return header
+    .split(",")
+    .map((s) => s.trim().replace(/^W\//, ""))
+    .some((t) => t === "*" || t === etag);
+}
+
+/** Lấy giây (HTTP date không có phần nghìn giây) */
+const toSeconds = (ms) => Math.floor(ms / 1000);
+
+/**
+ * Đặt ETag/Last-Modified và trả 304 nếu client đã có bản mới nhất (PERFORMANCE-CACHE-REPORT PF6).
+ * @returns {boolean} true nếu đã trả 304 (route không cần làm gì thêm)
+ */
+function handleConditional(req, res, stat) {
+  const etag = fileETag(stat);
+  res.setHeader("ETag", etag);
+  res.setHeader("Last-Modified", stat.mtime.toUTCString());
+
+  const inm = req.headers["if-none-match"];
+  let notModified = false;
+  if (inm !== undefined) {
+    notModified = etagMatches(inm, etag);
+  } else if (req.headers["if-modified-since"]) {
+    const since = Date.parse(req.headers["if-modified-since"]);
+    notModified = Number.isFinite(since) && toSeconds(stat.mtimeMs) <= toSeconds(since);
+  }
+  if (notModified) {
+    res.status(304).end();
+    return true;
+  }
+  return false;
+}
+
+/** If-Range không khớp bản hiện tại → bỏ qua Range, gửi cả file (RFC 9110 §13.1.5) */
+function ifRangeAllows(req, stat) {
+  const ifRange = req.headers["if-range"];
+  if (!ifRange) return true;
+  if (ifRange.startsWith('"') || ifRange.startsWith("W/")) return ifRange === fileETag(stat);
+  const date = Date.parse(ifRange);
+  return Number.isFinite(date) && toSeconds(stat.mtimeMs) === toSeconds(date);
+}
+
+/**
  * Gửi file (đã kiểm tra đường dẫn) với Content-Length/Content-Range phù hợp.
  * Header Content-Type, Cache-Control… do route đặt trước khi gọi.
+ * @param {number|fs.Stats} statOrSize - truyền fs.Stats để có ETag/Last-Modified, 304 và If-Range
  */
-function streamFile(req, res, absPath, fileSize) {
+function streamFile(req, res, absPath, statOrSize) {
+  const stat = typeof statOrSize === "object" && statOrSize ? statOrSize : null;
+  const fileSize = stat ? stat.size : statOrSize;
   res.setHeader("Accept-Ranges", "bytes");
 
-  const range = parseRange(req.headers.range, fileSize);
+  if (stat && handleConditional(req, res, stat)) return;
+
+  const range =
+    stat && !ifRangeAllows(req, stat) ? null : parseRange(req.headers.range, fileSize);
   if (range === false) {
     res.setHeader("Content-Range", `bytes */${fileSize}`);
     return res.status(416).send("Range Not Satisfiable");
@@ -71,4 +129,4 @@ function streamFile(req, res, absPath, fileSize) {
   });
 }
 
-module.exports = { streamFile, parseRange };
+module.exports = { streamFile, parseRange, fileETag };

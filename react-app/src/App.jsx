@@ -1,7 +1,7 @@
 // 📁 src/App.jsx
 // 🎯 Main App component
 
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useUIStore, useMusicStore } from '@/store';
@@ -12,26 +12,79 @@ import { useMiniPlayerVisible, MINI_PLAYER_HEIGHT } from '@/components/music/Min
 import Toast from '@/components/common/Toast';
 
 // Pages
+// ⚡ Trang chủ và 404 tải ngay; các trang khác tách thành chunk riêng, chỉ tải khi mở
+// (PERFORMANCE-CACHE-REPORT PF4). Trước đây cả app là một file JS ~1 MB tải ngay lần đầu.
 import Home from '@/pages/Home';
-import MangaSelect from '@/pages/manga/MangaSelect';
-import MangaHome from '@/pages/manga/MangaHome';
-import MangaReader from '@/pages/manga/MangaReader';
-import MangaFavorites from '@/pages/manga/MangaFavorites';
-import MovieHome from '@/pages/movie/MovieHome';
-import MoviePlayer from '@/pages/movie/MoviePlayer';
-import MovieFavorites from '@/pages/movie/MovieFavorites';
-import MusicHome from '@/pages/music/MusicHome';
-import MusicPlayer from '@/pages/music/MusicPlayer';
-import MusicPlayerV2 from '@/pages/music/MusicPlayerV2';
-import MusicPlaylists from '@/pages/music/MusicPlaylists';
-import MediaHome from '@/pages/media/MediaHome';
-import Settings from '@/pages/Settings';
 import NotFound from '@/pages/NotFound';
-import OfflineHome from '@/pages/offline/OfflineHome';
-import OfflineMangaLibrary from '@/pages/offline/OfflineMangaLibrary';
-import OfflineMovieLibrary from '@/pages/offline/OfflineMovieLibrary';
-import OfflineMusicLibrary from '@/pages/offline/OfflineMusicLibrary';
-import DownloadManager from '@/pages/downloads/DownloadManager';
+
+const pageLoaders = {
+  MangaSelect: () => import('@/pages/manga/MangaSelect'),
+  MangaHome: () => import('@/pages/manga/MangaHome'),
+  MangaReader: () => import('@/pages/manga/MangaReader'),
+  MangaFavorites: () => import('@/pages/manga/MangaFavorites'),
+  MovieHome: () => import('@/pages/movie/MovieHome'),
+  MoviePlayer: () => import('@/pages/movie/MoviePlayer'),
+  MovieFavorites: () => import('@/pages/movie/MovieFavorites'),
+  MusicHome: () => import('@/pages/music/MusicHome'),
+  MusicPlayer: () => import('@/pages/music/MusicPlayer'),
+  MusicPlayerV2: () => import('@/pages/music/MusicPlayerV2'),
+  MusicPlaylists: () => import('@/pages/music/MusicPlaylists'),
+  MediaHome: () => import('@/pages/media/MediaHome'),
+  Settings: () => import('@/pages/Settings'),
+  OfflineHome: () => import('@/pages/offline/OfflineHome'),
+  OfflineMangaLibrary: () => import('@/pages/offline/OfflineMangaLibrary'),
+  OfflineMovieLibrary: () => import('@/pages/offline/OfflineMovieLibrary'),
+  OfflineMusicLibrary: () => import('@/pages/offline/OfflineMusicLibrary'),
+  DownloadManager: () => import('@/pages/downloads/DownloadManager'),
+};
+
+const MangaSelect = lazy(pageLoaders.MangaSelect);
+const MangaHome = lazy(pageLoaders.MangaHome);
+const MangaReader = lazy(pageLoaders.MangaReader);
+const MangaFavorites = lazy(pageLoaders.MangaFavorites);
+const MovieHome = lazy(pageLoaders.MovieHome);
+const MoviePlayer = lazy(pageLoaders.MoviePlayer);
+const MovieFavorites = lazy(pageLoaders.MovieFavorites);
+const MusicHome = lazy(pageLoaders.MusicHome);
+const MusicPlayer = lazy(pageLoaders.MusicPlayer);
+const MusicPlayerV2 = lazy(pageLoaders.MusicPlayerV2);
+const MusicPlaylists = lazy(pageLoaders.MusicPlaylists);
+const MediaHome = lazy(pageLoaders.MediaHome);
+const Settings = lazy(pageLoaders.Settings);
+const OfflineHome = lazy(pageLoaders.OfflineHome);
+const OfflineMangaLibrary = lazy(pageLoaders.OfflineMangaLibrary);
+const OfflineMovieLibrary = lazy(pageLoaders.OfflineMovieLibrary);
+const OfflineMusicLibrary = lazy(pageLoaders.OfflineMusicLibrary);
+const DownloadManager = lazy(pageLoaders.DownloadManager);
+
+/**
+ * Khi trình duyệt rảnh, tải trước mọi trang. Mục đích: (1) mở trang lần đầu không phải chờ,
+ * (2) Service Worker lưu sẵn các chunk nên khi mất mạng vẫn mở được mọi trang (offline library,
+ * reader…) như lúc app còn là một file duy nhất.
+ */
+function prefetchAllPages() {
+  const run = () => {
+    Object.values(pageLoaders).forEach((load) => {
+      load().catch(() => { /* offline hoặc lỗi mạng: sẽ tải khi mở trang */ });
+    });
+  };
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(run, { timeout: 8000 });
+  } else {
+    setTimeout(run, 3000);
+  }
+}
+
+// Khung tạm trong lúc tải chunk của trang (thường chỉ vài chục ms)
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[40vh]" role="status" aria-label="Đang tải">
+      <div className="h-8 w-8 rounded-full border-2 border-gray-300 border-t-transparent animate-spin dark:border-gray-600 dark:border-t-transparent" />
+    </div>
+  );
+}
+
+const page = (element) => <Suspense fallback={<PageFallback />}>{element}</Suspense>;
 
 function MusicPlayerRouter() {
   const { playerSettings } = useMusicStore();
@@ -57,6 +110,11 @@ function App() {
   const toasterContainerStyle = location.pathname.startsWith('/music/player')
     ? { bottom: 112 }
     : miniPlayerVisible ? { bottom: MINI_PLAYER_HEIGHT + 16 } : undefined;
+
+  // Tải trước các trang khi rảnh (PF4)
+  useEffect(() => {
+    prefetchAllPages();
+  }, []);
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -104,49 +162,49 @@ function App() {
 
       <Routes>
         {/* Full-screen routes outside of the main Layout */}
-        <Route path="/manga/reader/:folderId" element={<MangaReader />} />
-        <Route path="/manga/reader" element={<MangaReader />} />
-        <Route path="/movie/player" element={<MoviePlayer />} />
-        <Route path="/music/player" element={<MusicPlayerRouter />} />
+        <Route path="/manga/reader/:folderId" element={page(<MangaReader />)} />
+        <Route path="/manga/reader" element={page(<MangaReader />)} />
+        <Route path="/movie/player" element={page(<MoviePlayer />)} />
+        <Route path="/music/player" element={page(<MusicPlayerRouter />)} />
 
       <Route path="/" element={<Layout />}> 
         <Route index element={<Home />} />
         
         {/* Manga routes */}
         <Route path="manga">
-          <Route path="select" element={<MangaSelect />} />
-          <Route index element={<MangaHome />} />
-          <Route path="favorites" element={<MangaFavorites />} />
+          <Route path="select" element={page(<MangaSelect />)} />
+          <Route index element={page(<MangaHome />)} />
+          <Route path="favorites" element={page(<MangaFavorites />)} />
         </Route>
         
         {/* Movie routes */}
         <Route path="movie">
-          <Route index element={<MovieHome />} />
-          <Route path="favorites" element={<MovieFavorites />} />
+          <Route index element={page(<MovieHome />)} />
+          <Route path="favorites" element={page(<MovieFavorites />)} />
         </Route>
         
   {/* Music routes */}
         <Route path="music">
-          <Route index element={<MusicHome />} />
-          <Route path="playlists" element={<MusicPlaylists />} />
+          <Route index element={page(<MusicHome />)} />
+          <Route path="playlists" element={page(<MusicPlaylists />)} />
         </Route>
         
         {/* Media Gallery routes */}
         <Route path="media">
-          <Route index element={<MediaHome />} />
+          <Route index element={page(<MediaHome />)} />
         </Route>
         
         {/* Settings */}
-        <Route path="settings" element={<Settings />} />
+        <Route path="settings" element={page(<Settings />)} />
         
         {/* Downloads */}
-        <Route path="downloads" element={<DownloadManager />} />
+        <Route path="downloads" element={page(<DownloadManager />)} />
         
         <Route path="offline">
-          <Route index element={<OfflineHome />} />
-          <Route path="manga" element={<OfflineMangaLibrary />} />
-          <Route path="movie" element={<OfflineMovieLibrary />} />
-          <Route path="music" element={<OfflineMusicLibrary />} />
+          <Route index element={page(<OfflineHome />)} />
+          <Route path="manga" element={page(<OfflineMangaLibrary />)} />
+          <Route path="movie" element={page(<OfflineMovieLibrary />)} />
+          <Route path="music" element={page(<OfflineMusicLibrary />)} />
         </Route>
         
         {/* 404 */}

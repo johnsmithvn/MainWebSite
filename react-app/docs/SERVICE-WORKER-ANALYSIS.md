@@ -1,5 +1,13 @@
 # Service Worker Implementation Analysis (v3.1.0)
 
+> ⚠️ **Cập nhật 2026-11-05** — `sw.js` đã đổi (giữ `CACHE_VERSION` v3.1.0 để không xoá cache offline), xem [PERFORMANCE-CACHE-REPORT.md](../../docs/PERFORMANCE-CACHE-REPORT.md) mục 7–8. Phần dưới đây mô tả bản trước đó; khác biệt chính:
+> - Ghi cache ở nền bằng `event.waitUntil` — response tới trang ngay, không chờ ghi xong (PF2).
+> - `/api/music/download`, `/api/music/audio`, `/api/movie/video` và mọi request có `Range` không đi qua SW; bản sao cũ trong `reader-dynamic` được xoá lúc activate.
+> - `reader-dynamic` giữ tối đa 400 response `/api/*` mới nhất (asset và trang không tính).
+> - Mạng chậm hơn 5 s: có cache → trả cache (mạng về sau vẫn cập nhật), chưa có cache → chờ mạng, không trả 503 nữa.
+> - Mục 6 (B14) đã sửa: `media-thumbnails-v1` nhận thumbnail trong `.thumbnail/` của `/video`, `/audio`, `/media`.
+> - Log chi tiết tắt mặc định; bật bằng `const SW_DEBUG = true` đầu file.
+
 > **Cập nhật:** 2026-10-29, đối chiếu với [`react-app/public/sw.js`](../public/sw.js) tại commit `a511bcd`.
 > TL;DR: service worker giữ tối thiểu asset dự phòng, phục vụ ảnh chapter đã tải offline từ cache riêng và
 > lưu tạm phản hồi API GET để dùng khi mất mạng. Bản v3.1.0 bổ sung cache thumbnail (`media-thumbnails-v1`) nhưng

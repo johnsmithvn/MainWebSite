@@ -36,14 +36,17 @@ const getMediaFolder = (req, res) => {
     params.push(type);
   }
 
+  // Lọc năm/tháng theo KHOẢNG date_taken (ms, giờ UTC như strftime cũ) để dùng được index
+  // idx_media_date_taken (PERFORMANCE-CACHE-REPORT PF9). Trước đây strftime(...) = ? trên cột nên
+  // phải tính cho từng dòng. Giá trị không hợp lệ vẫn cho kết quả rỗng như trước.
   if (year) {
-    whereConditions.push("strftime('%Y', datetime(date_taken/1000, 'unixepoch')) = ?");
-    params.push(year);
-  }
-
-  if (month && year) {
-    whereConditions.push("strftime('%Y-%m', datetime(date_taken/1000, 'unixepoch')) = ?");
-    params.push(`${year}-${month.padStart(2, '0')}`);
+    const range = dateRange(year, month);
+    if (range) {
+      whereConditions.push("date_taken >= ? AND date_taken < ?");
+      params.push(range[0], range[1]);
+    } else {
+      whereConditions.push("0 = 1");
+    }
   }
 
   if (albumId) {
@@ -73,18 +76,23 @@ const getMediaFolder = (req, res) => {
   `;
   const items = db.prepare(itemsQuery).all(...params, limit, offset);
 
-  // Get timeline data (grouped by date) - ONLY images and videos
-  const timelineQuery = `
-    SELECT 
-      date(datetime(date_taken/1000, 'unixepoch')) as date,
-      COUNT(*) as count
-    FROM media_items 
-    WHERE type IN ('image', 'video')
-    ${whereConditions.length > 0 ? `AND ${whereConditions.join(" AND ")}` : ''}
-    GROUP BY date(datetime(date_taken/1000, 'unixepoch'))
-    ORDER BY date DESC
-  `;
-  const timeline = db.prepare(timelineQuery).all(...params);
+  // Get timeline data (grouped by date) - ONLY images and videos.
+  // Câu này gom nhóm toàn bộ kết quả lọc (không phụ thuộc trang), nên client đã có timeline cho
+  // cùng bộ lọc thì gửi timeline=0 để bỏ qua (PF9). Mặc định vẫn trả như cũ.
+  let timeline;
+  if (req.query.timeline !== "0") {
+    const timelineQuery = `
+      SELECT
+        date(datetime(date_taken/1000, 'unixepoch')) as date,
+        COUNT(*) as count
+      FROM media_items
+      WHERE type IN ('image', 'video')
+      ${whereConditions.length > 0 ? `AND ${whereConditions.join(" AND ")}` : ''}
+      GROUP BY date(datetime(date_taken/1000, 'unixepoch'))
+      ORDER BY date DESC
+    `;
+    timeline = db.prepare(timelineQuery).all(...params);
+  }
 
   res.json({
     type: "media-folder",
@@ -95,8 +103,30 @@ const getMediaFolder = (req, res) => {
       total,
       totalPages: Math.ceil(total / limit)
     },
-    timeline
+    ...(timeline ? { timeline } : {})
   });
 };
+
+/** ms UTC của ngày 1 tháng `monthIndex` (0–12) năm `y` — setUTCFullYear để năm < 100 không bị cộng 1900 */
+function utcMs(y, monthIndex) {
+  const d = new Date(0);
+  d.setUTCFullYear(y, monthIndex, 1);
+  d.setUTCHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+/**
+ * [start, end) theo ms cho năm (và tháng nếu có), hoặc null nếu giá trị không hợp lệ.
+ * Khớp với strftime('%Y' / '%Y-%m') cũ: năm 4 chữ số, tháng 1–12 (có hoặc không có số 0 đầu).
+ */
+function dateRange(year, month) {
+  if (typeof year !== "string" || !/^\d{4}$/.test(year)) return null;
+  const y = Number(year);
+  if (!month) return [utcMs(y, 0), utcMs(y + 1, 0)];
+  if (typeof month !== "string" || !/^\d{1,2}$/.test(month)) return null;
+  const m = Number(month);
+  if (m < 1 || m > 12) return null;
+  return [utcMs(y, m - 1), utcMs(y, m)];
+}
 
 module.exports = getMediaFolder;

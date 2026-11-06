@@ -105,7 +105,7 @@ Sửa `.env` xong phải **khởi động lại server** thì mới có hiệu l
 
 - Phần sau tiền tố đặt tuỳ ý; khai báo bao nhiêu nguồn cũng được.
 - Key **chỉ được nạp nếu thư mục tồn tại** lúc server khởi động.
-- Mỗi key có một database riêng: `backend/data/<KEY>.db`.
+- Mỗi key có một database riêng: `backend/data/<KEY>.db`. Database chạy ở chế độ WAL nên khi server đang chạy, bên cạnh mỗi file còn có `<KEY>.db-wal` và `<KEY>.db-shm`. Tắt server bằng Ctrl+C thì hai file này được gộp vào `.db` rồi tự xoá. **Muốn sao lưu hoặc copy DB sang máy khác: tắt server trước**, hoặc copy đủ cả 3 file.
 
 **Ai được truy cập** — lớp chặn theo IP, áp dụng cho mọi request:
 
@@ -262,8 +262,9 @@ ExoPlayer không phát được video qua HTTPS nếu Android chưa tin chứng 
 | Hiện tượng | Nguyên nhân thường gặp | Cách xử lý |
 |------------|------------------------|-----------|
 | Backend tắt ngay, lỗi `ENOENT … .env` | Thiếu `backend/.env` | Làm lại [bước 2](#2-cài-đặt-nhanh) |
-| `npm install` lỗi ở `better-sqlite3` | Phiên bản Node không được hỗ trợ / thiếu công cụ build | Dùng Node 20 hoặc 22 LTS; cài công cụ build C++ ([mục 1](#1-yêu-cầu)) |
+| `npm install` lỗi ở `better-sqlite3` | Phiên bản Node không được hỗ trợ / thiếu công cụ build. VD **Node 24**: `better-sqlite3@11.10.0` chưa có bản build sẵn trên Windows | Dùng Node 20 hoặc 22 LTS; cài công cụ build C++ ([mục 1](#1-yêu-cầu)) |
 | `Forbidden (blocked)` / `Forbidden (lookup failed)` | IP/hostname thiết bị không có trong whitelist | Thêm vào `ALLOWED_IPS` / `ALLOWED_HOSTNAMES` ([mục 3.3](#33-cho-thiết-bị-khác-truy-cập-điện-thoại-laptop)) |
+| Production: trang trắng khi mở bằng `http://localhost:<cổng>` (cổng khác 3000/3001) | CORS ở production chặn cả file JS của app khi origin không nằm trong danh sách | Thêm `localhost:<cổng>` vào `CORS_DEV_CONFIG`, hoặc mở bằng `http://127.0.0.1:<cổng>` / IP LAN |
 | Xem được nhưng đăng nhập, scan, yêu thích báo lỗi `CORS blocked` | Mở app bằng một domain lạ (không phải IP / `*.ts.net`) | Thêm domain đó vào `CORS_DEV_CONFIG` |
 | Mở dev server bằng domain bị báo *host is not allowed* | Domain đó chưa được khai báo (IP và `*.ts.net` luôn được phép) | Thêm domain vào `VITE_ALLOWED_HOSTS` |
 | Không thấy nguồn vừa thêm | Đường dẫn sai / không tồn tại lúc khởi động | Sửa `backend/.env`, khởi động lại server |

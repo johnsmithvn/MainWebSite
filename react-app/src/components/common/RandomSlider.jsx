@@ -7,10 +7,11 @@ import Autoplay from 'embla-carousel-autoplay';
 import { FiRefreshCw, FiChevronLeft, FiChevronRight, FiClock } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import UniversalCard from '@/components/common/UniversalCard';
+import CardSkeleton from '@/components/common/CardSkeleton';
 import Button from '@/components/common/Button';
 import { useRandomItems } from '@/hooks/useRandomItems';
 import { useMangaStore, useMovieStore, useMusicStore } from '@/store';
-import { formatDistanceToNow } from 'date-fns';
+import { formatRelativeVi, parentFolderName } from '@/utils/formatters';
 import '@/styles/components/embla.css';
 
 const RandomSlider = ({ 
@@ -22,7 +23,10 @@ const RandomSlider = ({
   autoplayDelay = 3000,
   showRefresh = true,
   showTimestamp = true,
-  ...props 
+  showDots = true,
+  // Thay tiêu đề bằng nội dung khác, ví dụ tab "Ngẫu nhiên | Xem nhiều"
+  headerLeft = null,
+  ...props
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -194,30 +198,14 @@ const RandomSlider = ({
     }
   };
 
-  // Format timestamp
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return '';
-    
-    try {
-      const now = new Date();
-      const diffInMinutes = Math.floor((now - timestamp) / (1000 * 60));
-      
-      // If less than 1 minute show "just now"
-      if (diffInMinutes < 1) {
-        return 'just now';
-      }
-      
-      return formatDistanceToNow(timestamp, {
-        addSuffix: true
-      });
-    } catch (error) {
-      return '';
-    }
-  };
+  // Format timestamp (tiếng Việt)
+  const formatTimestamp = (timestamp) => formatRelativeVi(timestamp);
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-4 sm:mb-6">
+      <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-4 sm:mb-6 ${headerLeft ? 'pt-3' : ''}`}>
+        {/* Giữ tab để vẫn chuyển được sang mục khác khi mục này lỗi */}
+        {headerLeft && <div className="mb-4">{headerLeft}</div>}
         <div className="text-center">
           <p className="text-red-500 mb-4">Lỗi tải dữ liệu: {error.message}</p>
           <Button onClick={refresh} variant="outline">
@@ -234,12 +222,14 @@ const RandomSlider = ({
       {/* Header */}
       <div className="flex items-center justify-between p-2 sm:p-3 pb-1 sm:pb-2">
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+          {headerLeft || (
           <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white truncate">
             {title}
           </h2>
-          
+          )}
+
           {/* Timestamp */}
-          {showTimestamp && lastUpdated && (
+          {!headerLeft && showTimestamp && lastUpdated && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -289,18 +279,18 @@ const RandomSlider = ({
       </div>
 
       {/* Slider Container */}
-      <div 
-        className="embla"
+      <div
+        className={`embla embla--${type}`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
         <div className="embla__viewport" ref={emblaRef}>
           <div className="embla__container">
             {loading ? (
-              // Loading skeleton
+              // Loading skeleton: đúng hình card (tỉ lệ ảnh theo loại + 2 dòng tên), không còn khối cao cố định 256px
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide w-full h-full flex items-stretch">
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full h-64" />
+                  <CardSkeleton type={type} variant="slider" className="w-full" />
                 </div>
               ))
             ) : (
@@ -315,6 +305,7 @@ const RandomSlider = ({
                     onToggleFavorite={async (toggleItem) => {
                       await handleToggleFavorite(toggleItem);
                     }}
+                    subtitle={parentFolderName(item.path) || undefined} // tên thư mục cha, cho biết item thuộc bộ nào
                     variant="compact-slider" // Dùng variant siêu gọn để giảm chiều cao slider
                     className="w-full h-full"
                   />
@@ -326,7 +317,7 @@ const RandomSlider = ({
       </div>
 
       {/* Pagination Dots - Limited to max 6 dots */}
-      {visibleDots.length > 1 && (
+      {showDots && visibleDots.length > 1 && (
         <div className="embla__dots">
           {visibleDots.map((_, index) => {
             const actualIndex = scrollSnaps.length <= 6 ? index : index * Math.ceil(scrollSnaps.length / 6);

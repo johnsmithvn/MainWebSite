@@ -47,14 +47,15 @@ const isImg = /\.(avif|jpe?g|png|gif|webp|bmp|svg)$/i;
 const isAudio = /\.(mp3|m4a|aac|ogg|flac|wav)$/i;
 const isVideo = /\.(mp4|m4v|webm|mov|mkv|ts|m3u8)$/i;
 
-// Nếu bạn ĐÃ hash tên file ảnh manga, bật immutable + TTL dài
-const MANGA_IMAGES_IMMUTABLE = true; // Nếu build có hash (Vite/Webpack/Next…): = True
+// Ảnh manga: 1 ngày, KHÔNG immutable (PERFORMANCE-CACHE-REPORT PF15). Tên file ảnh không có hash
+// nên khi thay ảnh cùng tên, immutable khiến trình duyệt giữ bản cũ tới 1 ngày kể cả khi bấm
+// reload. Bỏ immutable: duyệt bình thường vẫn dùng cache như cũ, reload thì revalidate (304).
 
 function setStaticHeaders(kind) {
   return (res, path) => {
     if (isImg.test(path)) {
-      if (kind === "manga" && MANGA_IMAGES_IMMUTABLE) {
-        res.setHeader("Cache-Control", `public, max-age=${ONE_DAY}, immutable`);
+      if (kind === "manga") {
+        res.setHeader("Cache-Control", `public, max-age=${ONE_DAY}`);
       } else {
         res.setHeader(
           "Cache-Control",
@@ -95,12 +96,6 @@ for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
   app.use(mount.base, isSecure ? protectStatic(absPath, staticMiddleware) : staticMiddleware);
 }
 
-app.use(express.static(path.join(__dirname, "../frontend/public")));
-app.use(
-  "/dist",
-  express.static(path.join(__dirname, "../frontend/public/dist"))
-);
-
 // ✅ Default assets
 app.use(
   "/default",
@@ -113,17 +108,31 @@ app.use(
 
 // ✅ NEW: Production React App Serving
 const REACT_BUILD_PATH = path.join(__dirname, "../react-app/dist");
+// Kiểm tra một lần lúc khởi động (trước đây existsSync ở mỗi request "/" và mỗi lần SPA fallback).
+// Build mới tạo sau khi server chạy vẫn cần restart như trước (middleware static chỉ mount lúc đầu).
+const HAS_REACT_BUILD = fs.existsSync(REACT_BUILD_PATH);
 
-if (fs.existsSync(REACT_BUILD_PATH)) {
+if (HAS_REACT_BUILD) {
   console.log("✅ React build found, serving production app");
   console.log("📦 React build path:", REACT_BUILD_PATH);
 
-  // Serve React build static assets
+  // Cache cho build React (PERFORMANCE-CACHE-REPORT PF5). Trước đây mọi file đều 30 ngày:
+  // - /assets/*: tên có hash, nội dung đổi thì tên đổi → giữ 1 năm, immutable (reload không hỏi lại)
+  app.use(
+    "/assets",
+    express.static(path.join(REACT_BUILD_PATH, "assets"), {
+      maxAge: IS_DEV ? 0 : "1y",
+      immutable: !IS_DEV,
+      etag: true,
+      index: false,
+    })
+  );
+  // - File không hash (manifest, favicon, sw.js…): luôn hỏi lại server, nhận 304 nếu không đổi
   app.use(
     express.static(REACT_BUILD_PATH, {
-      maxAge: IS_DEV ? 0 : ONE_DAY * 30 * 1000,
-      etag: !IS_DEV,
+      etag: true,
       index: false,
+      setHeaders: (res) => res.setHeader("Cache-Control", "no-cache"),
     })
   );
 } else {
@@ -139,9 +148,17 @@ if (fs.existsSync(REACT_BUILD_PATH)) {
   }
 }
 
+// Frontend cũ: mount SAU build React để request asset React không phải stat thêm trong
+// thư mục cũ (PF5). Không có file trùng tên giữa hai thư mục ngoài /default (đã có mount riêng ở trên)
+app.use(express.static(path.join(__dirname, "../frontend/public")));
+app.use(
+  "/dist",
+  express.static(path.join(__dirname, "../frontend/public/dist"))
+);
+
 app.get("/", (req, res) => {
   // Check if React build exists for production
-  if (!IS_DEV && fs.existsSync(REACT_BUILD_PATH)) {
+  if (!IS_DEV && HAS_REACT_BUILD) {
     res.sendFile(path.join(REACT_BUILD_PATH, "index.html"));
   } else {
     res.sendFile(path.join(__dirname, "../frontend/public/home.html"));
@@ -223,8 +240,7 @@ app.use((req, res, next) => {
 
   if (req.method === "GET") {
     // Production: Serve React app if build exists
-    if (!IS_DEV && fs.existsSync(REACT_BUILD_PATH)) {
-      console.log(`🔄 SPA Fallback: ${req.path} → React index.html`);
+    if (!IS_DEV && HAS_REACT_BUILD) {
       return res.sendFile(path.join(REACT_BUILD_PATH, "index.html"), {
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -272,6 +288,8 @@ function setupGracefulShutdown(server) {
       console.log(`\n📴 ${sig} received, shutting down gracefully...`);
       server.close(() => {
         console.log("✅ Server closed successfully");
+        // Gộp file WAL (-wal/-shm) vào .db trước khi thoát (PF1)
+        require("./utils/db").closeAllDBs();
         process.exit(0);
       });
     });

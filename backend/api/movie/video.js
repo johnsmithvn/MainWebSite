@@ -26,7 +26,6 @@ router.get("/video", (req, res) => {
   }
 
   const stat = fs.statSync(absPath);
-  const fileSize = stat.size;
   const ext = path.extname(absPath).toLowerCase();
 
   // MIME
@@ -39,13 +38,16 @@ else if (ext === ".wmv") mime = "video/x-ms-wmv";
 
   // Header stream chuẩn
   res.setHeader("Accept-Ranges", "bytes");
-  res.setHeader("Cache-Control", "no-store");
-  res.setHeader("Last-Modified", stat.mtime.toUTCString());
+  // Trước đây là "no-store" (thêm cùng cache video trong RAM ở commit "fix tua", cache đó đã bỏ
+  // ở P1) → mở lại phim là tải lại từ đầu. Giờ cho trình duyệt giữ 1 giờ, kèm ETag/Last-Modified
+  // và If-Range để tua vẫn đúng khi file đổi (PERFORMANCE-CACHE-REPORT PF6). "private": URL có
+  // thể chứa token của nguồn bảo mật nên không cho cache dùng chung (proxy) lưu.
+  res.setHeader("Cache-Control", "private, max-age=3600");
   res.setHeader("Content-Type", mime);
   res.setHeader("X-Content-Type-Options", "nosniff");
 
   // Stream trực tiếp từ ổ đĩa, không đọc cả file vào RAM (ISSUES P1)
-  return streamFile(req, res, absPath, fileSize);
+  return streamFile(req, res, absPath, stat);
 });
 
 module.exports = router;

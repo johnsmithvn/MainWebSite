@@ -51,18 +51,19 @@ export const BADGE_STYLES = {
  * 📝 Text Styles
  */
 export const TEXT_STYLES = {
+  // Tên tối đa 2 dòng và luôn giữ chỗ đủ 2 dòng (min-h) để card trong cùng hàng cao bằng nhau
   title: {
-    default: 'font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1',
-    compact: 'font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1',
-    slider: 'font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-1',
-    'compact-slider': 'font-medium text-gray-900 dark:text-white text-xs leading-tight line-clamp-2 mb-0.5'
+    default: 'font-medium text-gray-900 dark:text-white text-sm leading-[1.3] line-clamp-2 min-h-[2.6em] [overflow-wrap:anywhere] mb-1',
+    compact: 'font-medium text-gray-900 dark:text-white text-sm leading-[1.3] line-clamp-2 min-h-[2.6em] [overflow-wrap:anywhere] mb-1',
+    slider: 'font-medium text-gray-900 dark:text-white text-sm leading-[1.3] line-clamp-2 min-h-[2.6em] [overflow-wrap:anywhere] mb-1',
+    'compact-slider': 'font-medium text-gray-900 dark:text-white text-[13px] leading-[1.3] line-clamp-2 min-h-[2.6em] [overflow-wrap:anywhere] mb-0.5'
   },
-  
+
   metadata: {
     default: 'flex items-center justify-between text-xs text-gray-500 dark:text-gray-400',
     compact: 'flex items-center justify-between text-xs text-gray-500 dark:text-gray-400',
     slider: 'flex items-center justify-between text-xs text-gray-500 dark:text-gray-400',
-    'compact-slider': 'flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400'
+    'compact-slider': 'flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400'
   },
   
   typeLabel: 'truncate max-w-[60%]',
@@ -134,10 +135,27 @@ export const ICON_SIZES = {
  * 📱 Responsive Aspect Ratios
  */
 export const ASPECT_RATIOS = {
-  manga: 'aspect-[3/4]', // Portrait for manga covers
+  manga: 'aspect-[5/7]', // Bìa dọc, gần khổ trang truyện B6/B5 (trước là 3:4)
   movie: 'aspect-video', // Widescreen for videos (same as aspect-[16/9])
   music: 'aspect-square', // Square for album covers
   folder: 'aspect-square' // Square for folder icons
+};
+
+/**
+ * 🧱 Lưới card theo loại (docs/CARD-REDESIGN-PROPOSAL.md, mục 3.2)
+ * Lưới tự chia cột theo bề rộng tối thiểu của card (auto-fill), không gắn số cột cố định theo breakpoint,
+ * nên vẫn đúng khi bề rộng nội dung thay đổi (ví dụ mở sidebar).
+ * Bề rộng tối thiểu: <640px / ≥640px / ≥1024px. Khe dọc lớn hơn khe ngang vì dưới ảnh còn 2 dòng tên.
+ * Kết quả với Layout px-4: điện thoại 390px → Manga/Music 3 cột, Movie 2, Media 3; máy tính 1280px → 7 / 5 / 8.
+ */
+export const CARD_GRIDS = {
+  manga: 'grid grid-cols-[repeat(auto-fill,minmax(var(--card-min),1fr))] [--card-min:104px] sm:[--card-min:128px] lg:[--card-min:144px] gap-x-2 gap-y-4 sm:gap-x-3 sm:gap-y-5 lg:gap-x-4 lg:gap-y-6',
+  movie: 'grid grid-cols-[repeat(auto-fill,minmax(var(--card-min),1fr))] [--card-min:152px] sm:[--card-min:200px] lg:[--card-min:220px] gap-x-2 gap-y-4 sm:gap-x-3 sm:gap-y-5 lg:gap-x-4 lg:gap-y-6',
+  music: 'grid grid-cols-[repeat(auto-fill,minmax(var(--card-min),1fr))] [--card-min:104px] sm:[--card-min:128px] lg:[--card-min:144px] gap-x-2 gap-y-4 sm:gap-x-3 sm:gap-y-5 lg:gap-x-4 lg:gap-y-6',
+  // Ảnh/video: lưới khít kiểu Google Photos, không chữ
+  media: 'grid grid-cols-[repeat(auto-fill,minmax(var(--card-min),1fr))] [--card-min:104px] sm:[--card-min:132px] lg:[--card-min:150px] gap-0.5 sm:gap-[3px] lg:gap-1',
+  // Thư mục / album của Media: dùng ItemCard ảnh vuông nên cùng cỡ với nhạc
+  mediaFolders: 'grid grid-cols-[repeat(auto-fill,minmax(var(--card-min),1fr))] [--card-min:104px] sm:[--card-min:128px] lg:[--card-min:144px] gap-x-2 gap-y-4 sm:gap-x-3 sm:gap-y-5 lg:gap-x-4 lg:gap-y-6'
 };
 
 /**

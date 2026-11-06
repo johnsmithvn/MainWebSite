@@ -18,6 +18,9 @@ import toast from 'react-hot-toast';
 import '../../styles/components/manga-reader.css';
 import '../../styles/components/reader-header.css';
 
+// Số ảnh preload cùng lúc (PF16)
+const READER_PRELOAD_CONCURRENCY = 3;
+
 const MangaReader = () => {
   const { folderId } = useParams();
   const navigate = useNavigate();
@@ -598,33 +601,39 @@ const MangaReader = () => {
       imagesToPreload.map(img => `${img.type}:${img.index + 1}`).join(', '));
     
     try {
-      // ✅ SEQUENTIAL preload với delay để tránh overwhelm backend
+      // ⚡ Preload tối đa READER_PRELOAD_CONCURRENCY ảnh cùng lúc, ảnh phía trước trước rồi mới tới
+      // ảnh phía sau (PERFORMANCE-CACHE-REPORT PF16). Trước đây tải tuần tự + nghỉ 50 ms giữa các
+      // ảnh: qua mạng có độ trễ cao (Tailscale) mỗi vòng chỉ được ~1 ảnh. Vẫn giới hạn số luồng để
+      // không dồn backend. Một ảnh lỗi không còn làm dừng cả lượt preload.
       const forwardImages = imagesToPreload.filter(img => img.type === 'forward');
       const backwardImages = imagesToPreload.filter(img => img.type === 'backward');
-      
-      // Preload forward images SEQUENTIALLY (không song song)
-      for (const img of forwardImages) {
-        // ✅ Check cancellation before each preload
-        if (cancelledRef?.current) {
-          console.log('🛑 Preload cancelled by unmount');
-          return;
-        }
-        await preloadImage(img.src, cancelledRef); // ✅ Pass cancelledRef
-        // Small delay between images
-        await new Promise(resolve => setTimeout(resolve, 50));
+
+      const preloadQueue = async (list) => {
+        let next = 0;
+        const worker = async () => {
+          while (next < list.length) {
+            // ✅ Check cancellation before each preload
+            if (cancelledRef?.current) return;
+            const img = list[next++];
+            try {
+              await preloadImage(img.src, cancelledRef); // ✅ Pass cancelledRef
+            } catch (error) {
+              console.warn(`⚠️ Preload failed: ${String(img.src).split('/').pop()}`);
+            }
+          }
+        };
+        await Promise.all(
+          Array.from({ length: Math.min(READER_PRELOAD_CONCURRENCY, list.length) }, worker)
+        );
+      };
+
+      await preloadQueue(forwardImages);
+      if (cancelledRef?.current) {
+        console.log('🛑 Preload cancelled by unmount');
+        return;
       }
-      
-      // Then preload backward images SEQUENTIALLY
-      for (const img of backwardImages) {
-        // ✅ Check cancellation before each preload
-        if (cancelledRef?.current) {
-          console.log('🛑 Preload cancelled by unmount');
-          return;
-        }
-        await preloadImage(img.src, cancelledRef); // ✅ Pass cancelledRef
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-      
+      await preloadQueue(backwardImages);
+
       console.log(`✅ Preload complete. Total cached: ${preloadedImagesRef.current.size}/${currentImages.length}`);
     } catch (error) {
       console.error('❌ Error preloading images:', error);

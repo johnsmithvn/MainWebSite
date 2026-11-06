@@ -8,7 +8,7 @@ import { useMovieStore, useUIStore } from '@/store';
 import Button from '@/components/common/Button';
 import LoadingOverlay from '@/components/common/LoadingOverlay';
 import MovieCard from '@/components/movie/MovieCard';
-import { PAGINATION } from '@/constants';
+import { PAGINATION, CARD_GRIDS } from '@/constants';
 
 const MovieFavorites = () => {
   const navigate = useNavigate();
@@ -165,22 +165,17 @@ const MovieFavorites = () => {
         </summary>
         
         <div className="p-6">
-          <div className={`grid ${
-            viewMode === 'grid' 
-              ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' 
-              : 'grid-cols-1'
-          } gap-6`}>
+          {/* Dùng chung lưới của Movie; ngày thêm vào yêu thích là badge góc trên trái của ItemCard */}
+          <div className={viewMode === 'grid' ? CARD_GRIDS.movie : 'flex flex-col gap-1'}>
             {items.map((item) => (
-              <div key={item.path} className="relative">
-                <MovieCard
-                  item={item}
-                  showViews={false}
-                  onFavoriteChange={handleFavoriteChange}
-                />
-                <div className="absolute top-2 left-2 bg-black/60 text-[10px] text-white px-2 py-0.5 rounded">
-                  {item.favoriteDate ? new Date(item.favoriteDate).toLocaleDateString() : ''}
-                </div>
-              </div>
+              <MovieCard
+                key={item.path}
+                item={item}
+                showViews={false}
+                variant={viewMode === 'list' ? 'list' : 'grid'}
+                onFavoriteChange={handleFavoriteChange}
+                badgeTopLeft={item.favoriteDate ? new Date(item.favoriteDate).toLocaleDateString('vi-VN') : undefined}
+              />
             ))}
           </div>
 

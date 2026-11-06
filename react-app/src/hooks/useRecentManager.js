@@ -89,8 +89,23 @@ export const useRecentManager = (type = 'manga') => {
     }
   }, [sourceKey, rootFolder, getCacheKey, type, maxItems, mangaSettings.enableRecentTracking]);
 
+  // Đọc danh sách đã xem, mới nhất trước (dùng cho nút "Đọc tiếp" ở đầu trang bộ truyện)
+  const getRecentItems = useCallback(() => {
+    try {
+      const cached = localStorage.getItem(getCacheKey());
+      const list = cached ? JSON.parse(cached) : [];
+      return Array.isArray(list)
+        ? [...list].sort((a, b) => (b.lastViewed || 0) - (a.lastViewed || 0))
+        : [];
+    } catch (error) {
+      console.warn('Error reading recent items:', error);
+      return [];
+    }
+  }, [getCacheKey]);
+
   return {
-    addRecentItem
+    addRecentItem,
+    getRecentItems
   };
 };
 

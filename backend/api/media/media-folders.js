@@ -1,7 +1,7 @@
 // 📁 backend/api/media/media-folders.js
 // 📂 Get media folders (navigation like Manga)
 
-const { getMediaDB } = require("../../utils/db");
+const { getMediaDB, parentPathSql, parentKey } = require("../../utils/db");
 
 /**
  * GET /api/media/media-folders?key=MEDIA_PHOTOS&path=
@@ -17,32 +17,24 @@ const mediaFolders = (req, res) => {
   try {
     const db = getMediaDB(key);
 
-    // Sanitize path để tránh SQL injection trong LIKE pattern
-    const sanitizePath = (p) => p.replace(/[%_]/g, '\\$&');
-    
-    // Get folders in current path
-    const pathPrefix = path ? `${sanitizePath(path)}/` : "";
-    const pathDepth = path ? path.split("/").length : 0;
+    // Con trực tiếp (folder + ảnh/video) của `path` qua index thư mục cha (PF3). Trước đây hai câu
+    // LIKE / NOT LIKE quét toàn bộ bảng ở mỗi lần mở thư mục
+    const parent = parentKey(path);
 
     // Get immediate child folders (not recursive)
     const folders = db.prepare(`
-      SELECT * FROM folders 
-      WHERE root = ? 
-        AND path LIKE ? ESCAPE '\\'
-        AND LENGTH(path) - LENGTH(REPLACE(path, '/', '')) = ?
+      SELECT * FROM folders
+      WHERE root = ?
+        AND ${parentPathSql()} = ? COLLATE NOCASE
       ORDER BY name COLLATE NOCASE ASC
-    `).all(key, `${pathPrefix}%`, pathDepth);
+    `).all(key, parent);
 
     // Get media items in current folder (not subfolders)
-    const sanitizedPath = path ? sanitizePath(path) : '';
     const items = db.prepare(`
-      SELECT * FROM media_items 
-      WHERE path LIKE ? ESCAPE '\\' AND path NOT LIKE ? ESCAPE '\\'
+      SELECT * FROM media_items
+      WHERE ${parentPathSql()} = ? COLLATE NOCASE
       ORDER BY name COLLATE NOCASE ASC
-    `).all(
-      sanitizedPath ? `${sanitizedPath}/%` : '%',
-      sanitizedPath ? `${sanitizedPath}/%/%` : '%/%'
-    );
+    `).all(parent);
 
     res.json({
       success: true,

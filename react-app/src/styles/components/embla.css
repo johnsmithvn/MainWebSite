@@ -135,17 +135,74 @@
   }
 }
 
-/* Phòng tràn ngang triệt để - từ gốc html đến container */
-html, 
+/* Bề rộng slide theo loại nội dung (docs/CARD-REDESIGN-PROPOSAL.md, mục 3.2):
+   bằng cỡ card trong lưới; phim 16:9 cần rộng hơn bìa truyện / ảnh bìa nhạc.
+   Có thêm class .embla--<loại> nên thắng các quy tắc chung ở trên. */
+.embla--manga .embla__slide,
+.embla--music .embla__slide {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  flex-basis: 104px !important;
+  max-width: 104px !important;
+}
+
+.embla--movie .embla__slide {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  flex-basis: 200px !important;
+  max-width: 200px !important;
+}
+
+@media (min-width: 640px) {
+  .embla--manga .embla__slide,
+  .embla--music .embla__slide {
+    flex-basis: 136px !important;
+    max-width: 136px !important;
+  }
+
+  .embla--movie .embla__slide {
+    flex-basis: 240px !important;
+    max-width: 240px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .embla--manga .embla__slide,
+  .embla--music .embla__slide {
+    flex-basis: 152px !important;
+    max-width: 152px !important;
+  }
+
+  .embla--movie .embla__slide {
+    flex-basis: 260px !important;
+    max-width: 260px !important;
+  }
+}
+
+/* Phòng tràn ngang triệt để - từ gốc html đến container.
+   Dùng `clip` thay vì `hidden` cho body/#root/main/.container: `hidden` biến các phần tử này thành vùng cuộn riêng,
+   làm hỏng position: sticky (thanh công cụ dính của trang Manga). Trình duyệt cũ không hỗ trợ `clip` thì dùng `hidden`. */
+html { overflow-x: hidden !important; }
+
 body,
 #root,
-main { overflow-x: hidden !important; }
+main {
+  overflow-x: hidden !important;
+  overflow-x: clip !important;
+}
+
+/* `main` là phần tử con của flex (Layout). Với `clip`, flex item không tự co về 0 như khi dùng `hidden`,
+   nên nội dung dài (ví dụ breadcrumb) sẽ đẩy trang rộng hơn màn hình. min-width: 0 giữ hành vi cũ. */
+main {
+  min-width: 0;
+}
 
 /* Force main wrapper không bao giờ tràn viewport */
 .container {
   width: 100% !important;
   max-width: 100% !important;
   overflow-x: hidden !important;
+  overflow-x: clip !important;
 }
 
 /* Smooth transitions */
@@ -168,7 +225,7 @@ main { overflow-x: hidden !important; }
 }
 
 .dark .embla__slide .animate-pulse {
-  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
   background-size: 200% 100%;
 }
 
@@ -220,7 +277,7 @@ main { overflow-x: hidden !important; }
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #d1d5db;
+  background-color: #cbd5e1;
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -229,7 +286,7 @@ main { overflow-x: hidden !important; }
 }
 
 .embla__dot:hover {
-  background-color: #9ca3af;
+  background-color: #94a3b8;
   transform: scale(1.2);
 }
 
@@ -240,11 +297,11 @@ main { overflow-x: hidden !important; }
 }
 
 .dark .embla__dot {
-  background-color: #4b5563;
+  background-color: #475569;
 }
 
 .dark .embla__dot:hover {
-  background-color: #6b7280;
+  background-color: #64748b;
 }
 
 .dark .embla__dot.active {

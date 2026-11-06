@@ -1,3 +1,5 @@
+import colors from 'tailwindcss/colors';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -8,6 +10,9 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Một bảng màu trung tính duy nhất (slate) cho cả app: trước đây Layout dùng "dark-*" (slate)
+        // còn các trang dùng "gray-*" nên nền tối bị hai màu lệch nhau (docs/CARD-REDESIGN-PROPOSAL.md, P6b).
+        gray: colors.slate,
         primary: {
           50: '#eff6ff',
           100: '#dbeafe',

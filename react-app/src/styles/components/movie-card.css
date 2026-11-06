@@ -18,7 +18,7 @@
 }
 
 .dark .movie-card {
-  background-color: #1f2937;
+  background-color: #1e293b;
 }
 
 .movie-card-thumbnail {
@@ -85,14 +85,14 @@
   padding: 0.75rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #1f2937;
+  color: #1e293b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .dark .movie-card-title {
-  color: #e5e7eb;
+  color: #e2e8f0;
 }
 
 .movie-card-duration {
@@ -145,12 +145,12 @@
 
 /* Loading state */
 .movie-card.loading .movie-card-image {
-  background-color: #f3f4f6;
+  background-color: #f1f5f9;
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .dark .movie-card.loading .movie-card-image {
-  background-color: #374151;
+  background-color: #334155;
 }
 
 @keyframes pulse {

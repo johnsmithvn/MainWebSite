@@ -11,10 +11,11 @@
 | [../readme.md](../readme.md) | ✅ | **Hướng dẫn cài đặt** (viết lại 2026-11-04): yêu cầu (Node 20/≥22), cài nhanh 5 bước, giải thích từng biến `.env`, cho thiết bị khác truy cập, dev/prod, quét dữ liệu lần đầu, Tailscale + HTTPS, chứng chỉ Android, bảng xử lý sự cố |
 | [SYSTEM-REPORT.md](SYSTEM-REPORT.md) | ✅ | Báo cáo tổng quan toàn hệ thống: kiến trúc, backend, DB, scanner, **danh mục API đầy đủ**, React app, offline, build |
 | [ISSUES-REPORT.md](ISSUES-REPORT.md) | ✅ | 57 issue phân theo mức độ (3 critical, 8 high) kèm vị trí code và lộ trình sửa — đã sửa toàn bộ Critical + High (S1–S7, D1, B1, B2, P1), nhóm dữ liệu (B12, B13, D2, D3, D4) cùng B5, B17, B18, B24, C8, C9 — 2026-11-04 |
+| [PERFORMANCE-CACHE-REPORT.md](PERFORMANCE-CACHE-REPORT.md) | ✅ | Audit cache & hiệu năng (2026-11-05): bản đồ 6 tầng cache, số đo bundle (1 MB JS, 288 kB gzip) và SQLite (WAL nhanh ~68×), 18 issue mới PF1–PF18 + đối chiếu P2/B10/B11/B14/B15 còn tồn, lộ trình 4 bước — **đã sửa và test cả 4 bước** (mục 7–8: bug hay cố ý, đánh đổi, kết quả test cũ/mới; còn P3, P4 và phần gộp tầng cache của PF14) |
 | [DEAD-CODE-REPORT.md](DEAD-CODE-REPORT.md) | ✅ | ~6.700 dòng code không dùng, cách dọn an toàn |
 | [UI-CONSISTENCY-REPORT.md](UI-CONSISTENCY-REPORT.md) | ✅ | So sánh UI/UX và logic giữa Manga · Movie · Music · Media, 11 bug do lệch nhau (U1–U11), đề xuất gộp khung chung |
 | [MUSIC-UX-REVIEW.md](MUSIC-UX-REVIEW.md) | ✅ | Đánh giá Music Player v1 (Spotify) & v2 (Zing): mobile, kéo-thả, thanh tua, trạng thái tải, 14 lỗi (M1–M14), lộ trình P0–P2 — nhóm P0 và P1 (trình phát toàn cục, mini-player, Media Session, SeekBar, skeleton) đã làm và kiểm tra lại (2026-11-04) |
-| [CARD-REDESIGN-PROPOSAL.md](CARD-REDESIGN-PROPOSAL.md) | 📋 | Đề xuất thiết kế lại card 4 loại và bố cục trang Manga: tỉ lệ ảnh, lưới, tên 2 dòng, badge, thao tác, skeleton, ảnh lỗi, dark mode, lộ trình P1–P6. Bản xem: [CARD-REDESIGN-PREVIEW.html](CARD-REDESIGN-PREVIEW.html) (2026-11-04) |
+| [CARD-REDESIGN-PROPOSAL.md](CARD-REDESIGN-PROPOSAL.md) | ✅ | Thiết kế lại card 4 loại và bố cục trang duyệt: tỉ lệ ảnh, lưới, tên 2 dòng, badge, thao tác, skeleton, ảnh lỗi, dark mode — **đã làm hết P1–P6** (2026-11-05): một `ItemCard` cho mọi loại, khung `BrowseLayout` + `useFolderBrowser` dùng chung cho Manga/Movie/Music (thanh công cụ dính, trang lưu trên URL), một bảng màu slate, Media/Album/Playlist/Yêu thích dùng chung card và lưới. Bản xem: [CARD-REDESIGN-PREVIEW.html](CARD-REDESIGN-PREVIEW.html) |
 
 ## Backend & dữ liệu (`docs/`)
 

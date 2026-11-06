@@ -8,6 +8,8 @@ import { FiChevronLeft, FiChevronRight, FiEye, FiTrash2 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import UniversalCard from '@/components/common/UniversalCard';
+import CardSkeleton from '@/components/common/CardSkeleton';
+import { parentFolderName } from '@/utils/formatters';
 import Button from '@/components/common/Button';
 import { useModal } from '@/components/common/Modal';
 import { useTopViewItems } from '@/hooks/useTopViewItems';
@@ -21,7 +23,10 @@ const TopViewSlider = ({
   className = '',
   autoplay = false,
   autoplayDelay = 4000,
-  ...props 
+  showDots = true,
+  // Thay tiêu đề bằng nội dung khác, ví dụ tab "Ngẫu nhiên | Xem nhiều"
+  headerLeft = null,
+  ...props
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -275,7 +280,9 @@ const TopViewSlider = ({
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-4 sm:mb-6">
+      <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-4 sm:mb-6 ${headerLeft ? 'pt-3' : ''}`}>
+        {/* Giữ tab để vẫn chuyển được sang mục khác khi mục này lỗi */}
+        {headerLeft && <div className="mb-4">{headerLeft}</div>}
         <div className="text-center">
           <p className="text-red-500 mb-4">Lỗi tải dữ liệu: {error.message}</p>
         </div>
@@ -285,6 +292,15 @@ const TopViewSlider = ({
 
   // Don't render if no items
   if (!loading && (!items || items.length === 0)) {
+    // Có tab thì vẫn hiện khung (kèm tab) để người dùng chuyển lại được
+    if (headerLeft) {
+      return (
+        <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 w-full ${className}`}>
+          <div className="p-2 sm:p-3">{headerLeft}</div>
+          <p className="px-3 pb-4 text-sm text-gray-500 dark:text-gray-400">Chưa có lượt xem nào.</p>
+        </div>
+      );
+    }
     return null;
   }
 
@@ -293,12 +309,14 @@ const TopViewSlider = ({
       {/* Header */}
       <div className="flex items-center justify-between p-2 sm:p-3 pb-1 sm:pb-2">
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+          {headerLeft || (
           <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white truncate">
             {title}
           </h2>
-          
+          )}
+
           {/* Item count badge */}
-          {items && items.length > 0 && (
+          {!headerLeft && items && items.length > 0 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -347,8 +365,8 @@ const TopViewSlider = ({
       </div>
 
       {/* Slider Container */}
-      <div 
-        className="embla"
+      <div
+        className={`embla embla--${type}`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -358,8 +376,8 @@ const TopViewSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  {/* Skeleton full width giúp card chiếm 50% màn hình trên mobile */}
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full h-64" />
+                  {/* Skeleton đúng hình card (tỉ lệ ảnh theo loại + 2 dòng tên), không còn khối cao cố định 256px */}
+                  <CardSkeleton type={type} variant="slider" className="w-full" />
                 </div>
               ))
             ) : (
@@ -367,20 +385,9 @@ const TopViewSlider = ({
               items?.map((item, index) => (
                 <div key={`topview-${type}-${index}-${item.path?.replace(/[^a-zA-Z0-9]/g, '_') || index}-${localRefreshTrigger}`} className="embla__slide w-full h-full flex items-stretch">
                   <div className="relative w-full h-full">
-                    {/* Ranking badge */}
-                    {index < 3 && (
-                      <div className="absolute top-1 sm:top-2 left-1 sm:left-2 z-10">
-                        <div className={`
-                          w-4 h-4 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-bold text-white
-                          ${index === 0 ? 'bg-yellow-500' : ''}
-                          ${index === 1 ? 'bg-gray-400' : ''}
-                          ${index === 2 ? 'bg-amber-600' : ''}
-                        `}>
-                          <span className="text-xs sm:text-xs">{index + 1}</span>
-                        </div>
-                      </div>
-                    )}
                     <UniversalCard
+                      // Hạng #1–#3: badge vàng / bạc / đồng ở góc trên trái ảnh
+                      badgeTopLeft={index < 3 ? { text: `#${index + 1}`, tone: ['gold', 'silver', 'bronze'][index] } : undefined}
                       item={item}
                       type={type}
                       isFavorite={Boolean(item.isFavorite)}
@@ -388,6 +395,7 @@ const TopViewSlider = ({
                       showDeleteView={true}
                       onToggleFavorite={() => handleToggleFavorite(item)}
                       onDeleteView={() => handleDeleteView(item)}
+                      subtitle={parentFolderName(item.path) || undefined} // tên thư mục cha
                       variant="compact-slider" // sử dụng phiên bản cực gọn
                       className="w-full h-full"
                       overlayMode={type === 'manga' ? 'views' : 'type'}
@@ -401,7 +409,7 @@ const TopViewSlider = ({
       </div>
 
       {/* Pagination Dots - Limited to max 6 dots */}
-      {visibleDots.length > 1 && (
+      {showDots && visibleDots.length > 1 && (
         <div className="embla__dots">
           {visibleDots.map((_, index) => {
             const actualIndex = scrollSnaps.length <= 6 ? index : index * Math.ceil(scrollSnaps.length / 6);

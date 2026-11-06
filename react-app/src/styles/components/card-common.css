@@ -1,0 +1,58 @@
+/* 📁 src/styles/components/card-common.css */
+/* Phần dùng chung cho mọi card (xem docs/CARD-REDESIGN-PROPOSAL.md) */
+
+/* Ô dự phòng khi thumbnail lỗi hoặc không có (CardThumb). Màu sinh từ tên item. */
+.thumb-fallback {
+  background-color: hsl(var(--thumb-hue, 220) 28% 88%);
+  color: hsl(var(--thumb-hue, 220) 25% 36%);
+}
+
+.dark .thumb-fallback {
+  background-color: hsl(var(--thumb-hue, 220) 18% 19%);
+  color: hsl(var(--thumb-hue, 220) 25% 72%);
+}
+
+.thumb-fallback svg {
+  width: 28%;
+  min-width: 1.25rem;
+  max-width: 2.25rem;
+  height: auto;
+}
+
+/* Mép xếp chồng phía trên ảnh: dấu hiệu "thư mục / tập hợp" dùng chung cho mọi loại (ItemCard) */
+.item-card-stack::before,
+.item-card-stack::after {
+  content: "";
+  position: absolute;
+  height: 12px;
+  border-radius: 6px 6px 0 0;
+}
+
+.item-card-stack::before {
+  left: 12%;
+  right: 12%;
+  top: -6px;
+  background-color: #e2e8f0;
+}
+
+.item-card-stack::after {
+  left: 6%;
+  right: 6%;
+  top: -3px;
+  background-color: #cbd5e1;
+}
+
+.dark .item-card-stack::before {
+  background-color: #334155;
+}
+
+.dark .item-card-stack::after {
+  background-color: #475569;
+}
+
+/* Nhấn giữ card để mở bảng thao tác: chặn menu ảnh và bôi chữ của trình duyệt */
+.card-pressable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}

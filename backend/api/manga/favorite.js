@@ -8,27 +8,24 @@ const { getDB } = require("../../utils/db");
  * POST /api/favorite
  * Body: { dbkey, path, value: true/false }
  */
+// root (thư mục gốc, tuỳ chọn): có thì chỉ đổi đúng bản ghi của root đó (ISSUES B11). Client cũ
+// không gửi root vẫn chạy như trước (đổi mọi bản ghi trùng path).
 router.post("/favorite", (req, res) => {
-  const { dbkey, path, value } = req.body;
+  const { dbkey, path, value, root } = req.body;
   // --- Validate đầu vào ---
   if (!dbkey || !path || typeof value !== "boolean") {
     console.log("❌ Validation failed:", { dbkey, path, value, typeofValue: typeof value });
     return res.status(400).json({ error: "Thiếu hoặc sai dữ liệu" });
   }
   try {
+    // Cột favoriteAt được thêm một lần trong getDB (PF12), không kiểm tra lại ở mỗi request
     const db = getDB(dbkey);
-    // Đảm bảo có cột favoriteAt
-    try {
-      const cols = db.prepare(`PRAGMA table_info(folders)`).all().map(c => c.name);
-      if (!cols.includes('favoriteAt')) {
-        db.prepare(`ALTER TABLE folders ADD COLUMN favoriteAt INTEGER`).run();
-      }
-    } catch (e) {
-      console.warn('⚠️ Không thể đảm bảo cột favoriteAt:', e.message);
-    }
-    const result = db
-      .prepare(`UPDATE folders SET isFavorite = ?, favoriteAt = CASE WHEN ? = 1 THEN CAST(strftime('%s','now') AS INTEGER) ELSE favoriteAt END WHERE path = ?`)
-      .run(value ? 1 : 0, value ? 1 : 0, path);
+    const setSql = `UPDATE folders SET isFavorite = ?, favoriteAt = CASE WHEN ? = 1 THEN CAST(strftime('%s','now') AS INTEGER) ELSE favoriteAt END`;
+    const flag = value ? 1 : 0;
+    const result =
+      typeof root === "string" && root
+        ? db.prepare(`${setSql} WHERE root = ? AND path = ?`).run(flag, flag, root, path)
+        : db.prepare(`${setSql} WHERE path = ?`).run(flag, flag, path);
     // ✅ Kiểm tra có update không
     if (result.changes === 0) {
       return res.status(404).json({ error: "Folder không tồn tại trong DB" });
@@ -51,16 +48,8 @@ router.get("/favorite", (req, res) => {
     return res.status(400).json({ error: "Thiếu key hoặc root" });
   }
   try {
+    // Cột favoriteAt đã được đảm bảo trong getDB (PF12)
     const db = getDB(key);
-    // Đảm bảo cột favoriteAt tồn tại để select không lỗi
-    try {
-      const cols = db.prepare(`PRAGMA table_info(folders)`).all().map(c => c.name);
-      if (!cols.includes('favoriteAt')) {
-        db.prepare(`ALTER TABLE folders ADD COLUMN favoriteAt INTEGER`).run();
-      }
-    } catch (e) {
-      console.warn('⚠️ favoriteAt ensure failed:', e.message);
-    }
     const list = db
       .prepare(
         `SELECT name, path, thumbnail, favoriteAt FROM folders WHERE root = ? AND isFavorite = 1`

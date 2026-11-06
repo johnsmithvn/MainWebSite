@@ -6,6 +6,62 @@ const Database = require("better-sqlite3");
 const DB_DIR = path.join(__dirname, "../data");
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR);
 
+// ⚡ Mở DB ở chế độ WAL + synchronous=NORMAL (PERFORMANCE-CACHE-REPORT PF1).
+// Chế độ mặc định (journal=DELETE, synchronous=FULL) fsync ở mỗi lệnh ghi: đo được ~3–4 ms/dòng
+// khi scan, so với ~0,05–0,08 ms/dòng ở WAL+NORMAL; better-sqlite3 chạy đồng bộ nên thời gian đó
+// chặn mọi request khác. WAL còn cho phép đọc trong lúc ghi.
+// Đánh đổi:
+// - Có thêm file <tên>.db-wal và <tên>.db-shm cạnh file .db. Khi server tắt đúng cách,
+//   closeAllDBs() gộp WAL vào .db. Sao lưu lúc server đang chạy phải copy cả 3 file.
+// - synchronous=NORMAL: tiến trình Node bị kill/crash thì không mất gì; mất điện hoặc hệ điều
+//   hành treo có thể mất vài lệnh ghi cuối cùng (DB không bị hỏng). Muốn bỏ hẳn rủi ro này thì
+//   đặt "FULL" (chậm hơn ~10 lần so với NORMAL nhưng vẫn nhanh hơn ~4 lần so với trước).
+const SQLITE_SYNCHRONOUS = "NORMAL";
+
+// 📂 "Thư mục cha + '/'" của một path, '' nếu nằm ở gốc (PERFORMANCE-CACHE-REPORT PF3).
+// VD 'A/B/c' → 'A/B/', 'c' → ''. rtrim(X, Y) bỏ ở bên phải X mọi ký tự có trong Y; Y là path đã
+// xoá hết '/', nên rtrim dừng đúng ở dấu '/' cuối cùng.
+// Có index trên biểu thức này (COLLATE NOCASE để không phân biệt hoa/thường như LIKE cũ), nên
+// "liệt kê con trực tiếp" tra thẳng index thay vì đọc mọi bản ghi rồi lọc độ sâu bằng JS.
+// Câu truy vấn phải viết đúng biểu thức này (dùng parentPathSql) thì SQLite mới dùng index.
+function parentPathSql(column = "path") {
+  return `rtrim(${column}, replace(${column}, '/', ''))`;
+}
+/** Giá trị so sánh với parentPathSql() cho thư mục folderPath ('' = gốc) */
+function parentKey(folderPath) {
+  return folderPath ? `${folderPath}/` : "";
+}
+
+const openConnections = new Set();
+
+function openDB(dbPath) {
+  const db = new Database(dbPath);
+  try {
+    db.pragma("journal_mode = WAL");
+    db.pragma(`synchronous = ${SQLITE_SYNCHRONOUS}`);
+  } catch (err) {
+    // VD ổ mạng không hỗ trợ WAL → vẫn chạy được ở chế độ mặc định như trước
+    console.warn(`⚠️ Không bật được WAL cho ${dbPath}:`, err.message);
+  }
+  openConnections.add(db);
+  return db;
+}
+
+/** Đóng mọi connection (gộp WAL vào file .db). Gọi khi tắt server. */
+function closeAllDBs() {
+  for (const db of openConnections) {
+    try {
+      db.close();
+    } catch (err) {
+      console.warn("⚠️ Lỗi đóng DB:", err.message);
+    }
+  }
+  openConnections.clear();
+  for (const map of [dbMap, dbMovieMap, dbMusicMap, dbMediaMap]) {
+    for (const key of Object.keys(map)) delete map[key];
+  }
+}
+
 // ✅ map: rootKey => DB instance
 const dbMap = {};
 
@@ -25,7 +81,7 @@ function getDB(dbkey) {
   const safeName = dbkey.replace(/[^a-zA-Z0-9_-]/g, "_"); // chống path lỗi
   const dbPath = path.join(DB_DIR, `${safeName}.db`);
 
-  const db = new Database(dbPath);
+  const db = openDB(dbPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS folders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -73,6 +129,17 @@ function getDB(dbkey) {
       console.warn('Could not add scanned column to folders (getDB):', err.message);
     }
   }
+  // ⭐ favoriteAt: trước đây api/manga/favorite.js chạy PRAGMA (+ ALTER) ở MỖI request (PF12)
+  if (!cols.includes("favoriteAt")) {
+    try {
+      db.prepare(`ALTER TABLE folders ADD COLUMN favoriteAt INTEGER`).run();
+    } catch (err) {
+      console.warn('Could not add favoriteAt column to folders (getDB):', err.message);
+    }
+  }
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_folders_root_parent ON folders(root, ${parentPathSql()} COLLATE NOCASE)`
+  );
 
   dbMap[dbkey] = db;
   return db;
@@ -84,7 +151,7 @@ function getMovieDB(dbkey) {
   if (dbMovieMap[dbkey]) return dbMovieMap[dbkey];
   const safeName = dbkey.replace(/[^a-zA-Z0-9_-]/g, "_");
   const dbPath = path.join(DB_DIR, `${safeName}.db`);
-  const db = new Database(dbPath);
+  const db = openDB(dbPath);
 
   // Tạo bảng nếu chưa có
   db.exec(`
@@ -126,6 +193,7 @@ function getMovieDB(dbkey) {
   if (!existingCols.includes("duration")) {
     db.prepare(`ALTER TABLE folders ADD COLUMN duration INTEGER`).run();
   }
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(${parentPathSql()} COLLATE NOCASE)`);
 
   dbMovieMap[dbkey] = db;
   return db;
@@ -138,7 +206,7 @@ function getMusicDB(dbkey) {
 
   const safeName = dbkey.replace(/[^a-zA-Z0-9_-]/g, "_");
   const dbPath = path.join(DB_DIR, `${safeName}.db`);
-  const db = new Database(dbPath);
+  const db = openDB(dbPath);
 
   db.exec(`
     -- 📁 folders: giống movie, lưu cả folder và bài hát
@@ -219,6 +287,8 @@ function getMusicDB(dbkey) {
     }
   }
 
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(${parentPathSql()} COLLATE NOCASE)`);
+
   dbMusicMap[dbkey] = db;
   return db;
 }
@@ -230,7 +300,7 @@ function getMediaDB(dbkey) {
   
   const safeName = dbkey.replace(/[^a-zA-Z0-9_-]/g, "_");
   const dbPath = path.join(DB_DIR, `${safeName}.db`);
-  const db = new Database(dbPath);
+  const db = openDB(dbPath);
 
   db.exec(`
     -- � folders: Folder cache with thumbnails (for navigation)
@@ -288,8 +358,13 @@ function getMediaDB(dbkey) {
     );
   `);
 
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_folder_root_parent ON folders(root, ${parentPathSql()} COLLATE NOCASE);
+    CREATE INDEX IF NOT EXISTS idx_media_parent ON media_items(${parentPathSql()} COLLATE NOCASE);
+  `);
+
   dbMediaMap[dbkey] = db;
   return db;
 }
 
-module.exports = { getDB, getMovieDB, getMusicDB, getMediaDB };
+module.exports = { getDB, getMovieDB, getMusicDB, getMediaDB, closeAllDBs, parentPathSql, parentKey };
