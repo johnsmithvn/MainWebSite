@@ -72,6 +72,20 @@ function setStaticHeaders(kind) {
 }
 
 // ✅ Static files với cache headers tối ưu và consistent
+// 🙈 Chỉ phục vụ file ẩn nằm trong .thumbnail; .env, .git… lỡ nằm trong thư mục media thì bỏ qua (ISSUES S9)
+function hideDotfiles(staticMiddleware) {
+  return (req, res, next) => {
+    let p;
+    try {
+      p = decodeURIComponent(req.path);
+    } catch {
+      return next();
+    }
+    const hidden = p.split(/[\\/]/).some((s) => s.startsWith(".") && s !== ".thumbnail");
+    return hidden ? next() : staticMiddleware(req, res, next);
+  };
+}
+
 const STATIC_MOUNTS = [
   { prefix: "V_", base: "/video", kind: "video" },
   { prefix: "M_", base: "/audio", kind: "audio" },
@@ -83,13 +97,15 @@ for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
     base: "/manga",
     kind: "manga",
   };
-  const staticMiddleware = express.static(absPath, {
-    dotfiles: "allow", // Giữ theo yêu cầu
-    maxAge: ONE_HOUR * 1000,
-    etag: true,
-    lastModified: true,
-    setHeaders: setStaticHeaders(mount.kind),
-  });
+  const staticMiddleware = hideDotfiles(
+    express.static(absPath, {
+      dotfiles: "allow", // cần cho thư mục .thumbnail — file ẩn khác bị hideDotfiles chặn
+      maxAge: ONE_HOUR * 1000,
+      etag: true,
+      lastModified: true,
+      setHeaders: setStaticHeaders(mount.kind),
+    })
+  );
   // 🔐 Nguồn trong SECURITY: file tĩnh cần cookie đăng nhập (ISSUES S4)
   const isSecure = SECURITY_KEYS.includes(key.toUpperCase());
   app.use(mount.base, isSecure ? protectStatic(absPath, staticMiddleware) : staticMiddleware);

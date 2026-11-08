@@ -120,6 +120,9 @@ router.get("/video-cache", async (req, res) => {
 
       return res.json({ folders: rows });
     }
+
+    // mode không hợp lệ → trả lỗi thay vì để request treo (ISSUES B10)
+    return res.status(400).json({ error: "Invalid mode" });
   } catch (err) {
     console.error("❌ video-cache error:", err);
     res.status(500).json({ error: "Internal Server Error" });

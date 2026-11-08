@@ -259,15 +259,11 @@ const MoviePlayer = () => {
         path: currentFile,
       });
 
-      // Set as folder thumbnail using the old API path
-      await fetch("/api/movie/set-thumbnail", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: sourceKey,
-          folderPath,
-          srcPath: currentFile,
-        }),
+      // Set as folder thumbnail (axios ném lỗi khi server trả 4xx/5xx → hiện toast lỗi)
+      await apiService.movie.setThumbnail({
+        key: sourceKey,
+        folderPath,
+        srcPath: currentFile,
       });
 
       showToast("✅ Đã đặt thumbnail", "success");

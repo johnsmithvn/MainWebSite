@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file. Dates use Y
   - File: react-app/src/pages/music/MusicPlayer.jsx
 
 - ✨ [2024-12-14] Added scope-aware thumbnail extraction for music and movie
+  - ⚠️ Ghi chú 2026-11-08: backend `extract-thumbnail` (music/movie) hiện **chưa** đọc `scopePath`/`shallow` — chỉ UI gửi tham số (ISSUES C7). Ngày ghi có thể là 2025-12-14
   - Music and movie extract-thumbnail now support scopePath and shallow mode
   - Backend: Updated extractThumbnailSmart and extractMovieThumbnailSmart functions
   - Added scopePath parameter to define which folder to extract (default: full extraction)
@@ -28,6 +29,13 @@ All notable changes to this project will be documented in this file. Dates use Y
   - Example: Extract thumbnails for "Albums/Rock" without processing nested folders
 
 ### Changed
+- 🔄 [2026-11-04] (PR #122) Music player dùng trình phát toàn cục — theo [docs/MUSIC-UX-REVIEW.md](docs/MUSIC-UX-REVIEW.md) nhóm P0 + P1
+  - `MusicPlayerProvider` giữ thẻ `<audio>` ngoài trang player → rời trang không tắt nhạc; thêm `MiniPlayer`, Media Session (nút media hệ điều hành/tai nghe)
+  - `SeekBar` kéo được cho thanh tua và âm lượng; `TrackListSkeleton` + trạng thái lỗi có nút "Thử lại"
+  - Sửa M1–M10, M13, M14 (v2 không phát được bài ở thư mục gốc, v2 ghi đè thứ tự playlist khi Shuffle, hết danh sách vẫn hiện "đang phát"…); M11 sửa một phần
+- 🔄 [2026-11-04] (PR #122) Video/audio stream bằng `utils/streamFile.js` thay cho đọc nguyên file vào RAM + cache LRU (ISSUES P1); scan manga chuyển sang `fs.promises`
+- 🔄 [2026-11-04] (PR #122) Viết lại `readme.md`, `.env.template` của backend và react-app; thêm báo cáo `docs/ISSUES-REPORT.md`, `SYSTEM-REPORT.md`, `DEAD-CODE-REPORT.md`, `UI-CONSISTENCY-REPORT.md`, `MUSIC-UX-REVIEW.md`, `CARD-REDESIGN-PROPOSAL.md`, mục lục `docs/README.md`
+
 - 🔄 [2026-02-15] Improved ScanModal path validation to auto-convert backslashes
   - ScanModal now automatically converts backslashes `\` to forward slashes `/`
   - Removed error message for backslash input, improved Windows path compatibility
@@ -45,6 +53,19 @@ All notable changes to this project will be documented in this file. Dates use Y
   - Better UX: Users can now easily distinguish folder cards from file cards at a glance
 
 ### Fixed
+
+- 🐛 [2026-11-08] Fixed thumbnail folder Media không hiện → scanner lưu `.thumbnail/<file>`, `MediaHome` ghép đúng đường dẫn và encode từng đoạn; DB quét trước đó (chỉ lưu tên file) vẫn hiển thị được (ISSUES B8)
+- 🐛 [2026-11-08] Fixed nút "đặt thumbnail" trong MoviePlayer gọi `/api/movie/set-thumbnail` không tồn tại (404 nhưng vẫn báo thành công) → gọi `apiService.movie.setThumbnail` trỏ tới `/folder-thumbnail`, lỗi thì hiện toast lỗi (ISSUES B3, một phần B4)
+- 🐛 [2026-11-08] Fixed extract thumbnail movie lỗi 500 với folder chỉ chứa folder con → tạo `.thumbnail` trước khi copy (ISSUES B9)
+- 🐛 [2026-11-08] Fixed `GET /api/movie/video-cache` với `mode` lạ không trả response (request treo) → trả 400 (ISSUES B10)
+- 🐛 [2026-11-08] Fixed MangaReader gọi `POST /api/increase-view` sai payload (luôn 400) khi thêm chapter vào hàng đợi → bỏ lời gọi, Reader đã đếm view (ISSUES B7)
+- 🐛 [2026-11-08] Fixed `RecentSlider` gọi hook sau `return null` (vi phạm Rules of Hooks, có thể crash khi bật/tắt Recent ở trang Manga) và Music dùng nhầm store Manga (UI-CONSISTENCY U11)
+- 🐛 [2026-11-08] Fixed CORS chấp nhận mọi origin `*.ts.net` kèm credentials → chỉ chấp nhận domain Tailscale của chính máy (`TAILSCALE_DEVICE.TAILSCALE_TAILNET.ts.net`, port bất kỳ) (ISSUES S8)
+- 🐛 [2026-11-08] Fixed static media phục vụ cả file ẩn (`.env`, `.git`…) nếu nằm trong thư mục media → chỉ cho phép thư mục `.thumbnail` (ISSUES S9)
+- 🐛 [2026-11-04] (PR #122) Sửa toàn bộ issue Critical + High trong [docs/ISSUES-REPORT.md](docs/ISSUES-REPORT.md)
+  - Bảo mật: path traversal ở mọi endpoint nhận đường dẫn (`utils/pathSafety.js`), SQL injection `ORDER BY` ở media-folder, vượt whitelist IP bằng `X-Forwarded-For`, token = mật khẩu (nay là HMAC, `utils/authToken.js`, rate-limit login), static route của nguồn `SECURITY` không cần đăng nhập (`middleware/protectStatic.js`), tham số `dbkey` lọt kiểm tra bảo mật (S1–S7)
+  - Dữ liệu: scan partial + shallow xoá nhầm con trực tiếp (D1), escape `_`/`%` trong `LIKE` (B13, `utils/sqlLike.js`), `getDB`/`getMusicDB` dùng chung cache (B12), reset music giữ playlist (D2), tải chapter thiếu trang vẫn báo hoàn tất (D3), hàng đợi tải làm đầy localStorage (D4)
+  - Chức năng: scan manga từ ScanModal luôn 400 (B1), reset movie/music không `await` có thể sập server (B2), CORS khi mở bằng IP LAN (B24), build có thể ra bản development (C8), `allowedHosts` của Vite (C9), toast không hiện ở nhiều trang (U9) và các lỗi U1–U4, U6, U8
 
 - 🐛 [2025-01-26] Fixed shallow scan deleting nested folders issue
   - Issue: Shallow scan was marking all folders as unscanned, then deleting nested folders during cleanup

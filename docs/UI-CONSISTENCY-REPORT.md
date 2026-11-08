@@ -157,7 +157,7 @@ Vì Movie/Music dùng `fetch()` không gắn `x-secure-token`, **nguồn đượ
 | **U8** | 🟢 | Manga và Media truyền `isLoading` cho `DeleteConfirmModal`, nhưng modal chỉ nhận `isDeleting` → khi đang xoá nút không bị khoá, không có trạng thái chờ, bấm được nhiều lần | [MangaHome.jsx:698](../react-app/src/pages/manga/MangaHome.jsx#L698), [MediaHome.jsx:449](../react-app/src/pages/media/MediaHome.jsx#L449), [DeleteConfirmModal.jsx:17](../react-app/src/components/common/DeleteConfirmModal.jsx#L17) | Đổi prop thành `isDeleting` | ✅ Đã sửa |
 | **U9** | 🟠 | *(Đính chính: bản đầu ghi "Movie/Music xoá không báo gì" — sai, store của hai loại này có gọi toast.)* Vấn đề thật có 2 lớp: (1) component `<Toast />` hiển thị `useUIStore().showToast` **chỉ được gắn trong MoviePlayer**, nên ~130 lời gọi `showToast` ở mọi trang khác (xoá, favorite Media, playlist, lỗi tải…) **không bao giờ hiện**; (2) store Movie/Music đọc `result.message`/`result.type` trên response axios thay vì `result.data.*` → toast thành công rỗng, lỗi chỉ hiện chuỗi chung của axios | [App.jsx:69](../react-app/src/App.jsx#L69), [store/index.js:779-808](../react-app/src/store/index.js#L779), [:1005-1027](../react-app/src/store/index.js#L1005) | Gắn `<Toast />` một lần ở `App.jsx` (bỏ bản trong MoviePlayer); đọc `result.data`, lỗi lấy `err.response.data.error` | ✅ Đã sửa |
 | **U10** | 🟢 | Movie/Music về trang 1 sau khi thoát player (trang lưu trong state), Manga thì giữ trang | [MovieHome.jsx:39](../react-app/src/pages/movie/MovieHome.jsx#L39), [MusicHome.jsx:51](../react-app/src/pages/music/MusicHome.jsx#L51) | Lưu `page` lên URL như Manga | Chưa sửa |
-| **U11** | 🟢 | `RecentSlider` lấy store theo `type === 'movie' ? movieStore : mangaStore` → Music dùng nhầm store Manga (hiện chưa lộ ra vì card music ẩn ❤️). Cùng file có `return null` **trước** khi gọi hook `useRecentItems` → vi phạm Rules of Hooks khi bật/tắt Recent tracking lúc đang ở trang Manga | [RecentSlider.jsx:57](../react-app/src/components/common/RecentSlider.jsx#L57), [:67-75](../react-app/src/components/common/RecentSlider.jsx#L67) | Chọn store giống `RandomSlider`; đưa điều kiện vào `enabled` của hook | Chưa sửa |
+| **U11** | 🟢 | `RecentSlider` lấy store theo `type === 'movie' ? movieStore : mangaStore` → Music dùng nhầm store Manga (hiện chưa lộ ra vì card music ẩn ❤️). Cùng file có `return null` **trước** khi gọi hook `useRecentItems` → vi phạm Rules of Hooks khi bật/tắt Recent tracking lúc đang ở trang Manga | [RecentSlider.jsx:57](../react-app/src/components/common/RecentSlider.jsx#L57), [:67-75](../react-app/src/components/common/RecentSlider.jsx#L67) | Chọn store giống `RandomSlider`; đưa điều kiện vào `enabled` của hook | ✅ Đã sửa 2026-11-08 (`return null` chuyển xuống sau mọi hook) |
 
 Đã có trong [ISSUES-REPORT.md](ISSUES-REPORT.md): **B6** (fetch không token → view movie/music thất bại với nguồn bảo mật), **B7** (MangaReader gửi `increase-view` sai payload khi thêm vào hàng đợi tải).
 
@@ -177,7 +177,7 @@ Vì Movie/Music dùng `fetch()` không gắn `x-secure-token`, **nguồn đượ
 
 ### Bước 1 — Sửa nhanh (mỗi mục vài dòng, không đổi kiến trúc)
 
-U1, U2, U3, U4, U8, U9 và U6 — ✅ **đã làm 2026-11-04**. Còn lại cho bước sau: U5, U7, U10, U11.
+U1, U2, U3, U4, U8, U9 và U6 — ✅ **đã làm 2026-11-04**. U11 — ✅ đã làm 2026-11-08. Còn lại cho bước sau: U5, U7, U10.
 
 ### Bước 2 — Thống nhất hành vi (vẫn giữ 3 trang riêng)
 

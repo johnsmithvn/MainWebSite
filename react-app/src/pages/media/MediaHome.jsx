@@ -14,6 +14,13 @@ import MediaLightbox from '@/components/media/MediaLightbox';
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 import { Trash2 } from 'lucide-react';
 
+// URL thumbnail của folder: DB mới lưu ".thumbnail/<file>", DB quét trước bản sửa chỉ lưu "<file>" (ISSUES B8).
+// Encode từng đoạn để tên có #, ?, % vẫn đúng.
+const buildFolderThumbUrl = (folder) => {
+  const thumb = folder.thumbnail.includes('/') ? folder.thumbnail : `.thumbnail/${folder.thumbnail}`;
+  return `/media/${`${folder.path}/${thumb}`.split('/').map(encodeURIComponent).join('/')}`;
+};
+
 function MediaHome() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useUIStore();
@@ -345,7 +352,7 @@ function MediaHome() {
                         >
                           {folder.thumbnail ? (
                             <img
-                              src={`/media/${folder.path}/${folder.thumbnail}`}
+                              src={buildFolderThumbUrl(folder)}
                               alt={folder.name}
                               className="w-full h-32 object-cover rounded mb-2"
                             />

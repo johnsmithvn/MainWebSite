@@ -1,6 +1,6 @@
 # 📚 Mục lục tài liệu — MainWebSite
 
-> Cập nhật 2026-11-04. Mỗi tài liệu được gắn trạng thái sau khi đối chiếu với code. **Cài đặt lần đầu: đọc [../readme.md](../readme.md).**
+> Cập nhật 2026-11-08 (sau khi PR #122 đã merge vào `main`). Mỗi tài liệu được gắn trạng thái sau khi đối chiếu với code. **Cài đặt lần đầu: đọc [../readme.md](../readme.md).**
 >
 > ✅ **Hiện hành** — khớp với code · ⚠️ **Lỗi thời một phần** — có banner ghi rõ phần sai · 📜 **Lịch sử** — ghi lại một đợt làm việc đã xong · 📋 **Đề xuất** — kế hoạch chưa thực hiện
 
@@ -10,9 +10,9 @@
 |----------|-----------|----------|
 | [../readme.md](../readme.md) | ✅ | **Hướng dẫn cài đặt** (viết lại 2026-11-04): yêu cầu (Node 20/≥22), cài nhanh 5 bước, giải thích từng biến `.env`, cho thiết bị khác truy cập, dev/prod, quét dữ liệu lần đầu, Tailscale + HTTPS, chứng chỉ Android, bảng xử lý sự cố |
 | [SYSTEM-REPORT.md](SYSTEM-REPORT.md) | ✅ | Báo cáo tổng quan toàn hệ thống: kiến trúc, backend, DB, scanner, **danh mục API đầy đủ**, React app, offline, build |
-| [ISSUES-REPORT.md](ISSUES-REPORT.md) | ✅ | 57 issue phân theo mức độ (3 critical, 8 high) kèm vị trí code và lộ trình sửa — đã sửa toàn bộ Critical + High (S1–S7, D1, B1, B2, P1), nhóm dữ liệu (B12, B13, D2, D3, D4) cùng B5, B17, B18, B24, C8, C9 — 2026-11-04 |
+| [ISSUES-REPORT.md](ISSUES-REPORT.md) | ✅ | 57 issue phân theo mức độ (3 critical, 8 high) kèm vị trí code và lộ trình sửa — đã sửa toàn bộ Critical + High (S1–S7, D1, B1, B2, P1), nhóm dữ liệu (B12, B13, D2, D3, D4) cùng B5, B17, B18, B24, C8, C9 — 2026-11-04 (PR #122); B3, B7–B10, S8, S9 — 2026-11-08 |
 | [DEAD-CODE-REPORT.md](DEAD-CODE-REPORT.md) | ✅ | ~6.700 dòng code không dùng, cách dọn an toàn |
-| [UI-CONSISTENCY-REPORT.md](UI-CONSISTENCY-REPORT.md) | ✅ | So sánh UI/UX và logic giữa Manga · Movie · Music · Media, 11 bug do lệch nhau (U1–U11), đề xuất gộp khung chung |
+| [UI-CONSISTENCY-REPORT.md](UI-CONSISTENCY-REPORT.md) | ✅ | So sánh UI/UX và logic giữa Manga · Movie · Music · Media, 11 bug do lệch nhau (U1–U11; còn U5, U7, U10), đề xuất gộp khung chung (chưa làm) |
 | [MUSIC-UX-REVIEW.md](MUSIC-UX-REVIEW.md) | ✅ | Đánh giá Music Player v1 (Spotify) & v2 (Zing): mobile, kéo-thả, thanh tua, trạng thái tải, 14 lỗi (M1–M14), lộ trình P0–P2 — nhóm P0 và P1 (trình phát toàn cục, mini-player, Media Session, SeekBar, skeleton) đã làm và kiểm tra lại (2026-11-04) |
 | [CARD-REDESIGN-PROPOSAL.md](CARD-REDESIGN-PROPOSAL.md) | 📋 | Đề xuất thiết kế lại card 4 loại và bố cục trang Manga: tỉ lệ ảnh, lưới, tên 2 dòng, badge, thao tác, skeleton, ảnh lỗi, dark mode, lộ trình P1–P6. Bản xem: [CARD-REDESIGN-PREVIEW.html](CARD-REDESIGN-PREVIEW.html) (2026-11-04) |
 
@@ -51,5 +51,5 @@
 
 ## Khác
 
-- [`../CHANGELOG.md`](../CHANGELOG.md) — nhật ký thay đổi chi tiết (lưu ý ISSUES C7: một mục ghi tính năng scope/shallow cho extract thumbnail mà backend chưa hỗ trợ).
+- [`../CHANGELOG.md`](../CHANGELOG.md) — nhật ký thay đổi chi tiết (ISSUES C7: mục scope/shallow cho extract thumbnail đã được ghi chú là backend chưa hỗ trợ).
 - `.github/prompts/`, `.github/instructions/`, `Promt.md` — prompt/hướng dẫn cho trợ lý AI, không phải tài liệu sản phẩm.

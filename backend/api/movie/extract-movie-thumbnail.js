@@ -76,6 +76,8 @@ async function extractMovieThumbnailSmart({
       const thumbDir = path.join(absPath, ".thumbnail");
       const folderThumb = path.join(thumbDir, folderName + ".jpg");
       if (overwrite || !fs.existsSync(folderThumb)) {
+        // Folder chỉ chứa folder con thì chưa có .thumbnail → tạo trước khi copy (ISSUES B9)
+        fs.mkdirSync(thumbDir, { recursive: true });
         fs.copyFileSync(firstVideoThumb, folderThumb);
       }
 
