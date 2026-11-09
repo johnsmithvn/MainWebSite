@@ -110,10 +110,15 @@ const INDEX_HTML_HEADERS = {
 // trang cũ (thiếu /dist nên trống) hoặc 404. Chỉ áp cho điều hướng trang (Accept: text/html) tới đường dẫn
 // không có đuôi file: ảnh/video/nhạc — kể cả khi mở ảnh trong tab mới — vẫn do static phục vụ như cũ.
 // Dev (Vite :3001) giữ nguyên: backend phục vụ frontend cũ, Vite tự trả SPA (bypass trong vite.config.js).
+// /manga/reader/:id là route React thuần: id chứa tên chương nên có thể có dấu chấm ("Chapter 1.5")
+// mà không phải đuôi file → luôn trả SPA.
+const APP_ONLY_PREFIXES = ["/manga/reader/"];
 if (!IS_DEV && HAS_REACT_BUILD) {
   app.use((req, res, next) => {
     if (req.method !== "GET" && req.method !== "HEAD") return next();
-    if (req.path.startsWith("/api/") || path.extname(req.path)) return next();
+    if (req.path.startsWith("/api/")) return next();
+    const appOnly = APP_ONLY_PREFIXES.some((p) => req.path.startsWith(p));
+    if (!appOnly && path.extname(req.path)) return next();
     if (!(req.headers.accept || "").includes("text/html")) return next();
     return res.sendFile(path.join(REACT_BUILD_PATH, "index.html"), { headers: INDEX_HTML_HEADERS });
   });

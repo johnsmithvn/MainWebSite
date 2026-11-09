@@ -1,6 +1,7 @@
 # 🎵 ĐÁNH GIÁ UI/UX MUSIC PLAYER — v1 (Spotify) & v2 (Zing)
 
 > **Ngày:** 2026-11-04 · **Commit nền:** `a511bcd` + các sửa đổi chưa commit trong [UI-CONSISTENCY-REPORT.md](UI-CONSISTENCY-REPORT.md)
+> **Lưu ý (2026-11-09):** số dòng trong các link là vị trí trước khi sửa P0/P1; player đã được tách nhiều phần (trình phát toàn cục, SeekBar…) nên link có thể lệch dòng. Trạng thái mới nhất của M11, M12 xem [AUDIT-2026-11-09.md](AUDIT-2026-11-09.md#4-mục-cũ-còn-mở-đối-chiếu-code-ngày-2026-11-09).
 > **Phạm vi:** `MusicHome`, `MusicPlayer` (v1), `MusicPlayerV2` (v2), `PlayerHeader`, `PlayerFooter`, `PlaylistSidebar`, `FullPlayerModal`, `LyricsModal`, `PlaylistModal`, `MusicPlaylists`.
 > **Cách kiểm tra:**
 > 1. Đọc toàn bộ code các file trên.

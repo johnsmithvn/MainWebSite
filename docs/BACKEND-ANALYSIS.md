@@ -15,7 +15,7 @@
 ### Kiến trúc Backend:
 - **Node.js** + **Express 5** server
 - **SQLite** databases để cache metadata 
-- **ffprobe-static** (duration, kích thước ảnh) + **ffmpeg** trong PATH (chụp thumbnail video)
+- **ffprobe-static** (duration và kích thước video; kích thước ảnh JPEG/PNG/GIF/WebP/BMP đọc thẳng từ đầu file bằng `utils/imageSize.js`, chỉ định dạng khác mới dùng ffprobe) + **ffmpeg** trong PATH (chụp thumbnail video)
 - **Music-metadata** để đọc thông tin nhạc
 - **Better-sqlite3** làm database driver
 
@@ -344,18 +344,18 @@ playlist_items (playlistId, songPath, sortOrder)
 #### 5. **middleware/security.js** - Bảo vệ Source có mật khẩu
 **Chức năng:** Kiểm tra token cho các source được bảo vệ
 **Nhiệm vụ:**
-- Skip check cho `/api/login` và static HTML files
-- Kiểm tra `x-secure-token` header hoặc query param `token`
-- So sánh với `SECURITY_PASSWORD` từ .env
+- Skip check cho `/api/login`, `/api/logout`, file `.html` và điều hướng trang không thuộc `/api` (`Accept: text/html` — để F5 ở trang có `?key=<nguồn bảo mật>` vẫn ra trang app, AUDIT-2026-11-09 R1)
+- Request có `key`/`dbkey` thuộc `SECURITY` phải có token hợp lệ: `x-secure-token`, `Authorization: Bearer`, `?token=` hoặc body `token`
+- Token là HMAC tính từ `SECURITY_PASSWORD` + `backend/data/.auth-secret` (`utils/authToken.js`), không phải mật khẩu (ISSUES S5)
 
 **Ảnh hưởng:** Bảo vệ các source nhạy cảm (SECURITY keys trong .env)
 
 #### 6. **middleware/rateLimiter.js** - Giới hạn request rate
 **Chức năng:** Ngăn spam/DoS attacks
 **Nhiệm vụ:**
-- Limit 100 requests/15 minutes per IP
-- Cleanup expired entries tự động
-- Return rate limit headers
+- **Đang tắt** (`ENABLE_RATE_LIMIT = false` trong `middleware/index.js`), xem Layer 3 bên dưới
+- Nếu bật: 50.000 request / 15 phút / IP (`constants.SECURITY.RATE_LIMIT`), tự dọn entry hết hạn, trả header rate limit
+- Đăng nhập có giới hạn riêng: 10 lần sai / 15 phút / IP → 429 (`routes/system.js`)
 
 #### 7. **middleware/errorHandler.js** - Xử lý lỗi toàn cục
 **Chức năng:** Centralized error handling
@@ -667,13 +667,14 @@ playlist_items (
 
 ### **Layer 1: Network Security (auth.js)**
 - IP allowlist từ `.env` `ALLOWED_IPS`
-- Ngoài allowlist: reverse DNS rồi so với `ALLOWED_HOSTNAMES` (mỗi request một lần tra, không cache)
+- Ngoài allowlist: reverse DNS rồi so với `ALLOWED_HOSTNAMES`. Kết quả được nhớ theo IP: cho phép 5 phút, bị chặn 1 phút, lỗi DNS không nhớ (ISSUES P2, đã sửa 2026-11-05)
 - IP lấy từ `req.socket.remoteAddress`, không tin header `X-Forwarded-For` (ISSUES S3, đã sửa 2026-11-04). Ở dev mode, request đi qua Vite proxy luôn có IP `127.0.0.1`
 
 ### **Layer 2: Content Security (security.js)**
 - Request có `key` hoặc `dbkey` (query/body) thuộc `SECURITY` phải gửi token hợp lệ (`x-secure-token`, `Authorization: Bearer`, `?token=` hoặc body `token`)
 - `/api/login` trả về token HMAC tính từ `SECURITY_PASSWORD` + `backend/data/.auth-secret` (`utils/authToken.js`), so sánh mật khẩu bằng `timingSafeEqual`, khoá 15 phút sau 10 lần sai từ cùng IP
 - Đăng nhập đặt cookie HttpOnly `ms_auth`; static `/manga`, `/video`, `/audio`, `/media` của nguồn bảo mật chỉ phục vụ khi có cookie này (`middleware/protectStatic.js`). API không chấp nhận cookie (chống CSRF)
+- Điều hướng trang không thuộc `/api` (`Accept: text/html`) được bỏ qua kiểm tra token: trang HTML không chứa dữ liệu, dữ liệu vẫn lấy qua `/api` có token (AUDIT-2026-11-09 R1)
 - (ISSUES S4, S5, S6 — đã sửa 2026-11-04)
 
 ### **Layer 3: Rate Limiting (rateLimiter.js)**

@@ -3,6 +3,7 @@
 > **Ngày rà soát:** 2026-10-29 · **Commit:** `a511bcd` (nhánh `main`, merge PR #120)
 > **Phạm vi:** toàn bộ repo — `backend/`, `react-app/`, `frontend/` (legacy), `scripts/`, `docs/`.
 > **Tài liệu liên quan:** [ISSUES-REPORT.md](ISSUES-REPORT.md) (danh sách lỗi/rủi ro) · [DEAD-CODE-REPORT.md](DEAD-CODE-REPORT.md) (code không dùng) · [README.md](README.md) (mục lục docs)
+> **Cập nhật 2026-11-09:** mục 4.1 (trình tự xử lý request) và bảng scanner ở 4.3 đã đối chiếu lại với code hiện tại (CORS S8, cache PF5/PF15, file ẩn S9, điều hướng trang R1, kích thước ảnh PF20 — xem [AUDIT-2026-11-09.md](AUDIT-2026-11-09.md)). Các phần khác giữ nội dung lúc rà soát.
 
 ---
 
@@ -109,21 +110,21 @@ MainWebSite/
 
 1. `dotenv` nạp `backend/.env`. **Lưu ý:** `utils/config.js` và `middleware/auth.js` đọc `.env` bằng `fs.readFileSync` không có try/catch → thiếu file `.env` thì server **crash ngay khi require**.
 2. `setupMiddleware(app)` (thứ tự trong `middleware/index.js`):
-   1. `cors` — whitelist từ `CORS_DEV_CONFIG` + `TAILSCALE_*`, ngoài ra **cho qua mọi origin `*.ts.net`**, origin là IP trùng header `Host` (mở app bằng IP LAN) và — ở dev — mọi origin là IP nội bộ; `credentials: true`.
+   1. `cors` — whitelist từ `CORS_DEV_CONFIG` + `TAILSCALE_*`, domain Tailscale **của chính máy** (`TAILSCALE_DEVICE.TAILSCALE_TAILNET.ts.net`, port bất kỳ — không còn cho qua mọi `*.ts.net`, ISSUES S8), origin là IP trùng header `Host` (mở app bằng IP LAN) và — ở dev — mọi origin là IP nội bộ; `credentials: true`.
    2. `express.json` / `urlencoded` — giới hạn 10MB.
    3. `compression`.
    4. Rate limiter — **bị tắt cứng** (`ENABLE_RATE_LIMIT = false`).
    5. `auth.js` — cho qua nếu IP ∈ `ALLOWED_IPS`, ngược lại reverse-DNS và so với `ALLOWED_HOSTNAMES`.
-   6. `security.js` — nếu `key` **hoặc `dbkey`** (query/body) ∈ `SECURITY` thì yêu cầu token hợp lệ (`x-secure-token` / `Authorization: Bearer` / `?token=` / body.token). Token = HMAC của `SECURITY_PASSWORD` với secret `backend/data/.auth-secret` (`utils/authToken.js`); cookie không được chấp nhận cho API.
+   6. `security.js` — nếu `key` **hoặc `dbkey`** (query/body) ∈ `SECURITY` thì yêu cầu token hợp lệ (`x-secure-token` / `Authorization: Bearer` / `?token=` / body.token). Token = HMAC của `SECURITY_PASSWORD` với secret `backend/data/.auth-secret` (`utils/authToken.js`); cookie không được chấp nhận cho API. Bỏ qua: `/api/login`, `/api/logout`, file `.html`, và điều hướng trang không thuộc `/api` (`Accept: text/html`, ví dụ F5 ở `/media?key=<nguồn bảo mật>` — trang HTML không chứa dữ liệu; AUDIT-2026-11-09 R1).
 3. Header bảo mật (chỉ production): `nosniff`, `X-Frame-Options: DENY`, HSTS, Referrer-Policy.
 4. `app.use("/api", routes)`.
-5. Static mount theo prefix key: `V_*`→`/video`, `M_*`→`/audio`, `MEDIA_*`→`/media`, **còn lại**→`/manga` (cache 1h; ảnh manga `immutable` 1 ngày). Nguồn thuộc `SECURITY` được bọc bởi `middleware/protectStatic.js`: file chỉ được phục vụ khi có cookie `ms_auth` hợp lệ (đặt lúc đăng nhập).
-6. Static legacy: `frontend/public`, `/dist`, `/default`.
-7. Nếu có `react-app/dist`: serve static (cache 30 ngày ở prod); `/` trả `index.html` ở prod, `home.html` legacy ở dev.
+5. **Chỉ production, có `react-app/dist`:** điều hướng trang (`GET`/`HEAD`, `Accept: text/html`) tới đường dẫn không có đuôi file và không thuộc `/api/` → trả `index.html` của React; riêng `/manga/reader/…` luôn trả `index.html`. Đặt trước static để F5 / mở link ở `/manga`, `/movie`, `/music`, `/media`… không rơi vào mount ảnh hay thư mục của frontend cũ (AUDIT-2026-11-09 R1). Ảnh, video (có đuôi file) đi tiếp xuống static như bình thường.
+6. Static mount theo prefix key: `V_*`→`/video`, `M_*`→`/audio`, `MEDIA_*`→`/media`, **còn lại**→`/manga` (cache 1h; ảnh manga 1 ngày, không `immutable` — PERFORMANCE PF15). File/thư mục bắt đầu bằng dấu chấm bị bỏ qua, trừ `.thumbnail` (`hideDotfiles`, ISSUES S9). Nguồn thuộc `SECURITY` được bọc bởi `middleware/protectStatic.js`: file chỉ được phục vụ khi có cookie `ms_auth` hợp lệ (đặt lúc đăng nhập).
+7. `/default`; nếu có `react-app/dist`: `/assets` cache 1 năm `immutable` (tên có hash), file khác `no-cache` (PERFORMANCE PF5); static legacy `frontend/public`, `/dist`; `/` trả `index.html` ở prod, `home.html` legacy ở dev.
 8. `/app/*` (legacy) → React build.
 9. Middleware decode URL cho `/manga /video /audio /media` (đặt **sau** static nên thực tế không tác dụng).
 10. `/api/list-roots` (bản trùng, không bao giờ được gọi vì router đã xử lý).
-11. SPA fallback: GET không phải `/api`/static → React `index.html` (prod) hoặc `frontend/public/manga/index.html` (dev).
+11. SPA fallback: GET không phải `/api`/static (và không bắt đầu bằng `/manga/`, `/video/`, `/audio/`, `/media/`…) → React `index.html` (prod) hoặc `frontend/public/manga/index.html` (dev). Ở prod, điều hướng trang đã được bước 5 xử lý trước.
 12. `/api/log`, error handler.
 13. Listen `0.0.0.0:PORT` — HTTPS nếu `ENABLE_HTTPS=true` và có `ssl/private-key.pem` + `ssl/certificate.pem`, ngược lại HTTP.
 
@@ -161,7 +162,7 @@ Mỗi key là **một file SQLite** `backend/data/<KEY>.db` (tên đã sanitize)
 | Manga | `utils/cache-scan.js` | Async (`fs.promises`, không chặn server), đệ quy theo `root`; chỉ lưu thư mục có ảnh; thumbnail = ảnh đầu tiên (natural sort); thư mục rỗng con → `otherName` (alias tìm kiếm); mark & sweep theo `root`; mỗi `(key, root)` chỉ chạy một scan/reset tại một thời điểm. Không hỗ trợ partial/shallow. |
 | Movie | `utils/movie-scan.js` | Async; ffprobe lấy `duration` cho file mới/đổi; thumbnail từ `.thumbnail/<tên>.<ext>`; hỗ trợ `scopePath` (partial) + `shallow`. |
 | Music | `utils/music-scan.js` | Async; `music-metadata` lấy duration/artist/album/title/genre/lyrics cho file mới/đổi; ghi bảng `songs`; partial + shallow. |
-| Media | `utils/media-scan.js` | Async; ảnh (ffprobe lấy width/height), video (duration), **mọi file khác** phân loại theo `FILE_EXTENSIONS`; `date_taken` = mtime (chưa đọc EXIF); folder thumbnail = file ảnh đầu tiên trong `.thumbnail/`. |
+| Media | `utils/media-scan.js` | Async; ảnh: width/height đọc thẳng từ đầu file với JPEG/PNG/GIF/WebP/BMP (`utils/imageSize.js`), định dạng khác mới dùng ffprobe (AUDIT-2026-11-09 PF20); video: một lần ffprobe lấy duration + kích thước của luồng video; **mọi file khác** phân loại theo `FILE_EXTENSIONS`; `date_taken` = mtime (chưa đọc EXIF); folder thumbnail = file ảnh đầu tiên trong `.thumbnail/`. |
 
 Partial + shallow (movie/music/media): `shallow` chỉ xử lý các mục nằm **ngay trong** thư mục `path` (hoặc ngay trong root nếu không có `path`) và không đi sâu hơn; phase 1 và phase 3 dùng đúng phạm vi đó nên không xoá nhầm các thư mục con (đã sửa ISSUES D1).
 

@@ -1,6 +1,6 @@
 # ⚡ BÁO CÁO CACHE & HIỆU NĂNG — MainWebSite
 
-> **Cập nhật 2026-11-09:** đo lại trên `main` sau PR #123 với thư viện lớn (18.000 ảnh manga, 6.000 ảnh Media, 3.000 bài hát) và thêm PF19–PF25 (ảnh bìa là ảnh gốc, ffprobe cho mỗi ảnh khi quét Media, đường tải đầu…) ở [AUDIT-2026-11-09.md](AUDIT-2026-11-09.md#3-hiệu-năng).
+> **Cập nhật 2026-11-09:** đo lại trên `main` sau PR #123 với thư viện lớn (18.000 ảnh manga, 6.000 ảnh Media, 3.000 bài hát) và thêm PF19–PF25 (ảnh bìa là ảnh gốc, ffprobe cho mỗi ảnh khi quét Media, đường tải đầu…) ở [AUDIT-2026-11-09.md](AUDIT-2026-11-09.md#3-hiệu-năng). PF20 đã sửa cùng ngày (quét 6.000 ảnh: 28,6 s → 13,4 s trên máy test).
 
 > Ngày 2026-11-05 · Phạm vi: backend Express + SQLite, React app (Vite), Service Worker `public/sw.js`.
 > Đối chiếu với code trên nhánh `fix/security-path-traversal`, **kể cả các thay đổi chưa commit**.

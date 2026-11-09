@@ -4,6 +4,7 @@
 > **Phạm vi:** React app (`react-app/src`) — các trang danh sách, card, slider, player/reader, store và hook của 4 loại nội dung.
 > **Phương pháp:** đọc và đặt cạnh nhau code của từng loại, đối chiếu tên trường với backend. Chưa chạy app để kiểm tra trực quan; mục nào cần xác nhận trên giao diện được ghi *"cần kiểm tra"*.
 > **Liên quan:** [ISSUES-REPORT.md](ISSUES-REPORT.md) (B6, B7 được nhắc lại ở đây) · [DEAD-CODE-REPORT.md](DEAD-CODE-REPORT.md)
+> **Lưu ý (2026-11-09):** số dòng trong các link là vị trí lúc rà soát; các trang Manga/Movie/Music đã được viết lại trong đợt thiết kế card nên nhiều link lệch dòng. Lỗi phát hiện sau đó (R1–R7) xem [AUDIT-2026-11-09.md](AUDIT-2026-11-09.md).
 
 ---
 

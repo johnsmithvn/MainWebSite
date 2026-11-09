@@ -19,7 +19,9 @@ function createProxyConfig(target) {
     bypass(req) {
       const accept = req.headers?.accept || ''
       const pathname = (req.url || '').split('?')[0]
-      if (req.method === 'GET' && accept.includes('text/html') && !path.extname(pathname)) return '/'
+      // /manga/reader/:id luôn là route React (id có thể chứa dấu chấm, ví dụ "Chapter 1.5")
+      const appOnly = pathname.startsWith('/manga/reader/')
+      if (req.method === 'GET' && accept.includes('text/html') && (appOnly || !path.extname(pathname))) return '/'
       return null
     },
   }
