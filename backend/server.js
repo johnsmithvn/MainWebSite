@@ -93,6 +93,32 @@ const STATIC_MOUNTS = [
   { prefix: "MEDIA_", base: "/media", kind: "image" },
 ];
 
+// ✅ Production React App Serving
+const REACT_BUILD_PATH = path.join(__dirname, "../react-app/dist");
+// Kiểm tra một lần lúc khởi động (trước đây existsSync ở mỗi request "/" và mỗi lần SPA fallback).
+// Build mới tạo sau khi server chạy vẫn cần restart như trước (middleware static chỉ mount lúc đầu).
+const HAS_REACT_BUILD = fs.existsSync(REACT_BUILD_PATH);
+const INDEX_HTML_HEADERS = {
+  "Cache-Control": "no-cache, no-store, must-revalidate",
+  Pragma: "no-cache",
+  Expires: "0",
+};
+
+// 🧭 F5 / mở link thẳng vào một trang của app React (docs/AUDIT-2026-11-09.md, R1).
+// Route React /manga, /media trùng đường dẫn mount ảnh ở dưới, còn /manga, /movie, /music trùng thư mục
+// của frontend cũ (frontend/public). Không chặn ở đây thì express.static đổi /manga thành /manga/ rồi trả
+// trang cũ (thiếu /dist nên trống) hoặc 404. Chỉ áp cho điều hướng trang (Accept: text/html) tới đường dẫn
+// không có đuôi file: ảnh/video/nhạc — kể cả khi mở ảnh trong tab mới — vẫn do static phục vụ như cũ.
+// Dev (Vite :3001) giữ nguyên: backend phục vụ frontend cũ, Vite tự trả SPA (bypass trong vite.config.js).
+if (!IS_DEV && HAS_REACT_BUILD) {
+  app.use((req, res, next) => {
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    if (req.path.startsWith("/api/") || path.extname(req.path)) return next();
+    if (!(req.headers.accept || "").includes("text/html")) return next();
+    return res.sendFile(path.join(REACT_BUILD_PATH, "index.html"), { headers: INDEX_HTML_HEADERS });
+  });
+}
+
 for (const [key, absPath] of Object.entries(ROOT_PATHS)) {
   const mount = STATIC_MOUNTS.find((m) => key.startsWith(m.prefix)) || {
     base: "/manga",
@@ -121,12 +147,6 @@ app.use(
     setHeaders: setStaticHeaders("image"),
   })
 );
-
-// ✅ NEW: Production React App Serving
-const REACT_BUILD_PATH = path.join(__dirname, "../react-app/dist");
-// Kiểm tra một lần lúc khởi động (trước đây existsSync ở mỗi request "/" và mỗi lần SPA fallback).
-// Build mới tạo sau khi server chạy vẫn cần restart như trước (middleware static chỉ mount lúc đầu).
-const HAS_REACT_BUILD = fs.existsSync(REACT_BUILD_PATH);
 
 if (HAS_REACT_BUILD) {
   console.log("✅ React build found, serving production app");
@@ -258,11 +278,7 @@ app.use((req, res, next) => {
     // Production: Serve React app if build exists
     if (!IS_DEV && HAS_REACT_BUILD) {
       return res.sendFile(path.join(REACT_BUILD_PATH, "index.html"), {
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
+        headers: INDEX_HTML_HEADERS,
       });
     }
 

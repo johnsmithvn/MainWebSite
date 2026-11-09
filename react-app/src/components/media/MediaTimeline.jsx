@@ -8,6 +8,7 @@ import useCardActions from '@/hooks/useCardActions';
 import CardThumb from '@/components/common/CardThumb';
 import CardActionSheet from '@/components/common/CardActionSheet';
 import { CARD_GRIDS } from '@/constants';
+import { mediaUrl, parentDir } from '@/utils/mediaUrl';
 
 function MediaTimeline({ items, selectedItems, onSelectItem, onItemClick, onFavorite }) {
   // Group items by year-month
@@ -71,10 +72,10 @@ function TimelinePhoto({ item, isSelected, selectionMode, onSelect, onClick, onF
   // (trước đây ảnh lỗi rơi về folder-thumb.png nên trông như một thư mục).
   const thumbSources = [];
   if (item.thumbnail) {
-    thumbSources.push(`/media/${item.path.split('/').slice(0, -1).join('/')}/${item.thumbnail}`);
+    thumbSources.push(mediaUrl(parentDir(item.path), item.thumbnail));
   }
   if (!isVideo && item.path) {
-    thumbSources.push(`/media/${item.path}`);
+    thumbSources.push(mediaUrl(item.path));
   }
 
   // Bảng thao tác khi nhấn giữ (cảm ứng) hoặc chuột phải

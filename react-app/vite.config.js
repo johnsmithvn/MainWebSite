@@ -11,23 +11,25 @@ function createProxyConfig(target) {
   // Base proxy configuration for simple endpoints
   const baseConfig = { target, changeOrigin: true }
   
-  // Special configuration for /manga endpoint with HTML bypass
-  const mangaConfig = {
+  // /manga và /media vừa là route React vừa là đường dẫn ảnh của backend: điều hướng trang (Accept: text/html)
+  // tới đường dẫn không có đuôi file thì trả SPA, còn lại (ảnh, kể cả mở ảnh trong tab mới) chuyển cho backend.
+  // Trước đây chỉ /manga có bypass nên F5 ở trang Media khi chạy dev ra 404 (docs/AUDIT-2026-11-09.md, R1).
+  const spaRouteConfig = {
     ...baseConfig,
     bypass(req) {
       const accept = req.headers?.accept || ''
-      // Redirect HTML requests to SPA for client-side routing
-      if (req.method === 'GET' && accept.includes('text/html')) return '/'
+      const pathname = (req.url || '').split('?')[0]
+      if (req.method === 'GET' && accept.includes('text/html') && !path.extname(pathname)) return '/'
       return null
     },
   }
 
   return {
     '/api': baseConfig,
-    '/manga': mangaConfig,
+    '/manga': spaRouteConfig,
     '/video': baseConfig,
     '/audio': baseConfig,
-    '/media': baseConfig,
+    '/media': spaRouteConfig,
     '/.thumbnail': baseConfig,
     '/default': baseConfig,
   }

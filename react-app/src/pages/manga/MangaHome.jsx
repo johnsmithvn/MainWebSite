@@ -47,7 +47,6 @@ const MangaHome = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const viewParam = searchParams.get('view');
   const showRandomSection = !searchParams.get('path') && viewParam !== 'folder';
-  const focusParam = searchParams.get('focus');
 
   // Guard: ensure we have a sourceKey; then ensure a root is selected or present in URL
   useEffect(() => {
@@ -110,8 +109,10 @@ const MangaHome = () => {
   useEffect(() => {
     if (shouldNavigateToReader) {
       if (viewParam !== 'folder') {
-        // Do NOT replace history so browser Back returns to the folder list
-        navigate(`/manga/reader?path=${encodeURIComponent(shouldNavigateToReader)}`);
+        // Thay (replace) URL thư mục chương bằng URL trình đọc để Back của trình duyệt về đúng danh sách
+        // người dùng vừa bấm (giữ cả trang đang xem). Giữ lại URL chương trong lịch sử thì Back mở lại nó và
+        // lại tự chuyển vào trình đọc — trình đọc phải ép về trang gốc /manga (docs/AUDIT-2026-11-09.md, R3).
+        navigate(`/manga/reader?path=${encodeURIComponent(shouldNavigateToReader)}`, { replace: true });
       }
       clearNavigationFlag();
     }
@@ -134,13 +135,15 @@ const MangaHome = () => {
   );
 
   const browser = useFolderBrowser({ type: 'manga', items: gridSource, searchTerm, searchFields });
-  const { sortedItems, size, pageParam, updateParams } = browser;
+  const { sortedItems, size } = browser;
 
-  const navigateToPath = (path) => {
+  // focus: đường dẫn mục cần hiện khi mở thư mục (nút ← truyền thư mục vừa rời để về đúng trang của nó)
+  const navigateToPath = (path, focus) => {
     const params = new URLSearchParams();
     if (path) params.set('path', path);
     params.set('page', '1');
     params.set('size', String(size));
+    if (focus) params.set('focus', focus);
     navigate(`/manga?${params.toString()}`);
   };
 
@@ -173,7 +176,8 @@ const MangaHome = () => {
     }
     const parts = currentPath.split('/').filter(Boolean);
     parts.pop();
-    navigateToPath(parts.join('/'));
+    // Về thư mục cha, đúng trang có thư mục vừa rời (trước đây luôn về trang 1 — docs/AUDIT-2026-11-09.md, R4)
+    navigateToPath(parts.join('/'), currentPath);
   };
 
   const handleToggleFavorite = async (item) => {
@@ -230,19 +234,7 @@ const MangaHome = () => {
     return child?.path || null;
   }, [continueItem, gridSource]);
 
-  // Quay lại từ trình đọc với ?focus=: tự chuyển tới trang có truyện vừa đọc
-  const focusHandledRef = React.useRef('');
-  useEffect(() => {
-    if (!focusParam || !sortedItems?.length) return;
-    const key = `${focusParam}|${size}`;
-    if (focusHandledRef.current === key) return; // already handled
-    focusHandledRef.current = key;
-    const idx = sortedItems.findIndex(i => i.path === focusParam);
-    if (idx >= 0) {
-      const pageOfItem = Math.floor(idx / size) + 1;
-      if (pageOfItem !== pageParam) updateParams({ page: String(pageOfItem) });
-    }
-  }, [focusParam, sortedItems, size, pageParam, updateParams]);
+  // Quay lại từ trình đọc hoặc bằng nút ← với ?focus=: useFolderBrowser tự chuyển tới trang có mục vừa rời
 
   // Lỗi tải danh sách: BrowseLayout giữ thanh công cụ và hiện thông báo kèm nút "Thử lại" (trước đây thay cả trang)
   let seriesHeader = null;

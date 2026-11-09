@@ -16,12 +16,13 @@ import { Trash2 } from 'lucide-react';
 import { CARD_GRIDS } from '@/constants';
 import { CardGridSkeleton } from '@/components/common/CardSkeleton';
 import ItemCard from '@/components/common/ItemCard';
+import { mediaUrl } from '@/utils/mediaUrl';
 
 // URL thumbnail của folder: DB mới lưu ".thumbnail/<file>", DB quét trước bản sửa chỉ lưu "<file>" (ISSUES B8).
-// Encode từng đoạn để tên có #, ?, % vẫn đúng.
+// mediaUrl encode từng đoạn để tên có #, ?, % vẫn đúng.
 const buildFolderThumbUrl = (folder) => {
   const thumb = folder.thumbnail.includes('/') ? folder.thumbnail : `.thumbnail/${folder.thumbnail}`;
-  return `/media/${`${folder.path}/${thumb}`.split('/').map(encodeURIComponent).join('/')}`;
+  return mediaUrl(folder.path, thumb);
 };
 
 function MediaHome() {

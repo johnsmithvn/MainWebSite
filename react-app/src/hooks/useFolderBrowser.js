@@ -144,6 +144,23 @@ export default function useFolderBrowser({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needle]);
 
+  // ?focus=<đường dẫn một mục>: về thư mục cha bằng nút ← hoặc từ trình đọc thì tự chuyển tới trang có mục vừa rời
+  // (docs/AUDIT-2026-11-09.md, R4; trước đây chỉ MangaHome có, và đánh dấu "đã xử lý" cả khi chưa thấy mục).
+  // Chỉ đánh dấu khi tìm thấy: lúc mới đổi thư mục, danh sách có thể vẫn là của thư mục cũ trong khi chờ API.
+  // Đổi trang bằng replace để không thêm một mục lịch sử (Back vẫn về đúng thư mục con vừa rời).
+  const focusParam = searchParams.get('focus');
+  const focusDoneRef = useRef('');
+  useEffect(() => {
+    if (!focusParam) return;
+    const key = `${path}|${focusParam}|${size}`;
+    if (focusDoneRef.current === key) return;
+    const idx = sorted.findIndex((it) => it.path === focusParam);
+    if (idx < 0) return;
+    focusDoneRef.current = key;
+    const target = Math.floor(idx / size) + 1;
+    if (target !== pageParam) updateParams({ page: String(target) }, { replace: true });
+  }, [focusParam, path, sorted, size, pageParam, updateParams]);
+
   const setPage = useCallback((p) => {
     const next = Math.max(1, Math.min(totalPages, p));
     updateParams({ page: String(next) });

@@ -11,6 +11,7 @@ const ffmpeg = require("fluent-ffmpeg");
 const ffprobe = require("ffprobe-static");
 const { escapeLike } = require("./sqlLike");
 const { createWriteQueue, createThumbnailLookup, pathExists } = require("./scanHelpers");
+const { readImageSize } = require("./imageSize");
 ffmpeg.setFfprobePath(ffprobe.path);
 
 // Use centralized file extensions from constants and normalize to lowercase
@@ -38,19 +39,30 @@ function getFileType(ext) {
 }
 
 
-// 📏 Helper: Get video duration
-function getVideoDuration(filePath) {
+// 🎬 Helper: thời lượng + kích thước video trong MỘT lần ffprobe (trước đây gọi 2 lần cho mỗi video — AUDIT PF20).
+// Kích thước lấy từ luồng video đầu tiên (trước đây lấy streams[0], là luồng âm thanh ở một số file).
+function probeVideo(filePath) {
   return new Promise((resolve) => {
     ffmpeg.ffprobe(filePath, (err, metadata) => {
-      if (err) return resolve(null);
+      if (err) return resolve({ duration: null, width: null, height: null });
+      const streams = metadata?.streams || [];
+      const video = streams.find((s) => s.codec_type === "video") || streams[0];
       const duration = parseFloat(metadata?.format?.duration);
-      resolve(Math.floor(duration || 0));
+      resolve({
+        duration: Math.floor(duration || 0),
+        width: video?.width || null,
+        height: video?.height || null,
+      });
     });
   });
 }
 
 // 🖼️ Helper: Get image dimensions
-function getImageDimensions(filePath) {
+// Đọc từ phần đầu file trong Node (JPEG/PNG/GIF/WebP/BMP, xem utils/imageSize.js); chỉ định dạng khác
+// (HEIC, AVIF, TIFF…) mới phải chạy ffprobe như trước (AUDIT PF20).
+async function getImageDimensions(filePath) {
+  const size = await readImageSize(filePath);
+  if (size) return size;
   return new Promise((resolve) => {
     ffmpeg.ffprobe(filePath, (err, metadata) => {
       if (err) return resolve({ width: null, height: null });
@@ -278,8 +290,7 @@ async function scanMediaLevel(
 
       if (!existing) {
         // ✅ NEW VIDEO
-        const duration = await getVideoDuration(fullPath);
-        const { width, height } = await getImageDimensions(fullPath);
+        const { duration, width, height } = await probeVideo(fullPath);
         queue.stmt(
           `INSERT INTO media_items (name, path, thumbnail, type, size, modified, width, height, duration, date_taken, scanned, createdAt, updatedAt)
            VALUES (?, ?, ?, 'video', ?, ?, ?, ?, ?, ?, 1, ?, ?)`
@@ -287,8 +298,7 @@ async function scanMediaLevel(
         stats.inserted++;
       } else if (existing.modified !== lastModified) {
         // ✅ CHANGED VIDEO
-        const duration = await getVideoDuration(fullPath);
-        const { width, height } = await getImageDimensions(fullPath);
+        const { duration, width, height } = await probeVideo(fullPath);
         queue.stmt(
           `UPDATE media_items SET thumbnail = ?, size = ?, modified = ?, width = ?, height = ?, duration = ?, date_taken = ?, scanned = 1, updatedAt = ? WHERE path = ?`
         ).run(thumb, stat.size, lastModified, width, height, duration, dateTaken, Date.now(), relPath);

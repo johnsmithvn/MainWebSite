@@ -9,7 +9,8 @@ import { useRecentMoviesManager } from '@/hooks/useMovieData';
 import ItemCard from '@/components/common/ItemCard';
 import { formatBytes, formatDuration, stripExtension } from '@/utils/formatters';
 
-const MovieCard = ({ item, showViews = false, onFavoriteChange, variant = 'grid', onDeleteClick, subtitle, badgeTopLeft }) => {
+// onOpenFolder(item): trang duyệt truyền vào để giữ sort/size khi mở thư mục (AUDIT R5); nơi khác giữ cách mở cũ
+const MovieCard = ({ item, showViews = false, onFavoriteChange, variant = 'grid', onDeleteClick, subtitle, badgeTopLeft, onOpenFolder }) => {
   const navigate = useNavigate();
   const { toggleFavorite } = useMovieStore();
   const { addRecentMovie } = useRecentMoviesManager();
@@ -19,7 +20,8 @@ const MovieCard = ({ item, showViews = false, onFavoriteChange, variant = 'grid'
 
   const handleOpen = () => {
     if (isFolder) {
-      navigate(`/movie?path=${encodeURIComponent(item.path)}`);
+      if (onOpenFolder) onOpenFolder(item);
+      else navigate(`/movie?path=${encodeURIComponent(item.path)}`);
     } else if (isVideo) {
       // Add to recent and navigate to player with stable URL using state
       addRecentMovie(item);

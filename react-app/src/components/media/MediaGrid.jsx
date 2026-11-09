@@ -8,6 +8,7 @@ import useCardActions from '@/hooks/useCardActions';
 import CardThumb from '@/components/common/CardThumb';
 import CardActionSheet from '@/components/common/CardActionSheet';
 import { CARD_GRIDS } from '@/constants';
+import { mediaUrl, parentDir } from '@/utils/mediaUrl';
 
 // Helper: Get file type icon
 function FileTypeIcon({ type, size = 20 }) {
@@ -58,10 +59,10 @@ function mediaThumbSources(item) {
   const isImage = item.type === 'image';
   const sources = [];
   if (item.thumbnail) {
-    sources.push(`/media/${item.path.split('/').slice(0, -1).join('/')}/${item.thumbnail}`);
+    sources.push(mediaUrl(parentDir(item.path), item.thumbnail));
   }
   if (isImage && item.path) {
-    sources.push(`/media/${item.path}`);
+    sources.push(mediaUrl(item.path));
   }
   return sources;
 }

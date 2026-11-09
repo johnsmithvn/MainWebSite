@@ -547,8 +547,10 @@ const MangaReader = () => {
         navigate(returnUrl, { replace: true });
         return;
       }
-      // Default back behavior
-      navigate('/manga', { replace: true });
+      // Không có returnUrl: để trình duyệt về trang trước như bình thường. Trước đây ép về '/manga' (trang gốc),
+      // vì mục lịch sử trước đó là URL thư mục chương — mở lại sẽ tự chuyển vào trình đọc, thành vòng lặp.
+      // MangaHome nay thay URL đó bằng URL trình đọc (replace) nên trang trước là danh sách người dùng vừa xem,
+      // đúng trang đang mở (docs/AUDIT-2026-11-09.md, R3).
     };
 
     window.addEventListener('popstate', handlePopState);

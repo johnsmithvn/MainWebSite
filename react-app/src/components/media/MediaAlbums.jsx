@@ -6,6 +6,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useModal } from '../common/Modal.jsx';
 import ItemCard from '../common/ItemCard';
 import { CARD_GRIDS } from '@/constants';
+import { mediaUrl, parentDir } from '@/utils/mediaUrl';
 
 function MediaAlbums({ albums, onCreateAlbum, onSelectAlbum, onDeleteAlbum }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -63,16 +64,17 @@ function MediaAlbums({ albums, onCreateAlbum, onSelectAlbum, onDeleteAlbum }) {
 
 function AlbumCard({ album, onClick, onDelete }) {
   // Build cover image source: prefer explicit coverImage; else derive from album's first item
+  // URL mã hoá từng đoạn (tên có #, ?, % — docs/AUDIT-2026-11-09.md, R2). Thumbnail của ảnh nằm ở thư mục gốc
+  // (dir rỗng) trước đây bị bỏ qua để tránh "//" trong URL; mediaUrl tự bỏ đoạn rỗng nên dùng được.
   let coverSrc = null;
   if (album.coverImage) {
-    coverSrc = `/media/${album.coverImage}`;
+    coverSrc = mediaUrl(album.coverImage);
   } else if (album.coverThumbnail) {
-    const dir = (album.coverItemPath || '').split('/').slice(0, -1).join('/');
-    if (dir && album.coverThumbnail) {
-      coverSrc = `/media/${dir}/${album.coverThumbnail}`;
+    if (album.coverItemPath) {
+      coverSrc = mediaUrl(parentDir(album.coverItemPath), album.coverThumbnail);
     }
   } else if (album.coverItemPath) {
-    coverSrc = `/media/${album.coverItemPath}`;
+    coverSrc = mediaUrl(album.coverItemPath);
   }
 
   // Album dùng chung ItemCard: ảnh bìa vuông, mép xếp chồng, "N mục", xoá trong bảng ⋯ (xác nhận bằng confirmModal)

@@ -28,7 +28,7 @@ const searchFields = (item) => [item.name, item.artist, item.album, item.title, 
 
 const MusicHome = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const { sourceKey } = useAuthStore();
   const {
     musicList,
@@ -83,8 +83,10 @@ const MusicHome = () => {
     sorters: SORTERS,
   });
 
-  // Mở một thư mục: chỉ đổi URL, việc tải do effect phía trên lo
-  const navigateToPath = (path) => setSearchParams(path ? { path } : {});
+  // Mở một thư mục: chỉ đổi URL, việc tải do effect phía trên lo.
+  // Giữ sort/size đang chọn (trước đây chỉ giữ path nên mở thư mục con là quay về "Tên A→Z" — AUDIT R5);
+  // focus: mục cần hiện khi mở thư mục (nút ← truyền thư mục vừa rời để về đúng trang — AUDIT R4).
+  const navigateToPath = (path, focus) => browser.updateParams({ path, page: '', focus: focus || '' });
 
   const handleGoBack = () => {
     if (!currentPath) {
@@ -93,7 +95,7 @@ const MusicHome = () => {
     }
     const parts = currentPath.split('/').filter(Boolean);
     parts.pop();
-    navigateToPath(parts.join('/'));
+    navigateToPath(parts.join('/'), currentPath);
   };
 
   return (
@@ -117,6 +119,7 @@ const MusicHome = () => {
           showViews={true}
           variant={mode}
           onDeleteClick={(it) => setItemToDelete(it)}
+          onOpenFolder={(it) => navigateToPath(it.path)}
         />
       )}
     >

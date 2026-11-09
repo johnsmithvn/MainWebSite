@@ -27,7 +27,7 @@ const searchFields = (item) => [item.name, item.path];
 
 const MovieHome = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const { sourceKey } = useAuthStore();
   const {
     movieList,
@@ -77,8 +77,10 @@ const MovieHome = () => {
     sorters: SORTERS,
   });
 
-  // Mở một thư mục: chỉ đổi URL, việc tải do effect phía trên lo (tránh gọi API hai lần)
-  const navigateToPath = (path) => setSearchParams(path ? { path } : {});
+  // Mở một thư mục: chỉ đổi URL, việc tải do effect phía trên lo (tránh gọi API hai lần).
+  // Giữ sort/size đang chọn (trước đây chỉ giữ path nên mở thư mục con là quay về "Tên A→Z" — AUDIT R5);
+  // focus: mục cần hiện khi mở thư mục (nút ← truyền thư mục vừa rời để về đúng trang — AUDIT R4).
+  const navigateToPath = (path, focus) => browser.updateParams({ path, page: '', focus: focus || '' });
 
   const handleGoBack = () => {
     if (!currentPath) {
@@ -87,7 +89,7 @@ const MovieHome = () => {
     }
     const parts = currentPath.split('/').filter(Boolean);
     parts.pop();
-    navigateToPath(parts.join('/'));
+    navigateToPath(parts.join('/'), currentPath);
   };
 
   return (
@@ -110,6 +112,7 @@ const MovieHome = () => {
           item={item}
           variant={mode}
           onDeleteClick={(it) => setItemToDelete(it)}
+          onOpenFolder={(it) => navigateToPath(it.path)}
         />
       )}
     >

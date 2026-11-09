@@ -13,7 +13,8 @@ const MusicCard = ({
   showViews = false,
   variant = 'grid',
   className = '',
-  onDeleteClick
+  onDeleteClick,
+  onOpenFolder // (item) => void — trang duyệt truyền vào để giữ sort/size khi mở thư mục (AUDIT R5)
 }) => {
   const navigate = useNavigate();
   const { sourceKey } = useAuthStore();
@@ -32,7 +33,8 @@ const MusicCard = ({
       const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
       navigate('/music/player', { state: { kind: 'audio', file: item.path, playlist: folderPath, key: sourceKey } });
     } else if (isFolder) {
-      navigate(`/music?path=${encodeURIComponent(item.path)}`);
+      if (onOpenFolder) onOpenFolder(item);
+      else navigate(`/music?path=${encodeURIComponent(item.path)}`);
     }
   };
 

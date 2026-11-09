@@ -1,5 +1,7 @@
 # ⚡ BÁO CÁO CACHE & HIỆU NĂNG — MainWebSite
 
+> **Cập nhật 2026-11-09:** đo lại trên `main` sau PR #123 với thư viện lớn (18.000 ảnh manga, 6.000 ảnh Media, 3.000 bài hát) và thêm PF19–PF25 (ảnh bìa là ảnh gốc, ffprobe cho mỗi ảnh khi quét Media, đường tải đầu…) ở [AUDIT-2026-11-09.md](AUDIT-2026-11-09.md#3-hiệu-năng).
+
 > Ngày 2026-11-05 · Phạm vi: backend Express + SQLite, React app (Vite), Service Worker `public/sw.js`.
 > Đối chiếu với code trên nhánh `fix/security-path-traversal`, **kể cả các thay đổi chưa commit**.
 > Issue đã có trong [ISSUES-REPORT.md](ISSUES-REPORT.md) được nhắc lại theo ID cũ (P2, B10, B15…) và chỉ ghi thêm phần mới phát hiện.

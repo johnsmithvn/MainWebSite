@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, Heart, Download, FileText, Music, File, Archive, FileCode, FileCog } from 'lucide-react';
+import { mediaUrl } from '@/utils/mediaUrl';
 
 // Helper: Get file type icon
 function FileIcon({ type, size = 48 }) {
@@ -115,7 +116,8 @@ function MediaLightbox({ items, currentIndex, onClose, onFavorite }) {
   const isVideo = item.type === 'video';
   const isImage = item.type === 'image';
   const isViewable = isImage || isVideo;
-  const mediaSrc = `/media/${item.path}`;
+  // Đã mã hoá từng đoạn: dùng chung cho <img>/<video>, nút tải về và tải qua Android (tên có # trước đây hỏng cả 3)
+  const mediaSrc = mediaUrl(item.path);
 
   const onWheel = (e) => {
     e.preventDefault();
