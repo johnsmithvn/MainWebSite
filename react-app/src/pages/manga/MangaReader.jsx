@@ -1314,22 +1314,8 @@ const MangaReader = () => {
           onClick: () => navigate('/downloads')
         }
       });
-      
-      // Ghi log view (tương tự như direct download)
-      try {
-        await fetch('/api/increase-view', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            source: sourceKey,
-            mangaPath: currentMangaPath
-          })
-        });
-      } catch (err) {
-        console.warn('⚠️ Failed to increase view count:', err);
-        // Non-critical error, continue
-      }
-      
+      // Không đếm view ở đây: Reader đã đếm khi mở chapter (payload cũ sai → luôn 400, ISSUES B7)
+
     } catch (err) {
       console.error('❌ Error adding to queue:', err);
       toast.error('❌ Lỗi thêm vào hàng chờ: ' + err.message);

@@ -186,7 +186,8 @@ async function scanMediaLevel(
           IMAGE_EXTS.includes(path.extname(f).toLowerCase())
         );
         if (thumbFiles.length > 0) {
-          folderThumb = thumbFiles[0];
+          // Lưu dạng ".thumbnail/<file>" giống thumbnail của file và của movie/music (ISSUES B8)
+          folderThumb = path.posix.join(".thumbnail", thumbFiles[0]);
         }
       }
 

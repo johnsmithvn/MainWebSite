@@ -11,7 +11,7 @@ import CardSkeleton from '@/components/common/CardSkeleton';
 import Button from '@/components/common/Button';
 import { useModal } from '@/components/common/Modal';
 import { useRecentItems } from '@/hooks/useRecentItems';
-import { useMangaStore, useMovieStore } from '@/store';
+import { useMangaStore, useMovieStore, useMusicStore } from '@/store';
 import { formatRelativeVi, parentFolderName } from '@/utils/formatters';
 import '@/styles/components/embla.css';
 
@@ -53,25 +53,26 @@ const RecentSlider = ({
   // Use appropriate store based on type
   const mangaStore = useMangaStore();
   const movieStore = useMovieStore();
-  
-  // Get functions and triggers based on type
-  const { toggleFavorite, clearRecentHistory, favoritesRefreshTrigger = 0 } = type === 'movie' ? movieStore : mangaStore;
-  const { mangaSettings } = type === 'movie' ? {} : mangaStore; // Only get mangaSettings from manga store
-  
+  const musicStore = useMusicStore();
+
+  // Get functions and triggers based on type (giống RandomSlider)
+  const { toggleFavorite, clearRecentHistory, favoritesRefreshTrigger = 0 } =
+    type === 'movie' ? movieStore : type === 'music' ? musicStore : mangaStore;
+  const { mangaSettings } = mangaStore;
+
   // Modal hook for confirmations
   const { confirmModal, Modal: ModalComponent } = useModal();
-  
+
   // Local refresh trigger for forcing re-renders
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
-  
-  // Don't render if recent tracking is disabled (only check for manga type)
-  if (type === 'manga' && (!mangaSettings || !mangaSettings.enableRecentTracking)) {
-    return null;
-  }
-  
+
+  // Tắt Recent tracking (chỉ áp dụng cho manga). Không return sớm ở đây:
+  // mọi hook phía dưới phải luôn được gọi (Rules of Hooks) → return null ở cuối component
+  const trackingDisabled = type === 'manga' && !mangaSettings?.enableRecentTracking;
+
   // Recent items hook
   const { data: items, loading, error, refresh, lastUpdated } = useRecentItems(type, {
-    enabled: isVisible,
+    enabled: isVisible && !trackingDisabled,
     maxItems
   });
 
@@ -225,6 +226,10 @@ const RecentSlider = ({
 
   // Thời điểm xem gần nhất, tiếng Việt và ngắn gọn ("2 giờ trước") để vừa trong card nhỏ
   const formatLastViewed = (lastViewed) => formatRelativeVi(lastViewed);
+
+  if (trackingDisabled) {
+    return null;
+  }
 
   if (error) {
     return (

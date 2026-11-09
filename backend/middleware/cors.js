@@ -48,6 +48,13 @@ if (parsedEnv.TAILSCALE_DEVICE && parsedEnv.TAILSCALE_TAILNET) {
   );
 }
 
+// Domain Tailscale của chính máy này (mọi port). Không mở cho mọi *.ts.net vì trang của
+// người khác (Tailscale Funnel) cũng là *.ts.net và đọc được API qua trình duyệt (ISSUES S8)
+const OWN_TAILSCALE_HOST =
+  parsedEnv.TAILSCALE_DEVICE && parsedEnv.TAILSCALE_TAILNET
+    ? `${parsedEnv.TAILSCALE_DEVICE}.${parsedEnv.TAILSCALE_TAILNET}.ts.net`.toLowerCase()
+    : null;
+
 // Combine all origins
 const EXTRA_ORIGINS = [...DEV_ORIGINS, ...TAILSCALE_ORIGINS];
 
@@ -130,8 +137,8 @@ function checkOrigin(origin, req, callback) {
       return callback(null, true);
     }
 
-    // Dev fallback: allow any Tailscale domain
-    if (u && u.hostname.endsWith('.ts.net')) {
+    // Domain Tailscale của máy này, port bất kỳ
+    if (u && OWN_TAILSCALE_HOST && u.hostname.toLowerCase() === OWN_TAILSCALE_HOST) {
       console.log(`🔗 Dev - Tailscale domain allowed: ${origin}`);
       return callback(null, true);
     }
@@ -146,8 +153,8 @@ function checkOrigin(origin, req, callback) {
     return callback(null, true);
   }
 
-  // Production fallback: allow Tailscale domains (for remote access)
-  if (u && u.hostname.endsWith('.ts.net')) {
+  // Domain Tailscale của máy này, port bất kỳ (remote access)
+  if (u && OWN_TAILSCALE_HOST && u.hostname.toLowerCase() === OWN_TAILSCALE_HOST) {
     console.log(`🔗 Prod - Tailscale domain allowed: ${origin}`);
     return callback(null, true);
   }

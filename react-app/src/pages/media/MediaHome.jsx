@@ -17,6 +17,13 @@ import { CARD_GRIDS } from '@/constants';
 import { CardGridSkeleton } from '@/components/common/CardSkeleton';
 import ItemCard from '@/components/common/ItemCard';
 
+// URL thumbnail của folder: DB mới lưu ".thumbnail/<file>", DB quét trước bản sửa chỉ lưu "<file>" (ISSUES B8).
+// Encode từng đoạn để tên có #, ?, % vẫn đúng.
+const buildFolderThumbUrl = (folder) => {
+  const thumb = folder.thumbnail.includes('/') ? folder.thumbnail : `.thumbnail/${folder.thumbnail}`;
+  return `/media/${`${folder.path}/${thumb}`.split('/').map(encodeURIComponent).join('/')}`;
+};
+
 function MediaHome() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useUIStore();
@@ -372,7 +379,7 @@ function MediaHome() {
                           key={folder.path}
                           type="media"
                           title={folder.name}
-                          thumbnail={folder.thumbnail ? `/media/${folder.path}/${folder.thumbnail}` : null}
+                          thumbnail={folder.thumbnail ? buildFolderThumbUrl(folder) : null}
                           isFolder
                           thumbKind="folder"
                           subtitle={folder.itemCount > 0 ? `${Number(folder.itemCount).toLocaleString('vi-VN')} mục` : 'Thư mục'}
