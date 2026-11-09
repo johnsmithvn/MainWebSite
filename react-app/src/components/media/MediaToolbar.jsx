@@ -18,7 +18,8 @@ function MediaToolbar({ dbkey, view, selectedItems, onClearSelection, onAddToAlb
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-20">
+    // Dính ngay dưới header (h-16) giống thanh công cụ của Manga/Movie/Music; z-[15] để nằm dưới lớp phủ và sidebar
+    <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-16 z-[15]">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Left: View Tabs */}

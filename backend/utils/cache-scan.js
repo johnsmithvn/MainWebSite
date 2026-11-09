@@ -7,6 +7,7 @@ const {
   hasImageRecursivelyAsync,
   findFirstImageRecursivelyAsync,
 } = require("./imageUtils");
+const { createWriteQueue } = require("./scanHelpers");
 
 // ⚡ Scan manga dùng fs.promises nên không còn chặn event loop (ISSUES P1): server vẫn trả lời
 // request khác trong lúc scan. Dữ liệu ghi vào DB giữ nguyên như bản đồng bộ trước đây.
@@ -35,11 +36,11 @@ function runExclusive(lockKey, task) {
  * ✅ Đệ quy quét một cấp thư mục bên trong root
  * 📌 Nếu folder có ảnh thì thêm vào DB (nếu chưa có)
  * 📌 Nếu lastModified mới hơn thì update thumbnail
- * @param {object} ctx - { db, root, rootPath, stats, hasImage }
+ * @param {object} ctx - { db, root, rootPath, stats, hasImage, queue, pendingInserts }
  * @param {string} currentPath - thư mục con bên trong root ("" = chính root)
  */
 async function scanLevel(ctx, currentPath) {
-  const { db, root, rootPath, stats, hasImage } = ctx;
+  const { root, rootPath, stats, hasImage, queue, pendingInserts } = ctx;
   const fullPath = path.join(rootPath, currentPath);
 
   // ⚠️ Bỏ qua nếu cả folder và subfolder đều không có ảnh
@@ -66,13 +67,18 @@ async function scanLevel(ctx, currentPath) {
       }
     }
     const alias = aliasNames.join(",");
-    const existingFolder = db
-      .prepare(`SELECT otherName FROM folders WHERE root = ? AND path = ?`)
-      .get(root, currentPath);
-    if (existingFolder && alias !== existingFolder.otherName) {
-      db.prepare(
-        `UPDATE folders SET otherName = ? WHERE root = ? AND path = ?`
-      ).run(alias || null, root, currentPath);
+    const pendingRow = pendingInserts.get(currentPath);
+    if (pendingRow) {
+      // Bản ghi vừa thêm ở cấp cha còn trong hàng đợi (chưa vào DB): ghi alias thẳng vào lệnh INSERT.
+      // Kết quả giống code cũ (INSERT với otherName null rồi UPDATE otherName = alias || null)
+      pendingRow.otherName = alias || null;
+    } else {
+      const existingFolder = queue
+        .prepare(`SELECT otherName FROM folders WHERE root = ? AND path = ?`)
+        .get(root, currentPath);
+      if (existingFolder && alias !== existingFolder.otherName) {
+        queue.run(`UPDATE folders SET otherName = ? WHERE root = ? AND path = ?`, alias || null, root, currentPath);
+      }
     }
   }
 
@@ -97,7 +103,7 @@ async function scanLevel(ctx, currentPath) {
       }
 
       // Đọc bản ghi sau các lệnh await ở trên để dùng dữ liệu mới nhất
-      const existing = db
+      const existing = queue
         .prepare(`SELECT * FROM folders WHERE root = ? AND path = ?`)
         .get(root, relativePath);
 
@@ -110,31 +116,38 @@ async function scanLevel(ctx, currentPath) {
       const chapterCount = childEntries.filter((e) => e.isDirectory()).length;
 
       if (!existing) {
-        db.prepare(
-          `INSERT INTO folders (
+        // Lệnh INSERT nằm trong hàng đợi; otherName có thể được điền khi đệ quy vào thư mục này
+        const row = { otherName: null, now: Date.now() };
+        pendingInserts.set(relativePath, row);
+        queue.push(() => {
+          queue
+            .prepare(
+              `INSERT INTO folders (
           root, name, path, thumbnail,
           lastModified, imageCount, chapterCount, otherName, type, scanned, createdAt, updatedAt
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`
-        ).run(
-          root,
-          entry.name,
-          relativePath,
-          thumbnail,
-          lastModified,
-          imageCount,
-          chapterCount,
-          null,
-          "folder",
-          Date.now(),
-          Date.now()
-        );
+            )
+            .run(
+              root,
+              entry.name,
+              relativePath,
+              thumbnail,
+              lastModified,
+              imageCount,
+              chapterCount,
+              row.otherName,
+              "folder",
+              row.now,
+              row.now
+            );
+          pendingInserts.delete(relativePath);
+        });
         stats.inserted++;
       } else if (existing.lastModified < lastModified) {
-        db.prepare(
+        queue.run(
           `UPDATE folders
          SET thumbnail = ?, lastModified = ?, imageCount = ?, chapterCount = ?, scanned = 1, updatedAt = ?
-         WHERE root = ? AND path = ?`
-        ).run(
+         WHERE root = ? AND path = ?`,
           thumbnail,
           lastModified,
           imageCount,
@@ -145,8 +158,7 @@ async function scanLevel(ctx, currentPath) {
         );
         stats.updated++;
       } else {
-        db.prepare(`UPDATE folders SET scanned = 1 WHERE root = ? AND path = ?`)
-          .run(root, relativePath);
+        queue.run(`UPDATE folders SET scanned = 1 WHERE root = ? AND path = ?`, root, relativePath);
         stats.skipped++;
       }
     }
@@ -162,19 +174,28 @@ async function scanRoot(dbkey, root) {
   const db = getDB(dbkey); // Lấy DB từ dbkey => xác định db
   const rootPath = path.join(getRootPath(dbkey), root); // Lấy đường dẫn root từ config
   const memo = new Map();
+  const queue = createWriteQueue(db);
   const ctx = {
     db,
     root,
     rootPath,
     stats: { scanned: 0, inserted: 0, updated: 0, skipped: 0, deleted: 0 },
     hasImage: (dir) => hasImageRecursivelyAsync(dir, memo),
+    queue, // ⚡ gom lệnh ghi theo lô (PF1)
+    pendingInserts: new Map(), // path -> dữ liệu INSERT còn trong hàng đợi
   };
 
   // 🗑️ PHASE 1: Mark all as unscanned
   db.prepare(`UPDATE folders SET scanned = 0 WHERE root = ?`).run(root);
 
   // PHASE 2: duyệt cây. Nếu root không có ảnh/không đọc được thì dừng, KHÔNG xoá gì (như trước)
-  const completed = await scanLevel(ctx, "");
+  let completed;
+  try {
+    completed = await scanLevel(ctx, "");
+  } finally {
+    // Lưu các lệnh còn chờ kể cả khi scan lỗi giữa chừng — giống code cũ ghi ngay từng lệnh
+    queue.flush();
+  }
   if (!completed) return ctx.stats;
 
   // 🗑️ PHASE 3: Sweep orphaned records

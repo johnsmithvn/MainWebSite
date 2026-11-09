@@ -410,7 +410,7 @@ export const useMangaStore = create(
           console.log('🔄 MangaStore toggleFavorite:', { sourceKey, rootFolder, path: item.path, newFavoriteState });
           
           // Call API to toggle favorite
-          await apiService.manga.toggleFavorite(sourceKey, item.path, newFavoriteState);
+          await apiService.manga.toggleFavorite(sourceKey, item.path, newFavoriteState, rootFolder);
           
           // Update local state
           set((state) => {

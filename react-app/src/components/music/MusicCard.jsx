@@ -1,18 +1,17 @@
 // 📁 src/components/music/MusicCard.jsx
-// 🎵 Music card component for folders and audio files
+// 🎵 Lớp bọc của ItemCard cho Music: cách mở (thư mục / trình phát), "Ca sĩ · thời lượng", thao tác.
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlay, FiFolder, FiMusic, FiPlus, FiTrash2 } from 'react-icons/fi';
-import { motion } from 'framer-motion';
+import { FiFolder, FiList, FiPlus, FiTrash2, FiHeadphones } from 'react-icons/fi';
 import { useAuthStore } from '@/store';
-import { DEFAULT_IMAGES } from '@/constants';
+import ItemCard from '@/components/common/ItemCard';
+import { formatDuration, stripExtension } from '@/utils/formatters';
 
-const MusicCard = ({ 
-  item, 
-  showViews = false, 
-  onFavoriteChange,
-  variant = 'default',
+const MusicCard = ({
+  item,
+  showViews = false,
+  variant = 'grid',
   className = '',
   onDeleteClick
 }) => {
@@ -23,133 +22,78 @@ const MusicCard = ({
   const isAudio = item.type === 'audio' || item.type === 'file';
   const isFolder = item.type === 'folder';
   const isPlaylist = item.isPlaylist;
+  // Đuôi file đã hiện ở dòng phụ khi không có ca sĩ, nên tên trên card bỏ đuôi cho gọn
+  const shownName = isAudio ? stripExtension(displayName) : displayName;
 
-  const getThumbnailUrl = () => {
-    if (item.thumbnail && item.thumbnail !== 'null') {
-      return item.thumbnail;
-    }
-    if (isAudio) return DEFAULT_IMAGES.music;
-    if (isFolder) return DEFAULT_IMAGES.folder;
-    return DEFAULT_IMAGES.cover;
-  };
-
-  const handleClick = () => {
-    const encodedPath = encodeURIComponent(item.path);
+  const handleOpen = () => {
     if (isPlaylist) {
       navigate('/music/player', { state: { kind: 'playlist', playlist: item.path, key: sourceKey } });
     } else if (isAudio) {
       const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
       navigate('/music/player', { state: { kind: 'audio', file: item.path, playlist: folderPath, key: sourceKey } });
     } else if (isFolder) {
-      navigate(`/music?path=${encodedPath}`);
+      navigate(`/music?path=${encodeURIComponent(item.path)}`);
     }
   };
 
-  const handleAddToPlaylist = (e) => {
-    e.stopPropagation();
+  const openPlaylistModal = () => {
     window.dispatchEvent(new CustomEvent('openPlaylistModal', { detail: { item } }));
   };
 
-  const handleDeleteClickInternal = (e) => {
-    e.stopPropagation();
-    if (onDeleteClick) {
-      onDeleteClick(item);
-    }
-  };
+  // Dòng phụ của bài hát: "Ca sĩ · 3:58" (API đã trả artist từ bảng songs và duration lúc quét)
+  const durationSec = Number(item.duration);
+  const durationLabel = isAudio && Number.isFinite(durationSec) && durationSec > 0 ? formatDuration(durationSec) : '';
+  const ext = isAudio ? (item.path?.split('.').pop()?.toLowerCase() || 'audio') : '';
+  const audioSub = [item.artist, durationLabel].filter(Boolean).join(' · ') || ext.toUpperCase();
 
-  const getTypeIcon = () => {
-    if (isPlaylist) return <FiMusic className="w-3 h-3" />;
-    if (isAudio) return <FiPlay className="w-3 h-3" />;
-    return <FiFolder className="w-3 h-3" />;
-  };
+  const subtitle = isPlaylist ? (
+    <>
+      <FiList className="flex-none" aria-hidden="true" />
+      Playlist
+    </>
+  ) : isFolder ? (
+    <>
+      <FiFolder className="flex-none" aria-hidden="true" />
+      Thư mục
+    </>
+  ) : (
+    audioSub
+  );
 
-  const getTypeLabel = () => {
-    if (isPlaylist) return 'Playlist';
-    if (isAudio) {
-      const ext = item.path?.split('.').pop()?.toLowerCase();
-      return `${ext || 'audio'}`;
-    }
-    return 'Folder';
-  };
-
-  if (variant === 'list') {
-    return (
-      <div onClick={handleClick} className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer group flex items-center p-2 sm:p-4">
-        <div className="flex items-center gap-2 sm:gap-4 w-full">
-          <div className="w-12 h-16 sm:w-16 sm:h-20 bg-gray-200 dark:bg-gray-700 rounded-md flex-shrink-0 overflow-hidden">
-            <img src={getThumbnailUrl()} alt={displayName} className="w-full h-full object-cover" loading="lazy" onError={(e) => { e.target.src = isAudio ? DEFAULT_IMAGES.music : DEFAULT_IMAGES.folder; }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{displayName}</h3>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                {getTypeIcon()}{getTypeLabel()}
-              </span>
-              {showViews && item.viewCount > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{item.viewCount} plays</span>}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {isAudio && (
-              <button onClick={handleAddToPlaylist} className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700" title="Thêm vào playlist">
-                <FiPlus className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
-            )}
-            <button onClick={handleDeleteClickInternal} className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title={`Xóa ${item.type === 'folder' ? 'folder' : 'file'} khỏi DB`}>
-              <FiTrash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Styling khác biệt cho folder vs file
-  const cardClasses = isFolder 
-    ? `relative cursor-pointer group overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl border-2 border-blue-500/60 dark:border-purple-500/60 hover:border-blue-600 dark:hover:border-purple-600 transition-all duration-200 ${className}`
-    : `relative cursor-pointer group overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-700 transition-shadow duration-200 ${className}`;
+  // Thao tác trong bảng ⋯ / nhấn giữ / chuột phải
+  const actions = [
+    isAudio && {
+      key: 'playlist',
+      label: 'Thêm vào playlist',
+      icon: FiPlus,
+      onClick: openPlaylistModal,
+    },
+    onDeleteClick && {
+      key: 'delete',
+      label: 'Xoá khỏi cơ sở dữ liệu',
+      icon: FiTrash2,
+      danger: true,
+      onClick: () => onDeleteClick(item),
+    },
+  ];
 
   return (
-    <motion.div className={cardClasses} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleClick}>
-      <div className="relative aspect-square overflow-hidden">
-        <img src={getThumbnailUrl()} alt={displayName} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" decoding="async" onError={(e) => { e.target.src = isAudio ? DEFAULT_IMAGES.music : DEFAULT_IMAGES.folder; }} />
-        {(isAudio || isPlaylist) && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            <FiPlay className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white drop-shadow-lg" />
-          </div>
-        )}
-        {isAudio && (
-          <motion.button className="absolute top-1 sm:top-2 right-1 sm:right-2 h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center rounded-full border-[1.5px] sm:border-2 border-white/80 text-white bg-black/30 hover:bg-black/40 backdrop-blur-sm shadow-md transition-all" onClick={handleAddToPlaylist} whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }} aria-label="Thêm vào playlist">
-            <FiPlus className="w-3 h-3 sm:w-4 sm:h-4" />
-          </motion.button>
-        )}
-        <div className="absolute top-1 sm:top-2 left-1 sm:left-2">
-          <div className={`flex items-center space-x-0.5 sm:space-x-1 backdrop-blur-sm text-white px-1 sm:px-2 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs ${
-            isFolder ? 'bg-blue-600/80 dark:bg-purple-600/80' : 'bg-black/60'
-          }`}>
-            {getTypeIcon()}<span>{getTypeLabel()}</span>
-          </div>
-        </div>
-        {isFolder && item.itemCount > 0 && (
-          <div className="absolute top-1 sm:top-2 right-1 sm:right-2">
-            <div className="bg-gradient-to-br from-blue-500 to-purple-600 dark:from-purple-500 dark:to-pink-600 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-semibold shadow-lg">
-              {item.itemCount} items
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="p-2 sm:p-3">
-        <h3 className={`font-medium text-xs sm:text-sm line-clamp-2 mb-0.5 sm:mb-1 ${
-          isFolder ? 'text-blue-900 dark:text-blue-100 font-semibold' : 'text-gray-900 dark:text-white'
-        }`}>{displayName}</h3>
-        <div className="flex items-center justify-between text-[9px] sm:text-xs text-gray-500 dark:text-gray-400">
-          <span className={isFolder ? 'text-blue-600 dark:text-purple-400 font-medium' : ''}>{getTypeLabel()}</span>
-          {showViews && item.viewCount > 0 && <span className="flex items-center gap-0.5 sm:gap-1"><FiMusic className="w-2 h-2 sm:w-3 sm:h-3" />{item.viewCount}</span>}
-        </div>
-      </div>
-      <motion.button onClick={handleDeleteClickInternal} className="absolute bottom-2 right-2 p-1.5 sm:p-2 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all duration-200 z-10" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} title={`Xóa ${item.type === 'folder' ? 'folder' : 'file'} khỏi DB`}>
-        <FiTrash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-      </motion.button>
-    </motion.div>
+    <ItemCard
+      type="music"
+      title={displayName}
+      displayTitle={shownName}
+      thumbnail={item.thumbnail}
+      isFolder={isFolder || Boolean(isPlaylist)}
+      thumbKind={isFolder ? 'folder' : 'music'}
+      subtitle={subtitle}
+      badgeBottomRight={showViews && item.viewCount > 0 ? { text: item.viewCount.toLocaleString('vi-VN'), icon: FiHeadphones } : undefined}
+      playable={isAudio || Boolean(isPlaylist)}
+      onOpen={handleOpen}
+      actions={actions}
+      sheetSubtitle={item.path}
+      variant={variant === 'list' ? 'list' : 'grid'}
+      className={className}
+    />
   );
 };
 

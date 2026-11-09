@@ -65,7 +65,10 @@ export const CACHE_KEYS = {
    * NOTE: manga key format is `rootFolder::rootFolder` (legacy duplicate) for backward compatibility
    */
   recentViewed: {
-    manga: (sourceKey, rootFolder) => `${CACHE_PREFIXES.RECENT_VIEWED_MANGA}::${rootFolder}::${rootFolder}`, // ⚠️ Legacy format (duplicate rootFolder)
+    // Trước đây là `recentViewed::<root>::<root>` (không có sourceKey) → hai nguồn có thư mục gốc
+    // trùng tên dùng chung lịch sử (PERFORMANCE-CACHE-REPORT PF17). Key cũ được chép sang key mới
+    // ở lần đọc đầu tiên, xem migrateLegacyMangaRecent()
+    manga: (sourceKey, rootFolder) => `${CACHE_PREFIXES.RECENT_VIEWED_MANGA}::${sourceKey}::${rootFolder}`,
     movie: (sourceKey) => `${CACHE_PREFIXES.RECENT_VIEWED_VIDEO}::${sourceKey}`,
     music: (sourceKey) => `${CACHE_PREFIXES.RECENT_VIEWED_MUSIC}::${sourceKey}`
   },
@@ -132,11 +135,41 @@ export const getRandomViewCacheKey = (type, sourceKey, rootFolder = null) => {
  * @param {string} rootFolder - Root folder (only for manga)
  * @returns {string} Cache key
  */
+// Key đã kiểm tra migration trong phiên này (tránh đọc localStorage ở mỗi lần render)
+const migratedRecentKeys = new Set();
+
+/**
+ * Chép lịch sử manga từ key cũ (không có sourceKey) sang key mới — một lần cho mỗi (nguồn, root).
+ * Lịch sử cũ không ghi nguồn nên không tách được; mỗi nguồn nhận một bản sao như trước đây vẫn thấy.
+ * Key cũ được giữ lại cho các nguồn khác cùng tên root. Dấu đánh dấu ngăn việc "xoá lịch sử" về sau
+ * bị khôi phục lại từ key cũ.
+ */
+const migrateLegacyMangaRecent = (newKey, rootFolder) => {
+  if (migratedRecentKeys.has(newKey)) return;
+  migratedRecentKeys.add(newKey);
+  try {
+    const marker = `migrated-${newKey}`;
+    if (localStorage.getItem(marker)) return;
+    const legacyKey = `${CACHE_PREFIXES.RECENT_VIEWED_MANGA}::${rootFolder}::${rootFolder}`;
+    if (legacyKey !== newKey && localStorage.getItem(newKey) === null) {
+      const legacy = localStorage.getItem(legacyKey);
+      if (legacy) localStorage.setItem(newKey, legacy);
+    }
+    localStorage.setItem(marker, '1');
+  } catch {
+    // localStorage không dùng được → bỏ qua, lần sau thử lại
+    migratedRecentKeys.delete(newKey);
+  }
+};
+
 export const getRecentViewedCacheKey = (type, sourceKey, rootFolder = null) => {
   switch (type) {
-    case 'manga':
+    case 'manga': {
       if (!rootFolder) throw new Error('Root folder required for manga recent cache');
-      return CACHE_KEYS.recentViewed.manga(sourceKey, rootFolder);
+      const key = CACHE_KEYS.recentViewed.manga(sourceKey, rootFolder);
+      if (sourceKey) migrateLegacyMangaRecent(key, rootFolder);
+      return key;
+    }
     case 'movie':
       return CACHE_KEYS.recentViewed.movie(sourceKey);
     case 'music':

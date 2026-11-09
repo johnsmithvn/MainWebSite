@@ -1,7 +1,7 @@
 // 📁 react-app/src/pages/media/MediaHome.jsx
 // 📸 Media Gallery Home Page (Google Photos-like)
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useUIStore, useAuthStore } from '@/store';
 import { apiService } from '@/utils/api';
@@ -13,6 +13,9 @@ import MediaToolbar from '@/components/media/MediaToolbar';
 import MediaLightbox from '@/components/media/MediaLightbox';
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 import { Trash2 } from 'lucide-react';
+import { CARD_GRIDS } from '@/constants';
+import { CardGridSkeleton } from '@/components/common/CardSkeleton';
+import ItemCard from '@/components/common/ItemCard';
 
 // URL thumbnail của folder: DB mới lưu ".thumbnail/<file>", DB quét trước bản sửa chỉ lưu "<file>" (ISSUES B8).
 // Encode từng đoạn để tên có #, ?, % vẫn đúng.
@@ -30,6 +33,9 @@ function MediaHome() {
   const [folders, setFolders] = useState([]);
   const [mediaItems, setMediaItems] = useState([]);
   const [timeline, setTimeline] = useState([]);
+  // Bộ lọc + trang của lần cuối nhận timeline (PF9): chỉ bỏ qua timeline khi CHỈ đổi trang;
+  // tải lại cùng trang (sau khi xoá, đổi yêu thích, quét...) thì vẫn tính lại
+  const timelineStateRef = useRef({ key: null, page: null });
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState(new Set());
@@ -123,6 +129,13 @@ function MediaHome() {
     if (month) params.month = month;
     if (albumId) params.albumId = albumId;
 
+    // Timeline gom nhóm toàn bộ kết quả lọc, không phụ thuộc trang → chuyển trang với cùng bộ lọc
+    // thì không bắt server tính lại (PERFORMANCE-CACHE-REPORT PF9)
+    const timelineKey = JSON.stringify([dbkey, view, type, year, month, albumId]);
+    const hasTimeline =
+      timelineStateRef.current.key === timelineKey && timelineStateRef.current.page !== pagination.page;
+    if (hasTimeline) params.timeline = '0';
+
     const response = await apiService.media.getItems(params);
     const data = response.data;
     
@@ -135,7 +148,14 @@ function MediaHome() {
     }
     
     setMediaItems(filteredItems);
-    setTimeline(data.timeline || []);
+    if (Array.isArray(data.timeline)) {
+      setTimeline(data.timeline);
+      timelineStateRef.current = { key: timelineKey, page: pagination.page };
+    } else if (hasTimeline) {
+      timelineStateRef.current = { key: timelineKey, page: pagination.page };
+    } else {
+      setTimeline([]);
+    }
     
     // Fix race condition: chỉ update pagination nếu thực sự có thay đổi
     if (data.pagination) {
@@ -231,7 +251,7 @@ function MediaHome() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen">
       <MediaToolbar
         dbkey={dbkey}
         view={view}
@@ -243,11 +263,17 @@ function MediaHome() {
 
   {/* NOTE: Removed pt-16 (extra 64px) which caused large gap & made timeline header appear bị đè/che phía trên.
       Toolbar already has fixed height 64px (h-16). Keeping only py-6 gives 24px top padding for breathing space. */}
-  <div className="container mx-auto px-4 py-6">
+  {/* Không bọc thêm container px-4: Layout đã có một lớp đệm (docs/CARD-REDESIGN-PROPOSAL.md, P2) */}
+  <div className="py-6">
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
+          view === 'albums' && !albumId ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            // Lưới ảnh: skeleton đúng ô vuông, cùng lưới với ảnh thật
+            <CardGridSkeleton type="media" count={24} />
+          )
         ) : (
           <>
             {view === 'albums' && !albumId ? (
@@ -342,47 +368,33 @@ function MediaHome() {
                 {/* Folders Grid */}
                 {view === 'photos' && folders.length > 0 && (
                   <div className="mb-8">
-                    <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Folders</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    <h3 className="text-base sm:text-lg font-semibold mb-3 text-gray-900 dark:text-white">
+                      Thư mục
+                      <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400 tabular-nums">{folders.length}</span>
+                    </h3>
+                    {/* Thư mục dùng chung ItemCard với các loại khác: ảnh vuông, mép xếp chồng, "134 mục", thao tác trong ⋯ */}
+                    <div className={CARD_GRIDS.mediaFolders}>
                       {folders.map((folder) => (
-                        <div
+                        <ItemCard
                           key={folder.path}
-                          className="relative group flex flex-col items-center p-4 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition cursor-pointer"
-                          onClick={() => setSearchParams({ key: dbkey, path: folder.path })}
-                        >
-                          {folder.thumbnail ? (
-                            <img
-                              src={buildFolderThumbUrl(folder)}
-                              alt={folder.name}
-                              className="w-full h-32 object-cover rounded mb-2"
-                            />
-                          ) : (
-                            <div className="w-full h-32 bg-gray-300 dark:bg-gray-700 rounded mb-2 flex items-center justify-center">
-                              <svg className="w-12 h-12 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                              </svg>
-                            </div>
-                          )}
-                          <span className="text-sm font-medium text-center line-clamp-2 text-gray-900 dark:text-white">
-                            {folder.name}
-                          </span>
-                          {folder.itemCount > 0 && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              {folder.itemCount} items
-                            </span>
-                          )}
-                          
-                          {/* Delete button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setItemToDelete({ path: folder.path, name: folder.name, type: 'folder' });
-                            }}
-                            className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-600/90 hover:bg-red-700 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Trash2 size={14} className="text-white" />
-                          </button>
-                        </div>
+                          type="media"
+                          title={folder.name}
+                          thumbnail={folder.thumbnail ? buildFolderThumbUrl(folder) : null}
+                          isFolder
+                          thumbKind="folder"
+                          subtitle={folder.itemCount > 0 ? `${Number(folder.itemCount).toLocaleString('vi-VN')} mục` : 'Thư mục'}
+                          onOpen={() => setSearchParams({ key: dbkey, path: folder.path })}
+                          sheetSubtitle={folder.path}
+                          actions={[
+                            {
+                              key: 'delete',
+                              label: 'Xoá khỏi cơ sở dữ liệu',
+                              icon: Trash2,
+                              danger: true,
+                              onClick: () => setItemToDelete({ path: folder.path, name: folder.name, type: 'folder' }),
+                            },
+                          ]}
+                        />
                       ))}
                     </div>
                   </div>

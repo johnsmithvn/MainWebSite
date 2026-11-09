@@ -1,8 +1,7 @@
 // 📁 backend/api/music/music-folder.js
 const express = require("express");
 const router = express.Router();
-const { getMusicDB } = require("../../utils/db");
-const { escapeLike } = require("../../utils/sqlLike");
+const { getMusicDB, parentPathSql, parentKey } = require("../../utils/db");
 
 router.get("/music-folder", (req, res) => {
   const dbkey = req.query.key;
@@ -15,15 +14,17 @@ router.get("/music-folder", (req, res) => {
   const items = db
     .prepare(
       `
-      SELECT folders.*, songs.artist, songs.album, songs.genre, songs.lyrics
+      SELECT folders.*, songs.artist, songs.album, songs.genre
       FROM folders
       LEFT JOIN songs ON folders.path = songs.path
-      WHERE folders.path LIKE ? ESCAPE '\\'
+      WHERE ${parentPathSql("folders.path")} = ? COLLATE NOCASE
         AND folders.name != '.thumbnail'
       ORDER BY folders.type DESC, folders.name COLLATE NOCASE ASC
     `
     )
-    .all(relPath ? `${escapeLike(relPath)}/%` : "%");
+    // PF3: chỉ con trực tiếp qua index thư mục cha (trước đây ở gốc đọc cả thư viện) và không kèm
+    // lời bài hát — LyricsModal lấy lyrics của bài đang phát từ /api/music/music-meta
+    .all(parentKey(relPath));
 
   const baseDepth = relPath ? relPath.split("/").filter(Boolean).length : 0;
   const folders = items
@@ -40,7 +41,6 @@ router.get("/music-folder", (req, res) => {
   artist: item.artist,
   album: item.album,
   genre: item.genre,
-  lyrics: item.lyrics,
   duration: item.duration,
   viewCount: typeof item.viewCount === "number" ? item.viewCount : (item.viewCount ? Number(item.viewCount) : 0),
 }));

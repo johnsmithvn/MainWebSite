@@ -34,7 +34,7 @@ function createProxyConfig(target) {
 }
 
 // Dùng loadEnv để đọc .env cho config (Vite chỉ inject vào import.meta.env cho app, không cho vite.config tự động)
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   const HMR_HOST = env.VITE_HMR_HOST || process.env.VITE_HMR_HOST // ví dụ: desktop-xxxx.ts.net
@@ -78,7 +78,29 @@ export default defineConfig(({ mode }) => {
         : true, // Enable HMR with default settings
       proxy: createProxyConfig(API_TARGET),
     },
-    build: { outDir: 'dist', assetsDir: 'assets' },
+    // Bản build bỏ console.log/debug/info (giữ warn/error): có ~300 lời gọi, nhiều cái nằm ở đường
+    // nóng (mỗi ảnh, mỗi request) — PERFORMANCE-CACHE-REPORT PF18. Dev vẫn giữ log như cũ.
+    esbuild: command === 'build'
+      ? { pure: ['console.log', 'console.debug', 'console.info'], drop: ['debugger'] }
+      : undefined,
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      rollupOptions: {
+        output: {
+          // Thư viện ít đổi tách riêng để lần deploy sau trình duyệt vẫn dùng lại cache (PF4).
+          // Các thư viện khác để Rollup tự chia theo trang dùng chúng.
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined;
+            if (/[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom|@remix-run)[\\/]/.test(id)) {
+              return 'vendor-react';
+            }
+            if (/[\\/]node_modules[\\/]framer-motion[\\/]/.test(id)) return 'vendor-motion';
+            return undefined;
+          },
+        },
+      },
+    },
   }
 })
 

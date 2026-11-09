@@ -25,7 +25,6 @@ router.get("/audio", (req, res) => {
   }
 
   const stat = fs.statSync(absPath);
-  const fileSize = stat.size;
   const ext = path.extname(absPath).toLowerCase();
 
   let mime = "audio/mpeg";
@@ -35,9 +34,11 @@ router.get("/audio", (req, res) => {
 
   res.setHeader("Accept-Ranges", "bytes");
   res.setHeader("Content-Type", mime);
+  // Trước đây không có header cache nào → nghe lại/lặp bài là tải lại cả file (PF6)
+  res.setHeader("Cache-Control", "private, max-age=3600");
 
   // Stream trực tiếp từ ổ đĩa, không đọc cả file vào RAM (ISSUES P1)
-  return streamFile(req, res, absPath, fileSize);
+  return streamFile(req, res, absPath, stat);
 });
 
 module.exports = router;

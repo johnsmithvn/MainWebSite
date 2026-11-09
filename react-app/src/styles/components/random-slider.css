@@ -54,7 +54,7 @@
   width: 2rem;
   height: 2rem;
   margin-top: 0;
-  color: #6b7280;
+  color: #64748b;
   background: transparent;
   border-radius: 50%;
   transition: all 0.2s ease;
@@ -62,18 +62,18 @@
 
 .dark .random-slider .swiper-button-prev,
 .dark .random-slider .swiper-button-next {
-  color: #d1d5db;
+  color: #cbd5e1;
 }
 
 .random-slider .swiper-button-prev:hover,
 .random-slider .swiper-button-next:hover {
-  background-color: #f3f4f6;
-  color: #111827;
+  background-color: #f1f5f9;
+  color: #0f172a;
 }
 
 .dark .random-slider .swiper-button-prev:hover,
 .dark .random-slider .swiper-button-next:hover {
-  background-color: #374151;
+  background-color: #334155;
   color: #ffffff;
 }
 
@@ -97,14 +97,14 @@
 }
 
 .random-slider .swiper-pagination-bullet {
-  background-color: #d1d5db;
+  background-color: #cbd5e1;
   opacity: 0.5;
   width: 8px;
   height: 8px;
 }
 
 .dark .random-slider .swiper-pagination-bullet {
-  background-color: #6b7280;
+  background-color: #64748b;
 }
 
 .random-slider .swiper-pagination-bullet-active {
@@ -130,12 +130,12 @@
 .random-slider-error {
   margin-bottom: 2rem;
   padding: 1.5rem;
-  background-color: #f9fafb;
+  background-color: #f8fafc;
   border-radius: 0.5rem;
 }
 
 .dark .random-slider-error {
-  background-color: #1f2937;
+  background-color: #1e293b;
 }
 
 /* Hover Effects */
@@ -202,13 +202,13 @@
 
 /* Custom scrollbar for horizontal scroll */
 .random-slider .swiper-scrollbar {
-  background-color: #e5e7eb;
+  background-color: #e2e8f0;
   height: 3px;
   border-radius: 2px;
 }
 
 .dark .random-slider .swiper-scrollbar {
-  background-color: #374151;
+  background-color: #334155;
 }
 
 .random-slider .swiper-scrollbar-drag {

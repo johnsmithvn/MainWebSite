@@ -7,12 +7,12 @@ import Autoplay from 'embla-carousel-autoplay';
 import { FiChevronLeft, FiChevronRight, FiClock, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import UniversalCard from '@/components/common/UniversalCard';
+import CardSkeleton from '@/components/common/CardSkeleton';
 import Button from '@/components/common/Button';
 import { useModal } from '@/components/common/Modal';
 import { useRecentItems } from '@/hooks/useRecentItems';
 import { useMangaStore, useMovieStore, useMusicStore } from '@/store';
-import { formatDistanceToNow } from 'date-fns';
-import { TIME } from '@/constants';
+import { formatRelativeVi, parentFolderName } from '@/utils/formatters';
 import '@/styles/components/embla.css';
 
 const RecentSlider = ({ 
@@ -24,8 +24,9 @@ const RecentSlider = ({
   showRefresh = true,
   showClearHistory = true,
   showTimestamp = true,
+  showDots = true,
   maxItems = 20,
-  ...props 
+  ...props
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -220,54 +221,11 @@ const RecentSlider = ({
     }
   };
 
-  // Format timestamp
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return '';
-    
-    try {
-      return formatDistanceToNow(timestamp, {
-        addSuffix: true
-      });
-    } catch (error) {
-      return '';
-    }
-  };
+  // Format timestamp (tiếng Việt)
+  const formatTimestamp = (timestamp) => formatRelativeVi(timestamp);
 
-  // Format last viewed time
-  const formatLastViewed = (lastViewed) => {
-    if (!lastViewed) return '';
-    
-    try {
-      const now = new Date();
-      const viewedDate = new Date(lastViewed);
-      const diffInMinutes = Math.floor((now - viewedDate) / 60000);
-      const isMobile = window.innerWidth < 640;
-      
-      // Luôn hiển thị "just now" cho thời gian dưới 1 phút
-      if (diffInMinutes < 1) return 'just now';
-      
-      // Rút gọn hơn cho mobile
-      if (isMobile) {
-        if (diffInMinutes < TIME.MINUTES_PER_HOUR) return `${diffInMinutes}m ago`;
-        if (diffInMinutes < TIME.MINUTES_PER_DAY) return `${Math.floor(diffInMinutes / TIME.MINUTES_PER_HOUR)}h ago`;
-        if (diffInMinutes < TIME.MINUTES_PER_WEEK) return `${Math.floor(diffInMinutes / TIME.MINUTES_PER_DAY)}d ago`;
-        return `${Math.floor(diffInMinutes / TIME.MINUTES_PER_WEEK)}w ago`;
-      } 
-      
-      // Phiên bản đầy đủ cho desktop
-      if (diffInMinutes < TIME.MINUTES_PER_HOUR) return `${diffInMinutes} minutes ago`;
-      if (diffInMinutes < TIME.MINUTES_PER_DAY) return `${Math.floor(diffInMinutes / TIME.MINUTES_PER_HOUR)} hours ago`;
-      
-      // Ghi đè kết quả từ formatDistanceToNow nếu là "less than a minute ago"
-      const formattedTime = formatDistanceToNow(viewedDate, {
-        addSuffix: true
-      });
-      
-      return formattedTime === 'less than a minute ago' ? 'just now' : formattedTime;
-    } catch (error) {
-      return '';
-    }
-  };
+  // Thời điểm xem gần nhất, tiếng Việt và ngắn gọn ("2 giờ trước") để vừa trong card nhỏ
+  const formatLastViewed = (lastViewed) => formatRelativeVi(lastViewed);
 
   if (trackingDisabled) {
     return null;
@@ -378,8 +336,8 @@ const RecentSlider = ({
       </div>
 
       {/* Slider Container */}
-      <div 
-        className="embla"
+      <div
+        className={`embla embla--${type}`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -389,8 +347,8 @@ const RecentSlider = ({
               // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="embla__slide">
-                  {/* Khung skeleton full width để card hiển thị 50% màn hình trên mobile */}
-                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse w-full h-64" />
+                  {/* Skeleton đúng hình card (tỉ lệ ảnh theo loại + 2 dòng tên), không còn khối cao cố định 256px */}
+                  <CardSkeleton type={type} variant="slider" className="w-full" />
                 </div>
               ))
             ) : (
@@ -398,19 +356,13 @@ const RecentSlider = ({
               items?.map((item, index) => (
                 <div key={`recent-${type}-${index}-${item.path?.replace(/[^a-zA-Z0-9]/g, '_') || index}-${localRefreshTrigger}`} className="embla__slide w-full h-full flex items-stretch">
                   <div className="relative w-full h-full">
-                    {/* Last viewed badge */}
-                    {item.lastViewed && (
-                      <div className="absolute top-1 left-1 sm:top-2 sm:left-2 z-10">
-                        <div className="bg-blue-500/90 text-white text-[9px] sm:text-xs px-1 py-0.5 sm:px-2 sm:py-1 rounded-full shadow-sm">
-                          {formatLastViewed(item.lastViewed)}
-                        </div>
-                      </div>
-                    )}
                     <UniversalCard
                       item={item}
                       type={type}
                       isFavorite={Boolean(item.isFavorite)}
                       variant="compact-slider" // thu gọn chiều cao
+                      subtitle={parentFolderName(item.path) || undefined} // tên bộ/thư mục cha thay cho nhãn "Folder"
+                      badgeTopLeft={item.lastViewed ? formatLastViewed(item.lastViewed) : undefined} // thời điểm xem gần nhất
                       showViews={false}
                       onToggleFavorite={async (toggleItem) => {
                         await handleToggleFavorite(toggleItem);
@@ -426,7 +378,7 @@ const RecentSlider = ({
       </div>
 
       {/* Pagination Dots - Limited to max 6 dots */}
-      {visibleDots.length > 1 && (
+      {showDots && visibleDots.length > 1 && (
         <div className="embla__dots">
           {visibleDots.map((_, index) => {
             const actualIndex = scrollSnaps.length <= 6 ? index : index * Math.ceil(scrollSnaps.length / 6);

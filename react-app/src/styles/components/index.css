@@ -2,10 +2,10 @@
 /* 🎨 Component Styles Index */
 
 /* Import all component styles */
+@import './card-common.css';
 @import './manga-reader.css';
-@import './manga-card.css';
-@import './movie-card.css';
-@import './music-card.css';
+/* manga-card.css, movie-card.css, music-card.css: không còn dùng từ khi các card chuyển sang ItemCard (P6)
+   nên bỏ import; có thể xoá hẳn 3 file này. */
 @import './random-slider.css';
 
 /* Future component imports can be added here:

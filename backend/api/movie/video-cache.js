@@ -121,7 +121,8 @@ router.get("/video-cache", async (req, res) => {
       return res.json({ folders: rows });
     }
 
-    // mode không hợp lệ → trả lỗi thay vì để request treo (ISSUES B10)
+    // mode không hợp lệ: trước đây không trả gì → request treo tới timeout (ISSUES B10).
+    // Giống audio-cache.js
     return res.status(400).json({ error: "Invalid mode" });
   } catch (err) {
     console.error("❌ video-cache error:", err);

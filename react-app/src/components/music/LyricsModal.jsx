@@ -1,26 +1,52 @@
 // 📁 src/components/music/LyricsModal.jsx
 // 🎤 Lyrics Display and Edit Modal
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiEdit3, FiCheck, FiChevronLeft } from 'react-icons/fi';
 import { useMusicStore, useAuthStore } from '@/store';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
 import { DEFAULT_IMAGES } from '@/constants';
+import { MusicPlayerContext } from './musicPlayerContext';
 import toast from 'react-hot-toast';
+
+/**
+ * Lời bài hát của `track`. API danh sách thư mục không còn trả lyrics (PERFORMANCE-CACHE-REPORT PF3),
+ * nên khi track không có sẵn thì lấy từ metadata của bài đang phát (MusicPlayerProvider đã tải
+ * /api/music/music-meta cho bài hiện tại).
+ */
+const resolveLyrics = (track, metadata) => {
+  if (!track) return '';
+  if (typeof track.lyrics === 'string') return track.lyrics; // có sẵn (VD vừa lưu xong)
+  if (metadata && metadata.path === track.path && typeof metadata.lyrics === 'string') {
+    return metadata.lyrics;
+  }
+  return '';
+};
 
 const LyricsModal = ({ isOpen, onClose, currentTrack }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [lyrics, setLyrics] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  // Không dùng useMusicPlayer() để modal vẫn chạy được nếu có nơi render ngoài provider
+  const trackMetadata = useContext(MusicPlayerContext)?.trackMetadata || null;
 
   useEffect(() => {
     if (isOpen && currentTrack) {
       // Load lyrics from track or fetch from API
-      setLyrics(currentTrack.lyrics || '');
+      setLyrics(resolveLyrics(currentTrack, trackMetadata));
       setIsEditMode(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, currentTrack]);
+
+  // Metadata của bài hiện tại có thể về sau khi modal đã mở → cập nhật, trừ khi đang sửa
+  useEffect(() => {
+    if (isOpen && currentTrack && !isEditMode) {
+      setLyrics(resolveLyrics(currentTrack, trackMetadata));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackMetadata]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -117,7 +143,7 @@ const LyricsModal = ({ isOpen, onClose, currentTrack }) => {
   };
 
   const handleCancel = () => {
-    setLyrics(currentTrack?.lyrics || '');
+    setLyrics(resolveLyrics(currentTrack, trackMetadata));
     setIsEditMode(false);
   };
 

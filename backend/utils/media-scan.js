@@ -10,6 +10,7 @@ const { FILE_EXTENSIONS } = require("../constants");
 const ffmpeg = require("fluent-ffmpeg");
 const ffprobe = require("ffprobe-static");
 const { escapeLike } = require("./sqlLike");
+const { createWriteQueue, createThumbnailLookup, pathExists } = require("./scanHelpers");
 ffmpeg.setFfprobePath(ffprobe.path);
 
 // Use centralized file extensions from constants and normalize to lowercase
@@ -36,16 +37,6 @@ function getFileType(ext) {
   return 'other';
 }
 
-// 🟢 Helper: Tìm thumbnail trong .thumbnail folder
-function findThumbnail(thumbnailDir, baseName) {
-  for (const ext of IMAGE_EXTS) {
-    const thumbFile = path.join(thumbnailDir, baseName + ext);
-    if (fs.existsSync(thumbFile)) {
-      return path.posix.join(".thumbnail", baseName + ext);
-    }
-  }
-  return null;
-}
 
 // 📏 Helper: Get video duration
 function getVideoDuration(filePath) {
@@ -73,10 +64,9 @@ function getImageDimensions(filePath) {
 }
 
 // 📅 Helper: Extract date from EXIF or filename
-function extractDateTaken(filePath, fileName) {
+function extractDateTaken(stat) {
   // TODO: Implement EXIF reading for proper date_taken
-  // For now, use file modified time
-  const stat = fs.statSync(filePath);
+  // For now, use file modified time (stat đã có sẵn ở nơi gọi — trước đây stat lại lần nữa, đồng bộ)
   return stat.mtimeMs;
 }
 
@@ -88,12 +78,13 @@ function extractDateTaken(filePath, fileName) {
  * @param {string} scopePath - 🎯 Partial scan: path to scan from (e.g., "Photos/2024")
  * @param {boolean} shallow - 📦 Shallow scan: don't recurse into subfolders
  */
-async function scanMediaFolderToDB(
+async function scanMediaLevel(
   dbkey,
   currentPath = "",
   stats = { folders: 0, inserted: 0, updated: 0, skipped: 0, deleted: 0 },
   scopePath = null,
-  shallow = false
+  shallow = false,
+  queue // ⚡ hàng đợi ghi theo lô + tra thumbnail (PF1, PF10) — do scanMediaFolderToDB tạo
 ) {
   const db = getMediaDB(dbkey);
   const rootPath = getRootPath(dbkey);
@@ -134,9 +125,9 @@ async function scanMediaFolderToDB(
     }
   }
 
-  if (!fs.existsSync(basePath)) return stats;
+  if (!(await pathExists(basePath))) return stats;
 
-  const entries = fs.readdirSync(basePath, { withFileTypes: true });
+  const entries = await fs.promises.readdir(basePath, { withFileTypes: true });
 
   // 📊 Count items in this folder
   let itemCount = 0;
@@ -161,17 +152,17 @@ async function scanMediaFolderToDB(
       
       // If this is a parent folder of scope, mark it as scanned (preserve it)
       if (isParentOfScope && !isInScope) {
-        const existingItem = db.prepare(`SELECT * FROM media_items WHERE path = ?`).get(relPath);
+        const existingItem = queue.stmt(`SELECT * FROM media_items WHERE path = ?`).get(relPath);
         if (existingItem) {
-          db.prepare(`UPDATE media_items SET scanned = 1 WHERE path = ?`).run(relPath);
+          queue.stmt(`UPDATE media_items SET scanned = 1 WHERE path = ?`).run(relPath);
         }
-        const existingFolder = db.prepare(`SELECT * FROM folders WHERE root = ? AND path = ?`).get(dbkey, relPath);
+        const existingFolder = queue.stmt(`SELECT * FROM folders WHERE root = ? AND path = ?`).get(dbkey, relPath);
         if (existingFolder) {
-          db.prepare(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
+          queue.stmt(`UPDATE folders SET scanned = 1 WHERE path = ?`).run(relPath);
         }
         // Continue scanning to reach the scope path
         if (entry.isDirectory()) {
-          await scanMediaFolderToDB(dbkey, relPath, stats, scopePath, shallow);
+          await scanMediaLevel(dbkey, relPath, stats, scopePath, shallow, queue);
         }
         continue;
       }
@@ -183,14 +174,15 @@ async function scanMediaFolderToDB(
       // xử lý các con trực tiếp đã bị đánh dấu ở phase 1, nếu không phase 3 xoá nhầm chúng (ISSUES D1)
       if (!shallow || relPath === scopePath) {
         // Recurse first to get subfolder's thumbnail
-        await scanMediaFolderToDB(dbkey, relPath, stats, scopePath, shallow);
+        await scanMediaLevel(dbkey, relPath, stats, scopePath, shallow, queue);
       }
       
       // Find first image in .thumbnail of this subfolder
       let folderThumb = null;
       const subThumbDir = path.join(fullPath, ".thumbnail");
-      if (fs.existsSync(subThumbDir)) {
-        const thumbFiles = fs.readdirSync(subThumbDir).filter(f => 
+      const subThumbNames = await queue.thumbs.list(subThumbDir);
+      if (subThumbNames) {
+        const thumbFiles = subThumbNames.filter(f =>
           IMAGE_EXTS.includes(path.extname(f).toLowerCase())
         );
         if (thumbFiles.length > 0) {
@@ -199,24 +191,27 @@ async function scanMediaFolderToDB(
         }
       }
 
-      // Count items in subfolder
-      const folderItemCount = db.prepare(
-        `SELECT COUNT(*) as count FROM media_items WHERE path LIKE ? ESCAPE '\\'`
-      ).get(`${escapeLike(relPath)}/%`).count;
+      // Count items in subfolder — đếm cả item vừa quét trong lần đệ quy ở trên, nên phải flush trước.
+      // Khoảng path >= 'x/' AND path < 'x0' ('0' đứng ngay sau '/') = mọi path bắt đầu bằng 'x/',
+      // dùng được index idx_media_path thay vì LIKE quét toàn bảng cho mỗi thư mục (PF3)
+      queue.flush();
+      const folderItemCount = queue.stmt(
+        `SELECT COUNT(*) as count FROM media_items WHERE path >= ? AND path < ?`
+      ).get(`${relPath}/`, `${relPath}0`).count;
 
       // Insert/update folder
-      const existingFolder = db.prepare(
+      const existingFolder = queue.stmt(
         `SELECT * FROM folders WHERE root = ? AND path = ?`
       ).get(dbkey, relPath);
 
       if (!existingFolder) {
-        db.prepare(
+        queue.stmt(
           `INSERT INTO folders (root, path, name, thumbnail, itemCount, scanned, createdAt, updatedAt)
            VALUES (?, ?, ?, ?, ?, 1, ?, ?)`
         ).run(dbkey, relPath, entry.name, folderThumb, folderItemCount, Date.now(), Date.now());
         stats.folders++;
       } else {
-        db.prepare(
+        queue.stmt(
           `UPDATE folders SET thumbnail = ?, itemCount = ?, scanned = 1, updatedAt = ? WHERE root = ? AND path = ?`
         ).run(folderThumb, folderItemCount, Date.now(), dbkey, relPath);
       }
@@ -229,23 +224,21 @@ async function scanMediaFolderToDB(
       itemCount++;
       if (!firstImagePath) firstImagePath = relPath;
 
-      const stat = fs.statSync(fullPath);
+      const stat = await fs.promises.stat(fullPath);
       const lastModified = stat.mtimeMs;
-      const dateTaken = extractDateTaken(fullPath, entry.name);
+      const dateTaken = extractDateTaken(stat);
       
       let thumb = null;
       const baseName = path.basename(entry.name, path.extname(entry.name));
       const thumbDir = path.join(basePath, ".thumbnail");
-      if (fs.existsSync(thumbDir)) {
-        thumb = findThumbnail(thumbDir, baseName);
-      }
+      thumb = await queue.thumbs.find(thumbDir, baseName, IMAGE_EXTS);
 
-      const existing = db.prepare(`SELECT * FROM media_items WHERE path = ?`).get(relPath);
+      const existing = queue.stmt(`SELECT * FROM media_items WHERE path = ?`).get(relPath);
 
       if (!existing) {
         // ✅ NEW IMAGE
         const { width, height } = await getImageDimensions(fullPath);
-        db.prepare(
+        queue.stmt(
           `INSERT INTO media_items (name, path, thumbnail, type, size, modified, width, height, date_taken, scanned, createdAt, updatedAt)
            VALUES (?, ?, ?, 'image', ?, ?, ?, ?, ?, 1, ?, ?)`
         ).run(entry.name, relPath, thumb, stat.size, lastModified, width, height, dateTaken, Date.now(), Date.now());
@@ -253,17 +246,17 @@ async function scanMediaFolderToDB(
       } else if (existing.modified !== lastModified) {
         // ✅ CHANGED IMAGE
         const { width, height } = await getImageDimensions(fullPath);
-        db.prepare(
+        queue.stmt(
           `UPDATE media_items SET thumbnail = ?, size = ?, modified = ?, width = ?, height = ?, date_taken = ?, scanned = 1, updatedAt = ? WHERE path = ?`
         ).run(thumb, stat.size, lastModified, width, height, dateTaken, Date.now(), relPath);
         stats.updated++;
       } else if (existing.thumbnail !== thumb) {
         // ✅ THUMBNAIL CHANGED
-        db.prepare(`UPDATE media_items SET thumbnail = ?, scanned = 1, updatedAt = ? WHERE path = ?`).run(thumb, Date.now(), relPath);
+        queue.stmt(`UPDATE media_items SET thumbnail = ?, scanned = 1, updatedAt = ? WHERE path = ?`).run(thumb, Date.now(), relPath);
         stats.updated++;
       } else {
         // ✅ UNCHANGED
-        db.prepare(`UPDATE media_items SET scanned = 1 WHERE path = ?`).run(relPath);
+        queue.stmt(`UPDATE media_items SET scanned = 1 WHERE path = ?`).run(relPath);
         stats.skipped++;
       }
     }
@@ -272,24 +265,22 @@ async function scanMediaFolderToDB(
     if (VIDEO_EXTS.includes(path.extname(entry.name).toLowerCase())) {
       itemCount++;
 
-      const stat = fs.statSync(fullPath);
+      const stat = await fs.promises.stat(fullPath);
       const lastModified = stat.mtimeMs;
-      const dateTaken = extractDateTaken(fullPath, entry.name);
+      const dateTaken = extractDateTaken(stat);
       
       let thumb = null;
       const baseName = path.basename(entry.name, path.extname(entry.name));
       const thumbDir = path.join(basePath, ".thumbnail");
-      if (fs.existsSync(thumbDir)) {
-        thumb = findThumbnail(thumbDir, baseName);
-      }
+      thumb = await queue.thumbs.find(thumbDir, baseName, IMAGE_EXTS);
 
-      const existing = db.prepare(`SELECT * FROM media_items WHERE path = ?`).get(relPath);
+      const existing = queue.stmt(`SELECT * FROM media_items WHERE path = ?`).get(relPath);
 
       if (!existing) {
         // ✅ NEW VIDEO
         const duration = await getVideoDuration(fullPath);
         const { width, height } = await getImageDimensions(fullPath);
-        db.prepare(
+        queue.stmt(
           `INSERT INTO media_items (name, path, thumbnail, type, size, modified, width, height, duration, date_taken, scanned, createdAt, updatedAt)
            VALUES (?, ?, ?, 'video', ?, ?, ?, ?, ?, ?, 1, ?, ?)`
         ).run(entry.name, relPath, thumb, stat.size, lastModified, width, height, duration, dateTaken, Date.now(), Date.now());
@@ -298,17 +289,17 @@ async function scanMediaFolderToDB(
         // ✅ CHANGED VIDEO
         const duration = await getVideoDuration(fullPath);
         const { width, height } = await getImageDimensions(fullPath);
-        db.prepare(
+        queue.stmt(
           `UPDATE media_items SET thumbnail = ?, size = ?, modified = ?, width = ?, height = ?, duration = ?, date_taken = ?, scanned = 1, updatedAt = ? WHERE path = ?`
         ).run(thumb, stat.size, lastModified, width, height, duration, dateTaken, Date.now(), relPath);
         stats.updated++;
       } else if (existing.thumbnail !== thumb) {
         // ✅ THUMBNAIL CHANGED
-        db.prepare(`UPDATE media_items SET thumbnail = ?, scanned = 1, updatedAt = ? WHERE path = ?`).run(thumb, Date.now(), relPath);
+        queue.stmt(`UPDATE media_items SET thumbnail = ?, scanned = 1, updatedAt = ? WHERE path = ?`).run(thumb, Date.now(), relPath);
         stats.updated++;
       } else {
         // ✅ UNCHANGED
-        db.prepare(`UPDATE media_items SET scanned = 1 WHERE path = ?`).run(relPath);
+        queue.stmt(`UPDATE media_items SET scanned = 1 WHERE path = ?`).run(relPath);
         stats.skipped++;
       }
       continue;
@@ -321,43 +312,44 @@ async function scanMediaFolderToDB(
     if (fileType !== 'image' && fileType !== 'video' && ext) {
       itemCount++;
 
-      const stat = fs.statSync(fullPath);
+      const stat = await fs.promises.stat(fullPath);
       const lastModified = stat.mtimeMs;
-      const dateTaken = extractDateTaken(fullPath, entry.name);
+      const dateTaken = extractDateTaken(stat);
       
       let thumb = null;
       const baseName = path.basename(entry.name, path.extname(entry.name));
       const thumbDir = path.join(basePath, ".thumbnail");
-      if (fs.existsSync(thumbDir)) {
-        thumb = findThumbnail(thumbDir, baseName);
-      }
+      thumb = await queue.thumbs.find(thumbDir, baseName, IMAGE_EXTS);
 
-      const existing = db.prepare(`SELECT * FROM media_items WHERE path = ?`).get(relPath);
+      const existing = queue.stmt(`SELECT * FROM media_items WHERE path = ?`).get(relPath);
 
       if (!existing) {
         // ✅ NEW FILE
-        db.prepare(
+        queue.stmt(
           `INSERT INTO media_items (name, path, thumbnail, type, size, modified, date_taken, scanned, createdAt, updatedAt)
            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`
         ).run(entry.name, relPath, thumb, fileType, stat.size, lastModified, dateTaken, Date.now(), Date.now());
         stats.inserted++;
       } else if (existing.modified !== lastModified) {
         // ✅ CHANGED FILE
-        db.prepare(
+        queue.stmt(
           `UPDATE media_items SET thumbnail = ?, size = ?, modified = ?, date_taken = ?, scanned = 1, updatedAt = ? WHERE path = ?`
         ).run(thumb, stat.size, lastModified, dateTaken, Date.now(), relPath);
         stats.updated++;
       } else if (existing.thumbnail !== thumb) {
         // ✅ THUMBNAIL CHANGED
-        db.prepare(`UPDATE media_items SET thumbnail = ?, scanned = 1, updatedAt = ? WHERE path = ?`).run(thumb, Date.now(), relPath);
+        queue.stmt(`UPDATE media_items SET thumbnail = ?, scanned = 1, updatedAt = ? WHERE path = ?`).run(thumb, Date.now(), relPath);
         stats.updated++;
       } else {
         // ✅ UNCHANGED
-        db.prepare(`UPDATE media_items SET scanned = 1 WHERE path = ?`).run(relPath);
+        queue.stmt(`UPDATE media_items SET scanned = 1 WHERE path = ?`).run(relPath);
         stats.skipped++;
       }
     }
   }
+
+  // Các lệnh ghi còn trong hàng đợi phải vào DB trước khi đếm/xoá bản ghi scanned = 0
+  if (currentPath === "") queue.flush();
 
   // 🗑️ PHASE 3: Sweep orphaned records (scope-aware & shallow-aware cleanup)
   if (currentPath === "") {
@@ -457,6 +449,20 @@ async function scanMediaFolderToDB(
   }
 
   return stats;
+}
+
+/**
+ * Điểm vào giữ nguyên chữ ký cũ. Tạo hàng đợi ghi cho cả lần scan và luôn flush khi xong hoặc khi
+ * lỗi giữa chừng (code cũ ghi ngay từng lệnh nên phần đã quét vẫn được lưu).
+ */
+async function scanMediaFolderToDB(dbkey, currentPath = "", stats = { folders: 0, inserted: 0, updated: 0, skipped: 0, deleted: 0 }, scopePath = null, shallow = false) {
+  const queue = createWriteQueue(getMediaDB(dbkey));
+  queue.thumbs = createThumbnailLookup();
+  try {
+    return await scanMediaLevel(dbkey, currentPath, stats, scopePath, shallow, queue);
+  } finally {
+    queue.flush();
+  }
 }
 
 module.exports = { scanMediaFolderToDB };

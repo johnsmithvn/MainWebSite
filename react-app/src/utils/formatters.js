@@ -30,6 +30,43 @@ export const formatBytes = (bytes) => {
 export const formatFileSize = formatBytes;
 
 /**
+ * Bỏ đuôi file khỏi tên để hiển thị trên card (đuôi đã có ở dòng phụ)
+ * @param {string} name - Ví dụ "Phim (2024) 1080p.mkv"
+ * @returns {string} Ví dụ "Phim (2024) 1080p"
+ */
+export const parentFolderName = (path = '') => {
+  // "Bộ truyện/Chương 12" → "Bộ truyện"; mục ở cấp gốc → ''
+  const parts = String(path).split('/').filter(Boolean);
+  return parts.length > 1 ? parts[parts.length - 2] : '';
+};
+
+/**
+ * Thời điểm tương đối, ngắn gọn, tiếng Việt: "vừa xong", "5 phút trước", "2 giờ trước", "3 ngày trước"...
+ * @param {number|string|Date} date
+ */
+export const formatRelativeVi = (date) => {
+  if (!date) return '';
+  const t = new Date(date).getTime();
+  if (Number.isNaN(t)) return '';
+  const minutes = Math.floor((Date.now() - t) / 60000);
+  if (minutes < 1) return 'vừa xong';
+  if (minutes < 60) return `${minutes} phút trước`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} ngày trước`;
+  if (days < 30) return `${Math.floor(days / 7)} tuần trước`;
+  if (days < 365) return `${Math.floor(days / 30)} tháng trước`;
+  return `${Math.floor(days / 365)} năm trước`;
+};
+
+export const stripExtension = (name = '') => {
+  const s = String(name);
+  const stripped = s.replace(/\.[a-z0-9]{2,5}$/i, '');
+  return stripped || s;
+};
+
+/**
  * Format view count number to readable format
  * @param {number} count - The view count
  * @returns {string} Formatted string

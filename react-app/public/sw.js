@@ -14,6 +14,11 @@ const DEFAULT_IMAGES = {
   favicon: '/default/favicon.png'
 };
 
+// Log chi tiết (mỗi request, mỗi lần cache hit…) tắt mặc định — PERFORMANCE-CACHE-REPORT PF18.
+// Đặt true khi cần gỡ lỗi SW. console.warn / console.error vẫn luôn hiện.
+const SW_DEBUG = false;
+const swLog = SW_DEBUG ? console.log.bind(console) : () => {};
+
 const CACHE_VERSION = 'v3.1.0'; // ✅ Added thumbnail caching for Movie/Music/Media
 const STATIC_CACHE = `offline-core-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `reader-dynamic-${CACHE_VERSION}`;
@@ -47,17 +52,17 @@ const contentChangeTracker = {
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('🔧 SW installing v3.1.0...');
+  swLog('🔧 SW installing v3.1.0...');
 
   event.waitUntil((async () => {
     try {
       const cache = await caches.open(STATIC_CACHE);
-      console.log('📦 Caching offline essentials...');
+      swLog('📦 Caching offline essentials...');
 
       for (const asset of OFFLINE_CORE_ASSETS) {
         try {
           await cache.add(asset);
-          console.log('✅ Cached offline asset:', asset);
+          swLog('✅ Cached offline asset:', asset);
         } catch (error) {
           console.warn('⚠️ Failed to cache offline asset:', asset, error);
         }
@@ -72,7 +77,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - cleanup old caches
 self.addEventListener('activate', (event) => {
-  console.log('🚀 SW activating v3.1.0...');
+  swLog('🚀 SW activating v3.1.0...');
 
   event.waitUntil(
     Promise.all([
@@ -91,7 +96,7 @@ self.addEventListener('activate', (event) => {
 
             // Simplified logic - only check if managed cache and not current
             if (!isCurrentCache && isManagedCache) {
-              console.log('🗑️ Deleting old cache:', cacheName);
+              swLog('🗑️ Deleting old cache:', cacheName);
               // Remove from cache instances map too
               cacheInstances.delete(cacheName);
               return caches.delete(cacheName);
@@ -99,12 +104,17 @@ self.addEventListener('activate', (event) => {
           })
         );
       }),
-      
+
+      // Xoá bản sao file nhạc/phim do bản SW cũ lưu (PF2), rồi giới hạn số response API (B15)
+      purgeStreamEntries()
+        .then(() => trimApiEntries())
+        .catch((error) => console.warn('⚠️ Failed to trim API cache:', error)),
+
       // Take control of all pages
       self.clients.claim()
     ])
     .then(() => {
-      console.log('✅ SW activated and controlling pages');
+      swLog('✅ SW activated and controlling pages');
       
       // Notify all clients about SW activation
       return self.clients.matchAll().then(clients => {
@@ -139,23 +149,67 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(fetch(request));
     return;
   }
-  
+
+  // ✅ Stream / tải file: không đi qua SW, để trình duyệt tự xử lý (PF2, B15).
+  // Phát nhạc/phim luôn nhận 206 nên chưa bao giờ được cache; nhạc tải về được lưu ra máy qua
+  // <a download> → bản sao trong reader-dynamic không nơi nào đọc, chỉ tốn dung lượng.
+  if (isStreamOrDownload(request, url)) return;
+
   // Route to appropriate strategy
   if (isStaticAsset(request)) {
     event.respondWith(cacheFirstStrategy(request, STATIC_CACHE));
   } else if (isAPIRequest(request)) {
-    event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE));
+    event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE, event));
+  } else if (isThumbnailRequest(request)) {
+    // Kiểm tra TRƯỚC isMangaImage, vì isMangaImage bắt mọi request ảnh (B14)
+    event.respondWith(thumbnailCacheStrategy(request, event));
   } else if (isMangaImage(request)) {
     event.respondWith(mangaImageStrategy(request));
-  } else if (isThumbnailRequest(request)) {
-    event.respondWith(thumbnailCacheStrategy(request));
   } else if (isNavigation(request)) {
-    event.respondWith(navigationStrategy(request));
+    event.respondWith(navigationStrategy(request, event));
   } else {
     // Default to network-first for other resources
-    event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE));
+    event.respondWith(networkFirstWithTimeout(request, DYNAMIC_CACHE, event));
   }
 });
+
+// Endpoint stream / download (so khớp đúng pathname: /api/movie/video-cache vẫn được cache)
+const STREAM_API_PATHS = ['/api/music/download', '/api/music/audio', '/api/movie/video'];
+
+function isStreamOrDownload(request, url) {
+  if (STREAM_API_PATHS.includes(url.pathname)) return true;
+  // Request có Range (thẻ <audio>/<video> với file tĩnh /audio, /video, /media) luôn trả 206,
+  // Cache API không lưu được 206 → đi qua SW chỉ thêm độ trễ và timeout 5s
+  return request.headers.has('range');
+}
+
+/**
+ * Dọn một lần các bản sao file nhạc/phim mà bản SW cũ đã lưu vào reader-dynamic (PF2).
+ * Chỉ xoá đúng các mục stream/download, giữ nguyên dữ liệu API khác dùng cho offline.
+ */
+async function purgeStreamEntries() {
+  try {
+    if (!(await caches.has(DYNAMIC_CACHE))) return;
+    const cache = await caches.open(DYNAMIC_CACHE);
+    const requests = await cache.keys();
+    let removed = 0;
+    for (const req of requests) {
+      let pathname;
+      try {
+        pathname = new URL(req.url).pathname;
+      } catch {
+        continue;
+      }
+      if (STREAM_API_PATHS.includes(pathname)) {
+        await cache.delete(req);
+        removed++;
+      }
+    }
+    if (removed > 0) swLog(`🗑️ Removed ${removed} cached stream/download entries from ${DYNAMIC_CACHE}`);
+  } catch (error) {
+    console.warn('⚠️ Failed to purge stream entries:', error);
+  }
+}
 
 // Cache instance management with Promise-based protection against race conditions
 const cachePromises = new Map(); // Track pending cache.open() promises
@@ -210,7 +264,7 @@ async function cacheFirstStrategy(request, cacheName) {
     const cachedResponse = await cache.match(request);
     
     if (cachedResponse) {
-      console.log('📦 Cache hit:', getResourceName(request.url));
+      swLog('📦 Cache hit:', getResourceName(request.url));
       
       // Update cache in background for next time
       if (navigator.onLine) {
@@ -220,7 +274,7 @@ async function cacheFirstStrategy(request, cacheName) {
       return cachedResponse;
     }
     
-    console.log('🌐 Cache miss, fetching:', getResourceName(request.url));
+    swLog('🌐 Cache miss, fetching:', getResourceName(request.url));
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
@@ -234,46 +288,128 @@ async function cacheFirstStrategy(request, cacheName) {
   }
 }
 
-// Network-first with timeout for better UX
-async function networkFirstWithTimeout(request, cacheName) {
+/**
+ * Chạy việc ghi cache ở nền: response được trả cho trang ngay, còn event.waitUntil giữ SW sống
+ * tới khi ghi xong (PERFORMANCE-CACHE-REPORT PF2). Trước đây `await cache.put()` nằm trước
+ * `return`, mà cache.put chỉ xong khi đọc hết body → trang phải chờ tải xong toàn bộ response.
+ * Lỗi được bắt ở đây (lý do ban đầu của `await` là để try/catch bắt được lỗi cache.put).
+ */
+function runInBackground(event, task, label) {
+  const promise = Promise.resolve()
+    .then(task)
+    .catch((error) => {
+      console.warn(`⚠️ ${label || 'Background cache task'} failed:`, error && error.message);
+    });
+  if (event && typeof event.waitUntil === 'function') {
+    try {
+      event.waitUntil(promise);
+    } catch (error) {
+      // event đã kết thúc → việc ghi cache vẫn tiếp tục nhưng không được giữ SW sống
+    }
+  }
+  return promise;
+}
+
+// Giới hạn số response /api/* giữ trong reader-dynamic (B15). Trước đây không giới hạn: mỗi lần tìm
+// kiếm, mỗi trang, mỗi thư mục đã mở đều thêm một mục, không bao giờ dọn. Giữ lại các mục mới nhất
+// (dùng làm dữ liệu offline), xoá mục cũ nhất khi vượt ngưỡng. Asset và trang không bị tính.
+const MAX_API_ENTRIES = 400;
+const TRIM_EVERY_PUTS = 50;
+let apiPutsSinceTrim = 0;
+
+function isApiUrl(url) {
   try {
-    // Race between network and timeout
-    const networkPromise = fetch(request);
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Network timeout')), NETWORK_TIMEOUT)
-    );
-    
-    const networkResponse = await Promise.race([networkPromise, timeoutPromise]);
-    
-    // Only cache full responses (200), not partial content (206) or other status codes
-    // Cache API doesn't support 206 Partial Content responses
-    if (networkResponse.ok && networkResponse.status === 200) {
-      try {
-        // Use centralized cache instance getter
-        const cache = await getCacheInstance(cacheName);
-        
-        // Check if content changed before caching
-        const shouldCache = await checkContentChange(request, networkResponse.clone());
-        if (shouldCache) {
-          await cache.put(request, networkResponse.clone());
-          // ✅ Invalidate cache info when new content is cached
-          invalidateCacheInfo();
-        }
-      } catch (cacheError) {
-        console.warn('⚠️ Failed to cache response:', cacheError.message);
+    return new URL(url).pathname.startsWith('/api/');
+  } catch {
+    return false;
+  }
+}
+
+async function trimApiEntries(cacheName = DYNAMIC_CACHE) {
+  const cache = await getCacheInstance(cacheName);
+  const requests = await cache.keys(); // thứ tự thêm vào: cũ → mới
+  const apiRequests = requests.filter((r) => isApiUrl(r.url));
+  const excess = apiRequests.length - MAX_API_ENTRIES;
+  for (let i = 0; i < excess; i++) {
+    await cache.delete(apiRequests[i]);
+  }
+  if (excess > 0) {
+    swLog(`🗑️ Trimmed ${excess} old API responses from ${cacheName}`);
+    invalidateCacheInfo();
+  }
+}
+
+/** Lưu response 200 vào cache ở nền (clone ngay, trước khi trang đọc body) */
+function saveResponseInBackground(event, request, response, cacheName) {
+  // Only cache full responses (200), not partial content (206) or other status codes
+  // Cache API doesn't support 206 Partial Content responses
+  if (!response || !response.ok || response.status !== 200) return;
+  const copy = response.clone();
+  runInBackground(event, async () => {
+    // Use centralized cache instance getter
+    const cache = await getCacheInstance(cacheName);
+
+    // Check if content changed before caching
+    const shouldCache = await checkContentChange(request, copy.clone());
+    if (shouldCache) {
+      await cache.put(request, copy);
+      // ✅ Invalidate cache info when new content is cached
+      invalidateCacheInfo();
+      if (isApiUrl(request.url) && ++apiPutsSinceTrim >= TRIM_EVERY_PUTS) {
+        apiPutsSinceTrim = 0;
+        await trimApiEntries(cacheName);
       }
     }
-    
+  }, 'Failed to cache response');
+}
+
+// Network-first with timeout for better UX
+// Sau NETWORK_TIMEOUT mà mạng chưa trả lời (B15):
+// - có bản cache → trả bản cache ngay, response mạng về sau vẫn được lưu để lần sau dùng
+// - chưa có bản cache → tiếp tục CHỜ mạng (trước đây trả 503 dù server vẫn đang xử lý, vd. thư mục
+//   lớn đọc từ ổ đĩa). Mạng lỗi thật (offline) thì fetch tự báo lỗi ngay, không phải chờ.
+const TIMED_OUT = Symbol('timeout');
+
+async function networkFirstWithTimeout(request, cacheName, event) {
+  const networkPromise = fetch(request);
+  networkPromise.catch(() => {}); // tránh "unhandled rejection" nếu đã trả bản cache trước khi mạng lỗi
+  let timeoutId;
+  const timeoutPromise = new Promise((resolve) => {
+    timeoutId = setTimeout(() => resolve(TIMED_OUT), NETWORK_TIMEOUT);
+  });
+
+  try {
+    const first = await Promise.race([networkPromise, timeoutPromise]);
+    if (first !== TIMED_OUT) {
+      clearTimeout(timeoutId);
+      saveResponseInBackground(event, request, first, cacheName);
+      return first;
+    }
+
+    // Mạng chậm: có cache thì trả cache, mạng về sau vẫn cập nhật cache
+    const cache = await getCacheInstance(cacheName);
+    const cachedResponse = await cache.match(request);
+    if (cachedResponse) {
+      runInBackground(event, async () => {
+        const late = await networkPromise;
+        saveResponseInBackground(event, request, late, cacheName);
+      }, 'Late network update');
+      return cachedResponse;
+    }
+
+    const networkResponse = await networkPromise;
+    saveResponseInBackground(event, request, networkResponse, cacheName);
     return networkResponse;
   } catch (error) {
+    clearTimeout(timeoutId);
     // Use centralized cache instance getter
     const cache = await getCacheInstance(cacheName);
     const cachedResponse = await cache.match(request);
-    
+
     if (cachedResponse) {
       return cachedResponse;
     }
-    
+
     return handleFetchError(request, error);
   }
 }
@@ -298,121 +434,93 @@ async function mangaImageStrategy(request) {
   } catch (error) {
     // For offline mode: only fallback if we have cached offline content
     // For online mode: let the image fail naturally (no default image interference)
-    console.log('❌ Manga image network failed - letting request fail naturally');
+    swLog('❌ Manga image network failed - letting request fail naturally');
     throw error; // Don't serve fallback for online requests
   }
 }
 
 // Thumbnail caching strategy for Movie/Music/Media
-// Uses stale-while-revalidate pattern: serve cached, update in background
-async function thumbnailCacheStrategy(request) {
-  try {
-    const thumbnailCache = await getCacheInstance(THUMBNAIL_CACHE);
-    const cachedThumbnail = await thumbnailCache.match(request);
-    
-    // Serve cached thumbnail immediately if available
-    if (cachedThumbnail) {
-      console.log('✅ 📦 THUMBNAIL CACHE HIT:', getResourceName(request.url));
-      
-      // Update cache in background (stale-while-revalidate)
-      if (navigator.onLine) {
-        fetch(request)
-          .then(async networkResponse => {
-            if (networkResponse.ok) {
-              try {
-                // Check if content changed before updating
-                const shouldUpdate = await checkContentChange(request, networkResponse.clone());
-                if (shouldUpdate) {
-                  await thumbnailCache.put(request, networkResponse.clone());
-                  console.log('🔄 Thumbnail cache updated:', getResourceName(request.url));
-                  
-                  // Implement LRU cleanup: keep max 1000 thumbnails (~30MB)
-                  const MAX_THUMBNAILS = 1000;
-                  const keys = await thumbnailCache.keys();
-                  if (keys.length > MAX_THUMBNAILS) {
-                    // Remove oldest entries (first 10%)
-                    const removeCount = Math.floor(MAX_THUMBNAILS * 0.1);
-                    for (let i = 0; i < removeCount; i++) {
-                      await thumbnailCache.delete(keys[i]);
-                    }
-                    console.log(`🗑️ Cleaned ${removeCount} old thumbnails (LRU)`);
-                  }
-                } else {
-                  console.log('⏭️ Thumbnail unchanged, skip cache update:', getResourceName(request.url));
-                }
-              } catch (cacheError) {
-                console.warn('⚠️ Failed to update thumbnail cache:', cacheError);
-              }
-            }
-          })
-          .catch(() => {
-            // Silent fail for background updates
-          });
-      }
-      
-      return cachedThumbnail;
+// Uses stale-while-revalidate pattern: serve cached, update in background.
+// Chỉ áp cho thumbnail trong thư mục .thumbnail (xem isThumbnailRequest) — ISSUES B14.
+const MAX_THUMBNAILS = 1000; // ~30MB
+let thumbnailPutsSinceTrim = 0;
+
+async function putThumbnail(thumbnailCache, request, response) {
+  await thumbnailCache.put(request, response);
+  // Dọn theo lô thay vì liệt kê toàn bộ cache sau mỗi lần ghi
+  if (++thumbnailPutsSinceTrim >= TRIM_EVERY_PUTS) {
+    thumbnailPutsSinceTrim = 0;
+    const keys = await thumbnailCache.keys(); // cũ → mới
+    const excess = keys.length - MAX_THUMBNAILS;
+    for (let i = 0; i < excess; i++) {
+      await thumbnailCache.delete(keys[i]);
     }
-    
-    // No cache: fetch from network and cache
-    console.log('❌ 🌐 THUMBNAIL CACHE MISS, fetching:', getResourceName(request.url));
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      try {
-        await thumbnailCache.put(request, networkResponse.clone());
-        console.log('✅ Thumbnail cached:', getResourceName(request.url));
-      } catch (cacheError) {
-        console.warn('⚠️ Failed to cache thumbnail:', cacheError);
-      }
-    }
-    
-    return networkResponse;
-  } catch (error) {
-    console.error('❌ Thumbnail cache strategy failed:', error);
-    
-    // Try to return fallback default images
-    if (request.url.includes('/movie')) {
-      return getFallbackImage(DEFAULT_IMAGES.video);
-    } else if (request.url.includes('/music')) {
-      return getFallbackImage(DEFAULT_IMAGES.music);
-    } else if (request.url.includes('/media')) {
-      return getFallbackImage(DEFAULT_IMAGES.folder);
-    }
-    
-    return handleFetchError(request, error);
+    if (excess > 0) swLog(`🗑️ Cleaned ${excess} old thumbnails`);
   }
 }
 
+async function thumbnailCacheStrategy(request, event) {
+  const thumbnailCache = await getCacheInstance(THUMBNAIL_CACHE);
+  const cachedThumbnail = await thumbnailCache.match(request);
+
+  // Serve cached thumbnail immediately if available
+  if (cachedThumbnail) {
+    // Update cache in background (stale-while-revalidate). fetch() đi qua HTTP cache của trình
+    // duyệt (max-age 1 giờ) nên phần lớn không tốn request mạng.
+    if (navigator.onLine) {
+      runInBackground(event, async () => {
+        const networkResponse = await fetch(request);
+        if (!networkResponse.ok) return;
+        // Check if content changed before updating
+        const shouldUpdate = await checkContentChange(request, networkResponse.clone());
+        if (shouldUpdate) await putThumbnail(thumbnailCache, request, networkResponse);
+      }, 'Thumbnail background update');
+    }
+    return cachedThumbnail;
+  }
+
+  // No cache: fetch from network and cache. Lỗi mạng thì để ảnh lỗi tự nhiên (như trước) để
+  // frontend tự hiện ảnh dự phòng qua onError.
+  const networkResponse = await fetch(request);
+  if (networkResponse.ok) {
+    // Ghi cache ở nền, trả ảnh cho trang ngay (PF2)
+    const copy = networkResponse.clone();
+    runInBackground(event, () => putThumbnail(thumbnailCache, request, copy), 'Failed to cache thumbnail');
+  }
+  return networkResponse;
+}
+
 // Navigation strategy for SPA
-async function navigationStrategy(request) {
+async function navigationStrategy(request, event) {
   try {
-    console.log('🧭 Navigation:', request.url);
+    swLog('🧭 Navigation:', request.url);
     const networkResponse = await fetch(request);
 
     if (networkResponse && networkResponse.ok) {
-      try {
+      // Clone ngay rồi ghi cache ở nền, trả trang ngay (PF2)
+      const appShellPaths = ['/', '/index.html'];
+      const routeCopy = networkResponse.clone();
+      const shellCopies = appShellPaths.map(() => networkResponse.clone());
+      runInBackground(event, async () => {
         const cache = await getCacheInstance(DYNAMIC_CACHE);
 
-        await cache.put(request, networkResponse.clone());
+        await cache.put(request, routeCopy);
 
-        const appShellPaths = ['/', '/index.html'];
         await Promise.all(
-          appShellPaths.map(async (path) => {
+          appShellPaths.map(async (path, i) => {
             try {
-              await cache.put(path, networkResponse.clone());
+              await cache.put(path, shellCopies[i]);
             } catch (cacheError) {
               console.warn('⚠️ Failed to update app shell cache for', path, cacheError);
             }
           })
         );
-      } catch (cacheError) {
-        console.warn('⚠️ Failed to cache navigation response:', cacheError);
-      }
+      }, 'Failed to cache navigation response');
     }
 
     return networkResponse;
   } catch (error) {
-    console.log('📴 Offline navigation fallback:', request.url);
+    swLog('📴 Offline navigation fallback:', request.url);
 
     try {
       const dynamicCache = await getCacheInstance(DYNAMIC_CACHE);
@@ -420,7 +528,7 @@ async function navigationStrategy(request) {
       // First: Try exact cached response for the route
       const cachedResponse = await dynamicCache.match(request);
       if (cachedResponse) {
-        console.log('✅ Serving cached navigation response');
+        swLog('✅ Serving cached navigation response');
         return cachedResponse;
       }
 
@@ -429,7 +537,7 @@ async function navigationStrategy(request) {
       for (const path of appShellPaths) {
         const appShell = await dynamicCache.match(path);
         if (appShell) {
-          console.log('✅ Serving cached app shell fallback (React app)');
+          swLog('✅ Serving cached app shell fallback (React app)');
           return appShell;
         }
       }
@@ -439,7 +547,7 @@ async function navigationStrategy(request) {
       for (const path of appShellPaths) {
         const appShell = await staticCache.match(path);
         if (appShell) {
-          console.log('✅ Serving static cached app shell');
+          swLog('✅ Serving static cached app shell');
           return appShell;
         }
       }
@@ -509,20 +617,20 @@ function isMangaImage(request) {
 }
 
 function isThumbnailRequest(request) {
-  const url = request.url;
-  // Match thumbnail requests for Movie, Music, and Media
-  return (
-    // Movie thumbnails: /movie-thumb/:id or /movie/.../*.jpg
-    url.includes('/movie-thumb/') ||
-    (url.includes('/movie/') && url.match(/\.(jpg|jpeg|png|webp)$/i)) ||
-    
-    // Music thumbnails: /music-thumb/:id or /music/.../*.jpg
-    url.includes('/music-thumb/') ||
-    (url.includes('/music/') && url.match(/\.(jpg|jpeg|png|webp)$/i)) ||
-    
-    // Media thumbnails: /media/.../*.jpg (except full images in lightbox)
-    (url.includes('/media/') && url.match(/\.(jpg|jpeg|png|webp|avif)$/i))
-  );
+  // ISSUES B14: trước đây so '/movie/', '/music/' trong khi URL thật là '/video/', '/audio/', và
+  // isMangaImage (bắt mọi request ảnh) được kiểm tra trước nên nhánh này không bao giờ chạy.
+  // Chỉ nhận thumbnail trong thư mục .thumbnail của nguồn video/audio/media — KHÔNG nhận ảnh gốc
+  // của /media (có thể vài MB mỗi ảnh, không nên đưa vào cache 1000 mục).
+  try {
+    const url = new URL(request.url);
+    if (url.origin !== self.location.origin) return false;
+    const p = url.pathname;
+    return /^\/(video|audio|media)\//.test(p) &&
+      p.includes('/.thumbnail/') &&
+      /\.(jpe?g|png|webp|avif|gif)$/i.test(p);
+  } catch (error) {
+    return false;
+  }
 }
 
 function isNavigation(request) {
@@ -541,7 +649,7 @@ async function updateCacheInBackground(request, cache) {
       const shouldUpdate = await checkContentChange(request, response.clone());
       if (shouldUpdate) {
         cache.put(request, response);
-        console.log('🔄 Cache updated due to content change:', getResourceName(request.url));
+        swLog('🔄 Cache updated due to content change:', getResourceName(request.url));
       }
     }
   } catch (error) {
@@ -661,7 +769,7 @@ function handleFetchError(request, error) {
 
 // Background sync for offline actions
 self.addEventListener('sync', (event) => {
-  console.log('🔄 Background sync:', event.tag);
+  swLog('🔄 Background sync:', event.tag);
   
   if (event.tag === 'retry-failed-downloads') {
     event.waitUntil(handleBackgroundSync());
@@ -670,7 +778,7 @@ self.addEventListener('sync', (event) => {
 
 async function handleBackgroundSync() {
   try {
-    console.log('🔄 Processing background sync...');
+    swLog('🔄 Processing background sync...');
     
     // Notify main app about sync opportunity
     const clients = await self.clients.matchAll();
@@ -685,7 +793,7 @@ async function handleBackgroundSync() {
       }
     });
     
-    console.log('✅ Background sync completed');
+    swLog('✅ Background sync completed');
   } catch (error) {
     console.error('❌ Background sync failed:', error);
   }
@@ -695,7 +803,7 @@ async function handleBackgroundSync() {
 self.addEventListener('message', (event) => {
   const { type, data } = event.data || {};
   
-  console.log('💬 SW message:', type);
+  swLog('💬 SW message:', type);
   
   switch (type) {
     case 'SKIP_WAITING':
@@ -770,7 +878,7 @@ self.addEventListener('message', (event) => {
       if (self.registration && self.registration.sync) {
         self.registration.sync.register('retry-failed-downloads')
           .then(() => {
-            console.log('✅ Background sync registered');
+            swLog('✅ Background sync registered');
           })
           .catch(error => {
             console.error('❌ Failed to register background sync:', error);
@@ -799,11 +907,11 @@ async function getCacheInfo() {
     
     // ✅ Return cached info if fresh (within TTL)
     if (cacheInfoCache.data && (now - cacheInfoCache.timestamp) < CACHE_INFO_TTL) {
-      console.log('⚡ Returning cached cache info (fast path)');
+      swLog('⚡ Returning cached cache info (fast path)');
       return cacheInfoCache.data;
     }
     
-    console.log('🔍 Computing fresh cache info (expensive)...');
+    swLog('🔍 Computing fresh cache info (expensive)...');
     
     const cacheNames = await caches.keys();
     const info = {
@@ -840,7 +948,7 @@ async function getCacheInfo() {
     cacheInfoCache.data = info;
     cacheInfoCache.timestamp = now;
     
-    console.log('✅ Cache info computed and cached');
+    swLog('✅ Cache info computed and cached');
     return info;
   } catch (error) {
     console.error('❌ Failed to get cache info:', error);
@@ -853,7 +961,7 @@ async function getCacheInfo() {
  */
 function invalidateCacheInfo() {
   if (cacheInfoCache.data) {
-    console.log('🔄 Cache info invalidated due to content change');
+    swLog('🔄 Cache info invalidated due to content change');
     cacheInfoCache.data = null;
     cacheInfoCache.timestamp = 0;
   }
@@ -863,18 +971,18 @@ async function clearSpecificCache(cacheName) {
   try {
     if (!cacheName) return false;
     
-    console.log('🗑️ Clearing cache:', cacheName);
+    swLog('🗑️ Clearing cache:', cacheName);
     const result = await caches.delete(cacheName);
     
     if (result) {
-      console.log('✅ Cache cleared:', cacheName);
+      swLog('✅ Cache cleared:', cacheName);
       // ✅ Invalidate cache info cache after clearing
       cacheInfoCache.data = null;
       cacheInfoCache.timestamp = 0;
       // ✅ Remove from cache instances map
       cacheInstances.delete(cacheName);
     } else {
-      console.log('⚠️ Cache not found:', cacheName);
+      swLog('⚠️ Cache not found:', cacheName);
     }
     
     return result;
@@ -895,4 +1003,4 @@ function getCacheType(cacheName) {
 
 // Performance monitoring logic moved to main fetch handler.
 
-console.log('🚀 Enhanced Service Worker v3.0.0 loaded');
+swLog('🚀 Enhanced Service Worker v3.0.0 loaded');

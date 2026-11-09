@@ -3,8 +3,7 @@
 // 📁 backend/api/movie-folder.js
 const express = require("express");
 const router = express.Router();
-const { getMovieDB } = require("../../utils/db");
-const { escapeLike } = require("../../utils/sqlLike");
+const { getMovieDB, parentPathSql, parentKey } = require("../../utils/db");
 
 /**
  * GET /api/movie-folder?key=V_MOVIE&path=...
@@ -18,10 +17,11 @@ router.get("/movie-folder", (req, res) => {
 
   const db = getMovieDB(dbkey);
 
-  // Query mọi item có path bắt đầu = relPath + "/"
+  // Chỉ lấy con trực tiếp qua index thư mục cha (PF3). Trước đây LIKE '<path>/%' đọc mọi bản
+  // ghi bên dưới (ở gốc là cả bảng) rồi mới lọc độ sâu bằng JS
   const items = db.prepare(
-    `SELECT * FROM folders WHERE path LIKE ? ESCAPE '\\' ORDER BY type DESC, name COLLATE NOCASE ASC`
-  ).all(relPath ? `${escapeLike(relPath)}/%` : "%");
+    `SELECT * FROM folders WHERE ${parentPathSql()} = ? COLLATE NOCASE ORDER BY type DESC, name COLLATE NOCASE ASC`
+  ).all(parentKey(relPath));
 
   // Chỉ trả về item có cấp ngay dưới (depth)
   const baseDepth = relPath ? relPath.split("/").filter(Boolean).length : 0;

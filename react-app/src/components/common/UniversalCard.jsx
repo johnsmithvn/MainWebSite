@@ -1,83 +1,61 @@
 // 📁 src/components/common/UniversalCard.jsx
-// 🎯 Universal card component cho manga, movie, music
+// 🎯 Card trong các slider (Ngẫu nhiên, Xem nhiều, Đọc tiếp) cho manga, movie, music.
+// Lớp bọc của ItemCard: giữ cách mở item theo từng loại, còn giao diện dùng chung với lưới.
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlay, FiFolder, FiMusic, FiHeart, FiEye, FiClock, FiPlus, FiTrash2 } from 'react-icons/fi';
-import { motion } from 'framer-motion';
+import { FiHeart, FiEye, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { useAuthStore } from '@/store';
 import { useRecentManager } from '@/hooks/useRecentManager';
 import { buildThumbnailUrl } from '@/utils/thumbnailUtils';
-import { 
-  DEFAULT_IMAGES, 
-  CARD_VARIANTS, 
-  IMAGE_STYLES, 
-  BUTTON_STYLES, 
-  BADGE_STYLES, 
-  TEXT_STYLES, 
-  LAYOUT, 
-  ANIMATIONS, 
-  ICON_SIZES, 
-  ASPECT_RATIOS 
-} from '@/constants';
+import ItemCard from '@/components/common/ItemCard';
+import { formatDuration } from '@/utils/formatters';
 
-const UniversalCard = ({ 
-  item, 
+const UniversalCard = ({
+  item,
   type = 'manga', // 'manga', 'movie', 'music'
   isFavorite = false,
-  showViews = false, 
-  showDeleteView = false, // New: show delete view button
+  showViews = false,
+  showDeleteView = false, // "Xoá lượt xem" trong bảng thao tác (hàng Xem nhiều)
   onToggleFavorite,
-  onDeleteView, // New: callback for delete view
-  variant = 'default', // 'default', 'compact', 'slider'
+  onDeleteView,
   className = '',
-  // New: control what appears in the bottom-left overlay: 'type' or 'views'
-  overlayMode = 'type'
+  // 'views': hiện lượt xem ở góc dưới phải ảnh
+  overlayMode = 'type',
+  // Dòng phụ thay cho nhãn loại (ví dụ tên thư mục cha)
+  subtitle,
+  // Badge góc trên trái: chuỗi hoặc { text, tone } (ví dụ hạng #1, "2 giờ trước")
+  badgeTopLeft,
 }) => {
   const navigate = useNavigate();
   const { sourceKey } = useAuthStore();
   const { addRecentItem } = useRecentManager(type);
-  
+
   // Internal state for favorite status to update UI immediately
   const [currentFavoriteState, setCurrentFavoriteState] = useState(Boolean(isFavorite));
-  
-  // Update internal state when prop changes
   useEffect(() => {
-    const booleanFavorite = Boolean(isFavorite);
-    setCurrentFavoriteState(booleanFavorite);
-    // Only log when there's an actual change to reduce spam
-    if (booleanFavorite !== currentFavoriteState) {
-      console.log('🔄 UniversalCard favorite updated:', { 
-        path: item?.path?.split('/').pop(), // Only show filename for cleaner logs
-        from: currentFavoriteState,
-        to: booleanFavorite
-      });
-    }
-  }, [isFavorite, item?.path]); // Add item.path as dependency
+    setCurrentFavoriteState(Boolean(isFavorite));
+  }, [isFavorite, item?.path]);
 
   // Normalize item data based on type
   const getItemData = () => {
     const baseName = item.name || item.path?.split('/').pop() || 'Unknown';
-    
+
     if (type === 'manga') {
       return {
         displayName: baseName === '__self__' ? 'Đọc ngay' : baseName,
         isReadable: item.name === '__self__' || (item.images && item.images.length > 0),
         isFolder: !item.images || item.images.length === 0,
-        thumbnail: getThumbnailUrl(),
-        typeIcon: item.images ? FiPlay : FiFolder,
-        typeLabel: item.images ? 'Đọc truyện' : 'Folder'
+        typeLabel: item.images ? 'Đọc truyện' : 'Thư mục'
       };
     } else if (type === 'movie') {
-      const isVideo = item.type === 'video' || item.type === 'File';
+      const isVideo = item.type === 'video' || item.type === 'file';
       const ext = isVideo ? item.path?.split('.').pop()?.toLowerCase() : null;
       return {
         displayName: baseName,
         isReadable: isVideo,
         isFolder: item.type === 'folder',
-        thumbnail: getThumbnailUrl(),
-        typeIcon: isVideo ? FiPlay : FiFolder,
-        typeLabel: isVideo ? `${ext || 'video'}` : 'Folder'
+        typeLabel: isVideo ? `${(ext || 'video').toUpperCase()}` : 'Thư mục'
       };
     } else if (type === 'music') {
       const isAudio = item.type === 'audio' || item.type === 'file';
@@ -87,72 +65,27 @@ const UniversalCard = ({
         displayName: baseName,
         isReadable: isAudio || isPlaylist,
         isFolder: item.type === 'folder' && !isPlaylist,
-        thumbnail: getThumbnailUrl(),
-        typeIcon: isAudio || isPlaylist ? FiMusic : FiFolder,
-        typeLabel: isPlaylist ? 'Playlist' : isAudio ? `${ext || 'audio'}` : 'Folder'
+        typeLabel: isPlaylist ? 'Playlist' : isAudio ? `${(ext || 'audio').toUpperCase()}` : 'Thư mục'
       };
     }
-    
-    return {
-      displayName: baseName,
-      isReadable: false,
-      isFolder: true,
-      thumbnail: getThumbnailUrl(),
-      typeIcon: FiFolder,
-      typeLabel: 'Unknown'
-    };
-  };
 
-  // Get thumbnail URL using utility
-  const getThumbnailUrl = () => {
-    return buildThumbnailUrl(item, type, sourceKey);
+    return { displayName: baseName, isReadable: false, isFolder: true, typeLabel: '' };
   };
 
   // Handle click navigation
-  const handleClick = async () => {
+  const handleOpen = () => {
     const encodedPath = encodeURIComponent(item.path);
-    
+
     // Add to recent items before navigation
     try {
       addRecentItem(item);
-      console.log('➕ Added to recent:', { type, name: item.name, path: item.path });
     } catch (error) {
       console.warn('Failed to add to recent:', error);
     }
-    
-    // Increase view count for content items (not folders)
+    // NOTE: lượt xem được đếm ở MangaReader / MoviePlayer / MusicPlayer, không đếm ở đây (tránh đếm 2 lần)
+
     if (type === 'manga') {
-      // NOTE: View count is handled by MangaReader when the reader opens
-      // Don't increase view count here to avoid counting twice
-    } else if (type === 'movie' && (item.type === 'video' || item.type === 'file')) {
-      // NOTE: View count is handled by MoviePlayer component
-      // Don't increase view count here to avoid duplicate calls
-      console.log('🎬 Movie click - view will be increased by MoviePlayer');
-      /*
-      try {
-        // Use direct fetch for movie-specific endpoint
-        await fetch('/api/increase-view/movie', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            key: sourceKey,
-            path: item.path
-          })
-        });
-        console.log('📈 View count increased for movie:', item.path);
-      } catch (error) {
-        console.warn('Failed to increase view count for movie:', error);
-      }
-      */
-    } else if (type === 'music' && (item.type === 'audio' || item.type === 'file' || item.isPlaylist)) {
-      // NOTE: View count for music is handled inside MusicPlayer on playback to ensure exactly-once semantics
-      // Avoid calling increase-view here to prevent duplicate counts on initial navigation
-      // console.log('🎵 Music click - view will be increased by MusicPlayer on play');
-    }
-    
-    // Navigate based on type
-    if (type === 'manga') {
-      // ✅ Handle PDF files - navigate to reader with type=pdf flag
+      // PDF: mở trình đọc với cờ type=pdf
       if (item.type === 'pdf') {
         const readerParams = new URLSearchParams();
         readerParams.set('path', item.path);
@@ -162,7 +95,6 @@ const UniversalCard = ({
         }
         navigate(`/manga/reader?${readerParams.toString()}`);
       } else if (item.name === '__self__' || (item.images && item.images.length > 0)) {
-        // Navigate to reader with return URL for proper back navigation
         const readerParams = new URLSearchParams();
         readerParams.set('path', item.path);
         if (window.location.pathname === '/manga') {
@@ -170,229 +102,94 @@ const UniversalCard = ({
         }
         navigate(`/manga/reader?${readerParams.toString()}`);
       } else {
-        // Navigate to manga folder
         navigate(`/manga?path=${encodedPath}`);
       }
     } else if (type === 'movie') {
       const isVideo = item.type === 'video' || item.type === 'file';
       if (isVideo) {
-        // Navigate to movie player with state (stable URL)
         navigate('/movie/player', { state: { file: item.path, key: sourceKey } });
       } else {
-        // Navigate to movie folder
         navigate(`/movie?path=${encodedPath}`);
       }
     } else if (type === 'music') {
       const isAudio = item.type === 'audio' || item.type === 'file';
-      const isPlaylist = item.isPlaylist;
-      if (isPlaylist) {
-        // Open player with playlist context, keep URL stable
+      if (item.isPlaylist) {
         navigate('/music/player', { state: { kind: 'playlist', playlist: item.path, key: sourceKey } });
       } else if (isAudio) {
         const folderPath = item.path?.split('/').slice(0, -1).join('/') || '';
-        // Pass both file and its parent folder so player can build playlist correctly
         navigate('/music/player', { state: { kind: 'audio', file: item.path, playlist: folderPath, key: sourceKey } });
       } else {
-        // For music folders clicked from sliders -> open directly as playlist in player
+        // Thư mục nhạc trong slider: phát cả thư mục trong player
         navigate('/music/player', { state: { kind: 'folder', playlist: item.path, key: sourceKey } });
       }
     }
   };
 
-  const handleFavoriteClick = async (e) => {
-    e.stopPropagation();
-    
-    // Update UI immediately for responsive feel
-    const newFavoriteState = !currentFavoriteState;
-    setCurrentFavoriteState(newFavoriteState);
-    
-    // Call parent callback if provided
+  const toggleFavorite = async () => {
+    const previous = currentFavoriteState;
+    setCurrentFavoriteState(!previous); // cập nhật giao diện ngay
     if (onToggleFavorite) {
       try {
         await onToggleFavorite(item);
-        console.log('✅ Favorite toggle completed via parent callback');
       } catch (error) {
-        // If error, revert UI state
-        setCurrentFavoriteState(currentFavoriteState);
+        setCurrentFavoriteState(previous);
         console.error('❌ Error in parent favorite toggle, reverting UI:', error);
       }
     }
   };
 
-  const handleDeleteViewClick = async (e) => {
-    e.stopPropagation();
-    
-    if (!onDeleteView) return;
-    
-    try {
-      await onDeleteView(item);
-      console.log('✅ Delete view completed');
-    } catch (error) {
-      console.error('❌ Error deleting view:', error);
-    }
-  };
-
   const itemData = getItemData();
-  const TypeIcon = itemData.typeIcon;
+  const views = item?.views ?? item?.viewCount ?? item?.count;
+  const durationSec = Number(item?.duration);
+  const durationLabel = Number.isFinite(durationSec) && durationSec > 0 ? formatDuration(durationSec) : '';
 
-  const cardVariants = {
-    default: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
-    compact: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
-    slider: 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200',
-    'compact-slider': 'bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200'
-  };
+  // Góc dưới phải: lượt xem (hàng Xem nhiều / Ngẫu nhiên) hoặc thời lượng
+  const badgeBottomRight = (overlayMode === 'views' || showViews) && views !== undefined
+    ? { text: Number(views).toLocaleString('vi-VN'), icon: FiEye }
+    : durationLabel || undefined;
 
-  // Aspect ratio based on type
-  const getAspectRatio = () => {
-    if (type === 'music') return ASPECT_RATIOS.music;
-    if (type === 'movie') return ASPECT_RATIOS.movie;
-    return ASPECT_RATIOS.manga; // manga default
-  };
+  // Thao tác trong bảng ⋯ / nhấn giữ / chuột phải
+  const actions = [
+    type !== 'music' && onToggleFavorite && {
+      key: 'favorite',
+      label: currentFavoriteState ? 'Bỏ yêu thích' : 'Thêm vào yêu thích',
+      icon: FiHeart,
+      onClick: toggleFavorite,
+    },
+    type === 'music' && {
+      key: 'playlist',
+      label: 'Thêm vào playlist',
+      icon: FiPlus,
+      onClick: () => window.dispatchEvent(new CustomEvent('openPlaylistModal', { detail: { item } })),
+    },
+    showDeleteView && onDeleteView && {
+      key: 'delete-view',
+      label: 'Xoá lượt xem',
+      icon: FiTrash2,
+      danger: true,
+      onClick: () => onDeleteView(item),
+    },
+  ];
 
   return (
-    <motion.div
-      className={`
-        ${LAYOUT.container}
-        ${CARD_VARIANTS[variant]}
-        ${className}
-      `}
-      /* Avoid horizontal scaling that misaligns total width: dùng translateY nhẹ cho feedback */
-      whileHover={ANIMATIONS.cardHover}
-      whileTap={ANIMATIONS.cardTap}
-      onClick={handleClick}
-    >
-      {/* Thumbnail */}
-      <div className={`relative ${getAspectRatio()} overflow-hidden`}>
-        <img
-          src={itemData.thumbnail}
-          alt={itemData.displayName}
-          className={IMAGE_STYLES.base}
-          loading="lazy"
-          decoding="async"
-          onError={(e) => {
-            if (type === 'movie') {
-              const isVideo = item.type === 'video' || item.type === 'file';
-              e.target.src = isVideo ? DEFAULT_IMAGES.video : DEFAULT_IMAGES.folder;
-            } else if (type === 'music') {
-              const isAudio = item.type === 'audio' || item.type === 'file';
-              e.target.src = isAudio ? DEFAULT_IMAGES.music : DEFAULT_IMAGES.folder;
-            } else {
-              e.target.src = DEFAULT_IMAGES.cover;
-            }
-          }}
-        />
-        
-        {/* Play overlay for readable content */}
-        {itemData.isReadable && (
-          <div className={IMAGE_STYLES.overlay}>
-            <TypeIcon className={ICON_SIZES.playOverlay} />
-          </div>
-        )}
-
-        {/* Favorite button (hidden for music) */}
-        {type !== 'music' && (
-          <motion.button
-            className={`
-              ${BUTTON_STYLES.favorite.base}
-              ${currentFavoriteState 
-                ? BUTTON_STYLES.favorite.active
-                : BUTTON_STYLES.favorite.inactive
-              }
-            `}
-            onClick={handleFavoriteClick}
-            whileHover={ANIMATIONS.buttonHover}
-            whileTap={ANIMATIONS.buttonTap}
-          >
-            <FiHeart className={`${ICON_SIZES.small} ${currentFavoriteState ? 'fill-current' : ''}`} />
-          </motion.button>
-        )}
-
-        {/* Delete view button */}
-        {showDeleteView && (
-          <motion.button
-            className={BUTTON_STYLES.deleteView}
-            whileHover={ANIMATIONS.buttonHover}
-            whileTap={ANIMATIONS.buttonTap}
-            onClick={handleDeleteViewClick}
-            title="Xóa lượt xem"
-          >
-            <FiTrash2 className={ICON_SIZES.small} />
-          </motion.button>
-        )}
-
-    {/* Add to playlist button (music only, top-right) */}
-        {type === 'music' && (
-          <motion.button
-            className={BUTTON_STYLES.addPlaylist}
-            onClick={(e) => {
-              e.stopPropagation();
-              window.dispatchEvent(new CustomEvent('openPlaylistModal', { detail: { item } }));
-            }}
-            whileHover={ANIMATIONS.buttonHover}
-            whileTap={ANIMATIONS.buttonTap}
-            aria-label="Thêm vào playlist"
-          >
-            <FiPlus className={ICON_SIZES.addPlaylist} />
-          </motion.button>
-        )}
-
-  {/* Overlay: type badge top-left for music; otherwise bottom-left */}
-  <div className={`absolute ${LAYOUT.badgePositions[type] || LAYOUT.badgePositions.default}`}>
-          {overlayMode === 'views' ? (
-            <div className={BADGE_STYLES.view}>
-              <FiEye className={ICON_SIZES.extraSmall} />
-              <span>{(item?.views ?? item?.viewCount ?? item?.count ?? 0)}</span>
-            </div>
-          ) : (
-            <div className={BADGE_STYLES.type}>
-              <TypeIcon className={ICON_SIZES.extraSmall} />
-              <span>{itemData.typeLabel}</span>
-            </div>
-          )}
-        </div>
-
-        {/* View count moved to bottom info section */}
-      </div>
-
-      {/* Content */}
-      <div className={LAYOUT.cardPadding[variant] || LAYOUT.cardPadding.default}>
-        <h3 className={TEXT_STYLES.title[variant] || TEXT_STYLES.title.default}>
-          {itemData.displayName}
-        </h3>
-        {/* Additional info */}
-        <div className={TEXT_STYLES.metadata[variant] || TEXT_STYLES.metadata.default}>
-          <span className={TEXT_STYLES.typeLabel}>{itemData.typeLabel}</span>
-          
-          {/* Priority: View count > Duration > Size */}
-          {showViews && overlayMode !== 'views' && (item?.views ?? item?.viewCount ?? item?.count) !== undefined ? (
-            <span className={TEXT_STYLES.viewCount}>
-              <FiEye className={ICON_SIZES.tiny} />
-              <span>{item?.views ?? item?.viewCount ?? item?.count ?? 0}</span>
-            </span>
-          ) : item.duration ? (
-            <span>{formatDuration(item.duration)}</span>
-          ) : item.size ? (
-            <span>{formatSize(item.size)}</span>
-          ) : null}
-        </div>
-      </div>
-    </motion.div>
+    <ItemCard
+      type={type}
+      title={itemData.displayName}
+      thumbnail={buildThumbnailUrl(item, type, sourceKey)}
+      thumbKind={type === 'manga' ? (item.type === 'pdf' ? 'pdf' : 'manga') : itemData.isFolder ? 'folder' : undefined}
+      isFolder={type !== 'manga' && itemData.isFolder}
+      subtitle={subtitle || itemData.typeLabel}
+      badgeTopLeft={badgeTopLeft}
+      badgeBottomRight={badgeBottomRight}
+      favorite={type !== 'music' && currentFavoriteState}
+      playable={type !== 'manga' && itemData.isReadable}
+      onOpen={handleOpen}
+      actions={actions}
+      sheetSubtitle={item.path}
+      variant="slider"
+      className={`w-full ${className}`}
+    />
   );
-};
-
-// Helper functions
-const formatSize = (bytes) => {
-  if (!bytes) return '';
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
-};
-
-const formatDuration = (seconds) => {
-  if (!seconds) return '';
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
 export default UniversalCard;
