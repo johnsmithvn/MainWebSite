@@ -144,7 +144,7 @@ Bố cục v1 trên mobile, từ trên xuống: header (🎵, ô tìm kiếm, �
 ### 4.7. Hiệu năng và code
 
 - Danh sách playlist được tải lại **mỗi lần đổi bài** (truyền `songPath`) ([MusicPlayer.jsx:922-937](../react-app/src/pages/music/MusicPlayer.jsx#L922)).
-- Lượt nghe tăng thêm mỗi lần tạm dừng rồi phát lại (U7 trong [UI-CONSISTENCY-REPORT.md](UI-CONSISTENCY-REPORT.md)); "Recent" của music ghi sai trường (U5).
+- Lượt nghe tăng thêm mỗi lần tạm dừng rồi phát lại (U7 trong [UI-CONSISTENCY-REPORT.md](UI-CONSISTENCY-REPORT.md) — chủ ý của tác giả theo commit `e5c9f9e`, giữ nguyên); "Recent" của music ghi sai trường (U5).
 - Logic Play/Pause, Shuffle, Repeat, Mute được **chép 4 lần** (MusicPlayer, MusicPlayerV2, PlayerFooter, FullPlayerModal). v1 và v2 trùng khoảng 60% code (load playlist/folder, kéo-thả, audio events).
 - `PlaylistDetail.jsx` không được gắn route nào → code chết.
 

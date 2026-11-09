@@ -120,9 +120,9 @@ Lưu ý thêm: cài đặt Recent (bật/tắt, số lượng) nằm trong **`ma
 | | Manga | Movie | Music |
 |---|---|---|---|
 | Khi nào tính 1 lượt | Ngay khi **mở** reader | Sau khi xem **≥ 3 giây** | **Mỗi lần sự kiện `play`** (chống trùng chỉ 1 giây) |
-| Tạm dừng rồi phát tiếp | — | Không tính thêm | **Tính thêm 1 lượt** (U7) |
+| Tạm dừng rồi phát tiếp | — | Không tính thêm | **Tính thêm 1 lượt** (U7 — chủ ý của tác giả) |
 | Gọi API bằng | `apiService` (có token) | `fetch()` trần (không token) | `fetch()` trần (không token) |
-| Vị trí | [MangaReader.jsx:170](../react-app/src/pages/manga/MangaReader.jsx#L170) | [MoviePlayer.jsx:291](../react-app/src/pages/movie/MoviePlayer.jsx#L291) | [MusicPlayer.jsx:249](../react-app/src/pages/music/MusicPlayer.jsx#L249), [MusicPlayerV2.jsx:115](../react-app/src/pages/music/MusicPlayerV2.jsx#L115) |
+| Vị trí | [MangaReader.jsx:170](../react-app/src/pages/manga/MangaReader.jsx#L170) | [MoviePlayer.jsx:291](../react-app/src/pages/movie/MoviePlayer.jsx#L291) | [MusicPlayerProvider.jsx:119](../react-app/src/components/music/MusicPlayerProvider.jsx#L119) (dùng chung cho player v1 và v2) |
 
 Vì Movie/Music dùng `fetch()` không gắn `x-secure-token`, **nguồn được bảo vệ bằng mật khẩu sẽ không bao giờ tăng view** (đã ghi ở ISSUES **B6**). Top Views / Most Played của nguồn đó sẽ trống.
 
@@ -153,10 +153,10 @@ Vì Movie/Music dùng `fetch()` không gắn `x-secure-token`, **nguồn đượ
 | **U4** | 🟡 | MusicHome tải dữ liệu với **bất kỳ** `sourceKey` (Manga/Movie kiểm tra prefix). Đang ở nguồn `ROOT_*`/`V_*`/`MEDIA_*` rồi bấm "Music" ở sidebar → gọi API music với key sai → lỗi hoặc danh sách rỗng (*cần kiểm tra* thông báo hiển thị) | [MusicHome.jsx:111](../react-app/src/pages/music/MusicHome.jsx#L111) | Thêm `sourceKey.startsWith('M_')` như 2 trang kia | ✅ Đã sửa |
 | **U5** | 🟡 | Recent của Music ghi `timestamp` nhưng slider đọc `lastViewed` → mất nhãn "x phút trước", thứ tự sai khi trộn với mục ghi từ slider; giới hạn 50 thay vì cài đặt; bỏ qua công tắc tắt Recent | [useMusicData.js:142-146](../react-app/src/hooks/useMusicData.js#L142), [useRecentItems.js:83](../react-app/src/hooks/useRecentItems.js#L83) | Cho Music dùng `useRecentManager('music')` (hoặc ghi `lastViewed`) | Chưa sửa |
 | **U6** | 🟢 | Mở manga từ slider bị tính **2 lượt xem** (UniversalCard + Reader) | [UniversalCard.jsx:124-127](../react-app/src/components/common/UniversalCard.jsx#L124) | Bỏ lời gọi trong UniversalCard — Reader đã đếm, giống cách Movie/Music đang làm | ✅ Đã sửa |
-| **U7** | 🟢 | Music tính thêm 1 lượt mỗi lần tạm dừng rồi phát lại | [MusicPlayer.jsx:249-281](../react-app/src/pages/music/MusicPlayer.jsx#L249), [MusicPlayerV2.jsx:115-135](../react-app/src/pages/music/MusicPlayerV2.jsx#L115) | Đánh dấu "đã đếm" theo bài như MoviePlayer | Chưa sửa |
+| **U7** | 🟢 | Music tính thêm 1 lượt mỗi lần tạm dừng rồi phát lại | [MusicPlayerProvider.jsx:119-145](../react-app/src/components/music/MusicPlayerProvider.jsx#L119) | *(Nếu muốn đổi)* Đánh dấu "đã đếm" theo bài như MoviePlayer — số lượt nghe sẽ thấp hơn trước | ⚪ Giữ nguyên — **chủ ý của tác giả**: commit `e5c9f9e` (2025-08-09) ghi *"Removed viewedTracksRef to allow counting on every playback start"* |
 | **U8** | 🟢 | Manga và Media truyền `isLoading` cho `DeleteConfirmModal`, nhưng modal chỉ nhận `isDeleting` → khi đang xoá nút không bị khoá, không có trạng thái chờ, bấm được nhiều lần | [MangaHome.jsx:698](../react-app/src/pages/manga/MangaHome.jsx#L698), [MediaHome.jsx:449](../react-app/src/pages/media/MediaHome.jsx#L449), [DeleteConfirmModal.jsx:17](../react-app/src/components/common/DeleteConfirmModal.jsx#L17) | Đổi prop thành `isDeleting` | ✅ Đã sửa |
 | **U9** | 🟠 | *(Đính chính: bản đầu ghi "Movie/Music xoá không báo gì" — sai, store của hai loại này có gọi toast.)* Vấn đề thật có 2 lớp: (1) component `<Toast />` hiển thị `useUIStore().showToast` **chỉ được gắn trong MoviePlayer**, nên ~130 lời gọi `showToast` ở mọi trang khác (xoá, favorite Media, playlist, lỗi tải…) **không bao giờ hiện**; (2) store Movie/Music đọc `result.message`/`result.type` trên response axios thay vì `result.data.*` → toast thành công rỗng, lỗi chỉ hiện chuỗi chung của axios | [App.jsx:69](../react-app/src/App.jsx#L69), [store/index.js:779-808](../react-app/src/store/index.js#L779), [:1005-1027](../react-app/src/store/index.js#L1005) | Gắn `<Toast />` một lần ở `App.jsx` (bỏ bản trong MoviePlayer); đọc `result.data`, lỗi lấy `err.response.data.error` | ✅ Đã sửa |
-| **U10** | 🟢 | Movie/Music về trang 1 sau khi thoát player (trang lưu trong state), Manga thì giữ trang | [MovieHome.jsx:39](../react-app/src/pages/movie/MovieHome.jsx#L39), [MusicHome.jsx:51](../react-app/src/pages/music/MusicHome.jsx#L51) | Lưu `page` lên URL như Manga | Chưa sửa |
+| **U10** | 🟢 | Movie/Music về trang 1 sau khi thoát player (trang lưu trong state), Manga thì giữ trang | [MovieHome.jsx:39](../react-app/src/pages/movie/MovieHome.jsx#L39), [MusicHome.jsx:51](../react-app/src/pages/music/MusicHome.jsx#L51) | Lưu `page` lên URL như Manga | ✅ Đã sửa 2026-11-05 — `useFolderBrowser` lưu `page/size/sort` trên URL (xem [CARD-REDESIGN-PROPOSAL.md](CARD-REDESIGN-PROPOSAL.md)) |
 | **U11** | 🟢 | `RecentSlider` lấy store theo `type === 'movie' ? movieStore : mangaStore` → Music dùng nhầm store Manga (hiện chưa lộ ra vì card music ẩn ❤️). Cùng file có `return null` **trước** khi gọi hook `useRecentItems` → vi phạm Rules of Hooks khi bật/tắt Recent tracking lúc đang ở trang Manga | [RecentSlider.jsx:57](../react-app/src/components/common/RecentSlider.jsx#L57), [:67-75](../react-app/src/components/common/RecentSlider.jsx#L67) | Chọn store giống `RandomSlider`; đưa điều kiện vào `enabled` của hook | Chưa sửa |
 
 Đã có trong [ISSUES-REPORT.md](ISSUES-REPORT.md): **B6** (fetch không token → view movie/music thất bại với nguồn bảo mật), **B7** (MangaReader gửi `increase-view` sai payload khi thêm vào hàng đợi tải).
@@ -177,16 +177,18 @@ Vì Movie/Music dùng `fetch()` không gắn `x-secure-token`, **nguồn đượ
 
 ### Bước 1 — Sửa nhanh (mỗi mục vài dòng, không đổi kiến trúc)
 
-U1, U2, U3, U4, U8, U9 và U6 — ✅ **đã làm 2026-11-04**. Còn lại cho bước sau: U5, U7, U10, U11.
+U1, U2, U3, U4, U8, U9 và U6 — ✅ **đã làm 2026-11-04**. U10 — ✅ đã làm 2026-11-05 (cùng đợt gộp khung chung). U7 giữ nguyên vì là chủ ý. Còn lại: U5, U11.
 
 ### Bước 2 — Thống nhất hành vi (vẫn giữ 3 trang riêng)
 
 - Một hook ghi Recent duy nhất: `useRecentManager(type)` cho cả 3 loại, luôn ghi `lastViewed` (sửa U5, xoá `useRecentMoviesManager`/`useRecentMusicManager` — `useRandomMovies`, `useTopViewMovies`, `useRandomMusic`, `useTopViewMusic` hiện không ai dùng).
-- Một quy tắc đếm view: đếm ở player/reader, 1 lần cho mỗi lần mở, qua `apiService` (sửa U6, U7, B6).
-- Lưu `page` và `view` (grid/list) lên URL/localStorage cho cả 3 loại (sửa U10).
+- Một quy tắc đếm view: đếm ở player/reader, 1 lần cho mỗi lần mở, qua `apiService` (sửa U6, B6; U7 là chủ ý của tác giả nên Music vẫn đếm mỗi lần bắt đầu phát).
+- Lưu `page` và `view` (grid/list) lên URL/localStorage cho cả 3 loại (sửa U10 — ✅ đã làm qua `useFolderBrowser`).
 - Thống nhất: tìm kiếm bỏ dấu, thư mục luôn lên đầu, sắp xếp tự nhiên, toast khi xoá, cùng component loading/error, một bộ icon, một ngôn ngữ hiển thị.
 
 ### Bước 3 — Gộp khung chung (refactor)
+
+> ✅ **Đã làm 2026-11-05** theo [CARD-REDESIGN-PROPOSAL.md](CARD-REDESIGN-PROPOSAL.md): `ItemCard` dùng chung + `BrowseLayout`/`useFolderBrowser` cho Manga/Movie/Music. Phần trình phát nhạc chung xem [MUSIC-UX-REVIEW.md](MUSIC-UX-REVIEW.md) (P1).
 
 ```
 components/browse/
