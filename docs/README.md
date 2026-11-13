@@ -1,56 +1,66 @@
 # 📚 Mục lục tài liệu — MainWebSite
 
-> Cập nhật 2026-11-08 (sau khi PR #122 đã merge vào `main`). Mỗi tài liệu được gắn trạng thái sau khi đối chiếu với code. **Cài đặt lần đầu: đọc [../readme.md](../readme.md).**
+> **Cập nhật:** 2026-11-13. Toàn bộ tài liệu đã được rà soát và đối chiếu với mã nguồn thực tế.  
+> **Tài liệu cài đặt & sử dụng lần đầu: đọc [../readme.md](../readme.md).**
 >
-> ✅ **Hiện hành** — khớp với code · ⚠️ **Lỗi thời một phần** — có banner ghi rõ phần sai · 📜 **Lịch sử** — ghi lại một đợt làm việc đã xong · 📋 **Đề xuất** — kế hoạch chưa thực hiện
+> 🏷️ **Quy ước trạng thái:**  
+> ✅ **Hiện hành** — Khớp với code thực tế, tài liệu tham khảo chính.  
+> ⚠️ **Lỗi thời một phần** — Có thông tin lệch so với code mới (có banner cảnh báo cụ thể ở đầu file).  
+> 📦 **Lưu trữ (Archive)** — Bản ghi lịch sử, sprint cũ đã hoàn thành, hoặc đề xuất chưa thực hiện.
 
-## Bắt đầu từ đây
+---
 
-| Tài liệu | Trạng thái | Nội dung |
-|----------|-----------|----------|
-| [../readme.md](../readme.md) | ✅ | **Hướng dẫn cài đặt** (viết lại 2026-11-04): yêu cầu (Node 20/≥22), cài nhanh 5 bước, giải thích từng biến `.env`, cho thiết bị khác truy cập, dev/prod, quét dữ liệu lần đầu, Tailscale + HTTPS, chứng chỉ Android, bảng xử lý sự cố |
-| [SYSTEM-REPORT.md](SYSTEM-REPORT.md) | ✅ | Báo cáo tổng quan toàn hệ thống: kiến trúc, backend, DB, scanner, **danh mục API đầy đủ**, React app, offline, build |
-| [ISSUES-REPORT.md](ISSUES-REPORT.md) | ✅ | 57 issue phân theo mức độ (3 critical, 8 high) kèm vị trí code và lộ trình sửa — đã sửa toàn bộ Critical + High (S1–S7, D1, B1, B2, P1), nhóm dữ liệu (B12, B13, D2, D3, D4) cùng B5, B17, B18, B24, C8, C9 — 2026-11-04 (PR #122); B3, B7–B10, S8, S9 — 2026-11-08 |
-| [PERFORMANCE-CACHE-REPORT.md](PERFORMANCE-CACHE-REPORT.md) | ✅ | Audit cache & hiệu năng (2026-11-05): bản đồ 6 tầng cache, số đo bundle (1 MB JS, 288 kB gzip) và SQLite (WAL nhanh ~68×), 18 issue mới PF1–PF18 + đối chiếu P2/B10/B11/B14/B15 còn tồn, lộ trình 4 bước — **đã sửa và test cả 4 bước** (mục 7–8: bug hay cố ý, đánh đổi, kết quả test cũ/mới; còn P3, P4 và phần gộp tầng cache của PF14) |
-| [DEAD-CODE-REPORT.md](DEAD-CODE-REPORT.md) | ✅ | ~6.700 dòng code không dùng, cách dọn an toàn |
-| [UI-CONSISTENCY-REPORT.md](UI-CONSISTENCY-REPORT.md) | ✅ | So sánh UI/UX và logic giữa Manga · Movie · Music · Media, 11 bug do lệch nhau (U1–U11; còn U5, U7, U10), đề xuất gộp khung chung (chưa làm) |
-| [MUSIC-UX-REVIEW.md](MUSIC-UX-REVIEW.md) | ✅ | Đánh giá Music Player v1 (Spotify) & v2 (Zing): mobile, kéo-thả, thanh tua, trạng thái tải, 14 lỗi (M1–M14), lộ trình P0–P2 — nhóm P0 và P1 (trình phát toàn cục, mini-player, Media Session, SeekBar, skeleton) đã làm và kiểm tra lại (2026-11-04) |
-| [CARD-REDESIGN-PROPOSAL.md](CARD-REDESIGN-PROPOSAL.md) | ✅ | Thiết kế lại card 4 loại và bố cục trang duyệt: tỉ lệ ảnh, lưới, tên 2 dòng, badge, thao tác, skeleton, ảnh lỗi, dark mode — **đã làm hết P1–P6** (2026-11-05): một `ItemCard` cho mọi loại, khung `BrowseLayout` + `useFolderBrowser` dùng chung cho Manga/Movie/Music (thanh công cụ dính, trang lưu trên URL), một bảng màu slate, Media/Album/Playlist/Yêu thích dùng chung card và lưới. Bản xem: [CARD-REDESIGN-PREVIEW.html](CARD-REDESIGN-PREVIEW.html) |
+## 🌟 1. Tài liệu kiến trúc & hệ thống chính (Nên đọc)
 
-## Backend & dữ liệu (`docs/`)
+| Tài liệu | Trạng thái | Nội dung tóm tắt |
+|----------|:----------:|------------------|
+| [../readme.md](../readme.md) | ✅ | **Hướng dẫn cài đặt & vận hành**: Yêu cầu môi trường, cài nhanh 5 bước, cấu hình `.env`, Tailscale + HTTPS, xử lý sự cố. |
+| [SYSTEM-REPORT.md](SYSTEM-REPORT.md) | ✅ | **Báo cáo tổng quan toàn hệ thống (Single Source of Truth)**: Kiến trúc tổng thể, Express backend, SQLite WAL, Scanners, danh mục API đầy đủ, React app, Offline PWA. |
+| [ISSUES-REPORT.md](ISSUES-REPORT.md) | ✅ | Bảng theo dõi 57 issue (Critical, High, Medium, Low) kèm vị trí code cụ thể và lộ trình sửa đổi. Đã cập nhật các đợt fix bảo mật (S1–S9, D1–D4, B1–B10, P1, C8, C9). |
+| [PERFORMANCE-CACHE-REPORT.md](PERFORMANCE-CACHE-REPORT.md) | ✅ | Báo cáo kiểm toán cache & hiệu năng: Bản đồ 6 tầng cache, kết quả benchmark SQLite WAL (~68×), code splitting và lộ trình tối ưu 4 bước đã hoàn tất. |
+| [DEAD-CODE-REPORT.md](DEAD-CODE-REPORT.md) | ✅ | Báo cáo chi tiết ~6.700 dòng dead code (backend & frontend) kèm vị trí và mức độ an toàn khi dọn dẹp. |
+| [UI-CONSISTENCY-REPORT.md](UI-CONSISTENCY-REPORT.md) | ✅ | So sánh UI/UX và logic giữa 4 phân hệ Manga · Movie · Music · Media (lỗi bất đồng bộ U1–U11). |
+| [MUSIC-UX-REVIEW.md](MUSIC-UX-REVIEW.md) | ✅ | Đánh giá Music Player v1 (Spotify) & v2 (Zing). Ghi nhận hoàn thành P0 & P1 (Global player, mini-player, Media Session API, thanh tua kéo được). |
+| [CARD-REDESIGN-PROPOSAL.md](CARD-REDESIGN-PROPOSAL.md) | ✅ | Thiết kế lại hệ thống card: Đã hoàn tất P1–P6, đưa vào sử dụng `ItemCard` và khung `BrowseLayout` dùng chung. |
+| [BACKEND-ANALYSIS.md](BACKEND-ANALYSIS.md) | ✅ | Phân tích chi tiết backend: Express 5, route, middleware, `pathSafety`, whitelist IP và cơ chế streaming. |
+| [MEDIA-GALLERY.md](MEDIA-GALLERY.md) | ✅ | Tài liệu chuẩn của Media Gallery: API, schema DB, timeline, albums, lightbox và các loại file hỗ trợ. |
+| [MEDIA-GALLERY-QUICKSTART.md](MEDIA-GALLERY-QUICKSTART.md) | ✅ | Hướng dẫn nhanh cho Media Gallery: Cấu hình nguồn, tạo thumbnail, các chế độ xem và thao tác ảnh. |
 
-| Tài liệu | Trạng thái | Ghi chú |
-|----------|-----------|---------|
-| [BACKEND-ANALYSIS.md](BACKEND-ANALYSIS.md) | ✅ | Đã cập nhật cây thư mục, API, cấu hình, lớp bảo mật |
-| [DATABASE-SCAN-ANALYSIS.md](DATABASE-SCAN-ANALYSIS.md) | ⚠️ | Viết trước khi có media scanner và tuỳ chọn `shallow` |
-| [PARTIAL-SCAN-SUMMARY.md](PARTIAL-SCAN-SUMMARY.md) | ⚠️ | Viết trước khi có `shallow` — banner đầu file mô tả hành vi hiện tại |
-| [Scan-music.md](Scan-music.md) | 📜 | Phân tích luồng scan music 12/2025 |
-| [MEDIA-GALLERY.md](MEDIA-GALLERY.md) | ✅ | Tài liệu chính của Media Gallery: API, schema, route, định dạng file (đối chiếu lại 2026-11-04) |
-| [MEDIA-GALLERY-QUICKSTART.md](MEDIA-GALLERY-QUICKSTART.md) | ✅ | Viết lại 2026-11-04: khai báo nguồn, thumbnail, quét, các chế độ xem, thao tác, xử lý sự cố |
-| [MEDIA-GALLERY-SUMMARY.md](MEDIA-GALLERY-SUMMARY.md) | 📜 | Tổng kết lúc hoàn thành 11/2025 |
-| [MEDIA-IMPLEMENTATION-SUMMARY.md](MEDIA-IMPLEMENTATION-SUMMARY.md) | 📜 | Danh sách file tạo lúc triển khai 11/2025 |
-| [FRONTEND_V2-ANALYSIS.md](FRONTEND_V2-ANALYSIS.md) | ⚠️ | Phân tích React app 09/2025 — thiếu media, downloads, PDF |
-| [FRONTEND_V1-ANALYSIS.md](FRONTEND_V1-ANALYSIS.md) | 📜 | Frontend legacy |
+---
 
-## React app (`react-app/docs/`)
+## 📱 2. Tài liệu React App (`react-app/docs/`)
 
-| Tài liệu | Trạng thái | Ghi chú |
-|----------|-----------|---------|
-| [README.md](../react-app/docs/README.md) | ✅ | Tính năng, cấu trúc, env (đã sửa `VITE_ALLOWED_HOSTS`, cảnh báo `NODE_ENV`), scripts, auth, offline |
-| [OFFLINE-GUIDE.md](../react-app/docs/OFFLINE-GUIDE.md) | ✅ | Đã bổ sung download queue, `media-thumbnails-v1` |
-| [SERVICE-WORKER-ANALYSIS.md](../react-app/docs/SERVICE-WORKER-ANALYSIS.md) | ✅ | Cập nhật lên v3.1.0, ghi rõ vấn đề B14/B15 |
-| [STORAGE-QUOTA-MANAGEMENT.md](../react-app/docs/STORAGE-QUOTA-MANAGEMENT.md) | ✅ | Ngưỡng 50MB desktop / 25MB mobile |
-| [PLAYLIST-SIDEBAR-RESPONSIVE.md](../react-app/docs/PLAYLIST-SIDEBAR-RESPONSIVE.md) | ✅ | Playlist sidebar responsive (10/2025) |
-| [ARCHITECTURE.md](../react-app/docs/ARCHITECTURE.md) | ⚠️ | Thiết kế 09/2025 — đầu file có bảng đối chiếu từng mục với code (lazy, ProtectedRoute, retry, virtual scrolling, test **không** có trong code) |
-| [DATA_FLOW.md](../react-app/docs/DATA_FLOW.md) | ⚠️ | Nhiều đoạn code chỉ là minh hoạ — đầu file có bảng đối chiếu (`getCacheKey`, `optimisticUpdate`, `useVirtualizedData` không tồn tại) |
-| [Download queue/](../react-app/docs/Download%20queue/) (3 file) | 📜 | Kế hoạch, mockup, performance fixes của download queue |
-| [refactor/](../react-app/refactor/) (4 file) | 📋 | Đề xuất refactor 10/2025, chưa thực hiện |
+| Tài liệu | Trạng thái | Nội dung tóm tắt |
+|----------|:----------:|------------------|
+| [README.md](../react-app/docs/README.md) | ✅ | Hướng dẫn React app, cấu trúc thư mục, môi trường, scripts, offline. |
+| [OFFLINE-GUIDE.md](../react-app/docs/OFFLINE-GUIDE.md) | ✅ | Hướng dẫn đọc offline PWA, cơ chế lưu trữ IndexedDB (`offline-manga`), hàng đợi Download Queue. |
+| [SERVICE-WORKER-ANALYSIS.md](../react-app/docs/SERVICE-WORKER-ANALYSIS.md) | ✅ | Phân tích Service Worker v3.1.0 (`public/sw.js`), các cache bucket và cơ chế network-first. |
+| [STORAGE-QUOTA-MANAGEMENT.md](../react-app/docs/STORAGE-QUOTA-MANAGEMENT.md) | ✅ | Quản lý dung lượng cache trên thiết bị người dùng. |
+| [PLAYLIST-SIDEBAR-RESPONSIVE.md](../react-app/docs/PLAYLIST-SIDEBAR-RESPONSIVE.md) | ✅ | Tài liệu responsive cho thanh sidebar playlist của Music player. |
+| [ARCHITECTURE.md](../react-app/docs/ARCHITECTURE.md) | ⚠️ | Phân tích kiến trúc React app từ 09/2025. Đầu file có bảng đối chiếu các tính năng mô tả dự kiến so với code thực tế. |
+| [DATA_FLOW.md](../react-app/docs/DATA_FLOW.md) | ⚠️ | Phân tích luồng dữ liệu (nhiều đoạn code minh họa ý tưởng). Đầu file có bảng đối chiếu hàm thực tế. |
 
-## Frontend legacy (`frontend/docs/`)
+---
 
-6 tài liệu về đợt migrate constants 07/2025 của frontend vanilla JS — 📜 lịch sử, không áp dụng cho React app.
+## ⚠️ 3. Tài liệu cũ cần lưu ý (Lỗi thời một phần)
 
-## Khác
+| Tài liệu | Trạng thái | Điểm lệch so với code hiện tại |
+|----------|:----------:|--------------------------------|
+| [DATABASE-SCAN-ANALYSIS.md](DATABASE-SCAN-ANALYSIS.md) | ⚠️ | Viết trước khi có scanner Media Gallery (`utils/media-scan.js`) và tuỳ chọn quét `shallow`. |
+| [PARTIAL-SCAN-SUMMARY.md](PARTIAL-SCAN-SUMMARY.md) | ⚠️ | Viết trước khi có tuỳ chọn `shallow` (đã có banner đầu file ghi rõ cập nhật). |
+| [FRONTEND_V2-ANALYSIS.md](FRONTEND_V2-ANALYSIS.md) | ⚠️ | Phân tích React app từ 09/2025: Thiếu Media Gallery (`/media`), Download Queue (`/downloads`), PDF reader. |
+| [FRONTEND_V1-ANALYSIS.md](FRONTEND_V1-ANALYSIS.md) | 📦 | Phân tích Frontend V1 (Vanilla JS). Giữ lại làm tư liệu tham khảo cho giao diện legacy. |
 
-- [`../CHANGELOG.md`](../CHANGELOG.md) — nhật ký thay đổi chi tiết (ISSUES C7: mục scope/shallow cho extract thumbnail đã được ghi chú là backend chưa hỗ trợ).
-- `.github/prompts/`, `.github/instructions/`, `Promt.md` — prompt/hướng dẫn cho trợ lý AI, không phải tài liệu sản phẩm.
+---
+
+## 📦 4. Kho lưu trữ lịch sử & đề xuất cũ (`docs/archive/`)
+
+Các tài liệu dưới đây đã hoàn tất hoặc không còn áp dụng trực tiếp cho codebase hiện tại, được chuyển vào [docs/archive/](archive/README.md) để tránh rác thư mục chính:
+
+* **[legacy-frontend-v1/](archive/legacy-frontend-v1/)** (6 tệp): Tài liệu migrate constants cho Frontend V1 (07/2025).
+* **[react-refactor-proposal-2025/](archive/react-refactor-proposal-2025/)** (4 tệp): Đề xuất refactor tách store/settings từ 10/2025 (chưa thực hiện).
+* **[download-queue-sprint-2025/](archive/download-queue-sprint-2025/)** (3 tệp): Kế hoạch và mockup sprint Download Queue (01/2025).
+* **Tài liệu tổng kết cũ**:
+  * [MEDIA-GALLERY-SUMMARY.md](archive/MEDIA-GALLERY-SUMMARY.md) & [MEDIA-IMPLEMENTATION-SUMMARY.md](archive/MEDIA-IMPLEMENTATION-SUMMARY.md) (11/2025)
+  * [Scan-music.md](archive/Scan-music.md) (12/2025)
+  * [CARD-REDESIGN-PREVIEW.html](archive/CARD-REDESIGN-PREVIEW.html) (Mockup HTML preview card redesign)

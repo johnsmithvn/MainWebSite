@@ -1,6 +1,6 @@
 # Architecture Overview - MainWebSite React
 
-> **⚠️ Viết 09/2025 — một phần mô tả kiến trúc *dự kiến*, không phải code hiện tại.** Bảng dưới đối chiếu từng mục với code (kiểm tra 2026-11-04). Trạng thái hiện tại: [README.md](README.md) · [docs/SYSTEM-REPORT.md](../../docs/SYSTEM-REPORT.md).
+> **⚠️ Viết 09/2025 — một phần mô tả kiến trúc *dự kiến*, không phải code hiện tại.** Bảng dưới đối chiếu từng mục với code (cập nhật 2026-11-13). Trạng thái hiện tại: [README.md](README.md) · [docs/SYSTEM-REPORT.md](../../docs/SYSTEM-REPORT.md).
 >
 > | Mục trong tài liệu | Khớp code? | Thực tế |
 > |--------------------|-----------|---------|
@@ -10,7 +10,7 @@
 > | API — "automatic retry", "response caching with TTL" | ❌ | Không có retry. Interceptor chỉ gắn token và xử lý 401 (xoá token, về `/`) |
 > | Token Management | ✅ | Interceptor gắn `Authorization: Bearer` + `x-secure-token`; `fetch()` trực tiếp thì không (ISSUES B6) |
 > | Route Protection / `ProtectedRoute`, route guards | ❌ | Không có. Nguồn bảo mật do backend trả 401 |
-> | Code Splitting `lazy()` | ❌ | Mọi page import tĩnh trong `App.jsx`; `utils/lazyLoadComponents.js` là dead code |
+> | Code Splitting `lazy()` | ✅ | Đã triển khai `React.lazy()` trong `App.jsx` cho 18 trang (PERFORMANCE PF4); riêng `Home` và `NotFound` tải tĩnh ngay lần đầu |
 > | Image Optimization `LazyLoadImage` | ⚠️ | Chỉ `MangaCard` dùng `react-lazy-load-image-component` |
 > | Virtual Scrolling `react-window` | ❌ | `react-window` không có trong dependencies; `react-virtualized` có nhưng không dùng |
 > | Testing Architecture | ❌ | Repo không có test và thư viện test |
